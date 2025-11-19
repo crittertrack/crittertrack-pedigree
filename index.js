@@ -1,118 +1,215 @@
-/**
- * HTTP Cloud Function that fetches the pedigree of an animal
- * from MongoDB, using the animalId passed in the request body.
- * * The function connects to MongoDB using the MONGO_URI and DB_NAME
- * environment variables configured in the Cloud Run service.
- * * @param {object} req Cloud Function request context.
- * @param {object} res Cloud Function response context.
- */
+// Load environment variables from .env file
+require('dotenv').config();
 
-const { MongoClient } = require('mongodb');
+const express = require('express');
+const cors = require('cors');
+const { connectDB } = require('./database/db_service');
+const dbService = require('./database/db_service');
+const jwt = require('jsonwebtoken');
 
-// Get environment variables
-const MONGODB_URI = process.env.MONGO_URI;
-const DB_NAME = process.env.DB_NAME;
-
-// Ensure connection URI is available
-if (!MONGODB_URI) {
-  throw new Error('MONGO_URI environment variable not set.');
+// Ensure essential env variables are set
+if (!process.env.MONGODB_URI) {
+    console.error("FATAL ERROR: MONGODB_URI is not defined.");
+    process.exit(1);
+}
+if (!process.env.JWT_SECRET) {
+    console.error("FATAL ERROR: JWT_SECRET is not defined.");
+    process.exit(1);
 }
 
-// Global variable to store the database connection
-let cachedDb = null;
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json()); // for parsing application/json
+
+// --- API Routes ---
 
 /**
- * Connects to the MongoDB database, reusing a cached connection if available.
- * @returns {Promise<Db>} The MongoDB database object.
+ * Helper middleware to verify JWT token.
+ * Attaches user payload (e.g., { id: 'backend_id', email: '...', id_public: 1001 }) to req.user
  */
-async function connectToDatabase() {
-  if (cachedDb) {
-    return cachedDb;
-  }
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Format: 'Bearer TOKEN'
+    
+    if (token == null) {
+        return res.status(401).json({ message: 'Access denied. No token provided.' });
+    }
 
-  // Connect to our MongoDB database instance
-  const client = await MongoClient.connect(MONGODB_URI);
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid token.' });
+        }
+        req.user = user; // user payload from the token
+        next();
+    });
+};
 
-  // Specify the database name
-  const db = client.db(DB_NAME);
-  cachedDb = db;
-  return db;
-}
+// --- User Routes ---
 
-/**
- * Main function handler for the Cloud Function.
- * @param {object} req - The request object.
- * @param {object} res - The response object.
- */
-exports.getAnimalPedigree = async (req, res) => {
-  // Set CORS headers for all responses
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
+// 1. User Registration Route
+app.post('/api/users/register', async (req, res) => {
+    try {
+        // password, email, personalName, etc. are in req.body
+        const user = await dbService.registerUser(req.body);
+        res.status(201).json({ 
+            message: 'User registered successfully.',
+            userId: user._id,
+            id_public: user.id_public
+        });
+    } catch (error) {
+        if (error.message.includes('Email already in use')) {
+            return res.status(409).json({ message: error.message });
+        }
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
 
-  // Handle pre-flight CORS request
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
-    return;
-  }
-  
-  // Only allow POST requests for data retrieval
-  if (req.method !== 'POST') {
-    return res.status(405).send('Method Not Allowed. Use POST.');
-  }
+// 2. User Login Route
+app.post('/api/users/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const token = await dbService.loginUser(email, password);
+        res.json({ token, message: 'Login successful.' });
+    } catch (error) {
+        if (error.message === 'User not found' || error.message === 'Invalid credentials') {
+            return res.status(401).json({ message: error.message });
+        }
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
 
-  // Validate the request body
-  const { animalId } = req.body;
-  if (!animalId) {
-    return res.status(400).json({ error: 'Missing required parameter: animalId' });
-  }
+// 3. Update User Profile (Protected)
+app.put('/api/users/profile', authenticateToken, async (req, res) => {
+    try {
+        const updatedUser = await dbService.updateProfile(req.user.id, req.body);
+        res.json({ message: 'Profile updated.', user: updatedUser });
+    } catch (error) {
+        console.error('Profile update error:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
 
-  let db;
-  try {
-    // 1. Connect to the database
-    db = await connectToDatabase();
-    const collection = db.collection('animals');
+// 4. Search Public Profiles (Public)
+app.get('/api/users/search', async (req, res) => {
+    const { query } = req.query;
+    if (!query) {
+        return res.status(400).json({ message: 'Search query is required.' });
+    }
+    try {
+        const results = await dbService.searchPublicProfiles(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Profile search error:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
 
-    // 2. Find the animal and its pedigree information
-    const animal = await collection.findOne(
-      { animalId: animalId },
-      { projection: { _id: 0, animalId: 1, name: 1, breed: 1, fatherId: 1, motherId: 1 } }
-    );
 
-    if (!animal) {
-      return res.status(404).json({ error: 'Animal not found.' });
+// --- Animal Routes ---
+
+// 5. Add Animal (Protected)
+app.post('/api/animals', authenticateToken, async (req, res) => {
+    try {
+        const newAnimal = await dbService.addAnimal(req.user.id, req.body);
+        res.status(201).json(newAnimal);
+    } catch (error) {
+        console.error('Add animal error:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// 6. Get Logged-in User's Animals (Function 1 - Protected)
+app.get('/api/animals', authenticateToken, async (req, res) => {
+    try {
+        const animals = await dbService.getUsersAnimals(req.user.id, req.query);
+        res.json(animals);
+    } catch (error) {
+        console.error('Get user animals error:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// 7. Toggle Animal Public Visibility (Function 2 - Protected)
+app.patch('/api/animals/:animalId/toggle-public', authenticateToken, async (req, res) => {
+    const { animalId } = req.params;
+    const { makePublic } = req.body; // { "makePublic": true }
+    
+    if (typeof makePublic !== 'boolean') {
+        return res.status(400).json({ message: 'Field "makePublic" (boolean) is required.' });
+    }
+
+    try {
+        const updatedAnimal = await dbService.toggleAnimalPublic(req.user.id, animalId, makePublic);
+        res.json({ 
+            message: `Animal visibility set to ${makePublic}.`, 
+            id_public: updatedAnimal.id_public,
+            showOnPublicProfile: updatedAnimal.showOnPublicProfile
+        });
+    } catch (error) {
+        console.error('Toggle animal public error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 8. Get a User's Public-Facing Animals (Public)
+app.get('/api/users/:userPublicId/animals', async (req, res) => {
+    try {
+        const userPublicId = parseInt(req.params.userPublicId, 10);
+        if (isNaN(userPublicId)) {
+            return res.status(400).json({ message: 'Invalid User Public ID.' });
+        }
+        const animals = await dbService.getPublicAnimalsByUser(userPublicId);
+        res.json(animals);
+    } catch (error) {
+        console.error('Get public animals error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+// --- Litter Routes ---
+
+// 9. Add Litter (Protected)
+app.post('/api/litters', authenticateToken, async (req, res) => {
+    try {
+        const newLitter = await dbService.addLitter(req.user.id, req.body);
+        res.status(201).json(newLitter);
+    } catch (error) {
+        console.error('Add litter error:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// 10. Register Offspring to Litter (Protected)
+app.patch('/api/litters/:litterId/register-offspring', authenticateToken, async (req, res) => {
+    const { litterId } = req.params;
+    const { offspringPublicId } = req.body; // { "offspringPublicId": 1045 }
+
+    if (!offspringPublicId) {
+        return res.status(400).json({ message: 'Field "offspringPublicId" is required.' });
     }
     
-    // 3. Construct the response object
-    const response = {
-      animalId: animal.animalId,
-      name: animal.name,
-      breed: animal.breed,
-      pedigree: {}
-    };
-
-    // 4. Fetch parents if IDs exist
-    const parentIds = [animal.fatherId, animal.motherId].filter(id => id);
-    if (parentIds.length > 0) {
-      const parents = await collection.find(
-        { animalId: { $in: parentIds } },
-        { projection: { _id: 0, animalId: 1, name: 1 } }
-      ).toArray();
-
-      // Map parents to the response structure
-      if (animal.fatherId) {
-        response.pedigree.father = parents.find(p => p.animalId === animal.fatherId) || { animalId: animal.fatherId, name: 'Unknown' };
-      }
-      if (animal.motherId) {
-        response.pedigree.mother = parents.find(p => p.animalId === animal.motherId) || { animalId: animal.motherId, name: 'Unknown' };
-      }
+    try {
+        const updatedLitter = await dbService.registerOffspringToLitter(req.user.id, litterId, offspringPublicId);
+        res.json({ message: 'Offspring linked to litter.', litter: updatedLitter });
+    } catch (error) {
+        console.error('Register offspring error:', error);
+        res.status(500).json({ message: error.message });
     }
+});
 
-    // 5. Send the successful response
-    res.status(200).json(response);
 
-  } catch (error) {
-    console.error('Database query failed:', error);
-    res.status(500).json({ error: 'Failed to retrieve animal pedigree due to a server error.' });
-  }
-};
+// --- Start Server ---
+connectDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`CritterTrack Server running on http://localhost:${PORT}`);
+    });
+}).catch(error => {
+    console.error('Failed to connect to DB and start server:', error);
+    process.exit(1);
+});
