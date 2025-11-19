@@ -1,0 +1,12 @@
+{
+  "name": "get-animal-pedigree",
+  "version": "1.0.0",
+  "description": "Cloud Function to fetch animal pedigree from MongoDB.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.8.0"
+  }
+}
