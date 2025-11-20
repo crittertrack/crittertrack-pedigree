@@ -2,53 +2,73 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const jwt = require('jsonwebtoken'); // Need jwt for the middleware
 
-// Assuming these files exist in your project:
-// NOTE: These files must be present for the server to run correctly.
-const { registerUser, loginUser } = require('./database/db_service'); 
+// --- IMPORT ALL REQUIRED FILES ---
+const { registerUser, loginUser } = require('./database/db_service');
+const animalRoutes = require('./routes/animalRoutes'); // New Animal Routes
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
 
 const app = express();
-
-// --- CRITICAL FIX FOR DEPLOYMENT ---
-// The server must listen on the port assigned by the hosting environment (e.g., Cloud Run), 
-// or default to 8080 if running locally without the PORT variable set.
-const PORT = process.env.PORT || 8080; 
+const PORT = process.env.PORT || 8080;
+const JWT_SECRET = process.env.JWT_SECRET; // Needed for auth middleware
 
 // --- Middleware setup ---
-
-// 1. CORS Middleware: Allows the React/Android frontends to communicate with the server.
-// Allows all origins for development flexibility.
-app.use(cors()); 
-
-// 2. JSON Body Parser Middleware: Parses incoming JSON payloads.
+app.use(cors());
 app.use(express.json());
+
+// --- CORE AUTHENTICATION MIDDLEWARE ---
+/**
+ * Verifies the JWT token and adds user data (id, email, id_public) to req.user.
+ */
+const authMiddleware = (req, res, next) => {
+    // 1. Check for token in the Authorization header (Bearer <token>)
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'Authentication invalid: No token provided.' });
+    }
+
+    const token = authHeader.split(' ')[1]; // Extract the token part
+
+    try {
+        // 2. Verify the token using the secret
+        const payload = jwt.verify(token, JWT_SECRET);
+        
+        // 3. Attach the user's data (from the token) to the request object
+        // payload.id is the backend _id used for file ownership/access control.
+        req.user = { id: payload.id, email: payload.email, id_public: payload.id_public }; 
+        next(); // Proceed to the next middleware/route handler
+
+    } catch (error) {
+        // Handle token expiration or signature mismatch
+        console.error('JWT Verification Error:', error.message);
+        return res.status(401).json({ message: 'Authentication invalid: Token expired or invalid.' });
+    }
+};
+
 
 // --- Database Connection ---
 const mongoUri = process.env.MONGODB_URI;
 
 // Check for MongoDB URI before attempting connection
 if (!mongoUri) {
-    console.error('FATAL ERROR: MONGODB_URI environment variable is not set. Please create a .env file and define it.');
+    console.error('FATAL ERROR: MONGODB_URI environment variable is not set.');
     process.exit(1);
 }
 
-// Attempt to connect to MongoDB
 mongoose.connect(mongoUri)
     .then(() => {
         console.log('📦 MongoDB connection successful.');
-        
-        // Start the server only after the DB connection is successful
         app.listen(PORT, () => {
             console.log(`🚀 CritterTrack Server is listening on port ${PORT}.`);
         });
     })
     .catch(err => {
         console.error('❌ MongoDB connection failed:', err.message);
-        console.error('Failed to connect to DB. Ensure MONGODB_URI is correct and the database is running.', err);
-        process.exit(1); // Exit if DB connection fails
+        process.exit(1);
     });
 
 // --- API Routes ---
@@ -58,52 +78,40 @@ app.get('/', (req, res) => {
     res.send('CritterTrack Backend API is running!');
 });
 
+// --- PUBLIC ROUTES (User Registration/Login) ---
+
 /**
- * POST /api/users/register
- * Handles new user registration, including validation and database storage.
- * Expected JSON Body: { email, password, personalName, breederName (optional), profileImage (optional) }
+ * POST /api/users/register 
  */
 app.post('/api/users/register', async (req, res) => {
     try {
-        const { email, password, personalName, breederName, profileImage } = req.body;
-
-        // Basic validation: ensures required fields are present
+        const { email, password, personalName, breederName, profileImage, showBreederName } = req.body;
         if (!email || !password || !personalName) {
             return res.status(400).json({ message: 'Email, password, and personal name are required.' });
         }
-
-        // Get the Mongoose Model. It should be registered either by user_schema.js or db_service.js
+        
+        // We get the model via mongoose.model('User') since it was registered in models.js
         const User = mongoose.model('User'); 
-        
-        // Check for existing user by email (ensures uniqueness)
         const existingUser = await User.findOne({ email: email });
-        
         if (existingUser) {
             return res.status(409).json({ message: 'This email is already registered.' });
         }
 
-        // Create the new user using the database service (handles password hashing and saving)
-        const newUser = await registerUser({ email, password, personalName, breederName, profileImage });
+        const newUser = await registerUser({ email, password, personalName, breederName, profileImage, showBreederName });
         
-        // Respond with success (201 Created) and the public ID for frontend confirmation
         res.status(201).json({ 
             message: 'User registered successfully!',
-            id_public: newUser.id_public // Must match the field the frontend expects
+            id_public: newUser.id_public
         });
 
     } catch (error) {
-        // Log the detailed error on the server side
         console.error('Error during user registration:', error);
-        
-        // Send a generic 500 error to the client
         res.status(500).json({ message: 'Internal server error during registration.' });
     }
 });
 
 /**
- * POST /api/users/login  <-- NEW LOGIN ROUTE ADDED HERE
- * Authenticates a user and returns a JWT token.
- * Expected JSON Body: { email, password }
+ * POST /api/users/login
  */
 app.post('/api/users/login', async (req, res) => {
     try {
@@ -113,16 +121,12 @@ app.post('/api/users/login', async (req, res) => {
             return res.status(400).json({ message: 'Email and password are required for login.' });
         }
         
-        // Calls the login logic from db_service.js
         const token = await loginUser(email, password); 
 
-        // Respond with the token
         res.status(200).json({ token });
 
     } catch (error) {
-        // Handle specific errors from loginUser
         if (error.message === 'User not found' || error.message === 'Invalid credentials') {
-            // Return 401 Unauthorized for login errors
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
         
@@ -130,3 +134,10 @@ app.post('/api/users/login', async (req, res) => {
         res.status(500).json({ message: 'Internal server error during login.' });
     }
 });
+
+
+// --- PROTECTED ROUTES ---
+
+// Mount the Animal routes and apply the authMiddleware.
+// All requests to /api/animals/* will be checked for a valid JWT token first.
+app.use('/api/animals', authMiddleware, animalRoutes);
