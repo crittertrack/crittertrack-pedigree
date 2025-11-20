@@ -83,7 +83,7 @@ app.post('/api/users/register', async (req, res) => {
         }
 
         // Create the new user using the database service (handles password hashing and saving)
-        const newUser = await createUser(email, password, personalName, breederName, profileImage);
+        const newUser = await registerUser(email, password, personalName, breederName, profileImage);
         
         // Respond with success (201 Created) and the public ID for frontend confirmation
         res.status(201).json({ 
