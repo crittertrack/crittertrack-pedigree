@@ -5,7 +5,7 @@ const cors = require('cors');
 
 // Assuming these files exist in your project:
 // NOTE: These files must be present for the server to run correctly.
-const { createUser } = require('./database/db_service'); 
+const { registerUser } = require('./database/db_service'); 
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
@@ -83,7 +83,7 @@ app.post('/api/users/register', async (req, res) => {
         }
 
         // Create the new user using the database service (handles password hashing and saving)
-        const newUser = await createUser(email, password, personalName, breederName, profileImage);
+        const newUser = await registerUser(email, password, personalName, breederName, profileImage);
         
         // Respond with success (201 Created) and the public ID for frontend confirmation
         res.status(201).json({ 
