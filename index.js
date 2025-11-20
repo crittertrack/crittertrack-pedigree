@@ -5,7 +5,7 @@ const cors = require('cors');
 
 // Assuming these files exist in your project:
 // NOTE: These files must be present for the server to run correctly.
-const { createUser } = require('./database/db_service'); 
+const { registerUser } = require('./database/db_service'); 
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
