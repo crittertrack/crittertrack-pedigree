@@ -5,7 +5,7 @@ const cors = require('cors');
 
 // Assuming these files exist in your project:
 // NOTE: These files must be present for the server to run correctly.
-const { registerUser } = require('./database/db_service'); 
+const { registerUser, loginUser } = require('./database/db_service'); 
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
@@ -97,5 +97,36 @@ app.post('/api/users/register', async (req, res) => {
         
         // Send a generic 500 error to the client
         res.status(500).json({ message: 'Internal server error during registration.' });
+    }
+});
+
+/**
+ * POST /api/users/login  <-- NEW LOGIN ROUTE ADDED HERE
+ * Authenticates a user and returns a JWT token.
+ * Expected JSON Body: { email, password }
+ */
+app.post('/api/users/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required for login.' });
+        }
+        
+        // Calls the login logic from db_service.js
+        const token = await loginUser(email, password); 
+
+        // Respond with the token
+        res.status(200).json({ token });
+
+    } catch (error) {
+        // Handle specific errors from loginUser
+        if (error.message === 'User not found' || error.message === 'Invalid credentials') {
+            // Return 401 Unauthorized for login errors
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+        
+        console.error('Error during user login:', error);
+        res.status(500).json({ message: 'Internal server error during login.' });
     }
 });
