@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { 
-    User, 
-    PublicProfile, 
-    Animal, 
-    PublicAnimal, 
-    Litter, 
-    getNextSequence 
+const {
+    User,
+    PublicProfile,
+    Animal,
+    PublicAnimal,
+    Litter,
+    getNextSequence
 } = require('./models');
 
 // Load environment variables
@@ -35,7 +35,8 @@ const connectDB = async () => {
 // --- USER REGISTRY FUNCTIONS ---
 
 /**
- * Registers a new user and creates their public profile counterpart in a transaction.
+ * Registers a new user and creates their public profile counterpart.
+ * NOTE: Transactions removed to support Railway's standalone MongoDB setup.
  * @param {object} userData - { email, password, personalName, profileImage, breederName, showBreederName }
  * @returns {object} The newly created user document.
  */
@@ -50,15 +51,14 @@ const registerUser = async (userData) => {
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    
+
+    // --- NON-TRANSACTIONAL SAVE ---
+    // The previous transaction logic is REMOVED. Operations now run sequentially.
     try {
         // 1. Get new public ID
         const id_public = await getNextSequence('userId');
 
-        // 2. Create private User document
+        // 2. Create and Save private User document
         const newUser = new User({
             id_public,
             email,
@@ -68,9 +68,9 @@ const registerUser = async (userData) => {
             breederName,
             showBreederName
         });
-        await newUser.save({ session });
+        await newUser.save(); // Non-transactional save
 
-        // 3. Create public Profile document
+        // 3. Create and Save public Profile document
         const newPublicProfile = new PublicProfile({
             userId_backend: newUser._id,
             id_public: newUser.id_public,
@@ -78,16 +78,14 @@ const registerUser = async (userData) => {
             profileImage: newUser.profileImage,
             breederName: newUser.showBreederName ? newUser.breederName : null
         });
-        await newPublicProfile.save({ session });
+        await newPublicProfile.save(); // Non-transactional save
 
-        await session.commitTransaction();
         return newUser;
 
     } catch (error) {
-        await session.abortTransaction();
+        // Since there are no transactions, no abort is needed.
+        // If one save fails, the function will simply throw the error.
         throw error;
-    } finally {
-        session.endSession();
     }
 };
 
@@ -117,41 +115,37 @@ const loginUser = async (email, password) => {
 
 /**
  * Updates a user's profile and syncs changes to the public profile.
+ * NOTE: Transactions removed to support Railway's standalone MongoDB setup.
  */
 const updateProfile = async (userId, updates) => {
     // If password is being updated, hash it
     if (updates.password) {
         updates.password = await bcrypt.hash(updates.password, SALT_ROUNDS);
     }
-    
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    
+
+    // The previous transaction logic is REMOVED.
     try {
-        // 1. Update private User
-        const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true, session });
+        // 1. Update private User (no session option needed)
+        const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
         if (!updatedUser) {
             throw new Error('User not found');
         }
 
         // 2. Update public Profile
-        const publicProfile = await PublicProfile.findOne({ userId_backend: userId }).session(session);
+        const publicProfile = await PublicProfile.findOne({ userId_backend: userId });
         if (publicProfile) {
             publicProfile.personalName = updatedUser.personalName;
             publicProfile.profileImage = updatedUser.profileImage;
             publicProfile.breederName = updatedUser.showBreederName ? updatedUser.breederName : null;
-            await publicProfile.save({ session });
+            await publicProfile.save(); // Non-transactional save
         }
         // Note: We assume the public profile always exists, as it's created on register.
 
-        await session.commitTransaction();
         return updatedUser;
 
     } catch (error) {
-        await session.abortTransaction();
+        // No abort needed.
         throw error;
-    } finally {
-        session.endSession();
     }
 };
 
@@ -184,7 +178,7 @@ const addAnimal = async (ownerId, animalData) => {
     if (!owner) {
         throw new Error("Owner not found for this animal.");
     }
-    
+
     const id_public = await getNextSequence('animalId');
 
     const newAnimal = new Animal({
@@ -194,7 +188,7 @@ const addAnimal = async (ownerId, animalData) => {
         ownerPersonalName: owner.personalName,
         ownerBreederName: owner.showBreederName ? owner.breederName : null,
     });
-    
+
     return await newAnimal.save();
 };
 
@@ -208,7 +202,7 @@ const getUsersAnimals = async (ownerId, filters = {}) => {
     const query = { ownerId };
     if (filters.gender) query.gender = filters.gender;
     if (filters.status) query.status = filters.status;
-    
+
     return await Animal.find(query).sort({ createdAt: -1 });
 };
 
@@ -261,7 +255,7 @@ const getPublicAnimalsByUser = async (userPublicId) => {
     if (!profile) {
         throw new Error("User profile not found.");
     }
-    
+
     // 2. Find all animals in the PublicAnimal collection matching that backend ID
     return await PublicAnimal.find({ ownerId: profile.userId_backend }).sort({ name: 1 });
 };
@@ -294,7 +288,7 @@ const registerOffspringToLitter = async (ownerId, litterId, offspringPublicId) =
     if (!litter) {
         throw new Error("Litter not found or user does not own this litter.");
     }
-    
+
     // Add offspring ID to the array, ensuring no duplicates
     return await Litter.findByIdAndUpdate(
         litterId,
