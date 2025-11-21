@@ -8,7 +8,8 @@ const jwt = require('jsonwebtoken');
 const { connectDB, registerUser, loginUser } = require('./database/db_service');
 const animalRoutes = require('./routes/animalRoutes'); 
 const publicRoutes = require('./routes/publicRoutes');
-const litterRoutes = require('./routes/litterRoutes'); // <<< NEW IMPORT
+const litterRoutes = require('./routes/litterRoutes');
+const pedigreeRoutes = require('./routes/pedigreeRoutes'); // <<< NEW IMPORT
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
@@ -123,8 +124,11 @@ app.use('/api/public', publicRoutes);
 // Mount the Animal routes
 app.use('/api/animals', authMiddleware, animalRoutes);
 
-// Mount the Litter routes and apply the authMiddleware
-app.use('/api/litters', authMiddleware, litterRoutes); // <<< NEW PROTECTED ROUTE
+// Mount the Litter routes
+app.use('/api/litters', authMiddleware, litterRoutes);
+
+// Mount the Pedigree routes
+app.use('/api/pedigree', authMiddleware, pedigreeRoutes); // <<< NEW PROTECTED ROUTE
 
 
 // --- START SERVER ---
