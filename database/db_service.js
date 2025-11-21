@@ -51,7 +51,21 @@ const connectDB = async (uri) => { // CHANGED: Now accepts 'uri'
 // --- USER REGISTRY FUNCTIONS ---
 
 const registerUser = async (userData) => { 
-    const { email, password, personalName, breederName, profileImage, showBreederName } = userData;
+    // FIX 1: Add default values to prevent undefined values from failing Mongoose validation
+    const { 
+        email, 
+        password, 
+        personalName, 
+        breederName = null,         // New default
+        profileImage = null,        // New default
+        showBreederName = false     // New default
+    } = userData;
+
+    // Check for existing user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+        throw new Error('Email already exists'); 
+    }
 
     // Get new public ID for the user
     const id_public = await getNextSequence('userId');
@@ -74,17 +88,16 @@ const registerUser = async (userData) => {
 
     // Create public profile immediately
     const publicProfileData = {
-    userId_backend: savedUser._id,
-    id_public: savedUser.id_public,
-    personalName: savedUser.personalName,
-    profileImage: savedUser.profileImage,
-    breederName: savedUser.breederName,
-    // <--- ADD IT HERE
-    showBreederName: savedUser.showBreederName, // <--- ADD THIS LINE
-};
-await PublicProfile.create(publicProfileData);
+        userId_backend: savedUser._id,
+        id_public: savedUser.id_public,
+        personalName: savedUser.personalName,
+        profileImage: savedUser.profileImage,
+        breederName: savedUser.breederName,
+        showBreederName: savedUser.showBreederName, // FIX 2: THIS LINE WAS MISSING/CRITICAL
+    };
+    await PublicProfile.create(publicProfileData);
 
-return savedUser;
+    return savedUser;
 };
 
 const loginUser = async (email, password) => { 

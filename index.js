@@ -47,16 +47,14 @@ app.use(express.json());
 app.post('/api/public/register', async (req, res) => {
     try {
         const { email, password, personalName } = req.body;
-        // NOTE: The frontend sends 'name', but your User model uses 'personalName'.
-        // I will use 'personalName' here, but verify your frontend is sending 'personalName'
-        // or change the frontend to send 'name' and update this destructuring.
         
+        // 1. Validation check for required fields
         if (!email || !password || !personalName) {
             return res.status(400).json({ message: 'All registration fields (email, password, name) are required.' });
         }
         
-        // This function is imported from db_service.js
-        const newUser = await registerUser(email, password, personalName);
+        // 2. Pass the ENTIRE request body as the single argument (userData)
+        const newUser = await registerUser(req.body); // <--- THIS IS THE CRITICAL CHANGE
         
         // Successful registration, no token is returned yet, user must log in.
         res.status(201).json({ 
