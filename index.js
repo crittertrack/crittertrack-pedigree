@@ -26,8 +26,37 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET; 
 
-// --- Middleware setup ---
-app.use(cors());
+// --- CORS Configuration (FIX) ---
+// 1. Define the specific origins allowed to access this API
+const allowedOrigins = [
+    'http://localhost:3000', // For local development
+    'https://crittertrack.net',      // The bare custom domain
+    'https://www.crittertrack.net',  // Your confirmed main production domain
+    // You may also need to add your default Vercel domain if you use it for preview builds, e.g.,
+    // 'https://your-project-name.vercel.app' 
+];
+
+// 2. Configure CORS middleware options
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        // AND allow requests whose origin is in the allowedOrigins list
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true, // Allow cookies and Authorization headers (necessary for your JWT auth)
+    optionsSuccessStatus: 204
+};
+
+// 3. Apply the custom CORS middleware
+app.use(cors(corsOptions));
+// ---------------------------------
+
+// --- General Middleware setup ---
 app.use(express.json());
 
 // --- CORE AUTHENTICATION MIDDLEWARE ---
