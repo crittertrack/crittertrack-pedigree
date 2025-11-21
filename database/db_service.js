@@ -1,30 +1,45 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+
 const {
     User,
     PublicProfile,
     Animal,
     PublicAnimal,
     Litter,
-    getNextSequence
-} = require('./models');
+    Counter
+} = require('./models'); 
 
-// Load environment variables
-const MONGODB_URI = process.env.MONGODB_URI;
+// Load environment variables (Only JWT secret and constants are read here)
 const JWT_SECRET = process.env.JWT_SECRET;
 const SALT_ROUNDS = 10;
 const JWT_LIFETIME = '1d';
 
 /**
- * Connects to the MongoDB database using the URI from environment variables.
+ * Utility function to get the next auto-incrementing public ID.
  */
-const connectDB = async () => {
-    if (!MONGODB_URI) {
+const getNextSequence = async (name) => {
+    const ret = await Counter.findByIdAndUpdate(
+        { _id: name },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+    // If we inserted (upsert: true), the first ID will be 1001, which is correct (default seq is 1000).
+    return ret.seq;
+};
+
+// --- DATABASE CONNECTION ---
+/**
+ * Connects to the MongoDB database using the URI passed from index.js.
+ * @param {string} uri - The MongoDB connection URI.
+ */
+const connectDB = async (uri) => { // CHANGED: Now accepts 'uri'
+    if (!uri) { 
         throw new Error("MONGODB_URI not found in environment variables. Cannot connect to database.");
     }
     try {
-        await mongoose.connect(MONGODB_URI);
+        await mongoose.connect(uri); // CHANGED: Uses 'uri' variable
         console.log('MongoDB connection successful.');
     } catch (error) {
         console.error('MongoDB connection failed:', error.message);
@@ -32,73 +47,53 @@ const connectDB = async () => {
     }
 };
 
+
 // --- USER REGISTRY FUNCTIONS ---
 
-/**
- * Registers a new user and creates their public profile counterpart.
- * NOTE: Transactions removed to support Railway's standalone MongoDB setup.
- * @param {object} userData - { email, password, personalName, profileImage, breederName, showBreederName }
- * @returns {object} The newly created user document.
- */
-const registerUser = async (userData) => {
-    const { email, password, personalName, profileImage, breederName, showBreederName } = userData;
+const registerUser = async (userData) => { 
+    const { email, password, personalName, breederName, profileImage, showBreederName } = userData;
 
-    // Check for existing user
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        throw new Error('Email already in use');
-    }
+    // Get new public ID for the user
+    const id_public = await getNextSequence('userId');
 
-    // Hash password
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // --- NON-TRANSACTIONAL SAVE ---
-    // The previous transaction logic is REMOVED. Operations now run sequentially.
-    try {
-        // 1. Get new public ID
-        const id_public = await getNextSequence('userId');
+    // Create the new user
+    const newUser = new User({
+        id_public,
+        email,
+        password: hashedPassword,
+        personalName,
+        breederName,
+        profileImage,
+        showBreederName
+    });
 
-        // 2. Create and Save private User document
-        const newUser = new User({
-            id_public,
-            email,
-            password: hashedPassword,
-            personalName,
-            profileImage,
-            breederName,
-            showBreederName
-        });
-        await newUser.save(); // Non-transactional save
+    const savedUser = await newUser.save();
 
-        // 3. Create and Save public Profile document
-        const newPublicProfile = new PublicProfile({
-            userId_backend: newUser._id,
-            id_public: newUser.id_public,
-            personalName: newUser.personalName,
-            profileImage: newUser.profileImage,
-            breederName: newUser.showBreederName ? newUser.breederName : null
-        });
-        await newPublicProfile.save(); // Non-transactional save
+    // Create public profile immediately
+    const publicProfileData = {
+        userId_backend: savedUser._id,
+        id_public: savedUser.id_public,
+        personalName: savedUser.personalName,
+        profileImage: savedUser.profileImage,
+        breederName: savedUser.breederName,
+    };
+    await PublicProfile.create(publicProfileData);
 
-        return newUser;
-
-    } catch (error) {
-        // Since there are no transactions, no abort is needed.
-        // If one save fails, the function will simply throw the error.
-        throw error;
-    }
+    return savedUser;
 };
 
-/**
- * Authenticates a user and generates a JWT token.
- * @returns {string} The generated JWT token.
- */
-const loginUser = async (email, password) => {
+const loginUser = async (email, password) => { 
+    // Find user by email, selecting the password field
     const user = await User.findOne({ email }).select('+password');
+
     if (!user) {
         throw new Error('User not found');
     }
 
+    // Compare the provided password with the stored hash
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         throw new Error('Invalid credentials');
@@ -106,100 +101,82 @@ const loginUser = async (email, password) => {
 
     // Generate JWT token
     const token = jwt.sign(
-        { id: user._id, email: user.email, id_public: user.id_public },
-        JWT_SECRET,
+        { id: user._id, email: user.email, id_public: user.id_public }, 
+        JWT_SECRET, 
         { expiresIn: JWT_LIFETIME }
     );
+    
     return token;
 };
 
 /**
- * Updates a user's profile and syncs changes to the public profile.
- * NOTE: Transactions removed to support Railway's standalone MongoDB setup.
+ * Updates a user's profile information (private and public records).
  */
-const updateProfile = async (userId, updates) => {
-    // If password is being updated, hash it
-    if (updates.password) {
-        updates.password = await bcrypt.hash(updates.password, SALT_ROUNDS);
+const updateUserProfile = async (userId_backend, updates) => {
+    // 1. Find and update the private User record
+    const user = await User.findByIdAndUpdate(userId_backend, updates, { 
+        new: true, 
+        runValidators: true 
+    });
+
+    if (!user) {
+        throw new Error("User profile not found.");
     }
 
-    // The previous transaction logic is REMOVED.
-    try {
-        // 1. Update private User (no session option needed)
-        const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
-        if (!updatedUser) {
-            throw new Error('User not found');
-        }
+    // 2. Sync necessary fields to the PublicProfile record
+    const publicUpdates = {};
 
-        // 2. Update public Profile
-        const publicProfile = await PublicProfile.findOne({ userId_backend: userId });
-        if (publicProfile) {
-            publicProfile.personalName = updatedUser.personalName;
-            publicProfile.profileImage = updatedUser.profileImage;
-            publicProfile.breederName = updatedUser.showBreederName ? updatedUser.breederName : null;
-            await publicProfile.save(); // Non-transactional save
-        }
-        // Note: We assume the public profile always exists, as it's created on register.
-
-        return updatedUser;
-
-    } catch (error) {
-        // No abort needed.
-        throw error;
+    if (updates.personalName !== undefined) publicUpdates.personalName = updates.personalName;
+    if (updates.profileImage !== undefined) publicUpdates.profileImage = updates.profileImage;
+    if (updates.breederName !== undefined) publicUpdates.breederName = updates.breederName;
+    
+    if (Object.keys(publicUpdates).length > 0) {
+        await PublicProfile.findOneAndUpdate({ userId_backend: userId_backend }, publicUpdates);
     }
-};
 
-/**
- * Searches public profiles by integer ID or text query.
- */
-const searchPublicProfiles = async (query) => {
-    const parsedQuery = parseInt(query, 10);
-    if (!isNaN(parsedQuery)) {
-        // Search by Public ID
-        return await PublicProfile.find({ id_public: parsedQuery }).limit(10);
-    } else {
-        // Search by Name (personal or breeder)
-        const regex = new RegExp(query, 'i'); // case-insensitive
-        return await PublicProfile.find({ _searchableName: regex }).limit(10);
-    }
+    return user;
 };
 
 
 // --- ANIMAL REGISTRY FUNCTIONS ---
 
 /**
- * Adds a new animal to the user's private collection.
- * @param {string} ownerId - The backend ID (_id) of the user.
- * @param {object} animalData - All data for the animal from the request body.
- * @returns {object} The new animal document.
+ * Registers a new animal.
  */
-const addAnimal = async (ownerId, animalData) => {
-    const owner = await User.findById(ownerId);
-    if (!owner) {
-        throw new Error("Owner not found for this animal.");
+const addAnimal = async (appUserId_backend, animalData) => {
+    const fileOwner = await User.findById(appUserId_backend);
+    if (!fileOwner) {
+        throw new Error("File owner (app user) not found.");
     }
 
+    // 1. Get new public ID for the animal
     const id_public = await getNextSequence('animalId');
+
+    // 2. Set owner display info (Initial owner is the app user)
+    const ownerId_public = fileOwner.id_public;
+    const ownerPersonalName = fileOwner.personalName;
+    const ownerBreederName = fileOwner.showBreederName ? fileOwner.breederName : null;
+
 
     const newAnimal = new Animal({
         ...animalData,
         id_public,
-        ownerId: owner._id,
-        ownerPersonalName: owner.personalName,
-        ownerBreederName: owner.showBreederName ? owner.breederName : null,
+        appUserId_backend, 
+        ownerId_public, 
+        ownerPersonalName,
+        ownerBreederName,
+        birthDate: new Date(animalData.birthDate), 
     });
 
     return await newAnimal.save();
 };
 
 /**
- * Function 1: Gets all animals for the logged-in user (local page).
- * @param {string} ownerId - The backend ID (_id) of the user.
- * @param {object} filters - e.g., { gender: 'male', status: 'Active' }
- * @returns {Array<object>} List of animals.
+ * Gets all animals for the logged-in user (local page).
  */
-const getUsersAnimals = async (ownerId, filters = {}) => {
-    const query = { ownerId };
+const getUsersAnimals = async (appUserId_backend, filters = {}) => {
+    // Queries by the access control ID (appUserId_backend)
+    const query = { appUserId_backend };
     if (filters.gender) query.gender = filters.gender;
     if (filters.status) query.status = filters.status;
 
@@ -207,94 +184,242 @@ const getUsersAnimals = async (ownerId, filters = {}) => {
 };
 
 /**
- * Function 2: Toggles an animal's visibility on the public profile.
- * This syncs the animal's data to/from the PublicAnimal collection.
- * @param {string} ownerId - The backend ID (_id) of the user.
- * @param {string} animalId - The backend ID (_id) of the animal.
- * @param {boolean} makePublic - True to show, False to hide.
+ * Retrieves a single animal by its backend ID, ensuring it belongs to the user.
  */
-const toggleAnimalPublic = async (ownerId, animalId, makePublic) => {
-    const animal = await Animal.findOne({ _id: animalId, ownerId: ownerId });
+const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
+    const animal = await Animal.findOne({ _id: animalId_backend, appUserId_backend });
     if (!animal) {
         throw new Error("Animal not found or user does not own this animal.");
-    }
-
-    // 1. Update the animal's private record
-    animal.showOnPublicProfile = makePublic;
-    await animal.save();
-
-    // 2. Sync with PublicAnimal collection
-    if (makePublic) {
-        // Create or update the public-facing document
-        const publicData = {
-            id_public: animal.id_public,
-            ownerId: animal.ownerId,
-            prefix: animal.prefix,
-            name: animal.name,
-            gender: animal.gender,
-            birthdate: animal.birthdate,
-            color: animal.color,
-        };
-        // Use { _id: animalId } to keep IDs consistent
-        await PublicAnimal.findByIdAndUpdate(animalId, publicData, { upsert: true, new: true });
-    } else {
-        // Remove from public collection
-        await PublicAnimal.findByIdAndDelete(animalId);
     }
     return animal;
 };
 
 /**
- * Gets all PUBLIC animals for a specific user (visual user profile).
- * @param {number} userPublicId - The public integer ID of the user.
- * @returns {Array<object>} List of public animals.
+ * Updates an existing animal record and optionally syncs the public record.
  */
-const getPublicAnimalsByUser = async (userPublicId) => {
-    // 1. Find the user's public profile to get their backend ID
-    const profile = await PublicProfile.findOne({ id_public: userPublicId });
-    if (!profile) {
-        throw new Error("User profile not found.");
+const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
+    // 1. Find and update the animal's private record (must check ownership)
+    const animal = await Animal.findOneAndUpdate(
+        { _id: animalId_backend, appUserId_backend }, 
+        updates, 
+        { new: true, runValidators: true }
+    );
+
+    if (!animal) {
+        throw new Error("Animal not found or user does not own this animal.");
     }
 
-    // 2. Find all animals in the PublicAnimal collection matching that backend ID
-    return await PublicAnimal.find({ ownerId: profile.userId_backend }).sort({ name: 1 });
+    // 2. If the animal is public, we must sync the PublicAnimal record
+    if (animal.showOnPublicProfile) {
+        // Only update fields that are exposed in the PublicAnimal schema
+        const publicUpdates = {};
+        if (updates.prefix !== undefined) publicUpdates.prefix = updates.prefix;
+        if (updates.name !== undefined) publicUpdates.name = updates.name;
+        if (updates.gender !== undefined) publicUpdates.gender = updates.gender;
+        if (updates.birthDate !== undefined) publicUpdates.birthDate = updates.birthDate;
+        if (updates.color !== undefined) publicUpdates.color = updates.color;
+        if (updates.coat !== undefined) publicUpdates.coat = updates.coat;
+        
+        // Update optional fields only if they exist in the private document
+        if (animal.remarks && updates.remarks !== undefined) publicUpdates.remarks = updates.remarks;
+        if (animal.geneticCode && updates.geneticCode !== undefined) publicUpdates.geneticCode = updates.geneticCode;
+
+        // Only update if there are fields to update
+        if (Object.keys(publicUpdates).length > 0) {
+            await PublicAnimal.findByIdAndUpdate(animalId_backend, publicUpdates);
+        }
+    }
+    
+    return animal;
+};
+
+
+/**
+ * Toggles an animal's visibility on the public profile.
+ */
+const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleData) => {
+    const { makePublic, includeRemarks = false, includeGeneticCode = false } = toggleData;
+
+    // 1. Find and update the animal's private record (must check ownership)
+    const animal = await Animal.findOne({ _id: animalId_backend, appUserId_backend });
+    if (!animal) {
+        throw new Error("Animal not found or user does not own this animal.");
+    }
+
+    animal.showOnPublicProfile = makePublic;
+    await animal.save(); 
+
+    // 2. Sync with PublicAnimal collection
+    if (makePublic) {
+        // Prepare data for public view, including optional fields based on toggleData
+        const publicData = {
+            _id: animal._id, // Set the public document's _id to match the private one
+            id_public: animal.id_public,
+            ownerId_public: animal.ownerId_public,
+            prefix: animal.prefix,
+            name: animal.name,
+            gender: animal.gender,
+            birthDate: animal.birthDate,
+            color: animal.color,
+            coat: animal.coat,
+            // Include optional fields only if toggled
+            remarks: includeRemarks ? animal.remarks : undefined,
+            geneticCode: includeGeneticCode ? animal.geneticCode : undefined,
+        };
+
+        // Create or update the public-facing document
+        await PublicAnimal.findOneAndUpdate({ _id: animal._id }, publicData, { upsert: true, new: true });
+    } else {
+        // Remove from public collection
+        await PublicAnimal.findByIdAndDelete(animal._id);
+    }
+    return animal;
+};
+
+// --- PUBLIC ACCESS FUNCTIONS ---
+
+/**
+ * Fetches a single public profile by its public ID.
+ */
+const getPublicProfile = async (id_public) => {
+    const profile = await PublicProfile.findOne({ id_public });
+    if (!profile) {
+        throw new Error('Public profile not found.');
+    }
+    return profile;
+};
+
+/**
+ * Fetches all public animals belonging to a specific user (ownerId_public).
+ */
+const getPublicAnimalsByOwner = async (ownerId_public) => {
+    const animals = await PublicAnimal.find({ ownerId_public }).sort({ createdAt: -1 });
+    return animals;
 };
 
 
 // --- LITTER REGISTRY FUNCTIONS ---
 
 /**
- * Adds a new litter to the user's private collection.
- * @param {string} ownerId - The backend ID (_id) of the user.
- * @param {object} litterData - All data for the litter.
- * @returns {object} The new litter document.
+ * Registers a new litter.
  */
-const addLitter = async (ownerId, litterData) => {
+const addLitter = async (appUserId_backend, litterData) => {
+    const owner = await User.findById(appUserId_backend);
+    if (!owner) {
+        throw new Error("Owner not found.");
+    }
+
     const newLitter = new Litter({
         ...litterData,
-        ownerId,
+        ownerId: appUserId_backend,
+        birthDate: new Date(litterData.birthDate), 
+        pairingDate: litterData.pairingDate ? new Date(litterData.pairingDate) : null,
     });
+
     return await newLitter.save();
 };
 
 /**
- * Links a newly registered animal (offspring) to its litter.
- * @param {string} ownerId - The backend ID (_id) of the user.
- * @param {string} litterId - The backend ID (_id) of the litter.
- * @param {number} offspringPublicId - The public integer ID of the animal.
+ * Gets all litters for the logged-in user.
  */
-const registerOffspringToLitter = async (ownerId, litterId, offspringPublicId) => {
-    const litter = await Litter.findOne({ _id: litterId, ownerId: ownerId });
+const getUsersLitters = async (appUserId_backend) => {
+    return await Litter.find({ ownerId: appUserId_backend }).sort({ birthDate: -1 });
+};
+
+/**
+ * Updates an existing litter record.
+ */
+const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
+    // 1. Find and update the litter's record (must check ownership)
+    const litter = await Litter.findOneAndUpdate(
+        { _id: litterId_backend, ownerId: appUserId_backend }, 
+        updates, 
+        { new: true, runValidators: true }
+    );
+
     if (!litter) {
         throw new Error("Litter not found or user does not own this litter.");
     }
+    
+    return litter;
+};
 
-    // Add offspring ID to the array, ensuring no duplicates
-    return await Litter.findByIdAndUpdate(
-        litterId,
-        { $addToSet: { offspringIds_public: offspringPublicId } },
-        { new: true }
-    );
+
+// --- PEDIGREE FUNCTIONS ---
+
+/**
+ * Recursively fetches the ancestry of an animal up to a specified depth (generations).
+ * @param {number} animalId_public - The public ID of the animal to trace.
+ * @param {number} depth - The number of generations (e.g., 2 for P, G1, G2).
+ * @returns {Promise<object>} - A pedigree node structure.
+ */
+const recursivelyFetchAncestry = async (animalId_public, depth) => {
+    if (depth <= 0 || !animalId_public) {
+        return null;
+    }
+
+    // 1. Fetch the animal's details
+    const animal = await Animal.findOne({ id_public: animalId_public }).lean();
+    
+    if (!animal) {
+        // If animal is not found, return a basic node with the known public ID
+        return {
+            id_public: animalId_public,
+            name: `(ID: ${animalId_public})`,
+            gender: 'Unknown',
+            generation: 5 - depth, // Generation 1 is the sire/dam
+            sire: null,
+            dam: null,
+        };
+    }
+
+    // 2. Find the litter where this animal is an offspring
+    const litter = await Litter.findOne({ offspringIds_public: animalId_public }).lean();
+    
+    let sireNode = null;
+    let damNode = null;
+
+    if (litter) {
+        // Recursively fetch the parents' ancestry
+        const nextDepth = depth - 1;
+
+        // Fetch Sire (Father)
+        sireNode = await recursivelyFetchAncestry(litter.sireId_public, nextDepth);
+        
+        // Fetch Dam (Mother)
+        damNode = await recursivelyFetchAncestry(litter.damId_public, nextDepth);
+    }
+    
+    // 3. Construct the current node's data
+    const pedigreeNode = {
+        id_public: animal.id_public,
+        name: `${animal.prefix ? animal.prefix + ' ' : ''}${animal.name}`,
+        gender: animal.gender,
+        birthDate: animal.birthDate,
+        color: animal.color,
+        // Calculate generation based on depth (5 is max depth we support here)
+        generation: 5 - depth, 
+        sire: sireNode,
+        dam: damNode,
+    };
+    
+    return pedigreeNode;
+};
+
+
+/**
+ * Generates a full pedigree chart for a given animal up to 4 generations (5 levels).
+ */
+const generatePedigree = async (appUserId_backend, animalId_backend, generations = 4) => {
+    const maxDepth = Math.min(generations, 4) + 1; // 4 generations is 5 levels (P + 4 ancestors)
+    
+    // 1. Get the starting animal to find its public ID
+    const rootAnimal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
+    
+    // 2. Start the recursive trace
+    const pedigreeTree = await recursivelyFetchAncestry(rootAnimal.id_public, maxDepth);
+
+    return pedigreeTree;
 };
 
 
@@ -302,12 +427,21 @@ module.exports = {
     connectDB,
     registerUser,
     loginUser,
-    updateProfile,
-    searchPublicProfiles,
+    updateUserProfile,
+    getNextSequence,
+    // Animal functions
     addAnimal,
     getUsersAnimals,
+    getAnimalByIdAndUser,
+    updateAnimal, 
     toggleAnimalPublic,
-    getPublicAnimalsByUser,
+    // Public functions
+    getPublicProfile,
+    getPublicAnimalsByOwner,
+    // Litter functions
     addLitter,
-    registerOffspringToLitter
+    getUsersLitters,
+    updateLitter, 
+    // Pedigree function
+    generatePedigree
 };
