@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { addLitter, getUsersLitters } = require('../database/db_service');
+const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service'); // <<< Imported update function
 // The authMiddleware will be passed in from the index.js file
 
 // --- Litter Route Controllers (PROTECTED) ---
@@ -43,6 +43,31 @@ router.get('/', async (req, res) => {
     } catch (error) {
         console.error('Error fetching user litters:', error);
         res.status(500).json({ message: 'Internal server error while fetching litters.' });
+    }
+});
+
+
+// PUT /api/litters/:id_backend
+// 3. Updates an existing litter's record.
+router.put('/:id_backend', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const litterId_backend = req.params.id_backend;
+        const updates = req.body; // Updates object
+
+        const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
+
+        res.status(200).json({
+            message: 'Litter updated successfully!',
+            litter: updatedLitter
+        });
+    } catch (error) {
+        console.error('Error updating litter:', error);
+        // Use 404 if the litter isn't found or doesn't belong to the user
+        if (error.message.includes("not found") || error.message.includes("does not own")) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error during litter update.' });
     }
 });
 
