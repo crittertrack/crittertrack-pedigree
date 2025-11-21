@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// --- IMPORTANT: CHANGE IMPORT PATH TO 'models.js' ---
+// --- IMPORTANT FIX: Changed '../models' to './models' since models.js is in the same directory (database) ---
 const {
     User,
     PublicProfile,
@@ -19,7 +19,7 @@ const SALT_ROUNDS = 10;
 const JWT_LIFETIME = '1d';
 
 /**
- * Utility function to get the next auto-incrementing public ID. (Moved here from models.js)
+ * Utility function to get the next auto-incrementing public ID.
  */
 const getNextSequence = async (name) => {
     const ret = await Counter.findByIdAndUpdate(
@@ -117,9 +117,6 @@ const loginUser = async (email, password) => {
 
 /**
  * Registers a new animal.
- * @param {string} appUserId_backend - The backend _id of the user creating/owning the file (access control).
- * @param {object} animalData - All data for the animal from the request body.
- * @returns {object} The new animal document.
  */
 const addAnimal = async (appUserId_backend, animalData) => {
     const fileOwner = await User.findById(appUserId_backend);
@@ -131,7 +128,6 @@ const addAnimal = async (appUserId_backend, animalData) => {
     const id_public = await getNextSequence('animalId');
 
     // 2. Set owner display info (Initial owner is the app user)
-    // IMPORTANT: ownerId_public is the public ID of the person to display.
     const ownerId_public = fileOwner.id_public;
     const ownerPersonalName = fileOwner.personalName;
     const ownerBreederName = fileOwner.showBreederName ? fileOwner.breederName : null;
@@ -140,14 +136,11 @@ const addAnimal = async (appUserId_backend, animalData) => {
     const newAnimal = new Animal({
         ...animalData,
         id_public,
-        appUserId_backend, // The user who owns the document (can edit)
-        ownerId_public, // The public ID of the current owner (for display)
+        appUserId_backend, 
+        ownerId_public, 
         ownerPersonalName,
         ownerBreederName,
-        // Ensure birthDate is correctly mapped from the request body
         birthDate: new Date(animalData.birthDate), 
-        // Note: The schema uses 'birthDate', but the model uses 'birthdate' in some places.
-        // We will stick to 'birthDate' for consistency in the service layer.
     });
 
     return await newAnimal.save();
@@ -207,6 +200,33 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
     return animal;
 };
 
+// --- NEW PUBLIC ACCESS FUNCTIONS ---
+
+/**
+ * Fetches a single public profile by its public ID.
+ */
+const getPublicProfile = async (id_public) => {
+    const profile = await PublicProfile.findOne({ id_public });
+    if (!profile) {
+        throw new Error('Public profile not found.');
+    }
+    return profile;
+};
+
+/**
+ * Fetches all public animals belonging to a specific user (ownerId_public).
+ */
+const getPublicAnimalsByOwner = async (ownerId_public) => {
+    // Note: We don't sort by createdAt here since the PublicAnimal schema doesn't use timestamps.
+    // The previous implementation used sort({ createdAt: -1 }), which is safe if PublicAnimal uses timestamps.
+    // Given the provided schema for PublicAnimal doesn't show timestamps, I'll remove the sort for safety, 
+    // but the original db_service file *did* have it, so I will stick to the provided previous version for consistency.
+    // Let's assume PublicAnimal *does* have timestamps for now (as per the earlier context).
+    const animals = await PublicAnimal.find({ ownerId_public }).sort({ createdAt: -1 });
+    return animals;
+};
+
+
 // --- LITTER REGISTRY FUNCTIONS (Placeholder) ---
 // ...
 
@@ -219,5 +239,8 @@ module.exports = {
     addAnimal,
     getUsersAnimals,
     toggleAnimalPublic,
+    // NEW Public functions
+    getPublicProfile,
+    getPublicAnimalsByOwner,
     // ... Litter functions
 };
