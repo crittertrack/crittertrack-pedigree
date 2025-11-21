@@ -10,7 +10,7 @@ const {
     PublicAnimal,
     Litter,
     Counter
-} = require('../models'); 
+} = require('./models'); 
 
 // Load environment variables
 const MONGODB_URI = process.env.MONGODB_URI;
