@@ -26,32 +26,32 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // --- CORS Configuration (FINAL FIX) ---
 // 1. Define the specific origins allowed to access this API
 const allowedOrigins = [
-    'http://localhost:3000',       // For local development
-    'https://crittertrack.net',      // The bare custom domain
-    'https://www.crittertrack.net',  // Your confirmed main production domain
-    // Add your default Vercel domain here as a safeguard for preview builds/proxies:
-    // Example: 'https://crittertrack-pedigree.vercel.app', 
+    'http://localhost:3000',            // For local development
+    'https://crittertrack.net',         // Your custom domain (bare)
+    'https://www.crittertrack.net',     // Your custom domain (with www)
+    // CRITICAL: Add the default Vercel domain here (Find this in your Vercel project settings)
+    // Example: 'https://crittertrack-pedigree-app-XXXX.vercel.app', 
 ];
 
 // 2. Configure CORS middleware options
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps) OR if origin is in the allowed list
+        // Allow requests with no origin (like Postman or mobile apps) OR if origin is in the allowed list
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            // Use the more descriptive error message
-            callback(new Error(`CORS policy error: Origin ${origin} not allowed.`));
+            // Log the blocked origin for debugging
+            console.warn(`CORS blocked request from origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true, // IMPORTANT: Allows cookies and Authorization headers (needed for JWT)
-    optionsSuccessStatus: 204
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
+    credentials: true, // IMPORTANT: Allows cookies and Authorization headers (Bearer Token)
+    optionsSuccessStatus: 204 // Status code for successful OPTIONS preflight
 };
 
-// 3. Apply the custom CORS middleware
+// Apply CORS middleware
 app.use(cors(corsOptions));
-// ---------------------------------
 
 // --- General Middleware setup ---
 app.use(express.json());
