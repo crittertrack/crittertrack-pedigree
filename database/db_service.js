@@ -108,8 +108,37 @@ const loginUser = async (email, password) => {
     
     return token;
 };
-// const updateProfile = async (userId, updates) => { /* ... */ };
-// const searchPublicProfiles = async (query) => { /* ... */ };
+
+/**
+ * Updates a user's profile information (private and public records).
+ */
+const updateUserProfile = async (userId_backend, updates) => {
+    // 1. Find and update the private User record
+    const user = await User.findByIdAndUpdate(userId_backend, updates, { 
+        new: true, 
+        runValidators: true 
+    });
+
+    if (!user) {
+        throw new Error("User profile not found.");
+    }
+
+    // 2. Sync necessary fields to the PublicProfile record
+    const publicUpdates = {};
+
+    if (updates.personalName !== undefined) publicUpdates.personalName = updates.personalName;
+    if (updates.profileImage !== undefined) publicUpdates.profileImage = updates.profileImage;
+    if (updates.breederName !== undefined) publicUpdates.breederName = updates.breederName;
+    // Note: showBreederName is handled by public profile, but the private Animal records use the latest setting, 
+    // which would require a complex mass update on animal records that we will skip for now. 
+    // The public profile just displays the name if available.
+    
+    if (Object.keys(publicUpdates).length > 0) {
+        await PublicProfile.findOneAndUpdate({ userId_backend: userId_backend }, publicUpdates);
+    }
+
+    return user;
+};
 
 
 // --- ANIMAL REGISTRY FUNCTIONS ---
@@ -167,6 +196,46 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     }
     return animal;
 };
+
+/**
+ * Updates an existing animal record and optionally syncs the public record.
+ */
+const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
+    // 1. Find and update the animal's private record (must check ownership)
+    const animal = await Animal.findOneAndUpdate(
+        { _id: animalId_backend, appUserId_backend }, 
+        updates, 
+        { new: true, runValidators: true }
+    );
+
+    if (!animal) {
+        throw new Error("Animal not found or user does not own this animal.");
+    }
+
+    // 2. If the animal is public, we must sync the PublicAnimal record
+    if (animal.showOnPublicProfile) {
+        // Only update fields that are exposed in the PublicAnimal schema
+        const publicUpdates = {};
+        if (updates.prefix !== undefined) publicUpdates.prefix = updates.prefix;
+        if (updates.name !== undefined) publicUpdates.name = updates.name;
+        if (updates.gender !== undefined) publicUpdates.gender = updates.gender;
+        if (updates.birthDate !== undefined) publicUpdates.birthDate = updates.birthDate;
+        if (updates.color !== undefined) publicUpdates.color = updates.color;
+        if (updates.coat !== undefined) publicUpdates.coat = updates.coat;
+        
+        // Update optional fields only if they exist in the private document
+        if (animal.remarks && updates.remarks !== undefined) publicUpdates.remarks = updates.remarks;
+        if (animal.geneticCode && updates.geneticCode !== undefined) publicUpdates.geneticCode = updates.geneticCode;
+
+        // Only update if there are fields to update
+        if (Object.keys(publicUpdates).length > 0) {
+            await PublicAnimal.findByIdAndUpdate(animalId_backend, publicUpdates);
+        }
+    }
+    
+    return animal;
+};
+
 
 /**
  * Toggles an animal's visibility on the public profile.
@@ -260,6 +329,25 @@ const getUsersLitters = async (appUserId_backend) => {
     return await Litter.find({ ownerId: appUserId_backend }).sort({ birthDate: -1 });
 };
 
+/**
+ * Updates an existing litter record.
+ */
+const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
+    // 1. Find and update the litter's record (must check ownership)
+    const litter = await Litter.findOneAndUpdate(
+        { _id: litterId_backend, ownerId: appUserId_backend }, 
+        updates, 
+        { new: true, runValidators: true }
+    );
+
+    if (!litter) {
+        throw new Error("Litter not found or user does not own this litter.");
+    }
+    
+    return litter;
+};
+
+
 // --- PEDIGREE FUNCTIONS ---
 
 /**
@@ -274,7 +362,6 @@ const recursivelyFetchAncestry = async (animalId_public, depth) => {
     }
 
     // 1. Fetch the animal's details
-    // Note: We use Animal (private) here since only the user should be generating full pedigrees.
     const animal = await Animal.findOne({ id_public: animalId_public }).lean();
     
     if (!animal) {
@@ -325,10 +412,6 @@ const recursivelyFetchAncestry = async (animalId_public, depth) => {
 
 /**
  * Generates a full pedigree chart for a given animal up to 4 generations (5 levels).
- * @param {string} appUserId_backend - The MongoDB _id of the user.
- * @param {string} animalId_backend - The MongoDB _id of the animal to start the pedigree from.
- * @param {number} generations - The number of generations to trace (max 4).
- * @returns {Promise<object>} - The root pedigree node.
  */
 const generatePedigree = async (appUserId_backend, animalId_backend, generations = 4) => {
     const maxDepth = Math.min(generations, 4) + 1; // 4 generations is 5 levels (P + 4 ancestors)
@@ -337,8 +420,6 @@ const generatePedigree = async (appUserId_backend, animalId_backend, generations
     const rootAnimal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
     
     // 2. Start the recursive trace
-    // We start the recursion at depth=5 for the root animal (generation 0),
-    // and stop at depth=1 (generation 4 ancestors)
     const pedigreeTree = await recursivelyFetchAncestry(rootAnimal.id_public, maxDepth);
 
     return pedigreeTree;
@@ -349,11 +430,13 @@ module.exports = {
     connectDB,
     registerUser,
     loginUser,
+    updateUserProfile, // <<< NEW
     getNextSequence,
     // Animal functions
     addAnimal,
     getUsersAnimals,
-    getAnimalByIdAndUser, // Added for pedigree check
+    getAnimalByIdAndUser,
+    updateAnimal, 
     toggleAnimalPublic,
     // Public functions
     getPublicProfile,
@@ -361,6 +444,7 @@ module.exports = {
     // Litter functions
     addLitter,
     getUsersLitters,
-    // NEW Pedigree function
+    updateLitter, 
+    // Pedigree function
     generatePedigree
 };
