@@ -40,6 +40,69 @@ app.use(cors(corsOptions));
 // --- General Middleware setup ---
 app.use(express.json());
 
+// --- USER AUTHENTICATION ROUTES (REQUIRED FOR LOGIN/REGISTER) ---
+
+// POST /api/public/register (Registration)
+// This must be an unprotected route.
+app.post('/api/public/register', async (req, res) => {
+    try {
+        const { email, password, personalName } = req.body;
+        // NOTE: The frontend sends 'name', but your User model uses 'personalName'.
+        // I will use 'personalName' here, but verify your frontend is sending 'personalName'
+        // or change the frontend to send 'name' and update this destructuring.
+        
+        if (!email || !password || !personalName) {
+            return res.status(400).json({ message: 'All registration fields (email, password, name) are required.' });
+        }
+        
+        // This function is imported from db_service.js
+        const newUser = await registerUser(email, password, personalName);
+        
+        // Successful registration, no token is returned yet, user must log in.
+        res.status(201).json({ 
+            message: 'Registration successful! You may now log in.',
+            userId: newUser.id_public // Optionally return the public ID
+        });
+    } catch (error) {
+        console.error('Error during registration:', error);
+        // Assuming your db_service throws an error when the email already exists
+        if (error.message.includes('E11000') || error.message.includes('email already exists')) {
+            return res.status(409).json({ message: 'Registration failed: A user with this email already exists.' });
+        }
+        res.status(500).json({ message: 'Internal server error during registration.' });
+    }
+});
+
+
+// POST /api/public/login (Login)
+// This must be an unprotected route.
+app.post('/api/public/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required for login.' });
+        }
+
+        // This function is imported from db_service.js and returns { token, userId, personalName }
+        const result = await loginUser(email, password);
+
+        // Success: Return token and basic user info
+        res.status(200).json({
+            message: 'Login successful!',
+            token: result.token,
+            userId: result.userId,
+            personalName: result.personalName
+        });
+    } catch (error) {
+        console.error('Error during login:', error);
+        // Catch invalid credentials error from db_service
+        if (error.message.includes('Invalid credentials')) {
+            return res.status(401).json({ message: 'Login failed: Invalid email or password.' });
+        }
+        res.status(500).json({ message: 'Internal server error during login.' });
+    }
+});
+
 
 // --- CORE AUTHENTICATION MIDDLEWARE ---
 /**
