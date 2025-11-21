@@ -74,15 +74,17 @@ const registerUser = async (userData) => {
 
     // Create public profile immediately
     const publicProfileData = {
-        userId_backend: savedUser._id,
-        id_public: savedUser.id_public,
-        personalName: savedUser.personalName,
-        profileImage: savedUser.profileImage,
-        breederName: savedUser.breederName,
-    };
-    await PublicProfile.create(publicProfileData);
+    userId_backend: savedUser._id,
+    id_public: savedUser.id_public,
+    personalName: savedUser.personalName,
+    profileImage: savedUser.profileImage,
+    breederName: savedUser.breederName,
+    // <--- ADD IT HERE
+    showBreederName: savedUser.showBreederName, // <--- ADD THIS LINE
+};
+await PublicProfile.create(publicProfileData);
 
-    return savedUser;
+return savedUser;
 };
 
 const loginUser = async (email, password) => { 
