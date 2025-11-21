@@ -23,7 +23,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET; 
 
-// --- CORS Configuration (FIXED to allow custom Vercel domain) ---
+// --- CORS Configuration (FINAL FIX) ---
 // 1. Define the specific origins allowed to access this API
 const allowedOrigins = [
     'http://localhost:3000',       // For local development
@@ -40,6 +40,7 @@ const corsOptions = {
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            // Use the more descriptive error message
             callback(new Error(`CORS policy error: Origin ${origin} not allowed.`));
         }
     },
@@ -61,25 +62,29 @@ app.use(express.json());
  * Verifies the JWT token and adds user data (id, email, id_public) to req.user.
  */
 const authMiddleware = (req, res, next) => {
+    // 1. Check for token in the Authorization header (Bearer <token>)
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ message: 'Authentication invalid: No token provided.' });
     }
 
-    const token = authHeader.split(' ')[1]; 
+    const token = authHeader.split(' ')[1]; // Extract the token part
 
     try {
+        // 2. Verify the token using the secret
         const payload = jwt.verify(token, JWT_SECRET);
         
+        // 3. Attach the user's data (from the token) to the request object
         req.user = { 
             id: payload.id, 
             email: payload.email,
             id_public: payload.id_public
         };
         
-        next(); 
+        next(); // Proceed to the route handler
     } catch (error) {
+        // Token is invalid, expired, or tampered with
         return res.status(401).json({ message: 'Authentication failed: Invalid or expired token.' });
     }
 };
@@ -98,6 +103,7 @@ app.post('/api/users/register', async (req, res) => {
             return res.status(400).json({ message: 'Email, password, and personal name are required for registration.' });
         }
         
+        // Check if user already exists
         const existingUser = await mongoose.model('User').findOne({ email }).select('+password');
         if (existingUser) {
             return res.status(409).json({ message: 'This email is already registered.' });
@@ -151,7 +157,9 @@ app.put('/api/users/profile', authMiddleware, async (req, res) => {
         const updates = req.body;
 
         if (updates.password) {
-             // Prevent accidental password change via this route
+             // For security, prevent accidental password change via this route
+             // If a user is changing their password, the database service needs to handle hashing it, 
+             // but we prevent direct insertion here for safety.
              delete updates.password;
         }
 
@@ -192,13 +200,14 @@ app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 
 // --- START SERVER (Uses the safer logic from original index.js) ---
 
-// Define the function that starts everything
+/**
+ * Defines the function that starts the server after successfully connecting to the database.
+ */
 const startServer = async () => {
     try {
         // 1. Connect to the database and AWAIT the result
         const dbUri = process.env.MONGODB_URI;
         if (!dbUri) {
-            // This error is caught if the MONGODB_URI is not set in environment variables
             throw new Error("MONGODB_URI environment variable not found. Cannot connect to database.");
         }
         
