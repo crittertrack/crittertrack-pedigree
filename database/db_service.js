@@ -2,13 +2,12 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// --- IMPORTANT FIX: Changed '../models' to './models' since models.js is in the same directory (database) ---
 const {
     User,
     PublicProfile,
     Animal,
     PublicAnimal,
-    Litter,
+    Litter, // <<< Imported Litter model
     Counter
 } = require('./models'); 
 
@@ -200,7 +199,7 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
     return animal;
 };
 
-// --- NEW PUBLIC ACCESS FUNCTIONS ---
+// --- PUBLIC ACCESS FUNCTIONS ---
 
 /**
  * Fetches a single public profile by its public ID.
@@ -222,8 +221,40 @@ const getPublicAnimalsByOwner = async (ownerId_public) => {
 };
 
 
-// --- LITTER REGISTRY FUNCTIONS (Placeholder) ---
-// ...
+// --- LITTER REGISTRY FUNCTIONS ---
+
+/**
+ * Registers a new litter.
+ * @param {string} appUserId_backend - The MongoDB _id of the user creating the litter.
+ * @param {object} litterData - The data for the new litter.
+ */
+const addLitter = async (appUserId_backend, litterData) => {
+    // 1. Find the user to ensure ownership reference is correct
+    const owner = await User.findById(appUserId_backend);
+    if (!owner) {
+        throw new Error("Owner not found.");
+    }
+
+    // 2. Create the new litter document
+    const newLitter = new Litter({
+        ...litterData,
+        ownerId: appUserId_backend, // Use the MongoDB ObjectId as the owner link
+        birthDate: new Date(litterData.birthDate), // Ensure date fields are correctly formatted
+        pairingDate: litterData.pairingDate ? new Date(litterData.pairingDate) : null,
+        // offspringIds_public is an array of Numbers, which should come directly from the front end if provided.
+    });
+
+    return await newLitter.save();
+};
+
+/**
+ * Gets all litters for the logged-in user.
+ * @param {string} appUserId_backend - The MongoDB _id of the user.
+ */
+const getUsersLitters = async (appUserId_backend) => {
+    // Finds all litters where the ownerId (backend ObjectId) matches the user's ID
+    return await Litter.find({ ownerId: appUserId_backend }).sort({ birthDate: -1 });
+};
 
 module.exports = {
     connectDB,
@@ -234,8 +265,10 @@ module.exports = {
     addAnimal,
     getUsersAnimals,
     toggleAnimalPublic,
-    // NEW Public functions
+    // Public functions
     getPublicProfile,
     getPublicAnimalsByOwner,
-    // ... Litter functions
+    // NEW Litter functions
+    addLitter,
+    getUsersLitters,
 };
