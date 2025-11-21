@@ -1,274 +1,137 @@
+const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const dotenv = require('dotenv');
+const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
-const {
-    User,
-    PublicProfile,
-    Animal,
-    PublicAnimal,
-    Litter, // <<< Imported Litter model
-    Counter
-} = require('./models'); 
+// --- IMPORT ALL REQUIRED FILES ---\n
+const { connectDB, registerUser, loginUser } = require('./database/db_service');
+const animalRoutes = require('./routes/animalRoutes'); 
+const publicRoutes = require('./routes/publicRoutes');
+const litterRoutes = require('./routes/litterRoutes');
+const pedigreeRoutes = require('./routes/pedigreeRoutes'); // <<< NEW IMPORT
 
-// Load environment variables
-const MONGODB_URI = process.env.MONGODB_URI;
-const JWT_SECRET = process.env.JWT_SECRET;
-const SALT_ROUNDS = 10;
-const JWT_LIFETIME = '1d';
+// Load environment variables from .env file (for MONGODB_URI)
+dotenv.config();
 
+// Connect to the database on startup
+connectDB();
+
+const app = express();
+const PORT = process.env.PORT || 8080;
+const JWT_SECRET = process.env.JWT_SECRET; 
+
+// --- Middleware setup ---\n
+app.use(cors());
+app.use(express.json());
+
+// --- CORE AUTHENTICATION MIDDLEWARE ---
 /**
- * Utility function to get the next auto-incrementing public ID.
+ * Verifies the JWT token and adds user data (id, email, id_public) to req.user.
  */
-const getNextSequence = async (name) => {
-    const ret = await Counter.findByIdAndUpdate(
-        { _id: name },
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-    );
-    // If we inserted (upsert: true), the first ID will be 1001, which is correct (default seq is 1000).
-    return ret.seq;
-};
-
-// --- DATABASE CONNECTION ---
-/**
- * Connects to the MongoDB database using the URI from environment variables.
- */
-const connectDB = async () => {
-    if (!MONGODB_URI) {
-        throw new Error("MONGODB_URI not found in environment variables. Cannot connect to database.");
-    }
-    try {
-        await mongoose.connect(MONGODB_URI);
-        console.log('MongoDB connection successful.');
-    } catch (error) {
-        console.error('MongoDB connection failed:', error.message);
-        throw error;
-    }
-};
-
-
-// --- USER REGISTRY FUNCTIONS ---
-
-const registerUser = async (userData) => { 
-    const { email, password, personalName, breederName, profileImage, showBreederName } = userData;
-
-    // Get new public ID for the user
-    const id_public = await getNextSequence('userId');
-
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-    // Create the new user
-    const newUser = new User({
-        id_public,
-        email,
-        password: hashedPassword,
-        personalName,
-        breederName,
-        profileImage,
-        showBreederName
-    });
-
-    const savedUser = await newUser.save();
-
-    // Create public profile immediately
-    const publicProfileData = {
-        userId_backend: savedUser._id,
-        id_public: savedUser.id_public,
-        personalName: savedUser.personalName,
-        profileImage: savedUser.profileImage,
-        breederName: savedUser.breederName,
-    };
-    await PublicProfile.create(publicProfileData);
-
-    return savedUser;
-};
-
-const loginUser = async (email, password) => { 
-    // Find user by email, selecting the password field
-    const user = await User.findOne({ email }).select('+password');
-
-    if (!user) {
-        throw new Error('User not found');
-    }
-
-    // Compare the provided password with the stored hash
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-        throw new Error('Invalid credentials');
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-        { id: user._id, email: user.email, id_public: user.id_public }, 
-        JWT_SECRET, 
-        { expiresIn: JWT_LIFETIME }
-    );
+const authMiddleware = (req, res, next) => {
+    // 1. Check for token in the Authorization header (Bearer <token>)
+    const authHeader = req.headers.authorization;
     
-    return token;
-};
-// const updateProfile = async (userId, updates) => { /* ... */ };
-// const searchPublicProfiles = async (query) => { /* ... */ };
-
-
-// --- ANIMAL REGISTRY FUNCTIONS ---
-
-/**
- * Registers a new animal.
- */
-const addAnimal = async (appUserId_backend, animalData) => {
-    const fileOwner = await User.findById(appUserId_backend);
-    if (!fileOwner) {
-        throw new Error("File owner (app user) not found.");
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'Authentication invalid: No token provided.' });
     }
 
-    // 1. Get new public ID for the animal
-    const id_public = await getNextSequence('animalId');
+    const token = authHeader.split(' ')[1]; // Extract the token part
 
-    // 2. Set owner display info (Initial owner is the app user)
-    const ownerId_public = fileOwner.id_public;
-    const ownerPersonalName = fileOwner.personalName;
-    const ownerBreederName = fileOwner.showBreederName ? fileOwner.breederName : null;
-
-
-    const newAnimal = new Animal({
-        ...animalData,
-        id_public,
-        appUserId_backend, 
-        ownerId_public, 
-        ownerPersonalName,
-        ownerBreederName,
-        birthDate: new Date(animalData.birthDate), 
-    });
-
-    return await newAnimal.save();
-};
-
-/**
- * Gets all animals for the logged-in user (local page).
- */
-const getUsersAnimals = async (appUserId_backend, filters = {}) => {
-    // Queries by the access control ID (appUserId_backend)
-    const query = { appUserId_backend };
-    if (filters.gender) query.gender = filters.gender;
-    if (filters.status) query.status = filters.status;
-
-    return await Animal.find(query).sort({ createdAt: -1 });
-};
-
-/**
- * Toggles an animal's visibility on the public profile.
- */
-const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleData) => {
-    const { makePublic, includeRemarks = false, includeGeneticCode = false } = toggleData;
-
-    // 1. Find and update the animal's private record (must check ownership)
-    const animal = await Animal.findOne({ _id: animalId_backend, appUserId_backend });
-    if (!animal) {
-        throw new Error("Animal not found or user does not own this animal.");
+    try {
+        // 2. Verify the token using the secret
+        const payload = jwt.verify(token, JWT_SECRET);
+        
+        // 3. Attach the user's data (from the token) to the request object
+        // payload.id is the backend _id for the user
+        req.user = payload; 
+        next(); // Proceed to the protected route handler
+    } catch (error) {
+        // Token is invalid (expired, wrong secret, malformed)
+        return res.status(401).json({ message: 'Authentication invalid: Token expired or invalid.' });
     }
+};
 
-    animal.showOnPublicProfile = makePublic;
-    await animal.save(); 
+// --- BASE ROUTE ---
+app.get('/', (req, res) => {
+    res.send('CritterTrack Pedigree API is running.');
+});
 
-    // 2. Sync with PublicAnimal collection
-    if (makePublic) {
-        // Prepare data for public view, including optional fields based on toggleData
-        const publicData = {
-            _id: animal._id, // Set the public document's _id to match the private one
-            id_public: animal.id_public,
-            ownerId_public: animal.ownerId_public,
-            prefix: animal.prefix,
-            name: animal.name,
-            gender: animal.gender,
-            birthDate: animal.birthDate,
-            color: animal.color,
-            coat: animal.coat,
-            // Include optional fields only if toggled
-            remarks: includeRemarks ? animal.remarks : undefined,
-            geneticCode: includeGeneticCode ? animal.geneticCode : undefined,
-        };
+// --- UNPROTECTED ROUTES (Users and Public Data) ---
 
-        // Create or update the public-facing document
-        await PublicAnimal.findOneAndUpdate({ _id: animal._id }, publicData, { upsert: true, new: true });
-    } else {
-        // Remove from public collection
-        await PublicAnimal.findByIdAndDelete(animal._id);
+/**
+ * POST /api/users/register
+ */
+app.post('/api/users/register', async (req, res) => {
+    try {
+        const { email, password, personalName, breederName, profileImage, showBreederName } = req.body;
+
+        if (!email || !password || !personalName) {
+            return res.status(400).json({ message: 'Email, password, and personal name are required.' });
+        }
+
+        // Handle common MongoDB duplicate key error (code 11000) for email uniqueness
+        // Since we removed the manual check, rely on Mongoose error handling
+        const newUser = await registerUser({ email, password, personalName, breederName, profileImage, showBreederName });
+        
+        res.status(201).json({ 
+            message: 'User registered successfully!',
+            id_public: newUser.id_public
+        });
+
+    } catch (error) {
+        // Handle common MongoDB duplicate key error (code 11000) for email uniqueness
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
+            return res.status(409).json({ message: 'This email is already registered.' });
+        }
+
+        console.error('Error during user registration:', error);
+        res.status(500).json({ message: 'Internal server error during registration.' });
     }
-    return animal;
-};
-
-// --- PUBLIC ACCESS FUNCTIONS ---
+});
 
 /**
- * Fetches a single public profile by its public ID.
+ * POST /api/users/login
  */
-const getPublicProfile = async (id_public) => {
-    const profile = await PublicProfile.findOne({ id_public });
-    if (!profile) {
-        throw new Error('Public profile not found.');
+app.post('/api/users/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required for login.' });
+        }
+        
+        const token = await loginUser(email, password); 
+
+        res.status(200).json({ token });
+
+    } catch (error) {
+        if (error.message === 'User not found' || error.message === 'Invalid credentials') {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+        
+        console.error('Error during user login:', error);
+        res.status(500).json({ message: 'Internal server error during login.' });
     }
-    return profile;
-};
+});
 
-/**
- * Fetches all public animals belonging to a specific user (ownerId_public).
- */
-const getPublicAnimalsByOwner = async (ownerId_public) => {
-    const animals = await PublicAnimal.find({ ownerId_public }).sort({ createdAt: -1 });
-    return animals;
-};
+// Mount the PUBLIC routes (NO AUTH MIDDLEWARE)
+app.use('/api/public', publicRoutes); 
+
+// --- PROTECTED ROUTES ---\n
+
+// Mount the Animal routes
+app.use('/api/animals', authMiddleware, animalRoutes);
+
+// Mount the Litter routes
+app.use('/api/litters', authMiddleware, litterRoutes);
+
+// Mount the Pedigree routes
+app.use('/api/pedigree', authMiddleware, pedigreeRoutes); // <<< NEW PROTECTED ROUTE
 
 
-// --- LITTER REGISTRY FUNCTIONS ---
-
-/**
- * Registers a new litter.
- * @param {string} appUserId_backend - The MongoDB _id of the user creating the litter.
- * @param {object} litterData - The data for the new litter.
- */
-const addLitter = async (appUserId_backend, litterData) => {
-    // 1. Find the user to ensure ownership reference is correct
-    const owner = await User.findById(appUserId_backend);
-    if (!owner) {
-        throw new Error("Owner not found.");
-    }
-
-    // 2. Create the new litter document
-    const newLitter = new Litter({
-        ...litterData,
-        ownerId: appUserId_backend, // Use the MongoDB ObjectId as the owner link
-        birthDate: new Date(litterData.birthDate), // Ensure date fields are correctly formatted
-        pairingDate: litterData.pairingDate ? new Date(litterData.pairingDate) : null,
-        // offspringIds_public is an array of Numbers, which should come directly from the front end if provided.
-    });
-
-    return await newLitter.save();
-};
-
-/**
- * Gets all litters for the logged-in user.
- * @param {string} appUserId_backend - The MongoDB _id of the user.
- */
-const getUsersLitters = async (appUserId_backend) => {
-    // Finds all litters where the ownerId (backend ObjectId) matches the user's ID
-    return await Litter.find({ ownerId: appUserId_backend }).sort({ birthDate: -1 });
-};
-
-module.exports = {
-    connectDB,
-    registerUser,
-    loginUser,
-    getNextSequence,
-    // Animal functions
-    addAnimal,
-    getUsersAnimals,
-    toggleAnimalPublic,
-    // Public functions
-    getPublicProfile,
-    getPublicAnimalsByOwner,
-    // NEW Litter functions
-    addLitter,
-    getUsersLitters,
-};
+// --- START SERVER ---
+app.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+});
