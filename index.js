@@ -2,12 +2,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const jwt = require('jsonwebtoken'); // Need jwt for the middleware
+const jwt = require('jsonwebtoken');
 
 // --- IMPORT ALL REQUIRED FILES ---\n
 const { connectDB, registerUser, loginUser } = require('./database/db_service');
 const animalRoutes = require('./routes/animalRoutes'); 
-const publicRoutes = require('./routes/publicRoutes'); // <<< NEW IMPORT
+const publicRoutes = require('./routes/publicRoutes');
+const litterRoutes = require('./routes/litterRoutes'); // <<< NEW IMPORT
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
@@ -115,13 +116,15 @@ app.post('/api/users/login', async (req, res) => {
 });
 
 // Mount the PUBLIC routes (NO AUTH MIDDLEWARE)
-app.use('/api/public', publicRoutes); // <<< PUBLIC ROUTE MOUNTED BEFORE AUTH
+app.use('/api/public', publicRoutes); 
 
 // --- PROTECTED ROUTES ---\n
 
-// Mount the Animal routes and apply the authMiddleware.\n
-// All requests to /api/animals/* will be checked for a valid JWT token first.\n
+// Mount the Animal routes
 app.use('/api/animals', authMiddleware, animalRoutes);
+
+// Mount the Litter routes and apply the authMiddleware
+app.use('/api/litters', authMiddleware, litterRoutes); // <<< NEW PROTECTED ROUTE
 
 
 // --- START SERVER ---
