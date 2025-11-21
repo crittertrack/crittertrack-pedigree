@@ -26,11 +26,11 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // --- CORS Configuration (FINAL FIX) ---
 // 1. Define the specific origins allowed to access this API
 const allowedOrigins = [
-    'http://localhost:3000',            // For local development
-    'https://crittertrack.net',         // Your custom domain (bare)
-    'https://www.crittertrack.net',     // Your custom domain (with www)
-    // CRITICAL: Add the default Vercel domain here (Find this in your Vercel project settings)
-    // Example: 'https://crittertrack-pedigree-app-XXXX.vercel.app', 
+    'http://localhost:3000',                              // Local Development
+    'https://crittertrack.net',                           // Primary Custom Domain
+    'https://www.crittertrack.net',                       // WWW Custom Domain
+    'https://crittertrack.vercel.app',                    // Main Vercel Default
+    'https://crittertrack-git-main-crittertracks-projects.vercel.app', // Main Branch/Staging
 ];
 
 // 2. Configure CORS middleware options
