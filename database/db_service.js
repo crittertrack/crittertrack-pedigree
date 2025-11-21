@@ -33,21 +33,6 @@ const getNextSequence = async (name) => {
 
 // --- DATABASE CONNECTION ---
 /**
- * Connects to the MongoDB database using the URI from environment variables.
->>>>>>> e54e23bccbda3a981838214aaec7a4b7f14055a2
- */
-const getNextSequence = async (name) => {
-    const ret = await Counter.findByIdAndUpdate(
-        { _id: name },
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-    );
-    // If we inserted (upsert: true), the first ID will be 1001, which is correct (default seq is 1000).
-    return ret.seq;
-};
-
-// --- DATABASE CONNECTION ---
-/**
  * Connects to the MongoDB database using the URI passed from index.js.
  * @param {string} uri - The MongoDB connection URI.
  */
