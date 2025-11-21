@@ -23,34 +23,18 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const JWT_SECRET = process.env.JWT_SECRET; 
 
-// --- CORS Configuration (FINAL FIX) ---
-// 1. Define the specific origins allowed to access this API
-const allowedOrigins = [
-    'http://localhost:3000',                              // Local Development
-    'https://crittertrack.net',                           // Primary Custom Domain
-    'https://www.crittertrack.net',                       // WWW Custom Domain
-    'https://crittertrack.vercel.app',                    // Main Vercel Default
-    'https://crittertrack-git-main-crittertracks-projects.vercel.app', // Main Branch/Staging
-];
+// --- CORS Configuration (TEMPORARY WILDCARD TEST) ---
+// WARNING: Do NOT leave this in final production code. It is INSECURE.
 
-// 2. Configure CORS middleware options
 const corsOptions = {
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like Postman or mobile apps) OR if origin is in the allowed list
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            // Log the blocked origin for debugging
-            console.warn(`CORS blocked request from origin: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
-    credentials: true, // IMPORTANT: Allows cookies and Authorization headers (Bearer Token)
-    optionsSuccessStatus: 204 // Status code for successful OPTIONS preflight
+    // TEMPORARILY SETS ORIGIN TO '*' (ALLOWS ALL)
+    origin: '*', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+    credentials: true, // Must remain true for JWT Authorization headers
+    optionsSuccessStatus: 204
 };
 
-// Apply CORS middleware
+// Apply the simplified CORS middleware
 app.use(cors(corsOptions));
 
 // --- General Middleware setup ---
