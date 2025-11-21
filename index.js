@@ -115,7 +115,7 @@ app.post('/api/users/login', async (req, res) => {
 });
 
 // Mount the PUBLIC routes (NO AUTH MIDDLEWARE)
-app.use('/api/public', publicRoutes); // <<< NEW PUBLIC ROUTE
+app.use('/api/public', publicRoutes); // <<< PUBLIC ROUTE MOUNTED BEFORE AUTH
 
 // --- PROTECTED ROUTES ---\n
 
