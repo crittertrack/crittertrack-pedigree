@@ -4,18 +4,22 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const jwt = require('jsonwebtoken'); // Need jwt for the middleware
 
-// --- IMPORT ALL REQUIRED FILES ---
-const { registerUser, loginUser } = require('./database/db_service');
-const animalRoutes = require('./routes/animalRoutes'); // New Animal Routes
+// --- IMPORT ALL REQUIRED FILES ---\n
+const { connectDB, registerUser, loginUser } = require('./database/db_service');
+const animalRoutes = require('./routes/animalRoutes'); 
+const publicRoutes = require('./routes/publicRoutes'); // <<< NEW IMPORT
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
 
+// Connect to the database on startup
+connectDB();
+
 const app = express();
 const PORT = process.env.PORT || 8080;
-const JWT_SECRET = process.env.JWT_SECRET; // Needed for auth middleware
+const JWT_SECRET = process.env.JWT_SECRET; 
 
-// --- Middleware setup ---
+// --- Middleware setup ---\n
 app.use(cors());
 app.use(express.json());
 
@@ -38,65 +42,35 @@ const authMiddleware = (req, res, next) => {
         const payload = jwt.verify(token, JWT_SECRET);
         
         // 3. Attach the user's data (from the token) to the request object
-        // payload.id is the backend _id used for file ownership/access control.
-        req.user = { id: payload.id, email: payload.email, id_public: payload.id_public }; 
-        next(); // Proceed to the next middleware/route handler
-
+        // payload.id is the backend _id for the user
+        req.user = payload; 
+        next(); // Proceed to the protected route handler
     } catch (error) {
-        // Handle token expiration or signature mismatch
-        console.error('JWT Verification Error:', error.message);
+        // Token is invalid (expired, wrong secret, malformed)
         return res.status(401).json({ message: 'Authentication invalid: Token expired or invalid.' });
     }
 };
 
-
-// --- Database Connection ---
-const mongoUri = process.env.MONGODB_URI;
-
-// Check for MongoDB URI before attempting connection
-if (!mongoUri) {
-    console.error('FATAL ERROR: MONGODB_URI environment variable is not set.');
-    process.exit(1);
-}
-
-mongoose.connect(mongoUri)
-    .then(() => {
-        console.log('📦 MongoDB connection successful.');
-        app.listen(PORT, () => {
-            console.log(`🚀 CritterTrack Server is listening on port ${PORT}.`);
-        });
-    })
-    .catch(err => {
-        console.error('❌ MongoDB connection failed:', err.message);
-        process.exit(1);
-    });
-
-// --- API Routes ---
-
-// Health Check / Basic Route
+// --- BASE ROUTE ---
 app.get('/', (req, res) => {
-    res.send('CritterTrack Backend API is running!');
+    res.send('CritterTrack Pedigree API is running.');
 });
 
-// --- PUBLIC ROUTES (User Registration/Login) ---
+// --- UNPROTECTED ROUTES (Users and Public Data) ---
 
 /**
- * POST /api/users/register 
+ * POST /api/users/register
  */
 app.post('/api/users/register', async (req, res) => {
     try {
         const { email, password, personalName, breederName, profileImage, showBreederName } = req.body;
+
         if (!email || !password || !personalName) {
             return res.status(400).json({ message: 'Email, password, and personal name are required.' });
         }
-        
-        // We get the model via mongoose.model('User') since it was registered in models.js
-        const User = mongoose.model('User'); 
-        const existingUser = await User.findOne({ email: email });
-        if (existingUser) {
-            return res.status(409).json({ message: 'This email is already registered.' });
-        }
 
+        // Handle common MongoDB duplicate key error (code 11000) for email uniqueness
+        // Since we removed the manual check, rely on Mongoose error handling
         const newUser = await registerUser({ email, password, personalName, breederName, profileImage, showBreederName });
         
         res.status(201).json({ 
@@ -105,6 +79,11 @@ app.post('/api/users/register', async (req, res) => {
         });
 
     } catch (error) {
+        // Handle common MongoDB duplicate key error (code 11000) for email uniqueness
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
+            return res.status(409).json({ message: 'This email is already registered.' });
+        }
+
         console.error('Error during user registration:', error);
         res.status(500).json({ message: 'Internal server error during registration.' });
     }
@@ -135,9 +114,17 @@ app.post('/api/users/login', async (req, res) => {
     }
 });
 
+// Mount the PUBLIC routes (NO AUTH MIDDLEWARE)
+app.use('/api/public', publicRoutes); // <<< NEW PUBLIC ROUTE
 
-// --- PROTECTED ROUTES ---
+// --- PROTECTED ROUTES ---\n
 
-// Mount the Animal routes and apply the authMiddleware.
-// All requests to /api/animals/* will be checked for a valid JWT token first.
+// Mount the Animal routes and apply the authMiddleware.\n
+// All requests to /api/animals/* will be checked for a valid JWT token first.\n
 app.use('/api/animals', authMiddleware, animalRoutes);
+
+
+// --- START SERVER ---
+app.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+});
