@@ -5,11 +5,16 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
 // --- IMPORT ALL REQUIRED FILES ---\n
-const { connectDB, registerUser, loginUser } = require('./database/db_service');
+const { 
+    connectDB, 
+    registerUser, 
+    loginUser, 
+    updateUserProfile // <<< NEW IMPORT
+} = require('./database/db_service');
 const animalRoutes = require('./routes/animalRoutes'); 
 const publicRoutes = require('./routes/publicRoutes');
 const litterRoutes = require('./routes/litterRoutes');
-const pedigreeRoutes = require('./routes/pedigreeRoutes'); // <<< NEW IMPORT
+const pedigreeRoutes = require('./routes/pedigreeRoutes');
 
 // Load environment variables from .env file (for MONGODB_URI)
 dotenv.config();
@@ -71,8 +76,6 @@ app.post('/api/users/register', async (req, res) => {
             return res.status(400).json({ message: 'Email, password, and personal name are required.' });
         }
 
-        // Handle common MongoDB duplicate key error (code 11000) for email uniqueness
-        // Since we removed the manual check, rely on Mongoose error handling
         const newUser = await registerUser({ email, password, personalName, breederName, profileImage, showBreederName });
         
         res.status(201).json({ 
@@ -121,6 +124,46 @@ app.use('/api/public', publicRoutes);
 
 // --- PROTECTED ROUTES ---\n
 
+/**
+ * PUT /api/users/profile
+ * Updates the logged-in user's profile information.
+ */
+app.put('/api/users/profile', authMiddleware, async (req, res) => {
+    try {
+        const userId_backend = req.user.id;
+        const updates = req.body;
+
+        // Note: Password changes should be handled in a dedicated route, 
+        // but we allow all other fields here.
+        if (updates.password) {
+             delete updates.password; // Prevent accidental password change via this route
+             // If a user is changing their password, the database service needs to handle hashing it, 
+             // but we prevent direct insertion here for safety.
+        }
+
+        const updatedUser = await updateUserProfile(userId_backend, updates);
+
+        res.status(200).json({
+            message: 'Profile updated successfully!',
+            // Return only non-sensitive fields
+            profile: {
+                id_public: updatedUser.id_public,
+                email: updatedUser.email,
+                personalName: updatedUser.personalName,
+                breederName: updatedUser.breederName,
+                profileImage: updatedUser.profileImage,
+                showBreederName: updatedUser.showBreederName,
+            }
+        });
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        if (error.message.includes('not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error during profile update.' });
+    }
+});
+
 // Mount the Animal routes
 app.use('/api/animals', authMiddleware, animalRoutes);
 
@@ -128,7 +171,7 @@ app.use('/api/animals', authMiddleware, animalRoutes);
 app.use('/api/litters', authMiddleware, litterRoutes);
 
 // Mount the Pedigree routes
-app.use('/api/pedigree', authMiddleware, pedigreeRoutes); // <<< NEW PROTECTED ROUTE
+app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 
 
 // --- START SERVER ---
