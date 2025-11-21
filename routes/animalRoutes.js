@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { addAnimal, getUsersAnimals, toggleAnimalPublic } = require('../database/db_service');
+const { 
+    addAnimal, 
+    getUsersAnimals, 
+    updateAnimal, // <<< Imported update function
+    toggleAnimalPublic 
+} = require('../database/db_service');
 // The authMiddleware will be passed in from the index.js file
 
-// --- Animal Route Controllers ---
+// --- Animal Route Controllers (PROTECTED) ---
 
 // POST /api/animals
 // 1. Registers a new animal under the logged-in user.
@@ -44,8 +49,33 @@ router.get('/', async (req, res) => {
 });
 
 
+// PUT /api/animals/:id_backend
+// 3. Updates an existing animal's record.
+router.put('/:id_backend', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const animalId_backend = req.params.id_backend;
+        const updates = req.body; // Updates object
+
+        const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
+
+        res.status(200).json({
+            message: 'Animal updated successfully!',
+            animal: updatedAnimal
+        });
+    } catch (error) {
+        console.error('Error updating animal:', error);
+        // Use 404 if the animal isn't found or doesn't belong to the user
+        if (error.message.includes("not found") || error.message.includes("does not own")) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error during animal update.' });
+    }
+});
+
+
 // PUT /api/animals/:id_backend/toggle
-// 3. Toggles an animal's public visibility.
+// 4. Toggles an animal's public visibility.
 router.put('/:id_backend/toggle', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
@@ -56,7 +86,7 @@ router.put('/:id_backend/toggle', async (req, res) => {
         const updatedAnimal = await toggleAnimalPublic(appUserId_backend, animalId_backend, toggleData);
 
         res.status(200).json({
-            message: `Animal visibility set to ${updatedAnimal.showOnPublicProfile}`,
+            message: `Animal visibility set to ${updatedAnimal.showOnPublicProfile ? 'public' : 'private'}`,
             showOnPublicProfile: updatedAnimal.showOnPublicProfile
         });
     } catch (error) {
@@ -65,7 +95,7 @@ router.put('/:id_backend/toggle', async (req, res) => {
         if (error.message.includes("not found")) {
             return res.status(404).json({ message: error.message });
         }
-        res.status(500).json({ message: 'Internal server error while toggling public status.' });
+        res.status(500).json({ message: 'Internal server error during visibility toggle.' });
     }
 });
 
