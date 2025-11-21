@@ -217,11 +217,6 @@ const getPublicProfile = async (id_public) => {
  * Fetches all public animals belonging to a specific user (ownerId_public).
  */
 const getPublicAnimalsByOwner = async (ownerId_public) => {
-    // Note: We don't sort by createdAt here since the PublicAnimal schema doesn't use timestamps.
-    // The previous implementation used sort({ createdAt: -1 }), which is safe if PublicAnimal uses timestamps.
-    // Given the provided schema for PublicAnimal doesn't show timestamps, I'll remove the sort for safety, 
-    // but the original db_service file *did* have it, so I will stick to the provided previous version for consistency.
-    // Let's assume PublicAnimal *does* have timestamps for now (as per the earlier context).
     const animals = await PublicAnimal.find({ ownerId_public }).sort({ createdAt: -1 });
     return animals;
 };
