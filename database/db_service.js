@@ -18,8 +18,6 @@ const JWT_LIFETIME = '1d';
 
 /**
  * Utility function to get the next auto-incrementing public ID.
-<<<<<<< HEAD
-=======
  */
 const getNextSequence = async (name) => {
     const ret = await Counter.findByIdAndUpdate(
@@ -131,12 +129,11 @@ const updateUserProfile = async (userId_backend, updates) => {
     if (updates.personalName !== undefined) publicUpdates.personalName = updates.personalName;
     if (updates.profileImage !== undefined) publicUpdates.profileImage = updates.profileImage;
     if (updates.breederName !== undefined) publicUpdates.breederName = updates.breederName;
-<<<<<<< HEAD
-=======
+
     // Note: showBreederName is handled by public profile, but the private Animal records use the latest setting, 
     // which would require a complex mass update on animal records that we will skip for now. 
     // The public profile just displays the name if available.
->>>>>>> e54e23bccbda3a981838214aaec7a4b7f14055a2
+
     
     if (Object.keys(publicUpdates).length > 0) {
         await PublicProfile.findOneAndUpdate({ userId_backend: userId_backend }, publicUpdates);
@@ -435,11 +432,7 @@ module.exports = {
     connectDB,
     registerUser,
     loginUser,
-<<<<<<< HEAD
-    updateUserProfile,
-=======
     updateUserProfile, // <<< NEW
->>>>>>> e54e23bccbda3a981838214aaec7a4b7f14055a2
     getNextSequence,
     // Animal functions
     addAnimal,
@@ -456,8 +449,4 @@ module.exports = {
     updateLitter, 
     // Pedigree function
     generatePedigree
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> e54e23bccbda3a981838214aaec7a4b7f14055a2
