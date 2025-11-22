@@ -121,7 +121,9 @@ const loginUser = async (email, password) => {
         { expiresIn: JWT_LIFETIME }
     );
     
-    return token;
+    return { 
+        token: token,
+        userId: user.id_public
 };
 
 /**
