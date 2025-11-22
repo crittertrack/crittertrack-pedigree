@@ -10,7 +10,7 @@ const {
     PublicAnimal,
     Litter,
     Counter
-} = require('../models'); 
+} = require('../models/models'); 
 
 // Load environment variables (Only JWT secret and constants are read here)
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me';
