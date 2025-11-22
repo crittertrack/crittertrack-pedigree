@@ -3,7 +3,7 @@ const router = express.Router();
 const { generatePedigree } = require('../database/db_service');
 // This router requires authMiddleware to be applied in index.js
 
-// --- Pedigree Route Controllers (PROTECTED) ---\
+// --- Pedigree Route Controllers (PROTECTED) ---
 
 // GET /api/pedigree/:animalId_backend
 // 1. Generates and returns a nested pedigree structure for the specified animal.
@@ -23,7 +23,6 @@ router.get('/:animalId_backend', async (req, res) => {
         const pedigreeTree = await generatePedigree(appUserId_backend, animalId_backend, generations);
 
         // This returns the nested object structure suitable for a 4-generation chart.
-        // [Image of Pedigree Chart Data Structure] 
         res.status(200).json(pedigreeTree);
     } catch (error) {
         console.error('Error generating pedigree:', error);
@@ -33,5 +32,6 @@ router.get('/:animalId_backend', async (req, res) => {
         res.status(500).json({ message: 'Internal server error during pedigree generation.' });
     }
 });
+
 
 module.exports = router;
