@@ -113,6 +113,23 @@ const loginUser = async (email, password) => {
 };
 
 /**
+ * Retrieves a user's profile details by their backend (MongoDB) ID, excluding the password.
+ * Used for the protected GET /api/users/profile route.
+ */
+const getUserProfileById = async (userId_backend) => {
+    // Find the user by their backend ID (_id) and explicitly exclude the 'password' field.
+    const user = await User.findById(userId_backend).select('-password');
+
+    if (!user) {
+        throw new Error('User profile not found.');
+    }
+
+    // Returning a Mongoose document (or lean object) that doesn't contain 'password'
+    return user;
+};
+
+
+/**
  * Updates a user's profile information (private and public records).
  */
 const updateUserProfile = async (userId_backend, updates) => {
@@ -412,7 +429,7 @@ const recursivelyFetchAncestry = async (animalId_public, depth) => {
     };
     
     return pedigreeNode;
-}; // <--- THIS WAS THE MISSING CLOSING BRACE '}'
+};
 
 
 /**
@@ -435,6 +452,7 @@ module.exports = {
     connectDB,
     registerUser,
     loginUser,
+    getUserProfileById, // <<< NEW EXPORT
     updateUserProfile, 
     getNextSequence,
     // Animal functions

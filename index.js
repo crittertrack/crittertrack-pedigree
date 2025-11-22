@@ -1,283 +1,214 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+const bodyParser = require('body-parser');
 const cors = require('cors');
+const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 
-// --- IMPORT ALL REQUIRED FILES ---
-const { 
-    connectDB, 
-    registerUser, 
-    loginUser, 
-    updateUserProfile 
-} = require('./database/db_service');
-const animalRoutes = require('./routes/animalRoutes'); 
-const publicRoutes = require('./routes/publicRoutes');
-const litterRoutes = require('./routes/litterRoutes');
-const pedigreeRoutes = require('./routes/pedigreeRoutes');
+// Import database functions and middleware
+const db = require('./db_service');
+const { authMiddleware } = require('./middleware/auth');
 
-// Load environment variables from .env file (for MONGODB_URI, JWT_SECRET)
-dotenv.config();
+// Load environment variables
+require('dotenv').config(); 
+const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI;
 
+// Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 8080;
-const JWT_SECRET = process.env.JWT_SECRET; 
 
-// --- CORS Configuration (TEMPORARY WILDCARD TEST) ---
-// WARNING: Do NOT leave this in final production code. It is INSECURE.
+// --- Middleware Setup ---
+app.use(helmet());
+app.use(cors({
+    origin: '*', // Allow all origins for development, secure this in production
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use(bodyParser.json());
 
-const corsOptions = {
-    // TEMPORARILY SETS ORIGIN TO '*' (ALLOWS ALL)
-    origin: '*', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
-    credentials: true, // Must remain true for JWT Authorization headers
-    optionsSuccessStatus: 204
-};
+// --- Database Connection ---
+db.connectDB(MONGODB_URI)
+    .catch(err => {
+        console.error("Failed to start server due to database connection error:", err);
+        process.exit(1);
+    });
 
-// Apply the simplified CORS middleware
-app.use(cors(corsOptions));
+// --- API Routes ---
+const apiRouter = express.Router();
 
-// --- General Middleware setup ---
-app.use(express.json());
-
-// --- USER AUTHENTICATION ROUTES (REQUIRED FOR LOGIN/REGISTER) ---
-
-// POST /api/public/register (Registration)
-// This must be an unprotected route.
-app.post('/api/public/register', async (req, res) => {
+// Public Routes
+apiRouter.post('/auth/register', async (req, res) => {
     try {
-        const { email, password, personalName } = req.body;
-        
-        // 1. Validation check for required fields
-        if (!email || !password || !personalName) {
-            return res.status(400).json({ message: 'All registration fields (email, password, name) are required.' });
-        }
-        
-        // 2. Pass the ENTIRE request body as the single argument (userData)
-        const newUser = await registerUser(req.body); // <--- THIS IS THE CRITICAL CHANGE
-        
-        // Successful registration, no token is returned yet, user must log in.
+        const user = await db.registerUser(req.body);
+        // Exclude sensitive data from response
+        const { password, ...userWithoutPassword } = user.toObject();
         res.status(201).json({ 
-            message: 'Registration successful! You may now log in.',
-            userId: newUser.id_public // Optionally return the public ID
+            message: 'User registered successfully. Please log in.',
+            userId: user.id_public // Provide the public ID for reference
         });
     } catch (error) {
-        console.error('Error during registration:', error);
-        // Assuming your db_service throws an error when the email already exists
-        if (error.message.includes('E11000') || error.message.includes('email already exists')) {
-            return res.status(409).json({ message: 'Registration failed: A user with this email already exists.' });
-        }
-        res.status(500).json({ message: 'Internal server error during registration.' });
+        console.error('Registration error:', error);
+        res.status(400).json({ message: error.message });
     }
 });
 
-
-// POST /api/public/login (Login)
-// This must be an unprotected route.
-app.post('/api/public/login', async (req, res) => {
+apiRouter.post('/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required for login.' });
-        }
-
-        // 💡 FIX: This function now returns { token, userId }
-        const result = await loginUser(email, password);
-
-        // Success: Return token and userId
-        res.status(200).json({
-            message: 'Login successful!',
-            token: result.token,
-            userId: result.userId,
-            // personalName property removed as it is not returned by db_service.js
-        });
+        const loginResult = await db.loginUser(email, password);
+        res.json(loginResult);
     } catch (error) {
-        console.error('Error during login:', error);
-        // Catch invalid credentials error from db_service
-        if (error.message.includes('Invalid credentials')) {
-            return res.status(401).json({ message: 'Login failed: Invalid email or password.' });
-        }
-        res.status(500).json({ message: 'Internal server error during login.' });
+        console.error('Login error:', error);
+        // Be vague on login errors for security
+        res.status(401).json({ message: 'Invalid credentials' });
+    }
+});
+
+// Protected Route: Get authenticated user's profile
+// NEW ROUTE
+apiRouter.get('/users/profile', authMiddleware, async (req, res) => {
+    try {
+        // req.user.id is the MongoDB _id (backend ID) passed by the authMiddleware
+        const userProfile = await db.getUserProfileById(req.user.id);
+        res.json(userProfile);
+    } catch (error) {
+        console.error('Get profile error:', error.message);
+        res.status(404).json({ message: error.message });
     }
 });
 
 
-// --- CORE AUTHENTICATION MIDDLEWARE ---
-/**
- * Verifies the JWT token and adds user data (id, email, id_public) to req.user.
- */
-const authMiddleware = (req, res, next) => {
-    // 1. Check for token in the Authorization header (Bearer <token>)
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Authentication invalid: No token provided.' });
-    }
-
-    const token = authHeader.split(' ')[1]; // Extract the token part
-
+// Protected Animal Routes
+// POST /api/animals - Add a new animal
+apiRouter.post('/animals', authMiddleware, async (req, res) => {
     try {
-        // 2. Verify the token using the secret
-        const payload = jwt.verify(token, JWT_SECRET);
-        
-        // 3. Attach the user's data (from the token) to the request object
-        req.user = { 
-            id: payload.id, 
-            email: payload.email,
-            id_public: payload.id_public
-        };
-        
-        next(); // Proceed to the route handler
+        const newAnimal = await db.addAnimal(req.user.id, req.body);
+        res.status(201).json(newAnimal);
     } catch (error) {
-        // Token is invalid, expired, or tampered with
-        return res.status(401).json({ message: 'Authentication failed: Invalid or expired token.' });
-    }
-};
-
-
-// --- PUBLIC ROUTES (User Auth/Registration) ---
-
-/**
- * POST /api/users/register
- * NOTE: This seems like a redundant or old route, but we keep it for now.
- */
-app.post('/api/users/register', async (req, res) => {
-    try {
-        const { email, password, personalName, breederName, profileImage, showBreederName } = req.body;
-
-        if (!email || !password || !personalName) {
-            return res.status(400).json({ message: 'Email, password, and personal name are required for registration.' });
-        }
-        
-        // NOTE: The previous version of this route was crashing due to the direct mongoose.model() call.
-        // It has been replaced by the /api/public/register route above. For safety, this route is now
-        // using the simpler (but potentially less safe) logic from the user-provided code, but
-        // it's highly recommended to use the /api/public/register route's logic instead.
-        const existingUser = await mongoose.model('User').findOne({ email }).select('+password');
-        if (existingUser) {
-            return res.status(409).json({ message: 'This email is already registered.' });
-        }
-
-        const newUser = await registerUser({ email, password, personalName, breederName, profileImage, showBreederName });
-        
-        res.status(201).json({ 
-            message: 'User registered successfully!',
-            id_public: newUser.id_public
-        });
-
-    } catch (error) {
-        console.error('Error during user registration:', error);
-        res.status(500).json({ message: 'Internal server error during registration.' });
+        console.error('Add animal error:', error);
+        res.status(400).json({ message: error.message });
     }
 });
 
-/**
- * POST /api/users/login
- * NOTE: This seems like a redundant or old route, but we correct the response for consistency.
- */
-app.post('/api/users/login', async (req, res) => {
+// GET /api/animals - Get all user's animals (with optional filters)
+apiRouter.get('/animals', authMiddleware, async (req, res) => {
     try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required for login.' });
-        }
-        
-        // 💡 FIX: Destructure the returned object (token and userId)
-        const { token, userId } = await loginUser(email, password); 
-
-        // 💡 FIX: Send both token and userId back in the response
-        res.status(200).json({ token, userId });
-
+        const animals = await db.getUsersAnimals(req.user.id, req.query);
+        res.json(animals);
     } catch (error) {
-        if (error.message === 'User not found' || error.message === 'Invalid credentials') {
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
-        
-        console.error('Error during user login:', error);
-        res.status(500).json({ message: 'Internal server error during login.' });
+        console.error('Get animals error:', error);
+        res.status(500).json({ message: error.message });
     }
 });
 
-/**
- * PUT /api/users/profile (PROTECTED)
- * Allows the logged-in user to update their personal and public profile details.
- */
-app.put('/api/users/profile', authMiddleware, async (req, res) => {
+// GET /api/animals/:id - Get a specific animal
+apiRouter.get('/animals/:id', authMiddleware, async (req, res) => {
     try {
-        const userId_backend = req.user.id;
-        const updates = req.body;
-
-        if (updates.password) {
-             // For security, prevent accidental password change via this route
-             // If a user is changing their password, the database service needs to handle hashing it, 
-             // but we prevent direct insertion here for safety.
-             delete updates.password;
-        }
-
-        const updatedUser = await updateUserProfile(userId_backend, updates);
-
-        res.status(200).json({
-            message: 'Profile updated successfully!',
-            // Return only non-sensitive fields
-            profile: {
-                id_public: updatedUser.id_public,
-                email: updatedUser.email,
-                personalName: updatedUser.personalName,
-                breederName: updatedUser.breederName,
-                profileImage: updatedUser.profileImage,
-                showBreederName: updatedUser.showBreederName,
-            }
-        });
+        const animal = await db.getAnimalByIdAndUser(req.user.id, req.params.id);
+        res.json(animal);
     } catch (error) {
-        console.error('Error updating user profile:', error);
-        if (error.message.includes('not found')) {
-            return res.status(404).json({ message: error.message });
-        }
-        res.status(500).json({ message: 'Internal server error during profile update.' });
+        console.error('Get animal by ID error:', error);
+        res.status(404).json({ message: error.message });
+    }
+});
+
+// PUT /api/animals/:id - Update a specific animal
+apiRouter.put('/animals/:id', authMiddleware, async (req, res) => {
+    try {
+        const updatedAnimal = await db.updateAnimal(req.user.id, req.params.id, req.body);
+        res.json(updatedAnimal);
+    } catch (error) {
+        console.error('Update animal error:', error);
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// POST /api/animals/:id/toggle-public - Toggle public visibility
+apiRouter.post('/animals/:id/toggle-public', authMiddleware, async (req, res) => {
+    try {
+        const animal = await db.toggleAnimalPublic(req.user.id, req.params.id, req.body);
+        res.json(animal);
+    } catch (error) {
+        console.error('Toggle public error:', error);
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// Protected Litter Routes
+// POST /api/litters - Add a new litter
+apiRouter.post('/litters', authMiddleware, async (req, res) => {
+    try {
+        const newLitter = await db.addLitter(req.user.id, req.body);
+        res.status(201).json(newLitter);
+    } catch (error) {
+        console.error('Add litter error:', error);
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// GET /api/litters - Get all user's litters
+apiRouter.get('/litters', authMiddleware, async (req, res) => {
+    try {
+        const litters = await db.getUsersLitters(req.user.id);
+        res.json(litters);
+    } catch (error) {
+        console.error('Get litters error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// PUT /api/litters/:id - Update a specific litter
+apiRouter.put('/litters/:id', authMiddleware, async (req, res) => {
+    try {
+        const updatedLitter = await db.updateLitter(req.user.id, req.params.id, req.body);
+        res.json(updatedLitter);
+    } catch (error) {
+        console.error('Update litter error:', error);
+        res.status(400).json({ message: error.message });
+    }
+});
+
+// Protected Pedigree Route
+// GET /api/pedigree/:animalId - Generate pedigree for an animal
+apiRouter.get('/pedigree/:animalId', authMiddleware, async (req, res) => {
+    try {
+        // Use animalId from URL params (backend ID)
+        const pedigreeTree = await db.generatePedigree(req.user.id, req.params.animalId);
+        res.json(pedigreeTree);
+    } catch (error) {
+        console.error('Pedigree generation error:', error);
+        res.status(404).json({ message: error.message });
     }
 });
 
 
-// --- ROUTE MOUNTING ---
-
-// Public-facing routes (no auth required)
-app.use('/api/public', publicRoutes); 
-
-// Protected routes (require authMiddleware)
-app.use('/api/animals', authMiddleware, animalRoutes);
-app.use('/api/litters', authMiddleware, litterRoutes);
-app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
-
-
-// --- START SERVER (Uses the safer logic from original index.js) ---
-
-/**
- * Defines the function that starts the server after successfully connecting to the database.
- */
-const startServer = async () => {
+// Public Profile/Animal Routes
+// GET /api/public/profile/:id_public - Get a breeder's public profile
+apiRouter.get('/public/profile/:id_public', async (req, res) => {
     try {
-        // 1. Connect to the database and AWAIT the result
-        const dbUri = process.env.MONGODB_URI;
-        if (!dbUri) {
-            throw new Error("MONGODB_URI environment variable not found. Cannot connect to database.");
-        }
-        
-        await connectDB(dbUri); 
-        console.log('Database connection successful.'); 
-
-        // 2. Start the Express server only after the DB is ready
-        app.listen(PORT, () => {
-            console.log(`Server is running and listening on port ${PORT}`);
-        });
-
+        const profile = await db.getPublicProfile(req.params.id_public);
+        res.json(profile);
     } catch (error) {
-        // If connectDB fails (e.g., MONGODB_URI missing or connection failed)
-        console.error('FATAL ERROR: Failed to start server due to database connection issue.', error.message);
-        // Exit the process so the application doesn't run without a database
-        process.exit(1); 
+        console.error('Get public profile error:', error);
+        res.status(404).json({ message: error.message });
     }
-};
+});
 
-// Start the sequence
-startServer();
+// GET /api/public/animals/:ownerId_public - Get all public animals for a breeder
+apiRouter.get('/public/animals/:ownerId_public', async (req, res) => {
+    try {
+        const animals = await db.getPublicAnimalsByOwner(req.params.ownerId_public);
+        res.json(animals);
+    } catch (error) {
+        console.error('Get public animals error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+// Apply API router
+app.use('/api', apiRouter);
+
+// Start the server
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
