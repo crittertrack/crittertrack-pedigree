@@ -2,11 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
 
-// --- Public Access Route Controllers (NO AUTH REQUIRED) ---
+// --- Public Access Route Controllers (NO AUTH REQUIRED) ---\
 
 // GET /api/public/profile/:id_public
 // 1. Gets a public profile for display.
-// This route is used to show a user's public profile page (Breeder Name, Profile Image, etc.)
 router.get('/profile/:id_public', async (req, res) => {
     try {
         // Convert the string parameter to a number for querying the id_public field
@@ -33,7 +32,6 @@ router.get('/profile/:id_public', async (req, res) => {
 
 // GET /api/public/animals/:ownerId_public
 // 2. Gets all publicly visible animals belonging to a specific owner.
-// This route is used to populate the list of shared animals on a user's public profile page.
 router.get('/animals/:ownerId_public', async (req, res) => {
     try {
         const ownerId_public = parseInt(req.params.ownerId_public, 10);
@@ -51,6 +49,5 @@ router.get('/animals/:ownerId_public', async (req, res) => {
         res.status(500).json({ message: 'Internal server error while fetching public animals.' });
     }
 });
-
 
 module.exports = router;
