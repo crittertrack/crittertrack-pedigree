@@ -3,12 +3,13 @@ const router = express.Router();
 const { 
     addAnimal, 
     getUsersAnimals, 
-    updateAnimal, // <<< Imported update function
-    toggleAnimalPublic 
+    updateAnimal, 
+    toggleAnimalPublic,
+    getAnimalByIdAndUser // Assuming this helper exists
 } = require('../database/db_service');
-// The authMiddleware will be passed in from the index.js file
+// This router requires authMiddleware to be applied in index.js
 
-// --- Animal Route Controllers (PROTECTED) ---
+// --- Animal Route Controllers (PROTECTED) ---\
 
 // POST /api/animals
 // 1. Registers a new animal under the logged-in user.
@@ -48,9 +49,28 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/animals/:id_backend
+// 3. Gets a single animal by its internal ID for viewing/editing.
+router.get('/:id_backend', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const animalId_backend = req.params.id_backend;
+
+        // Assuming a helper function to ensure ownership
+        const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
+        
+        res.status(200).json(animal);
+    } catch (error) {
+        console.error('Error fetching single animal:', error);
+        if (error.message.includes("not found") || error.message.includes("does not own")) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error while fetching animal.' });
+    }
+});
 
 // PUT /api/animals/:id_backend
-// 3. Updates an existing animal's record.
+// 4. Updates an existing animal's record.
 router.put('/:id_backend', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
@@ -75,7 +95,7 @@ router.put('/:id_backend', async (req, res) => {
 
 
 // PUT /api/animals/:id_backend/toggle
-// 4. Toggles an animal's public visibility.
+// 5. Toggles an animal's public visibility.
 router.put('/:id_backend/toggle', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
@@ -95,9 +115,8 @@ router.put('/:id_backend/toggle', async (req, res) => {
         if (error.message.includes("not found")) {
             return res.status(404).json({ message: error.message });
         }
-        res.status(500).json({ message: 'Internal server error during visibility toggle.' });
+        res.status(500).json({ message: 'Internal server error during public toggle.' });
     }
 });
-
 
 module.exports = router;

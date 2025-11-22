@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service'); // <<< Imported update function
-// The authMiddleware will be passed in from the index.js file
+const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
+// This router requires authMiddleware to be applied in index.js
 
-// --- Litter Route Controllers (PROTECTED) ---
+// --- Litter Route Controllers (PROTECTED) ---\
 
 // POST /api/litters
 // 1. Registers a new litter under the logged-in user.
@@ -70,6 +70,5 @@ router.put('/:id_backend', async (req, res) => {
         res.status(500).json({ message: 'Internal server error during litter update.' });
     }
 });
-
 
 module.exports = router;
