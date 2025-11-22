@@ -51,21 +51,7 @@ const connectDB = async (uri) => { // CHANGED: Now accepts 'uri'
 // --- USER REGISTRY FUNCTIONS ---
 
 const registerUser = async (userData) => { 
-    // FIX 1: Add default values to prevent undefined values from failing Mongoose validation
-    const { 
-        email, 
-        password, 
-        personalName, 
-        breederName = null,         // New default
-        profileImage = null,        // New default
-        showBreederName = false     // New default
-    } = userData;
-
-    // Check for existing user
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        throw new Error('Email already exists'); 
-    }
+    const { email, password, personalName, breederName, profileImage, showBreederName } = userData;
 
     // Get new public ID for the user
     const id_public = await getNextSequence('userId');
@@ -93,7 +79,6 @@ const registerUser = async (userData) => {
         personalName: savedUser.personalName,
         profileImage: savedUser.profileImage,
         breederName: savedUser.breederName,
-        showBreederName: savedUser.showBreederName, // FIX 2: THIS LINE WAS MISSING/CRITICAL
     };
     await PublicProfile.create(publicProfileData);
 
@@ -121,9 +106,11 @@ const loginUser = async (email, password) => {
         { expiresIn: JWT_LIFETIME }
     );
     
+    // FIX: Return an object with token and the public user ID
     return { 
         token: token,
-        userId: user.id_public
+        userId: user.id_public 
+    };
 };
 
 /**
@@ -426,7 +413,7 @@ const recursivelyFetchAncestry = async (animalId_public, depth) => {
     };
     
     return pedigreeNode;
-};
+}; // <--- THIS WAS THE MISSING CLOSING BRACE '}'
 
 
 /**
@@ -449,7 +436,7 @@ module.exports = {
     connectDB,
     registerUser,
     loginUser,
-    updateUserProfile, // <<< NEW
+    updateUserProfile, 
     getNextSequence,
     // Animal functions
     addAnimal,
