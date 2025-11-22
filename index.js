@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 
 // Import database functions and middleware
-const db = require('./db_service');
+const db = require('./database/db_service')
 const { authMiddleware } = require('./middleware/auth');
 
 // Load environment variables
