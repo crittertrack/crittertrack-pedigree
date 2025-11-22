@@ -72,7 +72,6 @@ const registerUser = async (userData) => {
 
     const savedUser = await newUser.save();
 
-    // Create public profile immediately
     const publicProfileData = {
         userId_backend: savedUser._id,
         id_public: savedUser.id_public,
