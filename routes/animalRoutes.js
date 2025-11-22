@@ -5,11 +5,13 @@ const {
     getUsersAnimals, 
     updateAnimal, 
     toggleAnimalPublic,
-    getAnimalByIdAndUser // Assuming this helper exists
+    getAnimalByIdAndUser, // Assuming this helper exists
+    deleteAnimal // Assuming this helper exists
 } = require('../database/db_service');
 // This router requires authMiddleware to be applied in index.js
 
-// --- Animal Route Controllers (PROTECTED) ---\
+
+// --- Animal Route Controllers (PROTECTED) ---
 
 // POST /api/animals
 // 1. Registers a new animal under the logged-in user.
@@ -18,6 +20,11 @@ router.post('/', async (req, res) => {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
         const animalData = req.body;
+
+        // Basic validation for required fields
+        if (!animalData.name || !animalData.species) {
+             return res.status(400).json({ message: 'Missing required animal fields: name and species.' });
+        }
 
         const newAnimal = await addAnimal(appUserId_backend, animalData);
 
@@ -49,25 +56,27 @@ router.get('/', async (req, res) => {
     }
 });
 
+
 // GET /api/animals/:id_backend
-// 3. Gets a single animal by its internal ID for viewing/editing.
+// 3. Gets a single animal's private details.
 router.get('/:id_backend', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.params.id_backend;
 
-        // Assuming a helper function to ensure ownership
-        const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
-        
+        // Uses a helper that also checks ownership
+        const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend); 
+
         res.status(200).json(animal);
     } catch (error) {
         console.error('Error fetching single animal:', error);
-        if (error.message.includes("not found") || error.message.includes("does not own")) {
+        if (error.message.includes("not found") || error.message.includes("does not belong to user")) {
             return res.status(404).json({ message: error.message });
         }
-        res.status(500).json({ message: 'Internal server error while fetching animal.' });
+        res.status(500).json({ message: 'Internal server error while fetching animal details.' });
     }
 });
+
 
 // PUT /api/animals/:id_backend
 // 4. Updates an existing animal's record.
@@ -118,5 +127,26 @@ router.put('/:id_backend/toggle', async (req, res) => {
         res.status(500).json({ message: 'Internal server error during public toggle.' });
     }
 });
+
+
+// DELETE /api/animals/:id_backend
+// 6. Deletes an animal from the user's collection.
+router.delete('/:id_backend', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const animalId_backend = req.params.id_backend;
+
+        await deleteAnimal(appUserId_backend, animalId_backend);
+
+        res.status(200).json({ message: 'Animal deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting animal:', error);
+        if (error.message.includes("not found") || error.message.includes("does not own")) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error during animal deletion.' });
+    }
+});
+
 
 module.exports = router;

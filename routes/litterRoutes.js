@@ -3,7 +3,7 @@ const router = express.Router();
 const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
 // This router requires authMiddleware to be applied in index.js
 
-// --- Litter Route Controllers (PROTECTED) ---\
+// --- Litter Route Controllers (PROTECTED) ---
 
 // POST /api/litters
 // 1. Registers a new litter under the logged-in user.
@@ -14,8 +14,8 @@ router.post('/', async (req, res) => {
         const litterData = req.body;
 
         // Basic validation for required fields
-        if (!litterData.sireId_public || !litterData.damId_public || !litterData.birthDate || litterData.numberBorn === undefined) {
-             return res.status(400).json({ message: 'Missing required litter fields: sireId, damId, birthDate, and numberBorn.' });
+        if (!litterData.birthDate || litterData.numberBorn === undefined) {
+             return res.status(400).json({ message: 'Missing required litter fields: birthDate, and numberBorn.' });
         }
 
         const newLitter = await addLitter(appUserId_backend, litterData);
@@ -70,5 +70,8 @@ router.put('/:id_backend', async (req, res) => {
         res.status(500).json({ message: 'Internal server error during litter update.' });
     }
 });
+
+// TODO: Add DELETE /api/litters/:id_backend for deleting a litter
+
 
 module.exports = router;

@@ -2,18 +2,18 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
-const jwt = require('jsonwebtoken'); // <-- Required for inlined Auth Middleware
+const jwt = require('jsonwebtoken'); // <-- REQUIRED for inlined Auth Middleware
 require('dotenv').config();
 
-// Database Connection Service and Controllers
+// Database Connection Service and User Profile Controllers
 const { 
     connectDB, 
     getUserProfileById, 
-    updateUserProfile
-    // registerUser and loginUser are now imported by authRoutes
+    updateUserProfile,
 } = require('./database/db_service'); 
 
-// --- Route Imports (Assumes routes/authRoutes.js now exists) ---
+// --- Route Imports (Using existing folders: routes, database) ---
+// Note: There is NO require for './middleware/auth' here.
 const authRoutes = require('./routes/authRoutes'); 
 const animalRoutes = require('./routes/animalRoutes');
 const litterRoutes = require('./routes/litterRoutes');
@@ -24,11 +24,10 @@ const publicRoutes = require('./routes/publicRoutes');
 const app = express();
 
 // --- Global Constants for Auth ---
-// Ensure this secret is set in your .env file
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me';
 
 
-// --- INLINED AUTH MIDDLEWARE (Resolves MODULE_NOT_FOUND) ---
+// --- INLINED AUTH MIDDLEWARE (FIXED: Resolves MODULE_NOT_FOUND) ---
 /**
  * Middleware function to verify JWT token.
  * It expects the token in the 'Authorization' header as 'Bearer [token]'.
@@ -120,6 +119,7 @@ app.put('/api/users/profile', authMiddleware, async (req, res) => {
 });
 
 // Main Data Routes (Require authMiddleware)
+// The middleware is applied here, before the router handles the request
 app.use('/api/animals', authMiddleware, animalRoutes);
 app.use('/api/litters', authMiddleware, litterRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
