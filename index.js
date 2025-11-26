@@ -121,6 +121,21 @@ app.use('/api/auth', authRoutes);
 // Public Data Routes
 app.use('/api/public', publicRoutes);
 
+// Temporary diagnostic endpoint: list files in uploads directory
+app.get('/api/uploads/list', (req, res) => {
+    try {
+        const files = fs.readdirSync(uploadsDir || path.join(__dirname, 'uploads'));
+        const fileInfos = files.map(f => ({
+            filename: f,
+            url: `${req.protocol}://${req.get('host')}/uploads/${f}`
+        }));
+        res.json({ files: fileInfos });
+    } catch (err) {
+        console.error('Failed to list uploads:', err.message);
+        res.status(500).json({ message: 'Failed to list uploads', error: err.message });
+    }
+});
+
 
 // --- PROTECTED Routes (Requires JWT token - using the inlined middleware) ---
 
