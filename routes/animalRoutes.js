@@ -14,7 +14,9 @@ const storage = multer.diskStorage({
         cb(null, name);
     }
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+// Allow somewhat larger uploads (10MB) to avoid hard failures for slightly larger images.
+// Client-side compression is preferred; server accepts up to 10MB per file here.
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 const { 
     addAnimal, 

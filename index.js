@@ -100,7 +100,9 @@ const storage = multer.diskStorage({
         cb(null, name);
     }
 });
-const uploadSingle = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+// Accept files up to 10MB by default for multipart profile uploads. Client-side
+// compression is still recommended to reduce bandwidth and storage usage.
+const uploadSingle = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // --- Database Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -189,10 +191,20 @@ app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 
 
 // --- Error Handling Middleware ---
+// Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error(err && err.stack ? err.stack : err);
+    // Multer file size exceeded
+    if (err && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ message: 'Uploaded file is too large. Please use a smaller image or allow the client to compress images before upload.' });
+    }
+    // Other Multer errors
+    if (err && err.name === 'MulterError') {
+        return res.status(400).json({ message: err.message || 'File upload error.' });
+    }
+
     // Send a generic 500 status response for unhandled errors
-    res.status(500).send({ message: 'Something broke on the server!', error: err.message });
+    res.status(500).send({ message: 'Something broke on the server!', error: err && err.message ? err.message : String(err) });
 });
 
 
