@@ -22,6 +22,8 @@ const publicRoutes = require('./routes/publicRoutes');
 
 
 const app = express();
+// Trust proxy headers so req.protocol reflects the front-facing protocol (useful on Railway)
+app.set('trust proxy', true);
 
 // --- Global Constants for Auth ---
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me';
@@ -157,11 +159,18 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
 
         // If a file was uploaded as part of multipart, map it to profileImage URL
         if (req.file) {
-            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            // Prefer X-Forwarded-Proto when behind proxies (trust proxy must be enabled)
+            const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+            const fileUrl = `${proto}://${req.get('host')}/uploads/${req.file.filename}`;
             updates.profileImage = fileUrl;
         } else {
             // Normalize common incoming JSON keys to profileImage
             updates.profileImage = updates.profileImage || updates.profileImageUrl || updates.imageUrl || updates.avatarUrl || updates.profile_image || undefined;
+        }
+
+        // Ensure stored URLs use HTTPS to avoid browser mixed-content issues
+        if (updates.profileImage && typeof updates.profileImage === 'string' && updates.profileImage.startsWith('http://')) {
+            updates.profileImage = updates.profileImage.replace(/^http:\/\//i, 'https://');
         }
 
         const updatedUser = await updateUserProfile(req.user.id, updates);
