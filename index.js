@@ -71,6 +71,11 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(bodyParser.json());
+// Set Cross-Origin-Resource-Policy to allow cross-origin embedding of uploaded assets
+app.use((req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+});
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
