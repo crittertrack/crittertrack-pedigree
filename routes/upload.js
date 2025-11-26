@@ -11,35 +11,35 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_cha
 // for maintenance (removing orphaned uploads). It does not perform
 // ownership checks and should be used carefully.
 router.delete('/:filename', (req, res) => {
-    try {
-        const authHeader = req.header('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'Authorization required.' });
-        }
-        const token = authHeader.replace('Bearer ', '');
-        try {
-            jwt.verify(token, JWT_SECRET);
-        } catch (err) {
-            return res.status(401).json({ message: 'Invalid or expired token.' });
-        }
-
-        const filename = req.params.filename;
-        if (!filename || filename.includes('..') || filename.includes('/')) {
-            return res.status(400).json({ message: 'Invalid filename.' });
-        }
-
-        const uploadsDir = path.join(__dirname, '..', 'uploads');
-        const filePath = path.join(uploadsDir, filename);
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ message: 'File not found.' });
-        }
-
-        fs.unlinkSync(filePath);
-        return res.json({ message: 'File deleted.' });
-    } catch (err) {
-        console.error('Failed to delete upload:', err && err.stack ? err.stack : err);
-        return res.status(500).json({ message: 'Failed to delete file.' });
+  try {
+    const authHeader = req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Authorization required.' });
     }
+    const token = authHeader.replace('Bearer ', '');
+    try {
+      jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ message: 'Invalid or expired token.' });
+    }
+
+    const filename = req.params.filename;
+    if (!filename || filename.includes('..') || filename.includes('/')) {
+      return res.status(400).json({ message: 'Invalid filename.' });
+    }
+
+    const uploadsDir = path.join(__dirname, '..', 'uploads');
+    const filePath = path.join(uploadsDir, filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found.' });
+    }
+
+    fs.unlinkSync(filePath);
+    return res.json({ message: 'File deleted.' });
+  } catch (err) {
+    console.error('Failed to delete upload:', err && err.stack ? err.stack : err);
+    return res.status(500).json({ message: 'Failed to delete file.' });
+  }
 });
 
 module.exports = router;
