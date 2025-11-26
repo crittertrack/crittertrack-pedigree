@@ -1,5 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+// simple disk storage for images (adjust for S3 in production)
+const uploadDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname) || '';
+        const name = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
+        cb(null, name);
+    }
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+
 const { 
     addAnimal, 
     getUsersAnimals, 
@@ -15,11 +31,18 @@ const {
 
 // POST /api/animals
 // 1. Registers a new animal under the logged-in user.
-router.post('/', async (req, res) => {
+// Accepts optional multipart file field `file` and will set `imageUrl` automatically.
+router.post('/', upload.single('file'), async (req, res) => {
     try {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
-        const animalData = req.body;
+        const animalData = req.body || {};
+
+        // If a file was uploaded via multipart, attach a public URL
+        if (req.file) {
+            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            animalData.imageUrl = fileUrl;
+        }
 
         // Basic validation for required fields
         if (!animalData.name || !animalData.species) {
@@ -80,11 +103,17 @@ router.get('/:id_backend', async (req, res) => {
 
 // PUT /api/animals/:id_backend
 // 4. Updates an existing animal's record.
-router.put('/:id_backend', async (req, res) => {
+// Accepts optional multipart file field `file` and will set `imageUrl` automatically.
+router.put('/:id_backend', upload.single('file'), async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.params.id_backend;
-        const updates = req.body; // Updates object
+        const updates = req.body || {};
+
+        if (req.file) {
+            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            updates.imageUrl = fileUrl;
+        }
 
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
 
