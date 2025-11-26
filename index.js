@@ -91,6 +91,10 @@ app.use('/uploads', express.static(uploadsDir));
 const uploadRouter = require('./routes/upload');
 app.use('/api/upload', uploadRouter);
 
+// Admin routes (protected by authMiddleware and restricted by ADMIN_USER_ID)
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', authMiddleware, adminRoutes);
+
 // Multer instance for optional multipart handling on profile route
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
