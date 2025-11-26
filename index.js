@@ -100,9 +100,9 @@ const storage = multer.diskStorage({
         cb(null, name);
     }
 });
-// Accept files up to 10MB by default for multipart profile uploads. Client-side
-// compression is still recommended to reduce bandwidth and storage usage.
-const uploadSingle = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+// Enforce server-side upload limit to 500KB per file. Client-side compression
+// should reduce images below this threshold before upload.
+const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 } });
 
 // --- Database Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -196,7 +196,7 @@ app.use((err, req, res, next) => {
     console.error(err && err.stack ? err.stack : err);
     // Multer file size exceeded
     if (err && err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ message: 'Uploaded file is too large. Please use a smaller image or allow the client to compress images before upload.' });
+        return res.status(413).json({ message: 'Uploaded file exceeds 500KB limit. Please compress the image (client will attempt compression automatically) or choose a smaller file.' });
     }
     // Other Multer errors
     if (err && err.name === 'MulterError') {
