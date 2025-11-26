@@ -34,6 +34,38 @@ const {
     getAnimalByIdAndUser, // Assuming this helper exists
     deleteAnimal // Assuming this helper exists
 } = require('../database/db_service');
+
+// Resolve internal Animal _id when routes receive either a backend ObjectId
+// or a numeric public id (id_public). This avoids Mongoose CastError when
+// the client passes a public id like "4" instead of the 24-char ObjectId.
+const { Animal } = require('../database/models');
+
+router.param('id_backend', async (req, res, next, value) => {
+    try {
+        // If the param already looks like a MongoDB ObjectId, accept it
+        if (/^[0-9a-fA-F]{24}$/.test(value)) {
+            req.resolvedAnimalId = value;
+            return next();
+        }
+
+        // If it's numeric, treat as id_public and resolve to internal _id
+        if (/^\d+$/.test(value)) {
+            // Need the user id to scope the lookup; if not available yet, defer
+            const appUserId_backend = req.user && req.user.id;
+            if (!appUserId_backend) {
+                return res.status(400).json({ message: 'User context required to resolve animal id.' });
+            }
+            const animal = await Animal.findOne({ id_public: Number(value), ownerId: appUserId_backend }).select('_id').lean();
+            if (!animal) return res.status(404).json({ message: 'Animal not found.' });
+            req.resolvedAnimalId = animal._id.toString();
+            return next();
+        }
+
+        return res.status(400).json({ message: 'Invalid animal id format.' });
+    } catch (err) {
+        next(err);
+    }
+});
 // This router requires authMiddleware to be applied in index.js
 
 
@@ -67,8 +99,14 @@ router.post('/', upload.single('file'), async (req, res) => {
             animalId_backend: newAnimal._id
         });
     } catch (error) {
-        console.error('Error registering animal:', error);
-        res.status(500).json({ message: 'Internal server error during animal registration.' });
+        console.error('Error registering animal:', error && error.stack ? error.stack : error);
+        if (error && error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ message: 'Uploaded file exceeds 500KB limit.' });
+        }
+        if (error && error.message === 'INVALID_FILE_TYPE') {
+            return res.status(415).json({ message: 'Unsupported file type. Only PNG and JPEG images are allowed.' });
+        }
+        res.status(500).json({ message: 'Internal server error during animal registration.', error: error && error.message ? error.message : String(error) });
     }
 });
 
@@ -95,10 +133,10 @@ router.get('/', async (req, res) => {
 router.get('/:id_backend', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
-        const animalId_backend = req.params.id_backend;
+        const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
 
         // Uses a helper that also checks ownership
-        const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend); 
+        const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
 
         res.status(200).json(animal);
     } catch (error) {
@@ -117,7 +155,7 @@ router.get('/:id_backend', async (req, res) => {
 router.put('/:id_backend', upload.single('file'), async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
-        const animalId_backend = req.params.id_backend;
+        const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
 
         if (req.file) {
@@ -132,12 +170,21 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             animal: updatedAnimal
         });
     } catch (error) {
-        console.error('Error updating animal:', error);
+        console.error('Error updating animal:', error && error.stack ? error.stack : error);
+        // Multer file size exceed or invalid file handling
+        if (error && error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ message: 'Uploaded file exceeds 500KB limit.' });
+        }
+        if (error && error.message === 'INVALID_FILE_TYPE') {
+            return res.status(415).json({ message: 'Unsupported file type. Only PNG and JPEG images are allowed.' });
+        }
         // Use 404 if the animal isn't found or doesn't belong to the user
-        if (error.message.includes("not found") || error.message.includes("does not own")) {
+        if (error && (error.message.includes("not found") || error.message.includes("does not own"))) {
             return res.status(404).json({ message: error.message });
         }
-        res.status(500).json({ message: 'Internal server error during animal update.' });
+
+        // Return error message to assist debugging (remove in production)
+        res.status(500).json({ message: 'Internal server error during animal update.', error: error && error.message ? error.message : String(error) });
     }
 });
 
@@ -147,7 +194,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
 router.put('/:id_backend/toggle', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
-        const animalId_backend = req.params.id_backend;
+        const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         // Expected body: { makePublic: true, includeRemarks: false, includeGeneticCode: true }
         const toggleData = req.body; 
 
@@ -173,7 +220,7 @@ router.put('/:id_backend/toggle', async (req, res) => {
 router.delete('/:id_backend', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
-        const animalId_backend = req.params.id_backend;
+        const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
 
         await deleteAnimal(appUserId_backend, animalId_backend);
 
