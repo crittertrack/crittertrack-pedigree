@@ -15,8 +15,16 @@ const storage = multer.diskStorage({
     }
 });
 // Enforce a strict server-side per-file upload limit to protect payload size.
-// Client compresses images before upload; server will reject files larger than 500KB.
-const upload = multer({ storage, limits: { fileSize: 500 * 1024 } });
+// Also restrict accepted file types to PNG/JPEG only.
+const imageFileFilter = (req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    const err = new Error('INVALID_FILE_TYPE');
+    err.status = 415;
+    return cb(err, false);
+};
+
+const upload = multer({ storage, limits: { fileSize: 500 * 1024 }, fileFilter: imageFileFilter });
 
 const { 
     addAnimal, 
