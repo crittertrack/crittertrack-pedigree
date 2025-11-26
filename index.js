@@ -87,7 +87,20 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
-// Mount the upload route (returns { url })
+// Provide a guarded upload endpoint that enforces file type and size server-side
+app.post('/api/upload', uploadSingle.single('file'), (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+        const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+        const fileUrl = `${proto}://${req.get('host')}/uploads/${req.file.filename}`;
+        return res.json({ url: fileUrl, filename: req.file.filename });
+    } catch (err) {
+        console.error('Upload endpoint error:', err && err.message ? err.message : err);
+        return res.status(500).json({ message: 'Upload failed' });
+    }
+});
+
+// Mount the existing upload router as a fallback for other upload-related routes
 const uploadRouter = require('./routes/upload');
 app.use('/api/upload', uploadRouter);
 
@@ -102,7 +115,17 @@ const storage = multer.diskStorage({
 });
 // Enforce server-side upload limit to 500KB per file. Client-side compression
 // should reduce images below this threshold before upload.
-const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 } });
+// Only accept PNG and JPEG/JPG files server-side
+const imageFileFilter = (req, file, cb) => {
+    const allowed = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (allowed.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('INVALID_FILE_TYPE'));
+    }
+};
+
+const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 }, fileFilter: imageFileFilter });
 
 // --- Database Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -197,6 +220,10 @@ app.use((err, req, res, next) => {
     // Multer file size exceeded
     if (err && err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({ message: 'Uploaded file exceeds 500KB limit. Please compress the image (client will attempt compression automatically) or choose a smaller file.' });
+    }
+    // Invalid file type from multer fileFilter
+    if (err && err.message === 'INVALID_FILE_TYPE') {
+        return res.status(415).json({ message: 'Unsupported file type. Only PNG and JPEG images are allowed.' });
     }
     // Other Multer errors
     if (err && err.name === 'MulterError') {
