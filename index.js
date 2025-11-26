@@ -71,6 +71,29 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(bodyParser.json());
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure uploads directory exists and serve it statically
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
+
+// Mount the upload route (returns { url })
+const uploadRouter = require('./routes/upload');
+app.use('/api/upload', uploadRouter);
+
+// Multer instance for optional multipart handling on profile route
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname) || '';
+        const name = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
+        cb(null, name);
+    }
+});
+const uploadSingle = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // --- Database Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -107,9 +130,20 @@ app.get('/api/users/profile', authMiddleware, async (req, res) => {
     }
 });
 
-app.put('/api/users/profile', authMiddleware, async (req, res) => {
+app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'), async (req, res) => {
     try {
-        const updates = req.body;
+        // Accept either JSON body or multipart upload (profileImage)
+        const updates = req.body || {};
+
+        // If a file was uploaded as part of multipart, map it to profileImage URL
+        if (req.file) {
+            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            updates.profileImage = fileUrl;
+        } else {
+            // Normalize common incoming JSON keys to profileImage
+            updates.profileImage = updates.profileImage || updates.profileImageUrl || updates.imageUrl || updates.avatarUrl || updates.profile_image || undefined;
+        }
+
         const updatedUser = await updateUserProfile(req.user.id, updates);
         res.json({ message: 'Profile updated successfully!', user: updatedUser });
     } catch (error) {
