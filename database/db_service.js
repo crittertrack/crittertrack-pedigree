@@ -211,26 +211,31 @@ const addAnimal = async (appUserId_backend, animalData) => {
     };
 
     try {
-        // Father
-        if (!animalData.father) {
-            const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public;
+        // Map parent aliases to schema fields: the schema uses sireId_public/damId_public
+        // Accept frontend aliases like fatherId_public / fatherId / father_id and map them
+        if (!animalData.sireId_public) {
+            const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public || animalData.sireId_public;
             if (candidate) {
                 const resolved = await resolveParentPublicToBackend(candidate);
                 if (resolved) {
-                    animalData.father = resolved.backendId;
-                    animalData.fatherId_public = resolved.id_public;
+                    animalData.sireId_public = resolved.id_public;
+                } else {
+                    // If candidate is numeric public id but not owned by user, still set numeric if provided
+                    const num = Number(candidate);
+                    if (!Number.isNaN(num)) animalData.sireId_public = num;
                 }
             }
         }
 
-        // Mother
-        if (!animalData.mother) {
-            const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public;
+        if (!animalData.damId_public) {
+            const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public || animalData.damId_public;
             if (candidateM) {
                 const resolvedM = await resolveParentPublicToBackend(candidateM);
                 if (resolvedM) {
-                    animalData.mother = resolvedM.backendId;
-                    animalData.motherId_public = resolvedM.id_public;
+                    animalData.damId_public = resolvedM.id_public;
+                } else {
+                    const numM = Number(candidateM);
+                    if (!Number.isNaN(numM)) animalData.damId_public = numM;
                 }
             }
         }
@@ -299,24 +304,29 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     };
 
     try {
-        if (!updates.father) {
-            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public;
+        // Map parent alias fields to schema's sireId_public/damId_public
+        if (!updates.sireId_public) {
+            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public || updates.sireId_public;
             if (candidate) {
                 const resolved = await resolveParentPublicToBackend(candidate);
                 if (resolved) {
-                    updates.father = resolved.backendId;
-                    updates.fatherId_public = resolved.id_public;
+                    updates.sireId_public = resolved.id_public;
+                } else {
+                    const num = Number(candidate);
+                    if (!Number.isNaN(num)) updates.sireId_public = num;
                 }
             }
         }
 
-        if (!updates.mother) {
-            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public;
+        if (!updates.damId_public) {
+            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public || updates.damId_public;
             if (candidateM) {
                 const resolvedM = await resolveParentPublicToBackend(candidateM);
                 if (resolvedM) {
-                    updates.mother = resolvedM.backendId;
-                    updates.motherId_public = resolvedM.id_public;
+                    updates.damId_public = resolvedM.id_public;
+                } else {
+                    const numM = Number(candidateM);
+                    if (!Number.isNaN(numM)) updates.damId_public = numM;
                 }
             }
         }
