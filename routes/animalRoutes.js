@@ -94,7 +94,15 @@ router.post('/', upload.single('file'), async (req, res) => {
 
             // If a file was uploaded via multipart, attach a public URL (multipart takes precedence)
             if (req.file) {
-                const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+                const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+                let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
+                if (base) {
+                    if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+                    base = base.replace(/\/$/, '');
+                } else {
+                    base = `${proto}://${req.get('host')}`;
+                }
+                const fileUrl = `${base}/uploads/${req.file.filename}`;
                 animalData.imageUrl = fileUrl;
                 animalData.photoUrl = animalData.photoUrl || fileUrl;
             }
@@ -184,7 +192,15 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
 
         // If a multipart file was uploaded directly with the animal update, set image URL from file
         if (req.file) {
-            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+            let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
+            if (base) {
+                if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+                base = base.replace(/\/$/, '');
+            } else {
+                base = `${proto}://${req.get('host')}`;
+            }
+            const fileUrl = `${base}/uploads/${req.file.filename}`;
             updates.imageUrl = fileUrl;
             updates.photoUrl = updates.photoUrl || fileUrl;
         }

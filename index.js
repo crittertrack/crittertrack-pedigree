@@ -122,8 +122,19 @@ const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 }, fileFil
 app.post('/api/upload', uploadSingle.single('file'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+        // Determine a stable public base URL. Prefer an explicit PUBLIC_HOST env var
+        // (e.g., "https://www.crittertrack.net"). If not provided, fall back to request host.
         const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
-        const fileUrl = `${proto}://${req.get('host')}/uploads/${req.file.filename}`;
+        let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
+        if (base) {
+            // Ensure base includes protocol
+            if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+            // Remove trailing slash
+            base = base.replace(/\/$/, '');
+        } else {
+            base = `${proto}://${req.get('host')}`;
+        }
+        const fileUrl = `${base}/uploads/${req.file.filename}`;
         return res.json({ url: fileUrl, filename: req.file.filename });
     } catch (err) {
         console.error('Upload endpoint error:', err && err.message ? err.message : err);
