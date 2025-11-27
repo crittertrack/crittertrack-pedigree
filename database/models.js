@@ -51,6 +51,9 @@ const AnimalSchema = new mongoose.Schema({
     birthDate: { type: Date, default: Date.now },
     color: { type: String, default: null },
     coat: { type: String, default: null },
+    // Image URLs (optional)
+    imageUrl: { type: String, default: null },
+    photoUrl: { type: String, default: null },
 
     // Lineage linking (Links to the public ID of the ancestor)
     sireId_public: { type: Number, default: null },
@@ -85,6 +88,10 @@ const PublicAnimalSchema = new mongoose.Schema({
     birthDate: { type: Date },
     color: { type: String, default: null },
     coat: { type: String, default: null },
+
+    // Public-facing image URLs
+    imageUrl: { type: String, default: null },
+    photoUrl: { type: String, default: null },
 
     // Lineage linking (Links to the public ID of the ancestor)
     sireId_public: { type: Number, default: null },
