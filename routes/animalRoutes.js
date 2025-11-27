@@ -79,20 +79,6 @@ router.post('/', upload.single('file'), async (req, res) => {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
         const animalData = req.body || {};
-        // If a multipart file was uploaded, attach a public URL
-        if (req.file) {
-            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-            animalData.imageUrl = fileUrl;
-        } else {
-            // Normalize common incoming JSON keys to `imageUrl` (accept the same flexibility as profile updates)
-            animalData.imageUrl = animalData.imageUrl || animalData.photoUrl || animalData.profileImage || animalData.profileImageUrl || animalData.photo || animalData.image_path || animalData.image_url || null;
-            // Ensure https URLs
-            if (animalData.imageUrl && typeof animalData.imageUrl === 'string' && animalData.imageUrl.startsWith('http://')) {
-                animalData.imageUrl = animalData.imageUrl.replace(/^http:\/\//i, 'https://');
-            }
-        }
-        // Debug: log incoming payload and uploaded filename (if any)
-        try { console.debug('Register animal payload:', JSON.stringify(animalData), 'uploadedFile:', req.file ? req.file.filename : null); } catch(e) { console.debug('Register animal payload (could not stringify)', animalData, 'uploadedFile:', req.file ? req.file.filename : null); }
 
         // If a file was uploaded via multipart, attach a public URL
         if (req.file) {
@@ -171,19 +157,6 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
-        // If a multipart file was uploaded, attach a public URL
-        if (req.file) {
-            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-            updates.imageUrl = fileUrl;
-        } else {
-            // Normalize common incoming JSON keys to `imageUrl`
-            updates.imageUrl = updates.imageUrl || updates.photoUrl || updates.profileImage || updates.profileImageUrl || updates.photo || updates.image_path || updates.image_url || null;
-            if (updates.imageUrl && typeof updates.imageUrl === 'string' && updates.imageUrl.startsWith('http://')) {
-                updates.imageUrl = updates.imageUrl.replace(/^http:\/\//i, 'https://');
-            }
-        }
-        // Debug: log incoming update payload and uploaded filename (if any)
-        try { console.debug('Update animal payload:', JSON.stringify(updates), 'uploadedFile:', req.file ? req.file.filename : null); } catch(e) { console.debug('Update animal payload (could not stringify)', updates, 'uploadedFile:', req.file ? req.file.filename : null); }
 
         if (req.file) {
             const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;

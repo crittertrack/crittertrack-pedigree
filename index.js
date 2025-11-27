@@ -87,9 +87,9 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
-// Mount the existing upload router so its routes (e.g. /upload) are available under /api
+// Mount the existing upload router as a fallback for other upload-related routes
 const uploadRouter = require('./routes/upload');
-app.use('/api', uploadRouter);
+app.use('/api/upload', uploadRouter);
 
 // Admin routes (protected by authMiddleware and restricted by ADMIN_USER_ID)
 const adminRoutes = require('./routes/admin');
@@ -118,7 +118,18 @@ const imageFileFilter = (req, file, cb) => {
 
 const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 }, fileFilter: imageFileFilter });
 
-// Upload endpoints are handled by the mounted router (routes/uploadRoutes.js)
+// Provide a guarded upload endpoint that enforces file type and size server-side
+app.post('/api/upload', uploadSingle.single('file'), (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+        const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+        const fileUrl = `${proto}://${req.get('host')}/uploads/${req.file.filename}`;
+        return res.json({ url: fileUrl, filename: req.file.filename });
+    } catch (err) {
+        console.error('Upload endpoint error:', err && err.message ? err.message : err);
+        return res.status(500).json({ message: 'Upload failed' });
+    }
+});
 
 // --- Database Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
