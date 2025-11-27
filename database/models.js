@@ -62,9 +62,6 @@ const AnimalSchema = new mongoose.Schema({
     // SENSITIVE/OPTIONAL DATA (Default to private)
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
-    // Image fields (optional) - store a publicly accessible URL to the animal's photo
-    imageUrl: { type: String, default: null },
-    photoUrl: { type: String, default: null },
     
     // Public visibility toggles
     showOnPublicProfile: { type: Boolean, default: false, index: true },
@@ -96,9 +93,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     // SENSITIVE/OPTIONAL DATA (Copied if toggled on)
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
-    // Include image URL on the public record so display consumers can show a photo
-    imageUrl: { type: String, default: null },
-    photoUrl: { type: String, default: null },
     
     // Settings used by db_service to know which fields to copy during update
     includeRemarks: { type: Boolean, default: false },

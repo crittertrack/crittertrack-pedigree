@@ -200,16 +200,9 @@ const updateUserProfile = async (appUserId_backend, updates) => {
  */
 const addAnimal = async (appUserId_backend, animalData) => {
     const id_public = await getNextSequence('animalId');
-    // Denormalize owner's public id for quick lookups in other collections
-    let ownerId_public = null;
-    try {
-        const ownerUser = await User.findById(appUserId_backend).select('id_public').lean();
-        if (ownerUser && ownerUser.id_public) ownerId_public = ownerUser.id_public;
-    } catch (e) { /* non-fatal, proceed without ownerId_public */ }
 
     const newAnimal = new Animal({
         ownerId: appUserId_backend,
-        ownerId_public: ownerId_public,
         id_public,
         ...animalData,
         // Default visibility to private
@@ -277,9 +270,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             birthDate: updatedAnimal.birthDate,
             color: updatedAnimal.color,
             coat: updatedAnimal.coat,
-            // Ensure the public record has an image if the private animal does
-            imageUrl: updatedAnimal.imageUrl || null,
-            photoUrl: updatedAnimal.photoUrl || null,
             // Only update remarks/genetic code if the user has explicitly allowed them to be public
             remarks: publicRecord.includeRemarks ? updatedAnimal.remarks : '',
             geneticCode: publicRecord.includeGeneticCode ? updatedAnimal.geneticCode : null,
