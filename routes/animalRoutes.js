@@ -102,7 +102,7 @@ router.post('/', upload.single('file'), async (req, res) => {
                 } else {
                     base = `${proto}://${req.get('host')}`;
                 }
-                const fileUrl = `${base}/uploads/${req.file.filename}`;
+                const fileUrl = `${base}/api/uploads/${req.file.filename}`;
                 animalData.imageUrl = fileUrl;
                 animalData.photoUrl = animalData.photoUrl || fileUrl;
             }
@@ -263,7 +263,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             } else {
                 base = `${proto}://${req.get('host')}`;
             }
-            const fileUrl = `${base}/uploads/${req.file.filename}`;
+            const fileUrl = `${base}/api/uploads/${req.file.filename}`;
             updates.imageUrl = fileUrl;
             updates.photoUrl = updates.photoUrl || fileUrl;
         }
