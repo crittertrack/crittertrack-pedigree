@@ -14,6 +14,7 @@ const { User, PublicProfile, Animal, PublicAnimal } = require('../database/model
 
 const MONGODB_URI = process.env.MONGODB_URI;
 let PUBLIC_HOST = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
+const DRY_RUN = process.env.DRY_RUN === '1' || process.argv.includes('--dry-run') || process.argv.includes('-n');
 
 if (!MONGODB_URI) {
   console.error('MONGODB_URI is required. Set it via environment variable.');
@@ -57,10 +58,14 @@ const run = async () => {
     if (!containsUploads(u.profileImage)) continue;
     const newUrl = buildNewUrl(u.profileImage);
     if (!newUrl) continue;
-    await User.updateOne({ _id: u._id }, { $set: { profileImage: newUrl } });
-    await PublicProfile.updateOne({ userId_backend: u._id }, { $set: { profileImage: newUrl } });
-    usersUpdated++;
-    console.log(`Updated User ${u._id} profileImage -> ${newUrl}`);
+    if (DRY_RUN) {
+      console.log(`[DRY-RUN] Would update User ${u._id} profileImage -> ${newUrl}`);
+    } else {
+      await User.updateOne({ _id: u._id }, { $set: { profileImage: newUrl } });
+      await PublicProfile.updateOne({ userId_backend: u._id }, { $set: { profileImage: newUrl } });
+      usersUpdated++;
+      console.log(`Updated User ${u._id} profileImage -> ${newUrl}`);
+    }
   }
 
   // Update Animals
@@ -78,11 +83,15 @@ const run = async () => {
       if (newUrl) updates.photoUrl = newUrl;
     }
     if (Object.keys(updates).length > 0) {
-      await Animal.updateOne({ _id: a._id }, { $set: updates });
-      // Also update public animal if exists
-      await PublicAnimal.updateOne({ id_public: a.id_public }, { $set: updates });
-      animalsUpdated++;
-      console.log(`Updated Animal CT${a.id_public} ->`, updates);
+      if (DRY_RUN) {
+        console.log(`[DRY-RUN] Would update Animal CT${a.id_public} ->`, updates);
+      } else {
+        await Animal.updateOne({ _id: a._id }, { $set: updates });
+        // Also update public animal if exists
+        await PublicAnimal.updateOne({ id_public: a.id_public }, { $set: updates });
+        animalsUpdated++;
+        console.log(`Updated Animal CT${a.id_public} ->`, updates);
+      }
     }
   }
 
