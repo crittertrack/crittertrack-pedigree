@@ -471,6 +471,33 @@ const getPublicAnimalsByOwner = async (ownerId_public) => {
 };
 
 
+/**
+ * Deletes an animal owned by the user and cleans up related records.
+ */
+const deleteAnimal = async (appUserId_backend, animalId_backend) => {
+    // Verify ownership and existence
+    const animal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend });
+    if (!animal) {
+        throw new Error('Animal not found or does not own this animal.');
+    }
+
+    // Remove the private animal record
+    await Animal.deleteOne({ _id: animalId_backend });
+
+    // Remove from the owner's ownedAnimals array
+    await User.findByIdAndUpdate(appUserId_backend, { $pull: { ownedAnimals: animal._id } });
+
+    // If a public record exists for this animal, remove it
+    try {
+        await PublicAnimal.deleteOne({ id_public: animal.id_public });
+    } catch (e) {
+        // Non-fatal: log and continue
+        console.warn('Failed to delete public animal record for id_public', animal.id_public, e && e.message ? e.message : e);
+    }
+
+    return;
+};
+
 module.exports = {
     connectDB,
     registerUser,
@@ -484,6 +511,7 @@ module.exports = {
     getAnimalByIdAndUser,
     updateAnimal,
     toggleAnimalPublic,
+    deleteAnimal,
     // Litter functions
     addLitter,
     getUsersLitters,
