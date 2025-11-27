@@ -107,7 +107,41 @@ router.post('/', upload.single('file'), async (req, res) => {
                 animalData.photoUrl = animalData.photoUrl || fileUrl;
             }
 
-        // Basic validation for required fields
+            // Normalize parent fields: if frontend provided numeric public IDs (fatherId_public, fatherId, etc.)
+            // resolve them to internal backend _id for storage.
+            const resolveParentPublicToBackend = async (pubVal) => {
+                if (!pubVal) return null;
+                const num = Number(pubVal);
+                if (Number.isNaN(num)) return null;
+                const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id').lean();
+                return found ? found._id.toString() : null;
+            };
+
+            // Father
+            if (!animalData.father) {
+                animalData.father = animalData.father || null;
+                const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public;
+                if (candidate) {
+                    try {
+                        const resolved = await resolveParentPublicToBackend(candidate);
+                        if (resolved) animalData.father = resolved;
+                    } catch (e) { /* ignore resolution errors */ }
+                }
+            }
+
+            // Mother
+            if (!animalData.mother) {
+                animalData.mother = animalData.mother || null;
+                const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public;
+                if (candidateM) {
+                    try {
+                        const resolvedM = await resolveParentPublicToBackend(candidateM);
+                        if (resolvedM) animalData.mother = resolvedM;
+                    } catch (e) { /* ignore */ }
+                }
+            }
+
+            // Basic validation for required fields
         if (!animalData.name || !animalData.species) {
              return res.status(400).json({ message: 'Missing required animal fields: name and species.' });
         }
@@ -178,6 +212,35 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
+
+        // Normalize parent fields on update as well (accept public numeric IDs)
+        const resolveParentPublicToBackend = async (pubVal) => {
+            if (!pubVal) return null;
+            const num = Number(pubVal);
+            if (Number.isNaN(num)) return null;
+            const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id').lean();
+            return found ? found._id.toString() : null;
+        };
+
+        if (!updates.father) {
+            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public;
+            if (candidate) {
+                try {
+                    const resolved = await resolveParentPublicToBackend(candidate);
+                    if (resolved) updates.father = resolved;
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        if (!updates.mother) {
+            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public;
+            if (candidateM) {
+                try {
+                    const resolvedM = await resolveParentPublicToBackend(candidateM);
+                    if (resolvedM) updates.mother = resolvedM;
+                } catch (e) { /* ignore */ }
+            }
+        }
 
         // Accept image URL from JSON body (compatibility with upload-then-save flow)
         const incImg = updates.imageUrl || updates.photoUrl || updates.profileImage || updates.profileImageUrl || updates.image_path || updates.photo || updates.image_url;
