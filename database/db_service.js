@@ -201,6 +201,49 @@ const updateUserProfile = async (appUserId_backend, updates) => {
 const addAnimal = async (appUserId_backend, animalData) => {
     const id_public = await getNextSequence('animalId');
 
+    // Normalize parent fields: accept numeric public IDs or alias fields and resolve to internal _id
+    const resolveParentPublicToBackend = async (pubVal) => {
+        if (!pubVal) return null;
+        const num = Number(pubVal);
+        if (Number.isNaN(num)) return null;
+        const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+        return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
+    };
+
+    try {
+        // Father
+        if (!animalData.father) {
+            const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public;
+            if (candidate) {
+                const resolved = await resolveParentPublicToBackend(candidate);
+                if (resolved) {
+                    animalData.father = resolved.backendId;
+                    animalData.fatherId_public = resolved.id_public;
+                }
+            }
+        }
+
+        // Mother
+        if (!animalData.mother) {
+            const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public;
+            if (candidateM) {
+                const resolvedM = await resolveParentPublicToBackend(candidateM);
+                if (resolvedM) {
+                    animalData.mother = resolvedM.backendId;
+                    animalData.motherId_public = resolvedM.id_public;
+                }
+            }
+        }
+
+        // Ensure image fields propagate
+        if (animalData.imageUrl && !animalData.photoUrl) {
+            animalData.photoUrl = animalData.imageUrl;
+        }
+
+    } catch (err) {
+        console.warn('Parent normalization failed in addAnimal:', err && err.message ? err.message : err);
+    }
+
     const newAnimal = new Animal({
         ownerId: appUserId_backend,
         id_public,
@@ -246,6 +289,44 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
  * Updates a specific animal's record.
  */
 const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
+    // Normalize parent fields on update: accept numeric public IDs and resolve to internal _id
+    const resolveParentPublicToBackend = async (pubVal) => {
+        if (!pubVal) return null;
+        const num = Number(pubVal);
+        if (Number.isNaN(num)) return null;
+        const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+        return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
+    };
+
+    try {
+        if (!updates.father) {
+            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public;
+            if (candidate) {
+                const resolved = await resolveParentPublicToBackend(candidate);
+                if (resolved) {
+                    updates.father = resolved.backendId;
+                    updates.fatherId_public = resolved.id_public;
+                }
+            }
+        }
+
+        if (!updates.mother) {
+            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public;
+            if (candidateM) {
+                const resolvedM = await resolveParentPublicToBackend(candidateM);
+                if (resolvedM) {
+                    updates.mother = resolvedM.backendId;
+                    updates.motherId_public = resolvedM.id_public;
+                }
+            }
+        }
+
+        // Ensure imageUrl propagates to photoUrl if provided
+        if (updates.imageUrl && !updates.photoUrl) updates.photoUrl = updates.imageUrl;
+    } catch (err) {
+        console.warn('Parent normalization failed in updateAnimal:', err && err.message ? err.message : err);
+    }
+
     // Use findOneAndUpdate to ensure ownership and get the updated document
     const updatedAnimal = await Animal.findOneAndUpdate(
         { _id: animalId_backend, ownerId: appUserId_backend },
@@ -273,6 +354,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Ensure public record includes image URLs if present
             imageUrl: updatedAnimal.imageUrl || null,
             photoUrl: updatedAnimal.photoUrl || null,
+            // Ensure sire/dam public ids are stored for pedigree lookup
+            sireId_public: updatedAnimal.fatherId_public || null,
+            damId_public: updatedAnimal.motherId_public || null,
             // Only update remarks/genetic code if the user has explicitly allowed them to be public
             remarks: publicRecord.includeRemarks ? updatedAnimal.remarks : '',
             geneticCode: publicRecord.includeGeneticCode ? updatedAnimal.geneticCode : null,
