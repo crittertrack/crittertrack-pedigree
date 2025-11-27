@@ -270,6 +270,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             birthDate: updatedAnimal.birthDate,
             color: updatedAnimal.color,
             coat: updatedAnimal.coat,
+            // Ensure public record includes image URLs if present
+            imageUrl: updatedAnimal.imageUrl || null,
+            photoUrl: updatedAnimal.photoUrl || null,
             // Only update remarks/genetic code if the user has explicitly allowed them to be public
             remarks: publicRecord.includeRemarks ? updatedAnimal.remarks : '',
             geneticCode: publicRecord.includeGeneticCode ? updatedAnimal.geneticCode : null,
@@ -310,6 +313,9 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             birthDate: animal.birthDate,
             color: animal.color,
             coat: animal.coat,
+            // Copy image URLs into the public record as well
+            imageUrl: animal.imageUrl || null,
+            photoUrl: animal.photoUrl || null,
             // Include sensitive data based on settings
             remarks: toggleData.includeRemarks ? animal.remarks : '',
             geneticCode: toggleData.includeGeneticCode ? animal.geneticCode : null,
