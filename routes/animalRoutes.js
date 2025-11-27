@@ -78,13 +78,26 @@ router.post('/', upload.single('file'), async (req, res) => {
     try {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
-        const animalData = req.body || {};
+            const animalData = req.body || {};
 
-        // If a file was uploaded via multipart, attach a public URL
-        if (req.file) {
-            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-            animalData.imageUrl = fileUrl;
-        }
+            // Accept image URL from JSON body using several common keys (frontend compatibility)
+            const incomingImage = animalData.imageUrl || animalData.photoUrl || animalData.profileImage || animalData.profileImageUrl || animalData.image_path || animalData.photo || animalData.image_url;
+            if (incomingImage) {
+                // Normalize to https to avoid mixed-content issues
+                let url = incomingImage;
+                if (typeof url === 'string' && url.startsWith('http://')) {
+                    url = url.replace(/^http:\/\//i, 'https://');
+                }
+                animalData.imageUrl = url;
+                if (!animalData.photoUrl) animalData.photoUrl = url;
+            }
+
+            // If a file was uploaded via multipart, attach a public URL (multipart takes precedence)
+            if (req.file) {
+                const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+                animalData.imageUrl = fileUrl;
+                animalData.photoUrl = animalData.photoUrl || fileUrl;
+            }
 
         // Basic validation for required fields
         if (!animalData.name || !animalData.species) {
@@ -158,9 +171,22 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
 
+        // Accept image URL from JSON body (compatibility with upload-then-save flow)
+        const incImg = updates.imageUrl || updates.photoUrl || updates.profileImage || updates.profileImageUrl || updates.image_path || updates.photo || updates.image_url;
+        if (incImg) {
+            let url = incImg;
+            if (typeof url === 'string' && url.startsWith('http://')) {
+                url = url.replace(/^http:\/\//i, 'https://');
+            }
+            updates.imageUrl = url;
+            if (!updates.photoUrl) updates.photoUrl = url;
+        }
+
+        // If a multipart file was uploaded directly with the animal update, set image URL from file
         if (req.file) {
             const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
             updates.imageUrl = fileUrl;
+            updates.photoUrl = updates.photoUrl || fileUrl;
         }
 
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
