@@ -157,6 +157,21 @@ app.get('/', (req, res) => {
     res.status(200).send('CritterTrack Backend API is running!');
 });
 
+// Diagnostic endpoint: expose relevant env vars for verification (temporary)
+app.get('/diagnostic/env', (req, res) => {
+    try {
+        const info = {
+            PUBLIC_HOST: process.env.PUBLIC_HOST || null,
+            UPLOADER_URL: process.env.UPLOADER_URL || null,
+            RAILWAY_PUBLIC_DOMAIN: process.env.RAILWAY_PUBLIC_DOMAIN || null,
+            NODE_ENV: process.env.NODE_ENV || null
+        };
+        res.json(info);
+    } catch (err) {
+        res.status(500).json({ error: 'failed to read env' });
+    }
+});
+
 // Authentication Routes (register and login)
 app.use('/api/auth', authRoutes); 
 
