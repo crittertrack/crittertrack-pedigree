@@ -87,10 +87,6 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
-// Mount the existing upload router as a fallback for other upload-related routes
-const uploadRouter = require('./routes/upload');
-app.use('/api/upload', uploadRouter);
-
 // Admin routes (protected by authMiddleware and restricted by ADMIN_USER_ID)
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', authMiddleware, adminRoutes);
