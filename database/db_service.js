@@ -256,6 +256,7 @@ const addAnimal = async (appUserId_backend, animalData) => {
         // Default visibility to private
         showOnPublicProfile: false,
     });
+    console.log('[addAnimal] Creating animal with:', JSON.stringify({ breederyId: newAnimal.breederyId, geneticCode: newAnimal.geneticCode, remarks: newAnimal.remarks }));
     await newAnimal.save();
 
     // Update the User's ownedAnimals array
@@ -362,6 +363,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
 
     // Use findOneAndUpdate to ensure ownership and get the updated document
+    console.log('[updateAnimal] Updating with:', JSON.stringify({ breederyId: updates.breederyId, geneticCode: updates.geneticCode, remarks: updates.remarks }));
     const updatedAnimal = await Animal.findOneAndUpdate(
         { _id: animalId_backend, ownerId: appUserId_backend },
         { $set: updates },

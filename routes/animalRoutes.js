@@ -86,6 +86,7 @@ router.post('/', upload.single('file'), async (req, res) => {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
             const animalData = req.body || {};
+            console.log('[POST /api/animals] Received data:', JSON.stringify({ breederyId: animalData.breederyId, geneticCode: animalData.geneticCode, remarks: animalData.remarks }));
 
             // Accept image URL from JSON body using several common keys (frontend compatibility)
             const incomingImage = animalData.imageUrl || animalData.photoUrl || animalData.profileImage || animalData.profileImageUrl || animalData.image_path || animalData.photo || animalData.image_url;
@@ -249,6 +250,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
+        console.log('[PUT /api/animals/:id] Received updates:', JSON.stringify({ breederyId: updates.breederyId, geneticCode: updates.geneticCode, remarks: updates.remarks }));
 
         // Normalize parent fields on update as well (accept public numeric IDs)
         const resolveParentPublicToBackend = async (pubVal) => {
