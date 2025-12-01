@@ -330,28 +330,37 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
     try {
         // Map parent alias fields to schema's sireId_public/damId_public
-        if (!updates.sireId_public) {
-            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public || updates.sireId_public;
-            if (candidate) {
-                const resolved = await resolveParentPublicToBackend(candidate);
-                if (resolved) {
-                    updates.sireId_public = resolved.id_public;
+        // Use === undefined to allow null values through (for clearing parents)
+        if (updates.sireId_public === undefined) {
+            const candidate = updates.fatherId_public ?? updates.fatherId ?? updates.father_id ?? updates.father_public;
+            if (candidate !== undefined) {
+                if (candidate === null) {
+                    updates.sireId_public = null;
                 } else {
-                    const num = Number(candidate);
-                    if (!Number.isNaN(num)) updates.sireId_public = num;
+                    const resolved = await resolveParentPublicToBackend(candidate);
+                    if (resolved) {
+                        updates.sireId_public = resolved.id_public;
+                    } else {
+                        const num = Number(candidate);
+                        if (!Number.isNaN(num)) updates.sireId_public = num;
+                    }
                 }
             }
         }
 
-        if (!updates.damId_public) {
-            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public || updates.damId_public;
-            if (candidateM) {
-                const resolvedM = await resolveParentPublicToBackend(candidateM);
-                if (resolvedM) {
-                    updates.damId_public = resolvedM.id_public;
+        if (updates.damId_public === undefined) {
+            const candidateM = updates.motherId_public ?? updates.motherId ?? updates.mother_id ?? updates.mother_public;
+            if (candidateM !== undefined) {
+                if (candidateM === null) {
+                    updates.damId_public = null;
                 } else {
-                    const numM = Number(candidateM);
-                    if (!Number.isNaN(numM)) updates.damId_public = numM;
+                    const resolvedM = await resolveParentPublicToBackend(candidateM);
+                    if (resolvedM) {
+                        updates.damId_public = resolvedM.id_public;
+                    } else {
+                        const numM = Number(candidateM);
+                        if (!Number.isNaN(numM)) updates.damId_public = numM;
+                    }
                 }
             }
         }
