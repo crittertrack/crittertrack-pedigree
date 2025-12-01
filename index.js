@@ -152,14 +152,8 @@ app.post('/api/upload', uploadSingle.single('file'), async (req, res) => {
         }
 
         const result = await workerResponse.json();
-        
-        // Clean up local file after successful upload to R2
-        const fs = require('fs');
-        if (req.file.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
 
-        return res.json({ url: result.url, filename: result.key || req.file.filename });
+        return res.json({ url: result.url, filename: result.key || req.file.originalname });
     } catch (err) {
         console.error('Upload endpoint error:', err && err.message ? err.message : err);
         return res.status(500).json({ message: 'Upload failed' });
