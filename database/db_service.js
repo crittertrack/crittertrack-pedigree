@@ -261,7 +261,11 @@ const addAnimal = async (appUserId_backend, animalData) => {
     // Update the User's ownedAnimals array
     await User.findByIdAndUpdate(appUserId_backend, { $push: { ownedAnimals: newAnimal._id } });
 
-    return newAnimal;
+    // Return a plain object with backward-compatible alias fields
+    const saved = newAnimal.toObject();
+    saved.fatherId_public = saved.sireId_public || null;
+    saved.motherId_public = saved.damId_public || null;
+    return saved;
 };
 
 /**
@@ -276,17 +280,26 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // ... add other relevant filters ...
 
     // Sort by birth date descending (most recent first)
-    return Animal.find(query).sort({ birthDate: -1 }).lean();
+    const docs = await Animal.find(query).sort({ birthDate: -1 }).lean();
+    // Provide backward-compatible alias fields expected by the frontend
+    return docs.map(d => ({
+        ...d,
+        fatherId_public: d.sireId_public || null,
+        motherId_public: d.damId_public || null,
+    }));
 };
 
 /**
  * Helper to find an animal by internal ID and verify ownership.
  */
 const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
-    const animal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend });
+    const animal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend }).lean();
     if (!animal) {
         throw new Error('Animal not found or does not belong to user.');
     }
+    // Backwards-compatible alias fields for older frontend keys
+    animal.fatherId_public = animal.sireId_public || null;
+    animal.motherId_public = animal.damId_public || null;
     return animal;
 };
 
@@ -365,8 +378,8 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             imageUrl: updatedAnimal.imageUrl || null,
             photoUrl: updatedAnimal.photoUrl || null,
             // Ensure sire/dam public ids are stored for pedigree lookup
-            sireId_public: updatedAnimal.fatherId_public || null,
-            damId_public: updatedAnimal.motherId_public || null,
+            sireId_public: updatedAnimal.sireId_public || null,
+            damId_public: updatedAnimal.damId_public || null,
             // Only update remarks/genetic code if the user has explicitly allowed them to be public
             remarks: publicRecord.includeRemarks ? updatedAnimal.remarks : '',
             geneticCode: publicRecord.includeGeneticCode ? updatedAnimal.geneticCode : null,
@@ -375,6 +388,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         await PublicAnimal.updateOne({ id_public: updatedAnimal.id_public }, publicUpdates);
     }
 
+    // Add backward-compatible alias fields before returning
+    updatedAnimal.fatherId_public = updatedAnimal.sireId_public || null;
+    updatedAnimal.motherId_public = updatedAnimal.damId_public || null;
     return updatedAnimal;
 };
 
@@ -410,6 +426,9 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             // Copy image URLs into the public record as well
             imageUrl: animal.imageUrl || null,
             photoUrl: animal.photoUrl || null,
+            // Include sire/dam public ids for pedigree tracing
+            sireId_public: animal.sireId_public || null,
+            damId_public: animal.damId_public || null,
             // Include sensitive data based on settings
             remarks: toggleData.includeRemarks ? animal.remarks : '',
             geneticCode: toggleData.includeGeneticCode ? animal.geneticCode : null,

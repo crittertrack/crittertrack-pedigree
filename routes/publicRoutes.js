@@ -54,8 +54,6 @@ router.get('/animals/:ownerId_public', async (req, res) => {
 });
 
 
-module.exports = router;
-
 // Serve uploaded files at GET /api/uploads/:filename
 // Note: this router is expected to be mounted at '/api' in the main server,
 // so this will respond to '/api/uploads/<filename>'.
@@ -114,3 +112,5 @@ router.get('/global/animals', async (req, res) => {
         return res.status(500).json({ message: 'Internal server error while fetching global animals.' });
     }
 });
+
+module.exports = router;
