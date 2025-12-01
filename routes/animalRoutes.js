@@ -177,6 +177,11 @@ router.post('/', upload.single('file'), async (req, res) => {
         if (!animalData.name || !animalData.species) {
              return res.status(400).json({ message: 'Missing required animal fields: name and species.' });
         }
+        
+        // Map frontend field names to backend schema
+        if (animalData.isDisplay !== undefined) {
+            animalData.showOnPublicProfile = animalData.isDisplay;
+        }
 
         const newAnimal = await addAnimal(appUserId_backend, animalData);
 
@@ -323,6 +328,11 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                 updates.imageUrl = fileUrl;
                 updates.photoUrl = updates.photoUrl || fileUrl;
             }
+        }
+
+        // Map frontend field names to backend schema
+        if (updates.isDisplay !== undefined) {
+            updates.showOnPublicProfile = updates.isDisplay;
         }
 
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);

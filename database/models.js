@@ -50,8 +50,16 @@ const AnimalSchema = new mongoose.Schema({
     gender: { type: String, enum: ['Male', 'Female', 'Unknown'], default: 'Unknown' },
     birthDate: { type: Date, default: Date.now },
     breederyId: { type: String, default: null },
+    status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
+    earset: { type: String, default: null },
+    
+    // Ownership and breeding status
+    isOwned: { type: Boolean, default: true },
+    isPregnant: { type: Boolean, default: false },
+    isNursing: { type: Boolean, default: false },
+    
     // Image URLs (optional)
     imageUrl: { type: String, default: null },
     photoUrl: { type: String, default: null },
@@ -88,8 +96,15 @@ const PublicAnimalSchema = new mongoose.Schema({
     gender: { type: String },
     birthDate: { type: Date },
     breederyId: { type: String, default: null },
+    status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
+    earset: { type: String, default: null },
+    
+    // Ownership and breeding status
+    isOwned: { type: Boolean, default: true },
+    isPregnant: { type: Boolean, default: false },
+    isNursing: { type: Boolean, default: false },
 
     // Public-facing image URLs
     imageUrl: { type: String, default: null },

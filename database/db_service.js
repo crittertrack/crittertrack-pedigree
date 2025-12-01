@@ -286,6 +286,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         ...d,
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
+        isDisplay: d.showOnPublicProfile || false,
     }));
 };
 
@@ -300,6 +301,7 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     // Backwards-compatible alias fields for older frontend keys
     animal.fatherId_public = animal.sireId_public || null;
     animal.motherId_public = animal.damId_public || null;
+    animal.isDisplay = animal.showOnPublicProfile || false;
     return animal;
 };
 
