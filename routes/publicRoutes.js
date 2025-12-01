@@ -80,17 +80,21 @@ router.get('/profiles/search', async (req, res) => {
         let filter = {};
         if (query && query.trim()) {
             const searchTerm = query.trim();
-            // Search by breederName or id_public
+            // Search by breederName, personalName, or id_public
             const idMatch = searchTerm.match(/^\d+$/);
             if (idMatch) {
-                // If query is numeric, search by id_public
+                // If query is numeric, search by id_public or in names
                 filter.$or = [
                     { id_public: parseInt(searchTerm, 10) },
-                    { breederName: { $regex: searchTerm, $options: 'i' } }
+                    { breederName: { $regex: searchTerm, $options: 'i' } },
+                    { personalName: { $regex: searchTerm, $options: 'i' } }
                 ];
             } else {
-                // Otherwise search by breederName only
-                filter.breederName = { $regex: searchTerm, $options: 'i' };
+                // Otherwise search by breederName or personalName
+                filter.$or = [
+                    { breederName: { $regex: searchTerm, $options: 'i' } },
+                    { personalName: { $regex: searchTerm, $options: 'i' } }
+                ];
             }
         }
         
