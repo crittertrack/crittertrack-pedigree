@@ -33,7 +33,8 @@ const PublicProfileSchema = new mongoose.Schema({
     id_public: { type: Number, required: true, unique: true, index: true },
     breederName: { type: String, required: true, trim: true },
     profileImage: { type: String, default: null },
-});
+    createdAt: { type: Date, default: null }, // Member since date
+}, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
 
 

@@ -85,6 +85,7 @@ const registerUser = async (userData) => {
         id_public: user.id_public,
         breederName: user.breederName,
         profileImage: user.profileImage,
+        createdAt: user.creationDate || new Date(), // Set member since date
     });
     await publicProfile.save();
 

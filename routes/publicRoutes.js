@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
-const { PublicAnimal, Animal } = require('../database/models');
+const { PublicAnimal, Animal, PublicProfile } = require('../database/models');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
 
@@ -67,6 +67,41 @@ router.get('/uploads/:filename', (req, res) => {
     } catch (err) {
         console.error('Error serving upload file:', err);
         return res.status(500).send('Server error');
+    }
+});
+
+// --- Global/Public search for users/breeders (public endpoint) ---
+// Support query: /api/public/profiles/search?query=...&limit=50
+router.get('/profiles/search', async (req, res) => {
+    try {
+        const { query, limit } = req.query;
+        const searchLimit = Math.min(parseInt(limit || '50', 10) || 50, 500);
+        
+        let filter = {};
+        if (query && query.trim()) {
+            const searchTerm = query.trim();
+            // Search by breederName or id_public
+            const idMatch = searchTerm.match(/^\d+$/);
+            if (idMatch) {
+                // If query is numeric, search by id_public
+                filter.$or = [
+                    { id_public: parseInt(searchTerm, 10) },
+                    { breederName: { $regex: searchTerm, $options: 'i' } }
+                ];
+            } else {
+                // Otherwise search by breederName only
+                filter.breederName = { $regex: searchTerm, $options: 'i' };
+            }
+        }
+        
+        const profiles = await PublicProfile.find(filter)
+            .limit(searchLimit)
+            .lean();
+        
+        res.status(200).json(profiles);
+    } catch (error) {
+        console.error('Error searching public profiles:', error);
+        res.status(500).json({ message: 'Internal server error while searching profiles.' });
     }
 });
 
