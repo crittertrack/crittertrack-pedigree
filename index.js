@@ -128,17 +128,14 @@ app.post('/api/upload', uploadSingle.single('file'), async (req, res) => {
         }
 
         // Create FormData and forward to Worker
-        const FormData = require('form-data');
+        const { Blob } = require('buffer');
         const formData = new FormData();
-        formData.append('file', req.file.buffer, {
-            filename: req.file.originalname,
-            contentType: req.file.mimetype
-        });
+        const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+        formData.append('file', blob, req.file.originalname);
 
         const workerResponse = await fetch(uploaderUrl, {
             method: 'POST',
-            body: formData,
-            headers: formData.getHeaders()
+            body: formData
         });
 
         if (!workerResponse.ok) {
