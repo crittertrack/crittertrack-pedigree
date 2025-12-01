@@ -144,33 +144,42 @@ router.post('/', upload.single('file'), async (req, res) => {
             };
 
             // Map parent alias fields into the schema's sireId_public/damId_public
-            if (!animalData.sireId_public) {
-                const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public || animalData.sireId_public;
-                if (candidate) {
-                    try {
-                        const resolved = await resolveParentPublicToBackend(candidate);
-                        if (resolved) {
-                            animalData.sireId_public = resolved.id_public;
-                        } else {
-                            const num = Number(candidate);
-                            if (!Number.isNaN(num)) animalData.sireId_public = num;
-                        }
-                    } catch (e) { /* ignore resolution errors */ }
+            // Check if explicitly provided (even if null) to allow clearing
+            if (animalData.sireId_public === undefined) {
+                const candidate = animalData.fatherId_public ?? animalData.fatherId ?? animalData.father_id ?? animalData.father_public;
+                if (candidate !== undefined) {
+                    if (candidate === null) {
+                        animalData.sireId_public = null;
+                    } else {
+                        try {
+                            const resolved = await resolveParentPublicToBackend(candidate);
+                            if (resolved) {
+                                animalData.sireId_public = resolved.id_public;
+                            } else {
+                                const num = Number(candidate);
+                                if (!Number.isNaN(num)) animalData.sireId_public = num;
+                            }
+                        } catch (e) { /* ignore resolution errors */ }
+                    }
                 }
             }
 
-            if (!animalData.damId_public) {
-                const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public || animalData.damId_public;
-                if (candidateM) {
-                    try {
-                        const resolvedM = await resolveParentPublicToBackend(candidateM);
-                        if (resolvedM) {
-                            animalData.damId_public = resolvedM.id_public;
-                        } else {
-                            const numM = Number(candidateM);
-                            if (!Number.isNaN(numM)) animalData.damId_public = numM;
-                        }
-                    } catch (e) { /* ignore */ }
+            if (animalData.damId_public === undefined) {
+                const candidateM = animalData.motherId_public ?? animalData.motherId ?? animalData.mother_id ?? animalData.mother_public;
+                if (candidateM !== undefined) {
+                    if (candidateM === null) {
+                        animalData.damId_public = null;
+                    } else {
+                        try {
+                            const resolvedM = await resolveParentPublicToBackend(candidateM);
+                            if (resolvedM) {
+                                animalData.damId_public = resolvedM.id_public;
+                            } else {
+                                const numM = Number(candidateM);
+                                if (!Number.isNaN(numM)) animalData.damId_public = numM;
+                            }
+                        } catch (e) { /* ignore */ }
+                    }
                 }
             }
 
@@ -262,33 +271,42 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         };
 
         // Map alias parent fields into schema's sireId_public/damId_public on update
-        if (!updates.sireId_public) {
-            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public || updates.sireId_public;
-            if (candidate) {
-                try {
-                    const resolved = await resolveParentPublicToBackend(candidate);
-                    if (resolved) {
-                        updates.sireId_public = resolved.id_public;
-                    } else {
-                        const num = Number(candidate);
-                        if (!Number.isNaN(num)) updates.sireId_public = num;
-                    }
-                } catch (e) { /* ignore */ }
+        // Check if explicitly provided (even if null) to allow clearing
+        if (updates.sireId_public === undefined) {
+            const candidate = updates.fatherId_public ?? updates.fatherId ?? updates.father_id ?? updates.father_public;
+            if (candidate !== undefined) {
+                if (candidate === null) {
+                    updates.sireId_public = null;
+                } else {
+                    try {
+                        const resolved = await resolveParentPublicToBackend(candidate);
+                        if (resolved) {
+                            updates.sireId_public = resolved.id_public;
+                        } else {
+                            const num = Number(candidate);
+                            if (!Number.isNaN(num)) updates.sireId_public = num;
+                        }
+                    } catch (e) { /* ignore */ }
+                }
             }
         }
 
-        if (!updates.damId_public) {
-            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public || updates.damId_public;
-            if (candidateM) {
-                try {
-                    const resolvedM = await resolveParentPublicToBackend(candidateM);
-                    if (resolvedM) {
-                        updates.damId_public = resolvedM.id_public;
-                    } else {
-                        const numM = Number(candidateM);
-                        if (!Number.isNaN(numM)) updates.damId_public = numM;
-                    }
-                } catch (e) { /* ignore */ }
+        if (updates.damId_public === undefined) {
+            const candidateM = updates.motherId_public ?? updates.motherId ?? updates.mother_id ?? updates.mother_public;
+            if (candidateM !== undefined) {
+                if (candidateM === null) {
+                    updates.damId_public = null;
+                } else {
+                    try {
+                        const resolvedM = await resolveParentPublicToBackend(candidateM);
+                        if (resolvedM) {
+                            updates.damId_public = resolvedM.id_public;
+                        } else {
+                            const numM = Number(candidateM);
+                            if (!Number.isNaN(numM)) updates.damId_public = numM;
+                        }
+                    } catch (e) { /* ignore */ }
+                }
             }
         }
 
