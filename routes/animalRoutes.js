@@ -6,14 +6,21 @@ const fs = require('fs');
 // simple disk storage for images (adjust for S3 in production)
 const uploadDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname) || '';
-        const name = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
-        cb(null, name);
-    }
-});
+// If running with Cloudflare R2 (or other remote storage), use memory storage
+const useR2 = (process.env.STORAGE_PROVIDER || '').toUpperCase() === 'R2';
+let storage;
+if (useR2) {
+    storage = multer.memoryStorage();
+} else {
+    storage = multer.diskStorage({
+        destination: (req, file, cb) => cb(null, uploadDir),
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname) || '';
+            const name = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
+            cb(null, name);
+        }
+    });
+}
 // Enforce a strict server-side per-file upload limit to protect payload size.
 // Also restrict accepted file types to PNG/JPEG only.
 const imageFileFilter = (req, file, cb) => {
@@ -94,49 +101,74 @@ router.post('/', upload.single('file'), async (req, res) => {
 
             // If a file was uploaded via multipart, attach a public URL (multipart takes precedence)
             if (req.file) {
-                const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
-                let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
-                if (base) {
-                    if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
-                    base = base.replace(/\/$/, '');
+                if (useR2) {
+                    // Upload buffer to R2 via storage client
+                    try {
+                        const r2 = require('../storage/r2_client');
+                        const ext = path.extname(req.file.originalname) || '';
+                        const key = `animals/${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
+                        const url = await r2.uploadBuffer(key, req.file.buffer, req.file.mimetype);
+                        animalData.imageUrl = url;
+                        animalData.photoUrl = animalData.photoUrl || url;
+                        // Attach filename for potential cleanup compatibility
+                        animalData._uploadedFilename = key;
+                    } catch (r2err) {
+                        console.error('R2 upload failed:', r2err);
+                        // Fall back to not setting image URL (frontend will handle)
+                    }
                 } else {
-                    base = `${proto}://${req.get('host')}`;
+                    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+                    let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
+                    if (base) {
+                        if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+                        base = base.replace(/\/$/, '');
+                    } else {
+                        base = `${proto}://${req.get('host')}`;
+                    }
+                    const fileUrl = `${base}/api/uploads/${req.file.filename}`;
+                    animalData.imageUrl = fileUrl;
+                    animalData.photoUrl = animalData.photoUrl || fileUrl;
                 }
-                const fileUrl = `${base}/uploads/${req.file.filename}`;
-                animalData.imageUrl = fileUrl;
-                animalData.photoUrl = animalData.photoUrl || fileUrl;
             }
 
             // Normalize parent fields: if frontend provided numeric public IDs (fatherId_public, fatherId, etc.)
             // resolve them to internal backend _id for storage.
+            // Helper: resolve a numeric public id to both backend _id and id_public
             const resolveParentPublicToBackend = async (pubVal) => {
                 if (!pubVal) return null;
                 const num = Number(pubVal);
                 if (Number.isNaN(num)) return null;
-                const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id').lean();
-                return found ? found._id.toString() : null;
+                const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+                return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
             };
 
-            // Father
-            if (!animalData.father) {
-                animalData.father = animalData.father || null;
-                const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public;
+            // Map parent alias fields into the schema's sireId_public/damId_public
+            if (!animalData.sireId_public) {
+                const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public || animalData.sireId_public;
                 if (candidate) {
                     try {
                         const resolved = await resolveParentPublicToBackend(candidate);
-                        if (resolved) animalData.father = resolved;
+                        if (resolved) {
+                            animalData.sireId_public = resolved.id_public;
+                        } else {
+                            const num = Number(candidate);
+                            if (!Number.isNaN(num)) animalData.sireId_public = num;
+                        }
                     } catch (e) { /* ignore resolution errors */ }
                 }
             }
 
-            // Mother
-            if (!animalData.mother) {
-                animalData.mother = animalData.mother || null;
-                const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public;
+            if (!animalData.damId_public) {
+                const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public || animalData.damId_public;
                 if (candidateM) {
                     try {
                         const resolvedM = await resolveParentPublicToBackend(candidateM);
-                        if (resolvedM) animalData.mother = resolvedM;
+                        if (resolvedM) {
+                            animalData.damId_public = resolvedM.id_public;
+                        } else {
+                            const numM = Number(candidateM);
+                            if (!Number.isNaN(numM)) animalData.damId_public = numM;
+                        }
                     } catch (e) { /* ignore */ }
                 }
             }
@@ -218,26 +250,37 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             if (!pubVal) return null;
             const num = Number(pubVal);
             if (Number.isNaN(num)) return null;
-            const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id').lean();
-            return found ? found._id.toString() : null;
+            const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+            return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
         };
 
-        if (!updates.father) {
-            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public;
+        // Map alias parent fields into schema's sireId_public/damId_public on update
+        if (!updates.sireId_public) {
+            const candidate = updates.fatherId_public || updates.fatherId || updates.father_id || updates.father_public || updates.sireId_public;
             if (candidate) {
                 try {
                     const resolved = await resolveParentPublicToBackend(candidate);
-                    if (resolved) updates.father = resolved;
+                    if (resolved) {
+                        updates.sireId_public = resolved.id_public;
+                    } else {
+                        const num = Number(candidate);
+                        if (!Number.isNaN(num)) updates.sireId_public = num;
+                    }
                 } catch (e) { /* ignore */ }
             }
         }
 
-        if (!updates.mother) {
-            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public;
+        if (!updates.damId_public) {
+            const candidateM = updates.motherId_public || updates.motherId || updates.mother_id || updates.mother_public || updates.damId_public;
             if (candidateM) {
                 try {
                     const resolvedM = await resolveParentPublicToBackend(candidateM);
-                    if (resolvedM) updates.mother = resolvedM;
+                    if (resolvedM) {
+                        updates.damId_public = resolvedM.id_public;
+                    } else {
+                        const numM = Number(candidateM);
+                        if (!Number.isNaN(numM)) updates.damId_public = numM;
+                    }
                 } catch (e) { /* ignore */ }
             }
         }
@@ -255,17 +298,31 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
 
         // If a multipart file was uploaded directly with the animal update, set image URL from file
         if (req.file) {
-            const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
-            let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
-            if (base) {
-                if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
-                base = base.replace(/\/$/, '');
+            if (useR2) {
+                try {
+                    const r2 = require('../storage/r2_client');
+                    const ext = path.extname(req.file.originalname) || '';
+                    const key = `animals/${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
+                    const url = await r2.uploadBuffer(key, req.file.buffer, req.file.mimetype);
+                    updates.imageUrl = url;
+                    updates.photoUrl = updates.photoUrl || url;
+                    updates._uploadedFilename = key;
+                } catch (r2err) {
+                    console.error('R2 upload failed (update):', r2err);
+                }
             } else {
-                base = `${proto}://${req.get('host')}`;
+                const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+                let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
+                if (base) {
+                    if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+                    base = base.replace(/\/$/, '');
+                } else {
+                    base = `${proto}://${req.get('host')}`;
+                }
+                const fileUrl = `${base}/api/uploads/${req.file.filename}`;
+                updates.imageUrl = fileUrl;
+                updates.photoUrl = updates.photoUrl || fileUrl;
             }
-            const fileUrl = `${base}/uploads/${req.file.filename}`;
-            updates.imageUrl = fileUrl;
-            updates.photoUrl = updates.photoUrl || fileUrl;
         }
 
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);

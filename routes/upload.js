@@ -34,7 +34,15 @@ const upload = multer({
 router.post('/', upload.single('file'), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+    let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
+    if (base) {
+      if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+      base = base.replace(/\/$/, '');
+    } else {
+      base = `${proto}://${req.get('host')}`;
+    }
+    const url = `${base}/uploads/${req.file.filename}`;
     return res.json({ url, filename: req.file.filename });
   } catch (err) {
     console.error('Upload error:', err);

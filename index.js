@@ -96,16 +96,6 @@ const adminRoutes = require('./routes/admin');
 app.use('/api/admin', authMiddleware, adminRoutes);
 
 // Multer instance for optional multipart handling on profile route
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname) || '';
-        const name = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
-        cb(null, name);
-    }
-});
-// Enforce server-side upload limit to 500KB per file. Client-side compression
-// should reduce images below this threshold before upload.
 // Only accept PNG and JPEG/JPG files server-side
 const imageFileFilter = (req, file, cb) => {
     const allowed = ['image/png', 'image/jpeg', 'image/jpg'];
@@ -116,26 +106,60 @@ const imageFileFilter = (req, file, cb) => {
     }
 };
 
+const storage = multer.memoryStorage(); // Use memory storage to forward files to Worker
 const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 }, fileFilter: imageFileFilter });
 
 // Provide a guarded upload endpoint that enforces file type and size server-side
-app.post('/api/upload', uploadSingle.single('file'), (req, res) => {
+// This endpoint now forwards uploads to the Cloudflare Worker (R2 storage)
+app.post('/api/upload', uploadSingle.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-        // Determine a stable public base URL. Prefer an explicit PUBLIC_HOST env var
-        // (e.g., "https://www.crittertrack.net"). If not provided, fall back to request host.
-        const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
-        let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
-        if (base) {
-            // Ensure base includes protocol
-            if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
-            // Remove trailing slash
-            base = base.replace(/\/$/, '');
-        } else {
-            base = `${proto}://${req.get('host')}`;
+        
+        // Forward the file to the Cloudflare Worker for R2 storage
+        const uploaderUrl = process.env.UPLOADER_URL || process.env.PUBLIC_HOST;
+        if (!uploaderUrl) {
+            // Fallback: save locally if no uploader configured
+            const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+            let base = process.env.PUBLIC_URL || process.env.DOMAIN || null;
+            if (base) {
+                if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+                base = base.replace(/\/$/, '');
+            } else {
+                base = `${proto}://${req.get('host')}`;
+            }
+            const fileUrl = `${base}/uploads/${req.file.filename}`;
+            return res.json({ url: fileUrl, filename: req.file.filename });
         }
-        const fileUrl = `${base}/uploads/${req.file.filename}`;
-        return res.json({ url: fileUrl, filename: req.file.filename });
+
+        // Create FormData and forward to Worker
+        const FormData = require('form-data');
+        const formData = new FormData();
+        formData.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype
+        });
+
+        const workerResponse = await fetch(uploaderUrl, {
+            method: 'POST',
+            body: formData,
+            headers: formData.getHeaders()
+        });
+
+        if (!workerResponse.ok) {
+            const errorText = await workerResponse.text();
+            console.error('Worker upload failed:', errorText);
+            return res.status(500).json({ message: 'Upload to storage failed' });
+        }
+
+        const result = await workerResponse.json();
+        
+        // Clean up local file after successful upload to R2
+        const fs = require('fs');
+        if (req.file.path && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        return res.json({ url: result.url, filename: result.key || req.file.filename });
     } catch (err) {
         console.error('Upload endpoint error:', err && err.message ? err.message : err);
         return res.status(500).json({ message: 'Upload failed' });
