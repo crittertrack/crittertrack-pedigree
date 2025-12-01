@@ -277,7 +277,16 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Apply filters from query params
     if (filters.gender) query.gender = filters.gender;
     if (filters.species) query.species = filters.species;
-    // ... add other relevant filters ...
+    if (filters.status) query.status = filters.status;
+    if (filters.isOwned !== undefined) {
+        query.isOwned = filters.isOwned === 'true' || filters.isOwned === true;
+    }
+    if (filters.isPregnant !== undefined) {
+        query.isPregnant = filters.isPregnant === 'true' || filters.isPregnant === true;
+    }
+    if (filters.isNursing !== undefined) {
+        query.isNursing = filters.isNursing === 'true' || filters.isNursing === true;
+    }
 
     // Sort by birth date descending (most recent first)
     const docs = await Animal.find(query).sort({ birthDate: -1 }).lean();
