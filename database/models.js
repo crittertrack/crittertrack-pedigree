@@ -49,6 +49,7 @@ const AnimalSchema = new mongoose.Schema({
     name: { type: String, required: true },
     gender: { type: String, enum: ['Male', 'Female', 'Unknown'], default: 'Unknown' },
     birthDate: { type: Date, default: Date.now },
+    breederyId: { type: String, default: null },
     color: { type: String, default: null },
     coat: { type: String, default: null },
     // Image URLs (optional)
@@ -86,6 +87,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     name: { type: String, required: true },
     gender: { type: String },
     birthDate: { type: Date },
+    breederyId: { type: String, default: null },
     color: { type: String, default: null },
     coat: { type: String, default: null },
 
