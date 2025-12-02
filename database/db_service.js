@@ -410,6 +410,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             birthDate: updatedAnimal.birthDate,
             color: updatedAnimal.color,
             coat: updatedAnimal.coat,
+            status: updatedAnimal.status || null,
             // Ensure public record includes image URLs if present
             imageUrl: updatedAnimal.imageUrl || null,
             photoUrl: updatedAnimal.photoUrl || null,
