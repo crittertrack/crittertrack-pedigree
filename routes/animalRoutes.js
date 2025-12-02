@@ -493,6 +493,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
 
         // Create notifications for breeder and parent linkages (if targeting other users' data)
         const currentUserPublicId = req.user.id_public;
+        console.log(`[UPDATE] Current user public ID from req.user: ${currentUserPublicId}`);
         
         // Check if breeder was set and it's not the current user
         if (updatedAnimal.breederId_public && updatedAnimal.breederId_public !== currentUserPublicId) {
