@@ -31,7 +31,9 @@ const User = mongoose.model('User', UserSchema);
 const PublicProfileSchema = new mongoose.Schema({
     userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     id_public: { type: Number, required: true, unique: true, index: true },
-    breederName: { type: String, required: true, trim: true },
+    personalName: { type: String, required: true, trim: true },
+    breederName: { type: String, default: null, trim: true },
+    showBreederName: { type: Boolean, default: false },
     profileImage: { type: String, default: null },
     createdAt: { type: Date, default: null }, // Member since date
 }, { timestamps: true });

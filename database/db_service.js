@@ -83,7 +83,9 @@ const registerUser = async (userData) => {
     const publicProfile = new PublicProfile({
         userId_backend: user._id,
         id_public: user.id_public,
+        personalName: user.personalName,
         breederName: user.breederName,
+        showBreederName: user.showBreederName,
         profileImage: user.profileImage,
         createdAt: user.creationDate || new Date(), // Set member since date
     });
@@ -172,13 +174,21 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     }
 
     // Apply allowed updates
-    if (updates.personalName !== undefined) user.personalName = updates.personalName;
+    if (updates.personalName !== undefined) {
+        user.personalName = updates.personalName;
+        // Update public profile personalName simultaneously
+        await PublicProfile.updateOne({ userId_backend: user._id }, { personalName: updates.personalName });
+    }
     if (updates.breederName !== undefined) {
         user.breederName = updates.breederName;
         // Update public profile name simultaneously
         await PublicProfile.updateOne({ userId_backend: user._id }, { breederName: updates.breederName });
     }
-    if (updates.showBreederName !== undefined) user.showBreederName = updates.showBreederName;
+    if (updates.showBreederName !== undefined) {
+        user.showBreederName = updates.showBreederName;
+        // Update public profile showBreederName simultaneously
+        await PublicProfile.updateOne({ userId_backend: user._id }, { showBreederName: updates.showBreederName });
+    }
     if (updates.profileImage !== undefined) {
         user.profileImage = updates.profileImage;
         // Update public profile image simultaneously
