@@ -411,6 +411,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             color: updatedAnimal.color,
             coat: updatedAnimal.coat,
             status: updatedAnimal.status || null,
+            breederId_public: updatedAnimal.breederId_public || null,
             // Ensure public record includes image URLs if present
             imageUrl: updatedAnimal.imageUrl || null,
             photoUrl: updatedAnimal.photoUrl || null,

@@ -58,6 +58,10 @@ const AnimalSchema = new mongoose.Schema({
     coat: { type: String, default: null },
     earset: { type: String, default: null },
     
+    // Breeder and owner info
+    breederId_public: { type: Number, default: null, index: true }, // Public ID of the breeder (user)
+    ownerName: { type: String, default: null }, // Custom owner name (only for local view)
+    
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
     isPregnant: { type: Boolean, default: false },
@@ -103,6 +107,9 @@ const PublicAnimalSchema = new mongoose.Schema({
     color: { type: String, default: null },
     coat: { type: String, default: null },
     earset: { type: String, default: null },
+    
+    // Breeder info (public)
+    breederId_public: { type: Number, default: null, index: true }, // Public ID of the breeder
     
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
