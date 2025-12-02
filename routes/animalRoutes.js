@@ -384,7 +384,13 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
-        console.log('[PUT /api/animals/:id] Received updates:', JSON.stringify({ breederyId: updates.breederyId, geneticCode: updates.geneticCode, remarks: updates.remarks }));
+        console.log('[PUT /api/animals/:id] Request received for animal:', animalId_backend);
+        console.log('[PUT /api/animals/:id] Updates:', JSON.stringify({ 
+            breederId_public: updates.breederId_public,
+            breederyId: updates.breederyId, 
+            geneticCode: updates.geneticCode, 
+            remarks: updates.remarks 
+        }));
 
         // Normalize parent fields on update as well (accept public numeric IDs)
         const resolveParentPublicToBackend = async (pubVal) => {
