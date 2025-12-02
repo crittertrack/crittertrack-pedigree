@@ -81,11 +81,13 @@ router.get('/profiles/search', async (req, res) => {
         if (query && query.trim()) {
             const searchTerm = query.trim();
             // Search by breederName, personalName, or id_public
-            const idMatch = searchTerm.match(/^\d+$/);
+            // Handle both numeric IDs and CT-prefixed IDs (e.g., "5" or "CT5")
+            const idMatch = searchTerm.match(/^(?:CT[- ]?)?(\d+)$/i);
             if (idMatch) {
-                // If query is numeric, search by id_public or in names
+                // If query is numeric (with or without CT prefix), search by id_public or in names
+                const numericId = parseInt(idMatch[1], 10);
                 filter.$or = [
-                    { id_public: parseInt(searchTerm, 10) },
+                    { id_public: numericId },
                     { breederName: { $regex: searchTerm, $options: 'i' } },
                     { personalName: { $regex: searchTerm, $options: 'i' } }
                 ];
