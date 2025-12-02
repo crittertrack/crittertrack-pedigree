@@ -58,9 +58,14 @@ const authMiddleware = async (req, res, next) => {
         req.user = decoded.user;
         
         // 4. Fetch and attach user's public ID for notification creation
-        const user = await User.findById(req.user.id).select('id_public');
-        if (user) {
-            req.user.id_public = user.id_public;
+        try {
+            const user = await User.findById(req.user.id).select('id_public');
+            if (user) {
+                req.user.id_public = user.id_public;
+            }
+        } catch (dbError) {
+            console.error("Failed to fetch user public ID:", dbError.message);
+            // Continue anyway - id_public is optional for most routes
         }
         
         // 5. Proceed to the next middleware/route handler
