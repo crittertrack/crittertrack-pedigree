@@ -4,31 +4,14 @@
  */
 
 const mongoose = require('mongoose');
-require('dotenv').config();
-
-const MONGO_URI = process.env.MONGO_URI;
-
-const UserSchema = new mongoose.Schema({
-    id_public: Number,
-    showGeneticCodePublic: { type: Boolean, default: false },
-    showRemarksPublic: { type: Boolean, default: false },
-});
-
-const PublicProfileSchema = new mongoose.Schema({
-    userId_backend: mongoose.Schema.Types.ObjectId,
-    id_public: Number,
-    showGeneticCodePublic: { type: Boolean, default: false },
-    showRemarksPublic: { type: Boolean, default: false },
-});
-
-const User = mongoose.model('User', UserSchema, 'users');
-const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
+const { User, PublicProfile } = require('../database/models');
 
 async function migratePrivacySettings() {
     try {
-        console.log('Connecting to MongoDB...');
-        await mongoose.connect(MONGO_URI);
-        console.log('Connected successfully');
+        // Connect to MongoDB
+        const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/crittertrack';
+        await mongoose.connect(mongoUri);
+        console.log('Connected to MongoDB');
 
         // Get all users
         const users = await User.find({});
