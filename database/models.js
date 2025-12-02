@@ -161,6 +161,31 @@ const LitterSchema = new mongoose.Schema({
 const Litter = mongoose.model('Litter', LitterSchema);
 
 
+// --- 6. NOTIFICATION SCHEMA ---
+const NotificationSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    userId_public: { type: Number, required: true, index: true },
+    type: { type: String, required: true, enum: ['breeder_request', 'parent_request'] },
+    status: { type: String, required: true, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
+    
+    // Request details
+    requestedBy_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    requestedBy_public: { type: Number, required: true },
+    animalId_public: { type: Number, required: true },
+    animalName: { type: String, required: true },
+    
+    // For parent requests: which parent (sire/dam)
+    parentType: { type: String, enum: ['sire', 'dam', null], default: null },
+    targetAnimalId_public: { type: Number, default: null }, // The animal being used as parent
+    
+    // Metadata
+    message: { type: String, default: '' },
+    read: { type: Boolean, default: false, index: true },
+    
+}, { timestamps: true });
+const Notification = mongoose.model('Notification', NotificationSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -168,5 +193,6 @@ module.exports = {
     Animal,
     PublicAnimal,
     Litter,
+    Notification,
     Counter
 };

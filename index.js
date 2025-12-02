@@ -19,6 +19,7 @@ const animalRoutes = require('./routes/animalRoutes');
 const litterRoutes = require('./routes/litterRoutes');
 const pedigreeRoutes = require('./routes/pedigreeRoutes');
 const publicRoutes = require('./routes/publicRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 // const adminRoutes = require('./routes/adminRoutes');
 
 
@@ -256,6 +257,7 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
 app.use('/api/animals', authMiddleware, animalRoutes);
 app.use('/api/litters', authMiddleware, litterRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
+app.use('/api/notifications', authMiddleware, notificationRoutes);
 
 
 // --- Error Handling Middleware ---
