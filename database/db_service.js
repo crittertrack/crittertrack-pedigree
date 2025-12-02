@@ -102,6 +102,8 @@ const registerUser = async (userData) => {
         personalName: user.personalName,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
+        showGeneticCodePublic: user.showGeneticCodePublic,
+        showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
     };
@@ -155,6 +157,8 @@ const getUserProfileById = async (appUserId_backend) => {
         personalName: user.personalName,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
+        showGeneticCodePublic: user.showGeneticCodePublic,
+        showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
