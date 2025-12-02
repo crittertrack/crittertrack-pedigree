@@ -140,6 +140,18 @@ router.get('/migrate-profiles-temp', async (req, res) => {
     }
 });
 
+// Debug endpoint to check PublicAnimal count
+router.get('/public-animals-count', async (req, res) => {
+    try {
+        const count = await PublicAnimal.countDocuments();
+        const sample = await PublicAnimal.find().limit(3).lean();
+        return res.status(200).json({ count, sample });
+    } catch (error) {
+        console.error('Error counting public animals:', error);
+        return res.status(500).json({ message: 'Error counting public animals' });
+    }
+});
+
 // --- Global/Public search for animals (public endpoint) ---
 // Support query: /api/global/animals?display=true&name=...&id_public=...&gender=...&birthdateBefore=YYYY-MM-DD
 router.get('/global/animals', async (req, res) => {
