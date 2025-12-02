@@ -131,7 +131,15 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
             message = `${requesterName} has set you as the breeder for ${fullAnimalName} (CT${animalId_public})`;
         } else if (type === 'parent_request') {
             const parentLabel = parentType === 'sire' ? 'sire (father)' : 'dam (mother)';
-            message = `${requesterName} has used your animal CT${targetAnimalId_public} as ${parentLabel} for ${fullAnimalName} (CT${animalId_public})`;
+            
+            // Fetch target animal details for display name
+            const targetAnimal = await PublicAnimal.findOne({ id_public: targetAnimalId_public });
+            const targetAnimalPrefix = targetAnimal?.prefix || '';
+            const targetAnimalName = targetAnimal?.name || '';
+            const fullTargetAnimalName = targetAnimalPrefix ? `${targetAnimalPrefix} ${targetAnimalName}` : targetAnimalName;
+            const targetAnimalDisplay = fullTargetAnimalName ? `${fullTargetAnimalName} (CT${targetAnimalId_public})` : `CT${targetAnimalId_public}`;
+            
+            message = `${requesterName} has used your animal ${targetAnimalDisplay} as ${parentLabel} for ${fullAnimalName} (CT${animalId_public})`;
         }
         
         const notification = await Notification.create({
