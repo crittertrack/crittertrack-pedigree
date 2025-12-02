@@ -394,13 +394,16 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         throw new Error('Animal not found or user does not own this animal.');
     }
 
-    // If the animal is public, update the corresponding PublicAnimal record
+    // If the animal is public, update or create the corresponding PublicAnimal record
     if (updatedAnimal.showOnPublicProfile) {
         // Fetch the current PublicAnimal record
         const publicRecord = await PublicAnimal.findOne({ id_public: updatedAnimal.id_public });
 
-        // Update the public record with non-sensitive fields
+        // Prepare public updates
         const publicUpdates = {
+            ownerId_public: updatedAnimal.ownerId_public,
+            id_public: updatedAnimal.id_public,
+            species: updatedAnimal.species,
             prefix: updatedAnimal.prefix,
             name: updatedAnimal.name,
             gender: updatedAnimal.gender,
@@ -413,12 +416,22 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Ensure sire/dam public ids are stored for pedigree lookup
             sireId_public: updatedAnimal.sireId_public || null,
             damId_public: updatedAnimal.damId_public || null,
-            // Only update remarks/genetic code if the user has explicitly allowed them to be public
-            remarks: publicRecord.includeRemarks ? updatedAnimal.remarks : '',
-            geneticCode: publicRecord.includeGeneticCode ? updatedAnimal.geneticCode : null,
+            // Only include remarks/genetic code if the user has explicitly allowed them to be public
+            remarks: (publicRecord && publicRecord.includeRemarks) || updatedAnimal.includeRemarks ? updatedAnimal.remarks : '',
+            geneticCode: (publicRecord && publicRecord.includeGeneticCode) || updatedAnimal.includeGeneticCode ? updatedAnimal.geneticCode : null,
+            includeRemarks: updatedAnimal.includeRemarks || false,
+            includeGeneticCode: updatedAnimal.includeGeneticCode || false,
         };
 
-        await PublicAnimal.updateOne({ id_public: updatedAnimal.id_public }, publicUpdates);
+        // Use upsert to create if doesn't exist, update if it does
+        await PublicAnimal.updateOne(
+            { id_public: updatedAnimal.id_public },
+            { $set: publicUpdates },
+            { upsert: true }
+        );
+    } else {
+        // If showOnPublicProfile is false, remove from PublicAnimal
+        await PublicAnimal.deleteOne({ id_public: updatedAnimal.id_public });
     }
 
     // Add backward-compatible alias fields before returning
