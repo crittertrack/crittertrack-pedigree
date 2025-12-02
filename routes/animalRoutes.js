@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const { Notification, User } = require('../database/models');
 const fs = require('fs');
 // simple disk storage for images (adjust for S3 in production)
 const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -74,6 +75,54 @@ router.param('id_backend', async (req, res, next, value) => {
     }
 });
 // This router requires authMiddleware to be applied in index.js
+
+
+// Helper: Create notification for breeder/parent requests
+async function createLinkageNotification(targetUserId_public, requestedBy_id, requestedBy_public, animalId_public, animalName, type, parentType = null, targetAnimalId_public = null) {
+    try {
+        // Find the target user's backend ID
+        const targetUser = await User.findOne({ id_public: targetUserId_public });
+        if (!targetUser) return;
+        
+        // Check if notification already exists for this exact request
+        const existing = await Notification.findOne({
+            userId: targetUser._id,
+            animalId_public,
+            type,
+            status: 'pending',
+            parentType: parentType || null,
+            targetAnimalId_public: targetAnimalId_public || null
+        });
+        
+        if (existing) return; // Don't create duplicate notifications
+        
+        // Create notification
+        let message = '';
+        if (type === 'breeder_request') {
+            message = `User CT${requestedBy_public} has set you as the breeder for ${animalName} (CT${animalId_public})`;
+        } else if (type === 'parent_request') {
+            const parentLabel = parentType === 'sire' ? 'sire (father)' : 'dam (mother)';
+            message = `User CT${requestedBy_public} has used your animal CT${targetAnimalId_public} as ${parentLabel} for ${animalName} (CT${animalId_public})`;
+        }
+        
+        await Notification.create({
+            userId: targetUser._id,
+            userId_public: targetUserId_public,
+            type,
+            status: 'pending',
+            requestedBy_id,
+            requestedBy_public,
+            animalId_public,
+            animalName,
+            parentType,
+            targetAnimalId_public,
+            message,
+            read: false
+        });
+    } catch (error) {
+        console.error('Error creating linkage notification:', error);
+    }
+}
 
 
 // --- Animal Route Controllers (PROTECTED) ---
@@ -356,6 +405,70 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         }
 
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
+
+        // Create notifications for breeder and parent linkages (if targeting other users' data)
+        const currentUserPublicId = req.user.id_public;
+        
+        // Check if breeder was set and it's not the current user
+        if (updatedAnimal.breederId_public && updatedAnimal.breederId_public !== currentUserPublicId) {
+            // Check if this user owns an animal with that ID (local ownership check)
+            const localCheck = await Animal.findOne({ id_public: updatedAnimal.breederId_public, ownerId: appUserId_backend });
+            if (!localCheck) {
+                // It's someone else's user ID - create notification
+                await createLinkageNotification(
+                    updatedAnimal.breederId_public,
+                    req.user.id,
+                    currentUserPublicId,
+                    updatedAnimal.id_public,
+                    updatedAnimal.name,
+                    'breeder_request'
+                );
+            }
+        }
+        
+        // Check if sire was set and it's not owned by current user
+        if (updatedAnimal.sireId_public) {
+            const localSire = await Animal.findOne({ id_public: updatedAnimal.sireId_public, ownerId: appUserId_backend });
+            if (!localSire) {
+                // It's someone else's animal - create notification
+                // Find who owns this animal
+                const sireOwner = await Animal.findOne({ id_public: updatedAnimal.sireId_public }).populate('ownerId', 'id_public');
+                if (sireOwner && sireOwner.ownerId && sireOwner.ownerId.id_public) {
+                    await createLinkageNotification(
+                        sireOwner.ownerId.id_public,
+                        req.user.id,
+                        currentUserPublicId,
+                        updatedAnimal.id_public,
+                        updatedAnimal.name,
+                        'parent_request',
+                        'sire',
+                        updatedAnimal.sireId_public
+                    );
+                }
+            }
+        }
+        
+        // Check if dam was set and it's not owned by current user
+        if (updatedAnimal.damId_public) {
+            const localDam = await Animal.findOne({ id_public: updatedAnimal.damId_public, ownerId: appUserId_backend });
+            if (!localDam) {
+                // It's someone else's animal - create notification
+                // Find who owns this animal
+                const damOwner = await Animal.findOne({ id_public: updatedAnimal.damId_public }).populate('ownerId', 'id_public');
+                if (damOwner && damOwner.ownerId && damOwner.ownerId.id_public) {
+                    await createLinkageNotification(
+                        damOwner.ownerId.id_public,
+                        req.user.id,
+                        currentUserPublicId,
+                        updatedAnimal.id_public,
+                        updatedAnimal.name,
+                        'parent_request',
+                        'dam',
+                        updatedAnimal.damId_public
+                    );
+                }
+            }
+        }
 
         res.status(200).json({
             message: 'Animal updated successfully!',
