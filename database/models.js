@@ -179,8 +179,11 @@ const NotificationSchema = new mongoose.Schema({
     // Request details
     requestedBy_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     requestedBy_public: { type: Number, required: true },
+    requestedBy_name: { type: String, default: '' }, // Requester's personal or breeder name
     animalId_public: { type: Number, required: true },
     animalName: { type: String, required: true },
+    animalPrefix: { type: String, default: '' }, // Animal prefix
+    animalImageUrl: { type: String, default: '' }, // Animal thumbnail
     
     // For parent requests: which parent (sire/dam)
     parentType: { type: String, enum: ['sire', 'dam', null], default: null },

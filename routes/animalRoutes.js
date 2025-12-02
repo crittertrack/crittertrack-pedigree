@@ -81,12 +81,23 @@ router.param('id_backend', async (req, res, next, value) => {
 async function createLinkageNotification(targetUserId_public, requestedBy_id, requestedBy_public, animalId_public, animalName, type, parentType = null, targetAnimalId_public = null) {
     try {
         console.log(`[Notification] Creating ${type} notification for user CT${targetUserId_public}`);
+        
         // Find the target user's backend ID
         const targetUser = await User.findOne({ id_public: targetUserId_public });
         if (!targetUser) {
             console.log(`[Notification] Target user CT${targetUserId_public} not found`);
             return;
         }
+        
+        // Fetch requester's name from PublicProfile
+        const requester = await PublicProfile.findOne({ id_public: requestedBy_public });
+        const requesterName = requester?.personalName || requester?.breederName || `User CT${requestedBy_public}`;
+        
+        // Fetch animal details (prefix and image)
+        const animal = await PublicAnimal.findOne({ id_public: animalId_public });
+        const animalPrefix = animal?.prefix || '';
+        const animalImageUrl = animal?.imageUrl || '';
+        const fullAnimalName = animalPrefix ? `${animalPrefix} ${animalName}` : animalName;
         
         // Check if notification already exists for this exact request
         const existing = await Notification.findOne({
@@ -103,13 +114,13 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
             return; // Don't create duplicate notifications
         }
         
-        // Create notification
+        // Create notification with improved message
         let message = '';
         if (type === 'breeder_request') {
-            message = `User CT${requestedBy_public} has set you as the breeder for ${animalName} (CT${animalId_public})`;
+            message = `${requesterName} has set you as the breeder for ${fullAnimalName} (CT${animalId_public})`;
         } else if (type === 'parent_request') {
             const parentLabel = parentType === 'sire' ? 'sire (father)' : 'dam (mother)';
-            message = `User CT${requestedBy_public} has used your animal CT${targetAnimalId_public} as ${parentLabel} for ${animalName} (CT${animalId_public})`;
+            message = `${requesterName} has used your animal CT${targetAnimalId_public} as ${parentLabel} for ${fullAnimalName} (CT${animalId_public})`;
         }
         
         const notification = await Notification.create({
@@ -119,8 +130,11 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
             status: 'pending',
             requestedBy_id,
             requestedBy_public,
+            requestedBy_name: requesterName,
             animalId_public,
             animalName,
+            animalPrefix,
+            animalImageUrl,
             parentType,
             targetAnimalId_public,
             message,
