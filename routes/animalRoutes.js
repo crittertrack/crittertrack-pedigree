@@ -91,7 +91,18 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
         
         // Fetch requester's name from PublicProfile
         const requester = await PublicProfile.findOne({ id_public: requestedBy_public });
-        const requesterName = requester?.personalName || requester?.breederName || `User CT${requestedBy_public}`;
+        let requesterName = `User CT${requestedBy_public}`;
+        if (requester) {
+            const hasPersonalName = requester.showPersonalName && requester.personalName;
+            const hasBreederName = requester.breederName;
+            if (hasPersonalName && hasBreederName) {
+                requesterName = `${requester.personalName} (${requester.breederName})`;
+            } else if (hasPersonalName) {
+                requesterName = requester.personalName;
+            } else if (hasBreederName) {
+                requesterName = requester.breederName;
+            }
+        }
         
         // Fetch animal details (prefix and image)
         const animal = await PublicAnimal.findOne({ id_public: animalId_public });
