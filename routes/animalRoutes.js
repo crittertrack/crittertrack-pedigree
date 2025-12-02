@@ -80,9 +80,13 @@ router.param('id_backend', async (req, res, next, value) => {
 // Helper: Create notification for breeder/parent requests
 async function createLinkageNotification(targetUserId_public, requestedBy_id, requestedBy_public, animalId_public, animalName, type, parentType = null, targetAnimalId_public = null) {
     try {
+        console.log(`[Notification] Creating ${type} notification for user CT${targetUserId_public}`);
         // Find the target user's backend ID
         const targetUser = await User.findOne({ id_public: targetUserId_public });
-        if (!targetUser) return;
+        if (!targetUser) {
+            console.log(`[Notification] Target user CT${targetUserId_public} not found`);
+            return;
+        }
         
         // Check if notification already exists for this exact request
         const existing = await Notification.findOne({
@@ -94,7 +98,10 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
             targetAnimalId_public: targetAnimalId_public || null
         });
         
-        if (existing) return; // Don't create duplicate notifications
+        if (existing) {
+            console.log(`[Notification] Duplicate notification exists, skipping`);
+            return; // Don't create duplicate notifications
+        }
         
         // Create notification
         let message = '';
@@ -105,7 +112,7 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
             message = `User CT${requestedBy_public} has used your animal CT${targetAnimalId_public} as ${parentLabel} for ${animalName} (CT${animalId_public})`;
         }
         
-        await Notification.create({
+        const notification = await Notification.create({
             userId: targetUser._id,
             userId_public: targetUserId_public,
             type,
@@ -119,6 +126,7 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
             message,
             read: false
         });
+        console.log(`[Notification] Successfully created notification ID ${notification._id}`);
     } catch (error) {
         console.error('Error creating linkage notification:', error);
     }
