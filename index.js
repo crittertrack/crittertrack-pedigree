@@ -189,6 +189,10 @@ app.use('/api/auth', authRoutes);
 // Public Data Routes
 app.use('/api/public', publicRoutes);
 
+// Admin Routes (for migrations and admin tasks)
+const adminRoutes = require('./routes/adminRoutes');
+app.use('/api/admin', adminRoutes);
+
 // Temporary diagnostic endpoint: list files in uploads directory
 app.get('/api/uploads/list', (req, res) => {
     try {
