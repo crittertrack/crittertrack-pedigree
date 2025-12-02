@@ -111,6 +111,35 @@ router.get('/profiles/search', async (req, res) => {
     }
 });
 
+// TEMPORARY MIGRATION ENDPOINT - Remove after running once
+router.get('/migrate-profiles-temp', async (req, res) => {
+    try {
+        const { User, PublicProfile } = require('../database/models');
+        const publicProfiles = await PublicProfile.find({});
+        let updated = 0;
+        const results = [];
+
+        for (const profile of publicProfiles) {
+            const user = await User.findById(profile.userId_backend);
+            if (user) {
+                await PublicProfile.updateOne(
+                    { _id: profile._id },
+                    {
+                        personalName: user.personalName,
+                        showBreederName: user.showBreederName || false,
+                        breederName: user.breederName || null
+                    }
+                );
+                results.push({ id: profile.id_public, personalName: user.personalName, breederName: user.breederName });
+                updated++;
+            }
+        }
+        res.json({ updated, results });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Global/Public search for animals (public endpoint) ---
 // Support query: /api/global/animals?display=true&name=...&id_public=...&gender=...&birthdateBefore=YYYY-MM-DD
 router.get('/global/animals', async (req, res) => {
