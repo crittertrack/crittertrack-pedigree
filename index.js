@@ -12,6 +12,9 @@ const {
     updateUserProfile,
 } = require('./database/db_service'); 
 
+// Import User model for authMiddleware
+const { User } = require('./database/models');
+
 // --- Route Imports (Using existing folders: routes, database) ---
 // Note: There is NO require for './middleware/auth' here.
 const authRoutes = require('./routes/authRoutes'); 
