@@ -19,6 +19,7 @@ const animalRoutes = require('./routes/animalRoutes');
 const litterRoutes = require('./routes/litterRoutes');
 const pedigreeRoutes = require('./routes/pedigreeRoutes');
 const publicRoutes = require('./routes/publicRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 
 const app = express();
@@ -190,7 +191,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/public', publicRoutes);
 
 // Admin Routes (for migrations and admin tasks)
-const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', adminRoutes);
 
 // Temporary diagnostic endpoint: list files in uploads directory
