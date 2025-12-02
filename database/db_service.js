@@ -438,8 +438,10 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
     // If the animal is public, update or create the corresponding PublicAnimal record
     if (updatedAnimal.showOnPublicProfile) {
-        // Fetch the current PublicAnimal record
-        const publicRecord = await PublicAnimal.findOne({ id_public: updatedAnimal.id_public });
+        // Fetch owner's privacy settings
+        const owner = await User.findById(appUserId_backend);
+        const showGeneticCodePublic = owner?.showGeneticCodePublic ?? false;
+        const showRemarksPublic = owner?.showRemarksPublic ?? false;
 
         // Prepare public updates
         const publicUpdates = {
@@ -460,11 +462,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Ensure sire/dam public ids are stored for pedigree lookup
             sireId_public: updatedAnimal.sireId_public || null,
             damId_public: updatedAnimal.damId_public || null,
-            // Only include remarks/genetic code if the user has explicitly allowed them to be public
-            remarks: (publicRecord && publicRecord.includeRemarks) || updatedAnimal.includeRemarks ? updatedAnimal.remarks : '',
-            geneticCode: (publicRecord && publicRecord.includeGeneticCode) || updatedAnimal.includeGeneticCode ? updatedAnimal.geneticCode : null,
-            includeRemarks: updatedAnimal.includeRemarks || false,
-            includeGeneticCode: updatedAnimal.includeGeneticCode || false,
+            // Include remarks/genetic code based on owner's privacy settings
+            remarks: showRemarksPublic ? (updatedAnimal.remarks || '') : '',
+            geneticCode: showGeneticCodePublic ? (updatedAnimal.geneticCode || null) : null,
         };
 
         // Use upsert to create if doesn't exist, update if it does
