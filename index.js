@@ -259,9 +259,9 @@ app.use('/api/litters', authMiddleware, litterRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 
-// Migration Routes (Admin only - should add admin check in production)
+// Migration Routes (No auth for one-time migrations - remove after running)
 const migrationRoutes = require('./routes/migrationRoutes');
-app.use('/api/admin/migrations', migrationRoutes);
+app.use('/api/migrations', migrationRoutes);
 
 
 // --- Error Handling Middleware ---
