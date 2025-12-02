@@ -490,10 +490,13 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         
         // Check if breeder was set and it's not the current user
         if (updatedAnimal.breederId_public && updatedAnimal.breederId_public !== currentUserPublicId) {
+            console.log(`[UPDATE] Checking breeder notification: breederId_public=${updatedAnimal.breederId_public}, currentUserPublicId=${currentUserPublicId}`);
             // Check if this user owns an animal with that ID (local ownership check)
             const localCheck = await Animal.findOne({ id_public: updatedAnimal.breederId_public, ownerId: appUserId_backend });
+            console.log(`[UPDATE] Local check for breeder animal: ${localCheck ? 'found' : 'not found'}`);
             if (!localCheck) {
                 // It's someone else's user ID - create notification
+                console.log(`[UPDATE] Creating breeder notification for user CT${updatedAnimal.breederId_public}`);
                 await createLinkageNotification(
                     updatedAnimal.breederId_public,
                     req.user.id,
