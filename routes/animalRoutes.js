@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { Notification, User } = require('../database/models');
+const { Notification, User, PublicProfile, PublicAnimal } = require('../database/models');
 const fs = require('fs');
 // simple disk storage for images (adjust for S3 in production)
 const uploadDir = path.join(__dirname, '..', 'uploads');
