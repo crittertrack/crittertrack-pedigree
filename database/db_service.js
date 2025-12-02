@@ -100,8 +100,12 @@ const registerUser = async (userData) => {
         id_public: user.id_public,
         email: user.email,
         personalName: user.personalName,
+        showPersonalName: user.showPersonalName,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
+        websiteURL: user.websiteURL,
+        showWebsiteURL: user.showWebsiteURL,
+        showEmailPublic: user.showEmailPublic,
         showGeneticCodePublic: user.showGeneticCodePublic,
         showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
@@ -155,8 +159,12 @@ const getUserProfileById = async (appUserId_backend) => {
         id_public: user.id_public,
         email: user.email,
         personalName: user.personalName,
+        showPersonalName: user.showPersonalName,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
+        websiteURL: user.websiteURL,
+        showWebsiteURL: user.showWebsiteURL,
+        showEmailPublic: user.showEmailPublic,
         showGeneticCodePublic: user.showGeneticCodePublic,
         showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
@@ -183,6 +191,9 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         // Update public profile personalName simultaneously
         await PublicProfile.updateOne({ userId_backend: user._id }, { personalName: updates.personalName });
     }
+    if (updates.showPersonalName !== undefined) {
+        user.showPersonalName = updates.showPersonalName;
+    }
     if (updates.breederName !== undefined) {
         user.breederName = updates.breederName;
         // Update public profile name simultaneously
@@ -192,6 +203,15 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         user.showBreederName = updates.showBreederName;
         // Update public profile showBreederName simultaneously
         await PublicProfile.updateOne({ userId_backend: user._id }, { showBreederName: updates.showBreederName });
+    }
+    if (updates.websiteURL !== undefined) {
+        user.websiteURL = updates.websiteURL;
+    }
+    if (updates.showWebsiteURL !== undefined) {
+        user.showWebsiteURL = updates.showWebsiteURL;
+    }
+    if (updates.showEmailPublic !== undefined) {
+        user.showEmailPublic = updates.showEmailPublic;
     }
     if (updates.showGeneticCodePublic !== undefined) {
         user.showGeneticCodePublic = updates.showGeneticCodePublic;
