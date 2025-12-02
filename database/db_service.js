@@ -86,6 +86,8 @@ const registerUser = async (userData) => {
         personalName: user.personalName,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
+        showGeneticCodePublic: user.showGeneticCodePublic || false,
+        showRemarksPublic: user.showRemarksPublic || false,
         profileImage: user.profileImage,
         createdAt: user.creationDate || new Date(), // Set member since date
     });
