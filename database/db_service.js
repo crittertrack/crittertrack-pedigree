@@ -189,6 +189,16 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         // Update public profile showBreederName simultaneously
         await PublicProfile.updateOne({ userId_backend: user._id }, { showBreederName: updates.showBreederName });
     }
+    if (updates.showGeneticCodePublic !== undefined) {
+        user.showGeneticCodePublic = updates.showGeneticCodePublic;
+        // Update public profile showGeneticCodePublic simultaneously
+        await PublicProfile.updateOne({ userId_backend: user._id }, { showGeneticCodePublic: updates.showGeneticCodePublic });
+    }
+    if (updates.showRemarksPublic !== undefined) {
+        user.showRemarksPublic = updates.showRemarksPublic;
+        // Update public profile showRemarksPublic simultaneously
+        await PublicProfile.updateOne({ userId_backend: user._id }, { showRemarksPublic: updates.showRemarksPublic });
+    }
     if (updates.profileImage !== undefined) {
         user.profileImage = updates.profileImage;
         // Update public profile image simultaneously

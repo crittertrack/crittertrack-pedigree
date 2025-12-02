@@ -19,6 +19,8 @@ const UserSchema = new mongoose.Schema({
     profileImage: { type: String, default: null },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
+    showGeneticCodePublic: { type: Boolean, default: false },
+    showRemarksPublic: { type: Boolean, default: false },
     creationDate: { type: Date, default: Date.now },
     // Array of internal Animal and Litter IDs owned by this user for easy lookup
     ownedAnimals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Animal' }], 
@@ -34,6 +36,8 @@ const PublicProfileSchema = new mongoose.Schema({
     personalName: { type: String, required: true, trim: true },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
+    showGeneticCodePublic: { type: Boolean, default: false },
+    showRemarksPublic: { type: Boolean, default: false },
     profileImage: { type: String, default: null },
     createdAt: { type: Date, default: null }, // Member since date
 }, { timestamps: true });
