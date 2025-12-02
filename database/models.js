@@ -16,9 +16,13 @@ const UserSchema = new mongoose.Schema({
     // Password MUST be selected manually in queries or explicitly included in update handlers
     password: { type: String, required: true, select: false }, 
     personalName: { type: String, required: true, trim: true },
+    showPersonalName: { type: Boolean, default: true },
     profileImage: { type: String, default: null },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
+    websiteURL: { type: String, default: null },
+    showWebsiteURL: { type: Boolean, default: false },
+    showEmailPublic: { type: Boolean, default: false },
     showGeneticCodePublic: { type: Boolean, default: false },
     showRemarksPublic: { type: Boolean, default: false },
     creationDate: { type: Date, default: Date.now },
