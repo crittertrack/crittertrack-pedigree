@@ -148,9 +148,8 @@ router.get('/global/animals', async (req, res) => {
         const q = {};
         const query = req.query || {};
 
-        if (query.display === 'true' || query.display === '1') {
-            q.isDisplay = true;
-        }
+        // Note: PublicAnimal collection only contains public animals, so we don't need to filter by isDisplay
+        // The display parameter is kept for API compatibility but not used when querying PublicAnimal
 
         if (query.name) {
             q.name = { $regex: query.name, $options: 'i' };
