@@ -148,6 +148,8 @@ router.get('/global/animals', async (req, res) => {
         const q = {};
         const query = req.query || {};
 
+        console.log('Global animals search - Model:', Model.modelName, 'Query params:', query);
+
         // Note: PublicAnimal collection only contains public animals, so we don't need to filter by isDisplay
         // The display parameter is kept for API compatibility but not used when querying PublicAnimal
 
@@ -174,7 +176,9 @@ router.get('/global/animals', async (req, res) => {
 
         const limit = Math.min(parseInt(query.limit || '50', 10) || 50, 500);
 
+        console.log('Global animals search - Query filter:', q, 'Limit:', limit);
         const docs = await Model.find(q).limit(limit).lean();
+        console.log('Global animals search - Results count:', docs.length);
         return res.status(200).json(docs);
     } catch (error) {
         console.error('Error fetching global animals:', error && (error.stack || error));
