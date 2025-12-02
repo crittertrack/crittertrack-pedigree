@@ -242,7 +242,72 @@ router.post('/', upload.single('file'), async (req, res) => {
             animalData.showOnPublicProfile = animalData.isDisplay;
         }
 
+        // IMPORTANT: Animal is saved with breeder/parent links immediately.
+        // Notifications are created AFTER the save, but the links remain active.
+        // Links are only removed if the breeder/parent owner explicitly rejects via notification.
         const newAnimal = await addAnimal(appUserId_backend, animalData);
+
+        // Create notifications for breeder and parent linkages (if targeting other users' data)
+        const currentUserPublicId = req.user.id_public;
+        
+        // Check if breeder was set and it's not the current user
+        if (newAnimal.breederId_public && newAnimal.breederId_public !== currentUserPublicId) {
+            // Check if this user owns an animal with that ID (local ownership check)
+            const localCheck = await Animal.findOne({ id_public: newAnimal.breederId_public, ownerId: appUserId_backend });
+            if (!localCheck) {
+                // It's someone else's user ID - create notification
+                await createLinkageNotification(
+                    newAnimal.breederId_public,
+                    req.user.id,
+                    currentUserPublicId,
+                    newAnimal.id_public,
+                    newAnimal.name,
+                    'breeder_request'
+                );
+            }
+        }
+        
+        // Check if sire was set and it's not owned by current user
+        if (newAnimal.sireId_public) {
+            const localSire = await Animal.findOne({ id_public: newAnimal.sireId_public, ownerId: appUserId_backend });
+            if (!localSire) {
+                // It's someone else's animal - create notification
+                const sireOwner = await Animal.findOne({ id_public: newAnimal.sireId_public }).populate('ownerId', 'id_public');
+                if (sireOwner && sireOwner.ownerId && sireOwner.ownerId.id_public) {
+                    await createLinkageNotification(
+                        sireOwner.ownerId.id_public,
+                        req.user.id,
+                        currentUserPublicId,
+                        newAnimal.id_public,
+                        newAnimal.name,
+                        'parent_request',
+                        'sire',
+                        newAnimal.sireId_public
+                    );
+                }
+            }
+        }
+        
+        // Check if dam was set and it's not owned by current user
+        if (newAnimal.damId_public) {
+            const localDam = await Animal.findOne({ id_public: newAnimal.damId_public, ownerId: appUserId_backend });
+            if (!localDam) {
+                // It's someone else's animal - create notification
+                const damOwner = await Animal.findOne({ id_public: newAnimal.damId_public }).populate('ownerId', 'id_public');
+                if (damOwner && damOwner.ownerId && damOwner.ownerId.id_public) {
+                    await createLinkageNotification(
+                        damOwner.ownerId.id_public,
+                        req.user.id,
+                        currentUserPublicId,
+                        newAnimal.id_public,
+                        newAnimal.name,
+                        'parent_request',
+                        'dam',
+                        newAnimal.damId_public
+                    );
+                }
+            }
+        }
 
         res.status(201).json({
             message: 'Animal registered successfully!',
@@ -404,6 +469,9 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             updates.showOnPublicProfile = updates.isDisplay;
         }
 
+        // IMPORTANT: Animal is saved with breeder/parent links immediately.
+        // Notifications are created AFTER the save, but the links remain active.
+        // Links are only removed if the breeder/parent owner explicitly rejects via notification.
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
 
         // Create notifications for breeder and parent linkages (if targeting other users' data)

@@ -99,7 +99,9 @@ router.post('/:notificationId/reject', async (req, res) => {
             return res.status(400).json({ message: 'Notification already processed' });
         }
         
-        // Find the animal that made the request
+        // Find the animal that made the request and remove the linkage
+        // NOTE: The linkage was saved immediately when the user created/updated their animal.
+        // We only remove it here when the breeder/parent owner explicitly rejects the request.
         const animal = await Animal.findOne({ id_public: notification.animalId_public });
         
         if (animal) {
@@ -116,6 +118,22 @@ router.post('/:notificationId/reject', async (req, res) => {
                 }
             }
             await animal.save();
+            
+            // Also update PublicAnimal if it exists
+            const { PublicAnimal } = require('../database/models');
+            const publicAnimal = await PublicAnimal.findOne({ id_public: notification.animalId_public });
+            if (publicAnimal) {
+                if (notification.type === 'breeder_request') {
+                    publicAnimal.breederId_public = null;
+                } else if (notification.type === 'parent_request') {
+                    if (notification.parentType === 'sire') {
+                        publicAnimal.sireId_public = null;
+                    } else if (notification.parentType === 'dam') {
+                        publicAnimal.damId_public = null;
+                    }
+                }
+                await publicAnimal.save();
+            }
             
             // Create a notification for the requester
             await Notification.create({

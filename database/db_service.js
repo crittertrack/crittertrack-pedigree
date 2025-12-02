@@ -287,6 +287,12 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     const query = { ownerId: appUserId_backend };
 
     // Apply filters from query params
+    if (filters.id_public !== undefined) {
+        const idNum = Number(filters.id_public);
+        if (!Number.isNaN(idNum)) {
+            query.id_public = idNum;
+        }
+    }
     if (filters.gender) query.gender = filters.gender;
     if (filters.species) query.species = filters.species;
     if (filters.status) query.status = filters.status;
