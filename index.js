@@ -37,7 +37,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_cha
  * It expects the token in the 'Authorization' header as 'Bearer [token]'.
  * If valid, it adds the decoded user payload to req.user and proceeds.
  */
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
     // 1. Get token from header
     const authHeader = req.header('Authorization');
 
@@ -57,7 +57,13 @@ const authMiddleware = (req, res, next) => {
         // 3. Attach user payload to the request (req.user.id will be the MongoDB _id)
         req.user = decoded.user;
         
-        // 4. Proceed to the next middleware/route handler
+        // 4. Fetch and attach user's public ID for notification creation
+        const user = await User.findById(req.user.id).select('id_public');
+        if (user) {
+            req.user.id_public = user.id_public;
+        }
+        
+        // 5. Proceed to the next middleware/route handler
         next();
     } catch (error) {
         // 401: Unauthorized - Token is invalid or expired
