@@ -663,7 +663,9 @@ router.delete('/:id_backend', async (req, res) => {
 
 
 // GET /api/animals/:id_public/offspring
-// 7. Get all offspring grouped by litter for a specific animal (works with public id)
+// 7. Get all offspring for a specific animal (works with public id)
+// For authenticated users (local view): returns ALL offspring (public + private)
+// For unauthenticated users (public view): returns only PUBLIC offspring
 router.get('/:id_public/offspring', async (req, res) => {
     try {
         const { id_public } = req.params;
@@ -674,62 +676,137 @@ router.get('/:id_public/offspring', async (req, res) => {
         }
 
         const { Litter } = require('../database/models');
+        const isAuthenticated = !!req.user;
 
-        // Find all litters where this animal is either sire or dam
-        const litters = await Litter.find({
-            $or: [
-                { sireId_public: animalIdPublic },
-                { damId_public: animalIdPublic }
-            ]
-        }).sort({ birthDate: -1 }).lean();
+        // Find all offspring where this animal is either sire or dam
+        let allOffspring = [];
 
-        // For each litter, fetch the offspring animals and the other parent
-        const littersWithOffspring = await Promise.all(litters.map(async (litter) => {
-            // Determine which parent is the "other" parent
-            const otherParentId = litter.sireId_public === animalIdPublic 
-                ? litter.damId_public 
-                : litter.sireId_public;
-            const otherParentType = litter.sireId_public === animalIdPublic ? 'dam' : 'sire';
+        if (isAuthenticated) {
+            // For authenticated users: get ALL offspring (both public and private animals)
+            // First, get offspring from user's own animals
+            const privateOffspring = await Animal.find({
+                $or: [
+                    { sireId_public: animalIdPublic },
+                    { damId_public: animalIdPublic },
+                    { fatherId_public: animalIdPublic },
+                    { motherId_public: animalIdPublic }
+                ],
+                ownerId: req.user.id
+            }).lean();
 
-            // Fetch other parent data from PublicAnimal if available
-            let otherParent = null;
-            if (otherParentId) {
-                otherParent = await PublicAnimal.findOne({ id_public: otherParentId }).lean();
+            // Then get public offspring that might not be owned by this user
+            const publicOffspring = await PublicAnimal.find({
+                $or: [
+                    { sireId_public: animalIdPublic },
+                    { damId_public: animalIdPublic },
+                    { fatherId_public: animalIdPublic },
+                    { motherId_public: animalIdPublic }
+                ]
+            }).lean();
+
+            // Combine and deduplicate by id_public
+            const offspringMap = new Map();
+            
+            privateOffspring.forEach(animal => {
+                offspringMap.set(animal.id_public, animal);
+            });
+            
+            publicOffspring.forEach(animal => {
+                if (!offspringMap.has(animal.id_public)) {
+                    offspringMap.set(animal.id_public, animal);
+                }
+            });
+
+            allOffspring = Array.from(offspringMap.values());
+        } else {
+            // For unauthenticated users: only get PUBLIC offspring
+            allOffspring = await PublicAnimal.find({
+                $or: [
+                    { sireId_public: animalIdPublic },
+                    { damId_public: animalIdPublic },
+                    { fatherId_public: animalIdPublic },
+                    { motherId_public: animalIdPublic }
+                ]
+            }).lean();
+        }
+
+        // Group offspring by litter (based on birthDate and other parent)
+        const litterGroups = new Map();
+
+        for (const offspring of allOffspring) {
+            // Determine the other parent ID
+            const isSire = offspring.sireId_public === animalIdPublic || offspring.fatherId_public === animalIdPublic;
+            const otherParentId = isSire 
+                ? (offspring.damId_public || offspring.motherId_public)
+                : (offspring.sireId_public || offspring.fatherId_public);
+            const otherParentType = isSire ? 'dam' : 'sire';
+
+            // Create a unique key for the litter based on birthDate and other parent
+            const birthDate = offspring.birthDate ? new Date(offspring.birthDate).toISOString().split('T')[0] : 'unknown';
+            const litterKey = `${birthDate}_${otherParentId || 'none'}`;
+
+            if (!litterGroups.has(litterKey)) {
+                litterGroups.set(litterKey, {
+                    birthDate: offspring.birthDate,
+                    otherParentId: otherParentId,
+                    otherParentType: otherParentType,
+                    offspring: []
+                });
             }
 
-            // Fetch all offspring animals (try PublicAnimal first, fallback to Animal)
-            const offspringPublicIds = litter.offspringIds_public || [];
-            const offspring = [];
+            litterGroups.get(litterKey).offspring.push(offspring);
+        }
 
-            for (const offspringId of offspringPublicIds) {
-                // Try public first
-                let animal = await PublicAnimal.findOne({ id_public: offspringId }).lean();
-                
-                // If not in public, try private Animal collection (user might be viewing their own animals)
-                if (!animal && req.user) {
-                    animal = await Animal.findOne({ 
-                        id_public: offspringId,
-                        ownerId: req.user.id 
+        // Convert to array and fetch additional data for each litter
+        const littersWithOffspring = await Promise.all(
+            Array.from(litterGroups.values()).map(async (group) => {
+                // Try to find a matching litter record
+                let litterRecord = null;
+                if (group.birthDate && group.otherParentId) {
+                    litterRecord = await Litter.findOne({
+                        birthDate: group.birthDate,
+                        $or: [
+                            { sireId_public: animalIdPublic, damId_public: group.otherParentId },
+                            { sireId_public: group.otherParentId, damId_public: animalIdPublic }
+                        ]
                     }).lean();
                 }
 
-                if (animal) {
-                    offspring.push(animal);
+                // Fetch other parent data
+                let otherParent = null;
+                if (group.otherParentId) {
+                    // Try PublicAnimal first
+                    otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
+                    
+                    // If not found and user is authenticated, try private Animal
+                    if (!otherParent && isAuthenticated) {
+                        otherParent = await Animal.findOne({ 
+                            id_public: group.otherParentId,
+                            ownerId: req.user.id 
+                        }).lean();
+                    }
                 }
-            }
 
-            return {
-                litterId: litter._id,
-                litterName: litter.breedingPairCodeName || null,
-                birthDate: litter.birthDate,
-                sireId_public: litter.sireId_public,
-                damId_public: litter.damId_public,
-                otherParent: otherParent,
-                otherParentType: otherParentType,
-                offspring: offspring,
-                numberBorn: litter.numberBorn
-            };
-        }));
+                return {
+                    litterId: litterRecord?._id || null,
+                    litterName: litterRecord?.breedingPairCodeName || null,
+                    birthDate: group.birthDate,
+                    sireId_public: group.otherParentType === 'dam' ? animalIdPublic : group.otherParentId,
+                    damId_public: group.otherParentType === 'sire' ? animalIdPublic : group.otherParentId,
+                    otherParent: otherParent,
+                    otherParentType: group.otherParentType,
+                    offspring: group.offspring,
+                    numberBorn: group.offspring.length
+                };
+            })
+        );
+
+        // Sort by birth date (most recent first)
+        littersWithOffspring.sort((a, b) => {
+            if (!a.birthDate) return 1;
+            if (!b.birthDate) return -1;
+            return new Date(b.birthDate) - new Date(a.birthDate);
+        });
 
         res.status(200).json(littersWithOffspring);
     } catch (error) {
