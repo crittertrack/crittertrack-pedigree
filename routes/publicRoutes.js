@@ -152,6 +152,29 @@ router.get('/public-animals-count', async (req, res) => {
     }
 });
 
+// --- Get single public animal by id_public ---
+// GET /api/public/animal/:id_public
+router.get('/animal/:id_public', async (req, res) => {
+    try {
+        const id_public = parseInt(req.params.id_public, 10);
+        
+        if (isNaN(id_public)) {
+            return res.status(400).json({ message: 'Invalid animal ID format.' });
+        }
+
+        const animal = await PublicAnimal.findOne({ id_public }).lean();
+        
+        if (!animal) {
+            return res.status(404).json({ message: 'Public animal not found.' });
+        }
+
+        return res.status(200).json(animal);
+    } catch (error) {
+        console.error('Error fetching public animal:', error);
+        return res.status(500).json({ message: 'Internal server error while fetching public animal.' });
+    }
+});
+
 // --- Global/Public search for animals (public endpoint) ---
 // Support query: /api/global/animals?display=true&name=...&id_public=...&gender=...&birthdateBefore=YYYY-MM-DD
 router.get('/global/animals', async (req, res) => {
