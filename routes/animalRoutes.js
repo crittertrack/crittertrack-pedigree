@@ -662,4 +662,81 @@ router.delete('/:id_backend', async (req, res) => {
 });
 
 
+// GET /api/animals/:id_public/offspring
+// 7. Get all offspring grouped by litter for a specific animal (works with public id)
+router.get('/:id_public/offspring', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const animalIdPublic = parseInt(id_public, 10);
+
+        if (isNaN(animalIdPublic)) {
+            return res.status(400).json({ message: 'Invalid animal ID.' });
+        }
+
+        const { Litter } = require('../database/models');
+
+        // Find all litters where this animal is either sire or dam
+        const litters = await Litter.find({
+            $or: [
+                { sireId_public: animalIdPublic },
+                { damId_public: animalIdPublic }
+            ]
+        }).sort({ birthDate: -1 }).lean();
+
+        // For each litter, fetch the offspring animals and the other parent
+        const littersWithOffspring = await Promise.all(litters.map(async (litter) => {
+            // Determine which parent is the "other" parent
+            const otherParentId = litter.sireId_public === animalIdPublic 
+                ? litter.damId_public 
+                : litter.sireId_public;
+            const otherParentType = litter.sireId_public === animalIdPublic ? 'dam' : 'sire';
+
+            // Fetch other parent data from PublicAnimal if available
+            let otherParent = null;
+            if (otherParentId) {
+                otherParent = await PublicAnimal.findOne({ id_public: otherParentId }).lean();
+            }
+
+            // Fetch all offspring animals (try PublicAnimal first, fallback to Animal)
+            const offspringPublicIds = litter.offspringIds_public || [];
+            const offspring = [];
+
+            for (const offspringId of offspringPublicIds) {
+                // Try public first
+                let animal = await PublicAnimal.findOne({ id_public: offspringId }).lean();
+                
+                // If not in public, try private Animal collection (user might be viewing their own animals)
+                if (!animal && req.user) {
+                    animal = await Animal.findOne({ 
+                        id_public: offspringId,
+                        ownerId: req.user.id 
+                    }).lean();
+                }
+
+                if (animal) {
+                    offspring.push(animal);
+                }
+            }
+
+            return {
+                litterId: litter._id,
+                litterName: litter.breedingPairCodeName || null,
+                birthDate: litter.birthDate,
+                sireId_public: litter.sireId_public,
+                damId_public: litter.damId_public,
+                otherParent: otherParent,
+                otherParentType: otherParentType,
+                offspring: offspring,
+                numberBorn: litter.numberBorn
+            };
+        }));
+
+        res.status(200).json(littersWithOffspring);
+    } catch (error) {
+        console.error('Error fetching offspring:', error);
+        res.status(500).json({ message: 'Internal server error while fetching offspring.' });
+    }
+});
+
+
 module.exports = router;
