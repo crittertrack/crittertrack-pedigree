@@ -71,7 +71,29 @@ router.put('/:id_backend', async (req, res) => {
     }
 });
 
-// TODO: Add DELETE /api/litters/:id_backend for deleting a litter
+// DELETE /api/litters/:id_backend
+// 4. Deletes a litter record.
+router.delete('/:id_backend', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const litterId_backend = req.params.id_backend;
+
+        const { Litter } = require('../database/models');
+        
+        const litter = await Litter.findOne({ _id: litterId_backend, ownerId: appUserId_backend });
+        
+        if (!litter) {
+            return res.status(404).json({ message: 'Litter not found or does not belong to user.' });
+        }
+
+        await Litter.deleteOne({ _id: litterId_backend });
+
+        res.status(200).json({ message: 'Litter deleted successfully!' });
+    } catch (error) {
+        console.error('Error deleting litter:', error);
+        res.status(500).json({ message: 'Internal server error during litter deletion.' });
+    }
+});
 
 
 module.exports = router;
