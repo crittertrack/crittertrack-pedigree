@@ -444,7 +444,36 @@ router.get('/any/:id_public', async (req, res) => {
                 ]
             }).lean();
             
-            if (hasUserParent || isOffspringOfUser) {
+            // Check if this animal is the OTHER PARENT of an offspring that has user's animal as parent
+            // (e.g., user owns the father, this is the mother of the same offspring)
+            const isOtherParentOfSharedOffspring = await Animal.findOne({
+                $or: [
+                    // This animal is sire/father, user's animal is dam/mother
+                    { 
+                        $or: [
+                            { sireId_public: id_public },
+                            { fatherId_public: id_public }
+                        ],
+                        $or: [
+                            { damId_public: { $in: userAnimalIds } },
+                            { motherId_public: { $in: userAnimalIds } }
+                        ]
+                    },
+                    // This animal is dam/mother, user's animal is sire/father
+                    { 
+                        $or: [
+                            { damId_public: id_public },
+                            { motherId_public: id_public }
+                        ],
+                        $or: [
+                            { sireId_public: { $in: userAnimalIds } },
+                            { fatherId_public: { $in: userAnimalIds } }
+                        ]
+                    }
+                ]
+            }).lean();
+            
+            if (hasUserParent || isOffspringOfUser || isOtherParentOfSharedOffspring) {
                 // User has relationship to this animal, allow access
                 return res.status(200).json(animal);
             }
