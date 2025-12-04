@@ -677,15 +677,15 @@ router.get('/:id_public/offspring', async (req, res) => {
         const { Litter } = require('../database/models');
         const authenticatedUserId = req.user.id;
 
-        // For authenticated users: get ALL offspring from user's private animals
+        // For authenticated users: get ALL offspring across entire database (not just owned)
         const allOffspring = await Animal.find({
             $or: [
                 { sireId_public: animalIdPublic },
                 { damId_public: animalIdPublic },
                 { fatherId_public: animalIdPublic },
                 { motherId_public: animalIdPublic }
-            ],
-            ownerId: authenticatedUserId
+            ]
+            // Removed ownerId filter - search ALL animals globally
         }).lean();
 
         // Group offspring by litter (based on birthDate and other parent)
@@ -730,16 +730,20 @@ router.get('/:id_public/offspring', async (req, res) => {
                     }).lean();
                 }
 
-                // Fetch other parent data - try private Animal first, then PublicAnimal
+                // Fetch other parent data - search globally (user's animals first, then any other animal)
                 let otherParent = null;
                 if (group.otherParentId) {
+                    // Try user's animals first
                     otherParent = await Animal.findOne({ 
                         id_public: group.otherParentId,
                         ownerId: authenticatedUserId 
                     }).lean();
                     
+                    // If not owned by user, search all animals globally
                     if (!otherParent) {
-                        otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
+                        otherParent = await Animal.findOne({ 
+                            id_public: group.otherParentId 
+                        }).lean();
                     }
                 }
 
