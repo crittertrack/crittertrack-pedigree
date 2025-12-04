@@ -337,15 +337,31 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
                 // Fetch other parent data
                 let otherParent = null;
                 if (group.otherParentId) {
-                    // Try PublicAnimal first
-                    otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
-                    
-                    // If not found and user is authenticated, try private Animal
-                    if (!otherParent && isAuthenticated) {
+                    if (isAuthenticated) {
+                        // For authenticated users: try private Animal first (their own animals)
                         otherParent = await Animal.findOne({ 
                             id_public: group.otherParentId,
                             ownerId: authenticatedUserId 
                         }).lean();
+                        
+                        // If not found in private, try PublicAnimal
+                        if (!otherParent) {
+                            otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
+                        }
+                    } else {
+                        // For unauthenticated users: try PublicAnimal first
+                        otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
+                        
+                        // If not found in PublicAnimal, fetch basic info from private Animal
+                        // (We show parent info if there are public offspring, even if parent is private)
+                        if (!otherParent) {
+                            const privateParent = await Animal.findOne({ id_public: group.otherParentId })
+                                .select('id_public name prefix gender imageUrl photoUrl')
+                                .lean();
+                            if (privateParent) {
+                                otherParent = privateParent;
+                            }
+                        }
                     }
                 }
 
