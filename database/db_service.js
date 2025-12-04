@@ -382,6 +382,11 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     };
 
     try {
+        // Map isDisplay to showOnPublicProfile (frontend sends isDisplay, backend uses showOnPublicProfile)
+        if (updates.isDisplay !== undefined) {
+            updates.showOnPublicProfile = updates.isDisplay;
+        }
+
         // Map parent alias fields to schema's sireId_public/damId_public
         // Use === undefined to allow null values through (for clearing parents)
         if (updates.sireId_public === undefined) {
