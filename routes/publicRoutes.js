@@ -260,8 +260,8 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
         let allOffspring = [];
 
         if (isAuthenticated) {
-            // For authenticated users: get ALL offspring (both public and private animals)
-            // First, get offspring from user's own animals
+            // For authenticated users: get ALL offspring from user's private animals
+            // Search ALL animals owned by this user (don't filter by parent ownership)
             const privateOffspring = await Animal.find({
                 $or: [
                     { sireId_public: animalIdPublic },
@@ -272,27 +272,11 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
                 ownerId: authenticatedUserId
             }).lean();
 
-            // Then get public offspring that might not be owned by this user
-            const publicOffspring = await PublicAnimal.find({
-                $or: [
-                    { sireId_public: animalIdPublic },
-                    { damId_public: animalIdPublic },
-                    { fatherId_public: animalIdPublic },
-                    { motherId_public: animalIdPublic }
-                ]
-            }).lean();
-
-            // Combine and deduplicate by id_public
+            // Map by id_public
             const offspringMap = new Map();
             
             privateOffspring.forEach(animal => {
                 offspringMap.set(animal.id_public, animal);
-            });
-            
-            publicOffspring.forEach(animal => {
-                if (!offspringMap.has(animal.id_public)) {
-                    offspringMap.set(animal.id_public, animal);
-                }
             });
 
             allOffspring = Array.from(offspringMap.values());
