@@ -90,6 +90,9 @@ const AnimalSchema = new mongoose.Schema({
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
     
+    // Inbreeding coefficient (cached value)
+    inbreedingCoefficient: { type: Number, default: null },
+    
     // Public visibility toggles
     showOnPublicProfile: { type: Boolean, default: false, index: true },
     includeRemarks: { type: Boolean, default: false }, // If public, include remarks
@@ -136,6 +139,9 @@ const PublicAnimalSchema = new mongoose.Schema({
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
     
+    // Inbreeding coefficient (cached value)
+    inbreedingCoefficient: { type: Number, default: null },
+    
     // Settings used by db_service to know which fields to copy during update
     includeRemarks: { type: Boolean, default: false },
     includeGeneticCode: { type: Boolean, default: false },
@@ -161,6 +167,9 @@ const LitterSchema = new mongoose.Schema({
     
     // Public IDs of offspring animals that came from this litter
     offspringIds_public: { type: [Number], default: [] }, 
+    
+    // Inbreeding coefficient for this pairing (cached value)
+    inbreedingCoefficient: { type: Number, default: null },
     
     // Remarks specific to the litter
     notes: { type: String, default: '' },

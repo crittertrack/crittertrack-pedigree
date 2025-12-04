@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const { Notification, User, PublicProfile, PublicAnimal } = require('../database/models');
 const fs = require('fs');
+const { calculateInbreedingCoefficient, calculatePairingInbreeding } = require('../utils/inbreeding');
 // simple disk storage for images (adjust for S3 in production)
 const uploadDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -871,6 +872,86 @@ router.get('/:id_public/offspring', async (req, res) => {
     } catch (error) {
         console.error('Error fetching offspring:', error);
         res.status(500).json({ message: 'Internal server error while fetching offspring.' });
+    }
+});
+
+// --- CALCULATE INBREEDING COEFFICIENT FOR AN ANIMAL ---
+router.get('/animals/:id_public/inbreeding', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const generations = parseInt(req.query.generations) || 5;
+
+        // Fetch animal function that works with both owned and public animals
+        const fetchAnimal = async (animalId) => {
+            let animal = await Animal.findOne({ id_public: animalId }).lean();
+            if (!animal) {
+                animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
+            }
+            return animal;
+        };
+
+        const coefficient = await calculateInbreedingCoefficient(
+            parseInt(id_public),
+            fetchAnimal,
+            generations
+        );
+
+        // Update cached value if this is an owned animal
+        const animal = await Animal.findOne({ id_public: parseInt(id_public) });
+        if (animal) {
+            animal.inbreedingCoefficient = coefficient;
+            await animal.save();
+
+            // Update public animal if it exists
+            const publicAnimal = await PublicAnimal.findOne({ id_public: parseInt(id_public) });
+            if (publicAnimal) {
+                publicAnimal.inbreedingCoefficient = coefficient;
+                await publicAnimal.save();
+            }
+        }
+
+        res.status(200).json({ 
+            id_public: parseInt(id_public),
+            inbreedingCoefficient: coefficient 
+        });
+    } catch (error) {
+        console.error('Error calculating inbreeding:', error);
+        res.status(500).json({ message: 'Internal server error while calculating inbreeding.' });
+    }
+});
+
+// --- CALCULATE INBREEDING COEFFICIENT FOR A PAIRING ---
+router.get('/inbreeding/pairing', async (req, res) => {
+    try {
+        const { sireId, damId, generations } = req.query;
+
+        if (!sireId || !damId) {
+            return res.status(400).json({ message: 'Both sireId and damId are required' });
+        }
+
+        const fetchAnimal = async (animalId) => {
+            let animal = await Animal.findOne({ id_public: animalId }).lean();
+            if (!animal) {
+                animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
+            }
+            return animal;
+        };
+
+        const coefficient = await calculatePairingInbreeding(
+            parseInt(sireId),
+            parseInt(damId),
+            fetchAnimal,
+            parseInt(generations) || 5
+        );
+
+        res.status(200).json({ 
+            sireId: parseInt(sireId),
+            damId: parseInt(damId),
+            inbreedingCoefficient: coefficient 
+        });
+    } catch (error) {
+        console.error('Error calculating pairing inbreeding:', error);
+        res.status(500).json({ message: 'Internal server error while calculating pairing inbreeding.' });
     }
 });
 
