@@ -37,11 +37,15 @@ router.patch('/:notificationId/read', async (req, res) => {
         const { notificationId } = req.params;
         const userId = req.user.id;
         
+        console.log('[Mark as Read] NotificationId:', notificationId, 'UserId:', userId);
+        
         const notification = await Notification.findOneAndUpdate(
             { _id: notificationId, userId },
             { $set: { read: true } },
             { new: true }
         );
+        
+        console.log('[Mark as Read] Found notification:', notification ? 'YES' : 'NO');
         
         if (!notification) {
             return res.status(404).json({ message: 'Notification not found' });
