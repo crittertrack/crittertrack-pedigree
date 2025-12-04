@@ -349,19 +349,9 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
                             otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
                         }
                     } else {
-                        // For unauthenticated users: try PublicAnimal first
+                        // For unauthenticated users: ONLY show public parents
                         otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
-                        
-                        // If not found in PublicAnimal, fetch basic info from private Animal
-                        // (We show parent info if there are public offspring, even if parent is private)
-                        if (!otherParent) {
-                            const privateParent = await Animal.findOne({ id_public: group.otherParentId })
-                                .select('id_public name prefix gender imageUrl photoUrl')
-                                .lean();
-                            if (privateParent) {
-                                otherParent = privateParent;
-                            }
-                        }
+                        // If not found in PublicAnimal, leave as null (will show as "Unknown")
                     }
                 }
 

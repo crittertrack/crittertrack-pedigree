@@ -391,19 +391,29 @@ router.get('/', async (req, res) => {
 // GET /api/animals/any/:id_public
 // Fetch ANY animal by id_public (authenticated users can view any animal's basic info)
 // This is for displaying parents/offspring that user doesn't own
+// Returns: owned animals OR public animals only (not private animals of other users)
 router.get('/any/:id_public', async (req, res) => {
     try {
         const id_public = parseInt(req.params.id_public, 10);
+        const userId = req.user.id;
         
         if (isNaN(id_public)) {
             return res.status(400).json({ message: 'Invalid animal ID.' });
         }
 
-        // Search globally for this animal (no ownership check)
-        const animal = await Animal.findOne({ id_public }).lean();
+        // First check if user owns this animal
+        let animal = await Animal.findOne({ id_public, ownerId: userId }).lean();
+        
+        if (animal) {
+            // User owns it, return full data
+            return res.status(200).json(animal);
+        }
+        
+        // Not owned by user, check if it's public
+        animal = await PublicAnimal.findOne({ id_public }).lean();
         
         if (!animal) {
-            return res.status(404).json({ message: 'Animal not found.' });
+            return res.status(404).json({ message: 'Animal not found or not accessible.' });
         }
 
         res.status(200).json(animal);
