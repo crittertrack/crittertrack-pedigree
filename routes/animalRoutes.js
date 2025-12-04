@@ -663,9 +663,8 @@ router.delete('/:id_backend', async (req, res) => {
 
 
 // GET /api/animals/:id_public/offspring
-// 7. Get all offspring for a specific animal (works with public id)
-// For authenticated users (local view): returns ALL offspring (public + private)
-// For unauthenticated users (public view): returns only PUBLIC offspring
+// 7. Get all offspring for a specific animal (AUTHENTICATED - shows ALL offspring)
+// This is the private/local version that requires authentication
 router.get('/:id_public/offspring', async (req, res) => {
     try {
         const { id_public } = req.params;
@@ -676,59 +675,18 @@ router.get('/:id_public/offspring', async (req, res) => {
         }
 
         const { Litter } = require('../database/models');
-        const isAuthenticated = !!req.user;
+        const authenticatedUserId = req.user.id;
 
-        // Find all offspring where this animal is either sire or dam
-        let allOffspring = [];
-
-        if (isAuthenticated) {
-            // For authenticated users: get ALL offspring (both public and private animals)
-            // First, get offspring from user's own animals
-            const privateOffspring = await Animal.find({
-                $or: [
-                    { sireId_public: animalIdPublic },
-                    { damId_public: animalIdPublic },
-                    { fatherId_public: animalIdPublic },
-                    { motherId_public: animalIdPublic }
-                ],
-                ownerId: req.user.id
-            }).lean();
-
-            // Then get public offspring that might not be owned by this user
-            const publicOffspring = await PublicAnimal.find({
-                $or: [
-                    { sireId_public: animalIdPublic },
-                    { damId_public: animalIdPublic },
-                    { fatherId_public: animalIdPublic },
-                    { motherId_public: animalIdPublic }
-                ]
-            }).lean();
-
-            // Combine and deduplicate by id_public
-            const offspringMap = new Map();
-            
-            privateOffspring.forEach(animal => {
-                offspringMap.set(animal.id_public, animal);
-            });
-            
-            publicOffspring.forEach(animal => {
-                if (!offspringMap.has(animal.id_public)) {
-                    offspringMap.set(animal.id_public, animal);
-                }
-            });
-
-            allOffspring = Array.from(offspringMap.values());
-        } else {
-            // For unauthenticated users: only get PUBLIC offspring
-            allOffspring = await PublicAnimal.find({
-                $or: [
-                    { sireId_public: animalIdPublic },
-                    { damId_public: animalIdPublic },
-                    { fatherId_public: animalIdPublic },
-                    { motherId_public: animalIdPublic }
-                ]
-            }).lean();
-        }
+        // For authenticated users: get ALL offspring from user's private animals
+        const allOffspring = await Animal.find({
+            $or: [
+                { sireId_public: animalIdPublic },
+                { damId_public: animalIdPublic },
+                { fatherId_public: animalIdPublic },
+                { motherId_public: animalIdPublic }
+            ],
+            ownerId: authenticatedUserId
+        }).lean();
 
         // Group offspring by litter (based on birthDate and other parent)
         const litterGroups = new Map();
@@ -772,18 +730,16 @@ router.get('/:id_public/offspring', async (req, res) => {
                     }).lean();
                 }
 
-                // Fetch other parent data
+                // Fetch other parent data - try private Animal first, then PublicAnimal
                 let otherParent = null;
                 if (group.otherParentId) {
-                    // Try PublicAnimal first
-                    otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
+                    otherParent = await Animal.findOne({ 
+                        id_public: group.otherParentId,
+                        ownerId: authenticatedUserId 
+                    }).lean();
                     
-                    // If not found and user is authenticated, try private Animal
-                    if (!otherParent && isAuthenticated) {
-                        otherParent = await Animal.findOne({ 
-                            id_public: group.otherParentId,
-                            ownerId: req.user.id 
-                        }).lean();
+                    if (!otherParent) {
+                        otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
                     }
                 }
 
@@ -808,10 +764,7 @@ router.get('/:id_public/offspring', async (req, res) => {
             return new Date(b.birthDate) - new Date(a.birthDate);
         });
 
-        // Filter out litters with no offspring (can happen when all offspring are private in public view)
-        const filteredLitters = littersWithOffspring.filter(litter => litter.offspring && litter.offspring.length > 0);
-
-        res.status(200).json(filteredLitters);
+        res.status(200).json(littersWithOffspring);
     } catch (error) {
         console.error('Error fetching offspring:', error);
         res.status(500).json({ message: 'Internal server error while fetching offspring.' });
