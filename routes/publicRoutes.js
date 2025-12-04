@@ -221,4 +221,179 @@ router.get('/global/animals', async (req, res) => {
     }
 });
 
+// --- Get offspring for a specific animal (public endpoint) ---
+// GET /api/public/animal/:id_public/offspring
+// Works for both authenticated and unauthenticated users
+// Authenticated: returns ALL offspring (private + public)
+// Unauthenticated: returns only PUBLIC offspring
+router.get('/animal/:id_public/offspring', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const animalIdPublic = parseInt(id_public, 10);
+
+        if (isNaN(animalIdPublic)) {
+            return res.status(400).json({ message: 'Invalid animal ID.' });
+        }
+
+        const { Litter, Animal } = require('../database/models');
+        
+        // Check if request has authentication (optional)
+        // Note: This route is public, so req.user may or may not exist
+        const authHeader = req.headers.authorization;
+        let authenticatedUserId = null;
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = authHeader.substring(7);
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+                authenticatedUserId = decoded.id;
+            } catch (err) {
+                // Invalid token, treat as unauthenticated
+                console.log('Invalid token in public offspring endpoint, treating as unauthenticated');
+            }
+        }
+
+        const isAuthenticated = !!authenticatedUserId;
+
+        // Find all offspring where this animal is either sire or dam
+        let allOffspring = [];
+
+        if (isAuthenticated) {
+            // For authenticated users: get ALL offspring (both public and private animals)
+            // First, get offspring from user's own animals
+            const privateOffspring = await Animal.find({
+                $or: [
+                    { sireId_public: animalIdPublic },
+                    { damId_public: animalIdPublic },
+                    { fatherId_public: animalIdPublic },
+                    { motherId_public: animalIdPublic }
+                ],
+                ownerId: authenticatedUserId
+            }).lean();
+
+            // Then get public offspring that might not be owned by this user
+            const publicOffspring = await PublicAnimal.find({
+                $or: [
+                    { sireId_public: animalIdPublic },
+                    { damId_public: animalIdPublic },
+                    { fatherId_public: animalIdPublic },
+                    { motherId_public: animalIdPublic }
+                ]
+            }).lean();
+
+            // Combine and deduplicate by id_public
+            const offspringMap = new Map();
+            
+            privateOffspring.forEach(animal => {
+                offspringMap.set(animal.id_public, animal);
+            });
+            
+            publicOffspring.forEach(animal => {
+                if (!offspringMap.has(animal.id_public)) {
+                    offspringMap.set(animal.id_public, animal);
+                }
+            });
+
+            allOffspring = Array.from(offspringMap.values());
+        } else {
+            // For unauthenticated users: only get PUBLIC offspring
+            allOffspring = await PublicAnimal.find({
+                $or: [
+                    { sireId_public: animalIdPublic },
+                    { damId_public: animalIdPublic },
+                    { fatherId_public: animalIdPublic },
+                    { motherId_public: animalIdPublic }
+                ]
+            }).lean();
+        }
+
+        // Group offspring by litter (based on birthDate and other parent)
+        const litterGroups = new Map();
+
+        for (const offspring of allOffspring) {
+            // Determine the other parent ID
+            const isSire = offspring.sireId_public === animalIdPublic || offspring.fatherId_public === animalIdPublic;
+            const otherParentId = isSire 
+                ? (offspring.damId_public || offspring.motherId_public)
+                : (offspring.sireId_public || offspring.fatherId_public);
+            const otherParentType = isSire ? 'dam' : 'sire';
+
+            // Create a unique key for the litter based on birthDate and other parent
+            const birthDate = offspring.birthDate ? new Date(offspring.birthDate).toISOString().split('T')[0] : 'unknown';
+            const litterKey = `${birthDate}_${otherParentId || 'none'}`;
+
+            if (!litterGroups.has(litterKey)) {
+                litterGroups.set(litterKey, {
+                    birthDate: offspring.birthDate,
+                    otherParentId: otherParentId,
+                    otherParentType: otherParentType,
+                    offspring: []
+                });
+            }
+
+            litterGroups.get(litterKey).offspring.push(offspring);
+        }
+
+        // Convert to array and fetch additional data for each litter
+        const littersWithOffspring = await Promise.all(
+            Array.from(litterGroups.values()).map(async (group) => {
+                // Try to find a matching litter record
+                let litterRecord = null;
+                if (group.birthDate && group.otherParentId) {
+                    litterRecord = await Litter.findOne({
+                        birthDate: group.birthDate,
+                        $or: [
+                            { sireId_public: animalIdPublic, damId_public: group.otherParentId },
+                            { sireId_public: group.otherParentId, damId_public: animalIdPublic }
+                        ]
+                    }).lean();
+                }
+
+                // Fetch other parent data
+                let otherParent = null;
+                if (group.otherParentId) {
+                    // Try PublicAnimal first
+                    otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
+                    
+                    // If not found and user is authenticated, try private Animal
+                    if (!otherParent && isAuthenticated) {
+                        otherParent = await Animal.findOne({ 
+                            id_public: group.otherParentId,
+                            ownerId: authenticatedUserId 
+                        }).lean();
+                    }
+                }
+
+                return {
+                    litterId: litterRecord?._id || null,
+                    litterName: litterRecord?.breedingPairCodeName || null,
+                    birthDate: group.birthDate,
+                    sireId_public: group.otherParentType === 'dam' ? animalIdPublic : group.otherParentId,
+                    damId_public: group.otherParentType === 'sire' ? animalIdPublic : group.otherParentId,
+                    otherParent: otherParent,
+                    otherParentType: group.otherParentType,
+                    offspring: group.offspring,
+                    numberBorn: group.offspring.length
+                };
+            })
+        );
+
+        // Sort by birth date (most recent first)
+        littersWithOffspring.sort((a, b) => {
+            if (!a.birthDate) return 1;
+            if (!b.birthDate) return -1;
+            return new Date(b.birthDate) - new Date(a.birthDate);
+        });
+
+        // Filter out litters with no offspring (can happen when all offspring are private in public view)
+        const filteredLitters = littersWithOffspring.filter(litter => litter.offspring && litter.offspring.length > 0);
+
+        res.status(200).json(filteredLitters);
+    } catch (error) {
+        console.error('Error fetching offspring:', error);
+        res.status(500).json({ message: 'Internal server error while fetching offspring.' });
+    }
+});
+
 module.exports = router;
