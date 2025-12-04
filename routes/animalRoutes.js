@@ -388,6 +388,31 @@ router.get('/', async (req, res) => {
 });
 
 
+// GET /api/animals/any/:id_public
+// Fetch ANY animal by id_public (authenticated users can view any animal's basic info)
+// This is for displaying parents/offspring that user doesn't own
+router.get('/any/:id_public', async (req, res) => {
+    try {
+        const id_public = parseInt(req.params.id_public, 10);
+        
+        if (isNaN(id_public)) {
+            return res.status(400).json({ message: 'Invalid animal ID.' });
+        }
+
+        // Search globally for this animal (no ownership check)
+        const animal = await Animal.findOne({ id_public }).lean();
+        
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found.' });
+        }
+
+        res.status(200).json(animal);
+    } catch (error) {
+        console.error('Error fetching animal:', error);
+        res.status(500).json({ message: 'Internal server error while fetching animal details.' });
+    }
+});
+
 // GET /api/animals/:id_backend
 // 3. Gets a single animal's private details.
 router.get('/:id_backend', async (req, res) => {
