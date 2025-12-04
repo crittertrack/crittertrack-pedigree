@@ -808,7 +808,10 @@ router.get('/:id_public/offspring', async (req, res) => {
             return new Date(b.birthDate) - new Date(a.birthDate);
         });
 
-        res.status(200).json(littersWithOffspring);
+        // Filter out litters with no offspring (can happen when all offspring are private in public view)
+        const filteredLitters = littersWithOffspring.filter(litter => litter.offspring && litter.offspring.length > 0);
+
+        res.status(200).json(filteredLitters);
     } catch (error) {
         console.error('Error fetching offspring:', error);
         res.status(500).json({ message: 'Internal server error while fetching offspring.' });

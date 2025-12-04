@@ -462,6 +462,10 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Ensure sire/dam public ids are stored for pedigree lookup
             sireId_public: updatedAnimal.sireId_public || null,
             damId_public: updatedAnimal.damId_public || null,
+            // Include status fields for offspring display
+            isOwned: updatedAnimal.isOwned || false,
+            isPregnant: updatedAnimal.isPregnant || false,
+            isNursing: updatedAnimal.isNursing || false,
             // Include remarks/genetic code based on owner's privacy settings
             remarks: showRemarksPublic ? (updatedAnimal.remarks || '') : '',
             geneticCode: showGeneticCodePublic ? (updatedAnimal.geneticCode || null) : null,
@@ -519,6 +523,12 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             // Include sire/dam public ids for pedigree tracing
             sireId_public: animal.sireId_public || null,
             damId_public: animal.damId_public || null,
+            // Include status fields for offspring display
+            isOwned: animal.isOwned || false,
+            isPregnant: animal.isPregnant || false,
+            isNursing: animal.isNursing || false,
+            status: animal.status || null,
+            breederId_public: animal.breederId_public || null,
             // Include sensitive data based on settings
             remarks: toggleData.includeRemarks ? animal.remarks : '',
             geneticCode: toggleData.includeGeneticCode ? animal.geneticCode : null,
