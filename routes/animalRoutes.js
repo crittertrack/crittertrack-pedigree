@@ -391,7 +391,7 @@ router.get('/', async (req, res) => {
 // GET /api/animals/any/:id_public
 // Fetch ANY animal by id_public (authenticated users can view any animal's basic info)
 // This is for displaying parents/offspring that user doesn't own
-// Returns: owned animals OR public animals only (not private animals of other users)
+// Returns: owned animals OR public animals OR animals related to user's animals (as parent/offspring)
 router.get('/any/:id_public', async (req, res) => {
     try {
         const id_public = parseInt(req.params.id_public, 10);
@@ -412,11 +412,46 @@ router.get('/any/:id_public', async (req, res) => {
         // Not owned by user, check if it's public
         animal = await PublicAnimal.findOne({ id_public }).lean();
         
-        if (!animal) {
-            return res.status(404).json({ message: 'Animal not found or not accessible.' });
+        if (animal) {
+            return res.status(200).json(animal);
         }
 
-        res.status(200).json(animal);
+        // Not public either, check if animal is related to user's animals
+        // (i.e., user owns one of the parents or offspring)
+        animal = await Animal.findOne({ id_public }).lean();
+        
+        if (animal) {
+            // Check if any of the user's animals are parents of this animal
+            const userAnimals = await Animal.find({ ownerId: userId }).select('id_public').lean();
+            const userAnimalIds = userAnimals.map(a => a.id_public);
+            
+            // Check if this animal has user's animal as parent
+            const hasUserParent = [
+                animal.fatherId_public,
+                animal.motherId_public,
+                animal.sireId_public,
+                animal.damId_public
+            ].some(parentId => parentId && userAnimalIds.includes(parentId));
+            
+            // Check if this animal is offspring of user's animal
+            const isOffspringOfUser = await Animal.findOne({
+                ownerId: userId,
+                $or: [
+                    { sireId_public: id_public },
+                    { damId_public: id_public },
+                    { fatherId_public: id_public },
+                    { motherId_public: id_public }
+                ]
+            }).lean();
+            
+            if (hasUserParent || isOffspringOfUser) {
+                // User has relationship to this animal, allow access
+                return res.status(200).json(animal);
+            }
+        }
+        
+        // Animal not found or not accessible
+        return res.status(404).json({ message: 'Animal not found or not accessible.' });
     } catch (error) {
         console.error('Error fetching animal:', error);
         res.status(500).json({ message: 'Internal server error while fetching animal details.' });
