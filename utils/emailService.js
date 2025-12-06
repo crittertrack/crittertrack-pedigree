@@ -9,7 +9,10 @@ const fromEmail = 'CritterTrack <onboarding@resend.dev>'; // Will use verified d
  */
 const sendVerificationEmail = async (email, code) => {
     try {
-        await resend.emails.send({
+        console.log('Attempting to send verification email to:', email);
+        console.log('Using Resend API key:', process.env.RESEND_API_KEY ? 'Set' : 'NOT SET');
+        
+        const result = await resend.emails.send({
             from: fromEmail,
             to: email,
             subject: 'CritterTrack - Email Verification Code',
@@ -27,8 +30,12 @@ const sendVerificationEmail = async (email, code) => {
                 </div>
             `
         });
+        
+        console.log('Resend API response:', result);
     } catch (error) {
         console.error('Error sending verification email:', error);
+        console.error('Error details:', error.message);
+        console.error('Error response:', error.response?.data);
         throw error;
     }
 };
