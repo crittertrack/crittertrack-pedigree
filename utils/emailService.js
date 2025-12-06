@@ -12,19 +12,25 @@ const sendVerificationEmail = async (email, code) => {
         console.log('Attempting to send verification email to:', email);
         console.log('Using Resend API key:', process.env.RESEND_API_KEY ? 'Set' : 'NOT SET');
         
+        // TEMPORARY: Resend test mode only allows sending to verified email
+        // TODO: Verify crittertrack.net domain and use noreply@crittertrack.net
+        const recipientEmail = email === 'crittertrackowner@gmail.com' ? email : 'crittertrackowner@gmail.com';
+        console.log('Sending to:', recipientEmail, '(Original recipient:', email + ')');
+        
         const result = await resend.emails.send({
             from: fromEmail,
-            to: email,
-            subject: 'CritterTrack - Email Verification Code',
+            to: recipientEmail,
+            subject: `CritterTrack - Email Verification Code for ${email}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #ec4899;">Welcome to CritterTrack!</h2>
+                    <p><strong>Registration email:</strong> ${email}</p>
                     <p>Thank you for registering. Please use the following verification code to complete your registration:</p>
                     <div style="background-color: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0;">
                         <h1 style="color: #ec4899; letter-spacing: 5px; margin: 0;">${code}</h1>
                     </div>
                     <p>This code will expire in 10 minutes.</p>
-                    <p>If you didn't request this code, please ignore this email.</p>
+                    <p style="color: #dc2626; font-weight: bold;">⚠️ TESTING MODE: This email was sent to crittertrackowner@gmail.com instead of ${email}. Domain verification needed for production.</p>
                     <hr style="margin-top: 30px; border: none; border-top: 1px solid #e5e7eb;">
                     <p style="color: #6b7280; font-size: 12px;">CritterTrack - Breeding Registry Management</p>
                 </div>
