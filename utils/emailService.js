@@ -6,6 +6,9 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER || 'crittertrackowner@gmail.com',
         pass: process.env.EMAIL_PASSWORD // App password from Gmail
+    },
+    tls: {
+        rejectUnauthorized: false // Accept self-signed certificates
     }
 });
 
