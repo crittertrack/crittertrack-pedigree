@@ -11,7 +11,7 @@ const Counter = mongoose.model('Counter', CounterSchema);
 
 // --- 2. USER SCHEMA (Private/Authentication Data) ---
 const UserSchema = new mongoose.Schema({
-    id_public: { type: Number, required: true, unique: true, index: true },
+    id_public: { type: Number, required: false, unique: true, sparse: true, index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     // Password MUST be selected manually in queries or explicitly included in update handlers
     password: { type: String, required: true, select: false }, 

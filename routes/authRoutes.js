@@ -45,6 +45,8 @@ router.post('/register-request', async (req, res) => {
         });
     } catch (error) {
         console.error('Error requesting email verification:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
         if (error.message.includes('already registered')) {
             return res.status(409).json({ message: error.message });
         }
