@@ -273,6 +273,10 @@ app.use('/api/litters', authMiddleware, litterRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 
+// Genetics Feedback Routes (Require authMiddleware)
+const geneticsFeedbackRoutes = require('./routes/geneticsFeedbackRoutes');
+app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
+
 // Migration Routes (No auth for one-time migrations - remove after running)
 const migrationRoutes = require('./routes/migrationRoutes');
 app.use('/api/migrations', migrationRoutes);

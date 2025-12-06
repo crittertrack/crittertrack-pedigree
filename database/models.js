@@ -206,6 +206,25 @@ const NotificationSchema = new mongoose.Schema({
 const Notification = mongoose.model('Notification', NotificationSchema);
 
 
+// --- 7. GENETICS FEEDBACK SCHEMA ---
+const GeneticsFeedbackSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    phenotype: { type: String, required: true },
+    genotype: { type: String, required: true },
+    feedback: { type: String, required: true },
+    status: { 
+        type: String, 
+        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
+        default: 'pending',
+        index: true 
+    },
+    adminNotes: { type: String, default: null },
+    reviewedAt: { type: Date, default: null },
+    createdAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+const GeneticsFeedback = mongoose.model('GeneticsFeedback', GeneticsFeedbackSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -214,5 +233,6 @@ module.exports = {
     PublicAnimal,
     Litter,
     Notification,
+    GeneticsFeedback,
     Counter
 };
