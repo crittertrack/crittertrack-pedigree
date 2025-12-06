@@ -277,6 +277,10 @@ app.use('/api/notifications', authMiddleware, notificationRoutes);
 const geneticsFeedbackRoutes = require('./routes/geneticsFeedbackRoutes');
 app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
 
+// Bug Report Routes (Require authMiddleware)
+const bugReportRoutes = require('./routes/bugReportRoutes');
+app.use('/api/bug-reports', authMiddleware, bugReportRoutes);
+
 // Migration Routes (No auth for one-time migrations - remove after running)
 const migrationRoutes = require('./routes/migrationRoutes');
 app.use('/api/migrations', migrationRoutes);
