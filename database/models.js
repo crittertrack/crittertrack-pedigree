@@ -26,6 +26,13 @@ const UserSchema = new mongoose.Schema({
     showGeneticCodePublic: { type: Boolean, default: false },
     showRemarksPublic: { type: Boolean, default: false },
     creationDate: { type: Date, default: Date.now },
+    // Email verification
+    emailVerified: { type: Boolean, default: false },
+    verificationCode: { type: String, default: null, select: false },
+    verificationCodeExpires: { type: Date, default: null, select: false },
+    // Password reset
+    resetPasswordToken: { type: String, default: null, select: false },
+    resetPasswordExpires: { type: Date, default: null, select: false },
     // Array of internal Animal and Litter IDs owned by this user for easy lookup
     ownedAnimals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Animal' }], 
     ownedLitters: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Litter' }],
@@ -225,6 +232,31 @@ const GeneticsFeedbackSchema = new mongoose.Schema({
 const GeneticsFeedback = mongoose.model('GeneticsFeedback', GeneticsFeedbackSchema);
 
 
+// --- 8. BUG REPORT SCHEMA ---
+const BugReportSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    userEmail: { type: String, required: true },
+    userName: { type: String, required: true },
+    category: { 
+        type: String, 
+        enum: ['Bug', 'Feature Request', 'General Feedback'], 
+        required: true 
+    },
+    description: { type: String, required: true },
+    page: { type: String, default: null },
+    status: { 
+        type: String, 
+        enum: ['pending', 'in-progress', 'resolved', 'dismissed'], 
+        default: 'pending',
+        index: true 
+    },
+    adminNotes: { type: String, default: null },
+    resolvedAt: { type: Date, default: null },
+    createdAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+const BugReport = mongoose.model('BugReport', BugReportSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -234,5 +266,6 @@ module.exports = {
     Litter,
     Notification,
     GeneticsFeedback,
+    BugReport,
     Counter
 };

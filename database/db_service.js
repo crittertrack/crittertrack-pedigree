@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const {
     User,
@@ -722,6 +723,189 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
     return;
 };
 
+/**
+ * Request email verification - generates a 6-digit code and stores it with expiry
+ * Does NOT create the account yet
+ */
+const requestEmailVerification = async (email, personalName, breederName, showBreederName, password) => {
+    // Check if email is already registered
+    const existingUser = await User.findOne({ email });
+    if (existingUser && existingUser.emailVerified) {
+        throw new Error('Email already registered and verified');
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set expiry to 10 minutes from now
+    const verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Hash the password
+    const salt = await bcrypt.genSalt(SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    if (existingUser) {
+        // Update existing unverified user
+        existingUser.password = hashedPassword;
+        existingUser.personalName = personalName;
+        existingUser.breederName = breederName || personalName;
+        existingUser.showBreederName = showBreederName || false;
+        existingUser.verificationCode = verificationCode;
+        existingUser.verificationCodeExpires = verificationCodeExpires;
+        await existingUser.save();
+    } else {
+        // Create new unverified user (no id_public yet)
+        const user = new User({
+            email,
+            password: hashedPassword,
+            personalName,
+            breederName: breederName || personalName,
+            showBreederName: showBreederName || false,
+            emailVerified: false,
+            verificationCode,
+            verificationCodeExpires
+        });
+        await user.save();
+    }
+
+    return { email, verificationCode };
+};
+
+/**
+ * Verify email code and complete registration
+ */
+const verifyEmailAndRegister = async (email, code) => {
+    // Find user with verification code
+    const user = await User.findOne({ 
+        email,
+        verificationCode: code 
+    }).select('+verificationCode +verificationCodeExpires');
+
+    if (!user) {
+        throw new Error('Invalid verification code');
+    }
+
+    // Check if code has expired
+    if (user.verificationCodeExpires < new Date()) {
+        throw new Error('Verification code has expired');
+    }
+
+    // Check if already verified
+    if (user.emailVerified) {
+        throw new Error('Email already verified');
+    }
+
+    // Get next public ID
+    const id_public = await getNextSequence('userId');
+
+    // Update user with verification and public ID
+    user.emailVerified = true;
+    user.id_public = id_public;
+    user.verificationCode = undefined;
+    user.verificationCodeExpires = undefined;
+    await user.save();
+
+    // Create PublicProfile
+    const publicProfile = new PublicProfile({
+        userId_backend: user._id,
+        id_public: user.id_public,
+        personalName: user.personalName,
+        breederName: user.breederName,
+        showBreederName: user.showBreederName,
+        showGeneticCodePublic: user.showGeneticCodePublic || false,
+        showRemarksPublic: user.showRemarksPublic || false,
+        profileImage: user.profileImage,
+        createdAt: user.creationDate || new Date(),
+    });
+    await publicProfile.save();
+
+    // Generate JWT Token
+    const payload = { user: { id: user.id } };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_LIFETIME });
+
+    // Return token and user profile
+    const userProfile = {
+        id_public: user.id_public,
+        email: user.email,
+        personalName: user.personalName,
+        showPersonalName: user.showPersonalName,
+        breederName: user.breederName,
+        showBreederName: user.showBreederName,
+        websiteURL: user.websiteURL,
+        showWebsiteURL: user.showWebsiteURL,
+        showEmailPublic: user.showEmailPublic,
+        showGeneticCodePublic: user.showGeneticCodePublic,
+        showRemarksPublic: user.showRemarksPublic,
+        profileImage: user.profileImage,
+        creationDate: user.creationDate,
+    };
+
+    return { token, userProfile };
+};
+
+/**
+ * Request password reset - generates token and stores it with expiry
+ */
+const requestPasswordReset = async (email) => {
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+        // Don't reveal if email exists or not for security
+        throw new Error('If the email exists, a reset link has been sent');
+    }
+
+    if (!user.emailVerified) {
+        throw new Error('Email not verified. Please verify your email first');
+    }
+
+    // Generate secure reset token (32 bytes = 64 hex characters)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Hash the token before storing (same pattern as passwords)
+    const salt = await bcrypt.genSalt(SALT_ROUNDS);
+    const hashedToken = await bcrypt.hash(resetToken, salt);
+
+    // Set expiry to 1 hour from now
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save();
+
+    return { resetToken, email };
+};
+
+/**
+ * Reset password with valid token
+ */
+const resetPassword = async (email, token, newPassword) => {
+    const user = await User.findOne({ 
+        email,
+        resetPasswordExpires: { $gt: new Date() }
+    }).select('+resetPasswordToken +resetPasswordExpires');
+
+    if (!user || !user.resetPasswordToken) {
+        throw new Error('Invalid or expired reset token');
+    }
+
+    // Verify the token
+    const isValidToken = await bcrypt.compare(token, user.resetPasswordToken);
+    
+    if (!isValidToken) {
+        throw new Error('Invalid reset token');
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password and clear reset token
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return { message: 'Password reset successful' };
+};
+
 module.exports = {
     connectDB,
     registerUser,
@@ -729,6 +913,10 @@ module.exports = {
     getUserProfileById,
     updateUserProfile, 
     getNextSequence,
+    requestEmailVerification,
+    verifyEmailAndRegister,
+    requestPasswordReset,
+    resetPassword,
     // Animal functions
     addAnimal,
     getUsersAnimals,

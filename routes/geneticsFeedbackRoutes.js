@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { GeneticsFeedback } = require('../database/models');
+const { sendGeneticsFeedbackNotification } = require('../utils/emailService');
 
 /**
  * POST /genetics-feedback
@@ -28,6 +29,33 @@ router.post('/', async (req, res) => {
             status: 'pending',
             createdAt: new Date()
         });
+
+        // Send admin email notification
+        try {
+            const { User } = require('../database/models');
+            let userName = 'Anonymous';
+            let userEmail = 'Not logged in';
+            
+            if (userId) {
+                const user = await User.findById(userId).select('username email');
+                if (user) {
+                    userName = user.username;
+                    userEmail = user.email;
+                }
+            }
+
+            await sendGeneticsFeedbackNotification({
+                userName,
+                userEmail,
+                phenotype,
+                genotype,
+                feedback,
+                createdAt: newFeedback.createdAt
+            });
+        } catch (emailError) {
+            console.error('Failed to send genetics feedback notification email:', emailError);
+            // Don't fail the request if email fails, feedback is still saved
+        }
 
         return res.status(201).json({ 
             message: 'Feedback submitted successfully',
