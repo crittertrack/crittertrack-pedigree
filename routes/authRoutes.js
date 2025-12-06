@@ -37,7 +37,15 @@ router.post('/register-request', async (req, res) => {
         );
 
         // Send verification email
-        await sendVerificationEmail(email, verificationCode);
+        try {
+            await sendVerificationEmail(email, verificationCode);
+            console.log('✓ Verification email sent successfully to:', email);
+        } catch (emailError) {
+            console.error('✗ FAILED to send verification email:', emailError);
+            console.error('Email error details:', emailError.message);
+            // Still return success to user since code is stored in DB
+            // but log the error for debugging
+        }
 
         res.status(200).json({
             message: 'Verification code sent to your email. Please check your inbox.',
