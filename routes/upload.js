@@ -28,6 +28,12 @@ router.post('/', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    console.log('Upload request received:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.buffer.length
+    });
+
     // Create form data to send to R2 uploader
     const formData = new FormData();
     formData.append('file', req.file.buffer, {
@@ -36,22 +42,36 @@ router.post('/', upload.single('file'), async (req, res) => {
     });
 
     // Upload to R2
+    console.log('Uploading to R2:', R2_UPLOADER_URL);
     const uploadResponse = await axios.post(R2_UPLOADER_URL, formData, {
       headers: formData.getHeaders(),
       maxContentLength: Infinity,
-      maxBodyLength: Infinity
+      maxBodyLength: Infinity,
+      timeout: 30000 // 30 second timeout
     });
+
+    console.log('R2 upload response:', uploadResponse.data);
 
     if (uploadResponse.data && uploadResponse.data.url) {
       return res.json({ 
         url: uploadResponse.data.url,
         filename: uploadResponse.data.key || req.file.originalname
       });
+    } else if (uploadResponse.data && uploadResponse.data.ok && uploadResponse.data.url) {
+      // Handle R2 worker response format
+      return res.json({ 
+        url: uploadResponse.data.url,
+        filename: uploadResponse.data.key || req.file.originalname
+      });
     } else {
-      throw new Error('Invalid response from R2 uploader');
+      throw new Error('Invalid response from R2 uploader: ' + JSON.stringify(uploadResponse.data));
     }
   } catch (err) {
-    console.error('Upload error:', err.response?.data || err.message);
+    console.error('Upload error:', {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status
+    });
     return res.status(500).json({ 
       error: 'Failed to upload file',
       details: err.response?.data || err.message 
