@@ -83,4 +83,59 @@ router.get('/categories', (req, res) => {
     res.json(categories);
 });
 
+/**
+ * POST /api/species/migrate-categories
+ * One-time migration to add categories to existing species
+ */
+router.post('/migrate-categories', async (req, res) => {
+    try {
+        const defaultSpecies = ['Mouse', 'Rat', 'Hamster'];
+        const results = {
+            updated: [],
+            created: [],
+            skipped: []
+        };
+        
+        // Update/create default species with Rodent category
+        for (const speciesName of defaultSpecies) {
+            const existing = await Species.findOne({ name: speciesName });
+            
+            if (existing) {
+                if (!existing.category || existing.category === 'Other' || !existing.isDefault) {
+                    existing.category = 'Rodent';
+                    existing.isDefault = true;
+                    await existing.save();
+                    results.updated.push(speciesName);
+                } else {
+                    results.skipped.push(speciesName);
+                }
+            } else {
+                const newSpecies = new Species({
+                    name: speciesName,
+                    category: 'Rodent',
+                    isDefault: true
+                });
+                await newSpecies.save();
+                results.created.push(speciesName);
+            }
+        }
+        
+        // Set default category for species without one
+        const updateResult = await Species.updateMany(
+            { category: { $exists: false } },
+            { $set: { category: 'Other' } }
+        );
+        
+        res.json({
+            success: true,
+            results,
+            uncategorizedUpdated: updateResult.modifiedCount,
+            message: 'Migration completed successfully'
+        });
+    } catch (error) {
+        console.error('Error migrating species categories:', error);
+        res.status(500).json({ error: 'Migration failed', details: error.message });
+    }
+});
+
 module.exports = router;
