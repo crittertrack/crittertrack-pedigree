@@ -870,7 +870,7 @@ router.get('/:id_public/offspring', async (req, res) => {
 router.get('/:id_public/inbreeding', async (req, res) => {
     try {
         const { id_public } = req.params;
-        const generations = parseInt(req.query.generations) || 5;
+        const generations = parseInt(req.query.generations) || 50;
 
         // Fetch animal function that works with both owned and public animals
         const fetchAnimal = async (animalId) => {
@@ -929,15 +929,15 @@ router.get('/inbreeding/pairing', async (req, res) => {
         };
 
         const coefficient = await calculatePairingInbreeding(
-            parseInt(sireId),
-            parseInt(damId),
+            sireId,
+            damId,
             fetchAnimal,
-            parseInt(generations) || 5
+            parseInt(generations) || 50
         );
 
         res.status(200).json({ 
-            sireId: parseInt(sireId),
-            damId: parseInt(damId),
+            sireId,
+            damId,
             inbreedingCoefficient: coefficient 
         });
     } catch (error) {
