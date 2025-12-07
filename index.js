@@ -88,7 +88,8 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' })); // Increase limit for base64 images
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 // Set Cross-Origin-Resource-Policy to allow cross-origin embedding of uploaded assets
 app.use((req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
