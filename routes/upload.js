@@ -1,88 +1,70 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me';
+const axios = require('axios');
+const FormData = require('form-data');
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '';
-    const name = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
-    cb(null, name);
-  }
-});
-
+// Use memory storage to avoid saving files locally
 const upload = multer({
-  storage,
-  limits: { fileSize: 500 * 1024 }, // 500KB
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg') cb(null, true);
-    else cb(new Error('Only PNG and JPEG images are allowed'));
-  }
-});
-
-// POST /api/upload
-router.post('/', upload.single('file'), (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
-    let base = process.env.PUBLIC_HOST || process.env.PUBLIC_URL || process.env.DOMAIN || null;
-    if (base) {
-      if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
-      base = base.replace(/\/$/, '');
+    if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg' || file.mimetype === 'image/webp') {
+      cb(null, true);
     } else {
-      base = `${proto}://${req.get('host')}`;
+      cb(new Error('Only PNG, JPEG, and WebP images are allowed'));
     }
-    const url = `${base}/uploads/${req.file.filename}`;
-    return res.json({ url, filename: req.file.filename });
-  } catch (err) {
-    console.error('Upload error:', err);
-    return res.status(500).json({ error: 'Failed to upload file' });
   }
 });
 
-// DELETE /api/upload/:filename
-// Protected: requires a valid Bearer token. This endpoint is intended
-// for maintenance (removing orphaned uploads). It does not perform
-// ownership checks and should be used carefully.
-router.delete('/:filename', (req, res) => {
+// R2 uploader URL
+const R2_UPLOADER_URL = process.env.R2_UPLOADER_URL || 'https://uploads.crittertrack.net';
+
+// POST /api/upload - proxy to R2 uploader
+router.post('/', upload.single('file'), async (req, res) => {
   try {
-    const authHeader = req.header('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Authorization required.' });
-    }
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      return res.status(401).json({ message: 'Invalid or expired token.' });
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const filename = req.params.filename;
-    if (!filename || filename.includes('..') || filename.includes('/')) {
-      return res.status(400).json({ message: 'Invalid filename.' });
-    }
+    // Create form data to send to R2 uploader
+    const formData = new FormData();
+    formData.append('file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype
+    });
 
-    const filePath = path.join(uploadDir, filename);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'File not found.' });
-    }
+    // Upload to R2
+    const uploadResponse = await axios.post(R2_UPLOADER_URL, formData, {
+      headers: formData.getHeaders(),
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    });
 
-    fs.unlinkSync(filePath);
-    return res.json({ message: 'File deleted.' });
+    if (uploadResponse.data && uploadResponse.data.url) {
+      return res.json({ 
+        url: uploadResponse.data.url,
+        filename: uploadResponse.data.key || req.file.originalname
+      });
+    } else {
+      throw new Error('Invalid response from R2 uploader');
+    }
   } catch (err) {
-    console.error('Failed to delete upload:', err && err.stack ? err.stack : err);
-    return res.status(500).json({ message: 'Failed to delete file.' });
+    console.error('Upload error:', err.response?.data || err.message);
+    return res.status(500).json({ 
+      error: 'Failed to upload file',
+      details: err.response?.data || err.message 
+    });
   }
+});
+
+// DELETE /api/upload/:filename - Note: This endpoint is deprecated as files are now in R2
+// Kept for backward compatibility but will not delete R2 files
+router.delete('/:filename', (req, res) => {
+  return res.status(410).json({ 
+    message: 'Delete endpoint deprecated. Files are stored in R2 and managed separately.' 
+  });
 });
 
 module.exports = router;
