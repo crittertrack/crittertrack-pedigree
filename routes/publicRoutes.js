@@ -105,6 +105,17 @@ router.get('/profiles/search', async (req, res) => {
             .limit(searchLimit)
             .lean();
         
+        console.log('[PROFILE SEARCH] Query:', query, 'Found profiles:', profiles.length);
+        if (profiles.length > 0) {
+            console.log('[PROFILE SEARCH] First profile:', {
+                id_public: profiles[0].id_public,
+                personalName: profiles[0].personalName,
+                breederName: profiles[0].breederName,
+                showBreederName: profiles[0].showBreederName,
+                profileImage: profiles[0].profileImage ? 'present' : 'none'
+            });
+        }
+        
         res.status(200).json(profiles);
     } catch (error) {
         console.error('Error searching public profiles:', error);
