@@ -62,7 +62,7 @@ const AnimalSchema = new mongoose.Schema({
     id_public: { type: String, required: true, unique: true, index: true }, // The unique public Animal ID
     
     // Key display data
-    species: { type: String, required: true, enum: ['Mouse', 'Rat', 'Hamster'] },
+    species: { type: String, required: true },
     prefix: { type: String, default: null },
     name: { type: String, required: true },
     gender: { type: String, enum: ['Male', 'Female', 'Unknown'], default: 'Unknown' },
@@ -257,6 +257,22 @@ const BugReportSchema = new mongoose.Schema({
 const BugReport = mongoose.model('BugReport', BugReportSchema);
 
 
+// --- 9. SPECIES SCHEMA (Global Species List) ---
+const SpeciesSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true, trim: true, index: true },
+    category: { 
+        type: String, 
+        enum: ['Rodent', 'Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'], 
+        default: 'Other',
+        index: true 
+    },
+    isDefault: { type: Boolean, default: false, index: true },
+    createdBy_public: { type: String, default: null }, // User ID who created this species (null for defaults)
+    createdAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+const Species = mongoose.model('Species', SpeciesSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -267,5 +283,6 @@ module.exports = {
     Notification,
     GeneticsFeedback,
     BugReport,
-    Counter
+    Counter,
+    Species
 };
