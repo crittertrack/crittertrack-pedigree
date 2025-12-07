@@ -11,10 +11,10 @@ const { PublicAnimal, Animal, PublicProfile } = require('../database/models');
 // 1. Gets a public profile for display.
 router.get('/profile/:id_public', async (req, res) => {
     try {
-        // Convert the string parameter to a number for querying the id_public field
-        const id_public = parseInt(req.params.id_public, 10); 
+        // Accept string IDs (CTU2) or legacy numeric IDs (2)
+        const id_public = req.params.id_public;
         
-        if (isNaN(id_public)) {
+        if (!id_public) {
             return res.status(400).json({ message: 'Invalid public ID format.' });
         }
 
@@ -37,9 +37,10 @@ router.get('/profile/:id_public', async (req, res) => {
 // 2. Gets all publicly visible animals belonging to a specific owner.
 router.get('/animals/:ownerId_public', async (req, res) => {
     try {
-        const ownerId_public = parseInt(req.params.ownerId_public, 10);
+        // Accept string IDs (CTU2) or legacy numeric IDs (2)
+        const ownerId_public = req.params.ownerId_public;
 
-        if (isNaN(ownerId_public)) {
+        if (!ownerId_public) {
             return res.status(400).json({ message: 'Invalid public owner ID format.' });
         }
 
@@ -156,9 +157,10 @@ router.get('/public-animals-count', async (req, res) => {
 // GET /api/public/animal/:id_public
 router.get('/animal/:id_public', async (req, res) => {
     try {
-        const id_public = parseInt(req.params.id_public, 10);
+        // Accept string IDs (CTC1001) or legacy numeric IDs (1001)
+        const id_public = req.params.id_public;
         
-        if (isNaN(id_public)) {
+        if (!id_public) {
             return res.status(400).json({ message: 'Invalid animal ID format.' });
         }
 
