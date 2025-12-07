@@ -205,6 +205,7 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     }
     if (updates.showBreederName !== undefined) {
         console.log('[updateUserProfile] Setting showBreederName to:', updates.showBreederName, 'Type:', typeof updates.showBreederName);
+        console.log('[updateUserProfile] User._id:', user._id, 'User id_public:', user.id_public);
         user.showBreederName = updates.showBreederName;
         // Update public profile showBreederName simultaneously
         const publicUpdateResult = await PublicProfile.updateOne(
@@ -212,6 +213,10 @@ const updateUserProfile = async (appUserId_backend, updates) => {
             { showBreederName: updates.showBreederName }
         );
         console.log('[updateUserProfile] PublicProfile update result:', publicUpdateResult);
+        
+        // Verify the update
+        const verifyProfile = await PublicProfile.findOne({ userId_backend: user._id }).lean();
+        console.log('[updateUserProfile] Verified PublicProfile showBreederName:', verifyProfile?.showBreederName, 'id_public:', verifyProfile?.id_public);
     }
     if (updates.websiteURL !== undefined) {
         user.websiteURL = updates.websiteURL;
