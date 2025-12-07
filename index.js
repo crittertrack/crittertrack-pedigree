@@ -315,6 +315,10 @@ app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
 const bugReportRoutes = require('./routes/bugReportRoutes');
 app.use('/api/bug-reports', authMiddleware, bugReportRoutes);
 
+// Species Routes (Public read, auth for write)
+const speciesRoutes = require('./routes/speciesRoutes');
+app.use('/api/species', speciesRoutes);
+
 // Migration Routes (No auth for one-time migrations - remove after running)
 const migrationRoutes = require('./routes/migrationRoutes');
 app.use('/api/migrations', migrationRoutes);

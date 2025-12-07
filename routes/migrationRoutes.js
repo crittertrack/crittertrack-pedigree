@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, PublicProfile, Animal, PublicAnimal } = require('../database/models');
+const { User, PublicProfile, Animal, PublicAnimal, Species } = require('../database/models');
 
 // Migration endpoint to sync privacy settings to PublicProfile
 router.post('/sync-privacy-settings', async (req, res) => {
@@ -119,6 +119,55 @@ router.post('/sync-animal-privacy', async (req, res) => {
         res.status(500).json({ 
             success: false, 
             message: 'Animal migration failed', 
+            error: error.message 
+        });
+    }
+});
+
+/**
+ * POST /api/migrations/seed-default-species
+ * One-time migration to seed default species
+ */
+router.post('/seed-default-species', async (req, res) => {
+    try {
+        const defaultSpecies = [
+            { name: 'Mouse', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Rat', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Hamster', category: 'Rodent', isDefault: true, createdBy_public: null }
+        ];
+        
+        let created = 0;
+        let skipped = 0;
+        
+        for (const species of defaultSpecies) {
+            const existing = await Species.findOne({ name: species.name });
+            if (!existing) {
+                await Species.create(species);
+                created++;
+                console.log(`✓ Created default species: ${species.name}`);
+            } else {
+                // Update to ensure it's marked as default
+                await Species.updateOne(
+                    { name: species.name },
+                    { $set: { isDefault: true, category: species.category } }
+                );
+                skipped++;
+                console.log(`! Species already exists: ${species.name} (updated to default)`);
+            }
+        }
+        
+        res.json({ 
+            success: true,
+            message: 'Default species seeded successfully',
+            created,
+            skipped,
+            total: defaultSpecies.length
+        });
+    } catch (error) {
+        console.error('Error seeding default species:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to seed default species', 
             error: error.message 
         });
     }
