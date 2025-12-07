@@ -266,6 +266,40 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
     }
 });
 
+// Delete user account
+app.delete('/api/users/account', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { User, PublicProfile, Animal, PublicAnimal, Litter, Notification } = require('./database/models');
+        
+        // Delete all user's animals from both collections
+        await Animal.deleteMany({ ownerId: userId });
+        const userPublicId = await User.findById(userId).select('id_public');
+        if (userPublicId) {
+            await PublicAnimal.deleteMany({ ownerId_public: userPublicId.id_public });
+        }
+        
+        // Delete all user's litters
+        await Litter.deleteMany({ ownerId: userId });
+        
+        // Delete all notifications for this user
+        await Notification.deleteMany({ userId: userId });
+        
+        // Delete public profile
+        if (userPublicId) {
+            await PublicProfile.deleteOne({ id_public: userPublicId.id_public });
+        }
+        
+        // Delete user account
+        await User.deleteOne({ _id: userId });
+        
+        res.status(200).json({ message: 'Account deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting user account:', error.message);
+        res.status(500).json({ message: 'Failed to delete account.' });
+    }
+});
+
 // Main Data Routes (Require authMiddleware)
 // The middleware is applied here, before the router handles the request
 app.use('/api/animals', authMiddleware, animalRoutes);
