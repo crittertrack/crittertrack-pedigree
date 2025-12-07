@@ -241,6 +241,12 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
     try {
         // Accept either JSON body or multipart upload (profileImage)
         const updates = req.body || {};
+        
+        console.log('[PROFILE UPDATE] Received updates:', {
+            showBreederName: updates.showBreederName,
+            breederName: updates.breederName,
+            profileImage: updates.profileImage ? 'present' : 'none'
+        });
 
         // If a file was uploaded as part of multipart, map it to profileImage URL
         if (req.file) {
@@ -259,6 +265,7 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
         }
 
         const updatedUser = await updateUserProfile(req.user.id, updates);
+        console.log('[PROFILE UPDATE] After update, user showBreederName:', updatedUser.showBreederName);
         res.json({ message: 'Profile updated successfully!', user: updatedUser });
     } catch (error) {
         console.error('Error updating user profile:', error.message);
