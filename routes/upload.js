@@ -34,22 +34,22 @@ router.post('/', upload.single('file'), async (req, res) => {
       size: req.file.buffer.length
     });
 
-    // Sanitize filename - remove special characters and URL-unsafe chars
-    const sanitizedFilename = req.file.originalname
-      .replace(/[^a-zA-Z0-9.-]/g, '_')  // Replace unsafe chars with underscore
-      .replace(/_+/g, '_')               // Replace multiple underscores with single
-      .replace(/^_|_$/g, '')             // Remove leading/trailing underscores
-      .substring(0, 100);                 // Limit length
+    // Generate a clean filename with timestamp
+    const timestamp = Date.now();
+    const extension = req.file.mimetype === 'image/png' ? 'png' : 'jpg';
+    const cleanFilename = `${timestamp}.${extension}`;
+
+    console.log('Generated clean filename:', cleanFilename);
 
     // Create form data to send to R2 uploader
     const formData = new FormData();
     formData.append('file', req.file.buffer, {
-      filename: sanitizedFilename,
+      filename: cleanFilename,
       contentType: req.file.mimetype
     });
 
     // Upload to R2
-    console.log('Uploading to R2:', R2_UPLOADER_URL, 'as', sanitizedFilename);
+    console.log('Uploading to R2:', R2_UPLOADER_URL, 'as', cleanFilename);
     const uploadResponse = await axios.post(R2_UPLOADER_URL, formData, {
       headers: formData.getHeaders(),
       maxContentLength: Infinity,
@@ -62,13 +62,13 @@ router.post('/', upload.single('file'), async (req, res) => {
     if (uploadResponse.data && uploadResponse.data.url) {
       return res.json({ 
         url: uploadResponse.data.url,
-        filename: uploadResponse.data.key || sanitizedFilename
+        filename: uploadResponse.data.key || cleanFilename
       });
     } else if (uploadResponse.data && uploadResponse.data.ok && uploadResponse.data.url) {
       // Handle R2 worker response format
       return res.json({ 
         url: uploadResponse.data.url,
-        filename: uploadResponse.data.key || sanitizedFilename
+        filename: uploadResponse.data.key || cleanFilename
       });
     } else {
       throw new Error('Invalid response from R2 uploader: ' + JSON.stringify(uploadResponse.data));
