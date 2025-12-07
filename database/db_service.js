@@ -250,12 +250,11 @@ const updateUserProfile = async (appUserId_backend, updates) => {
 const addAnimal = async (appUserId_backend, animalData) => {
     const id_public = await getNextSequence('animalId');
 
-    // Normalize parent fields: accept numeric public IDs or alias fields and resolve to internal _id
+    // Normalize parent fields: accept public IDs (string or numeric) and resolve to check ownership
     const resolveParentPublicToBackend = async (pubVal) => {
         if (!pubVal) return null;
-        const num = Number(pubVal);
-        if (Number.isNaN(num)) return null;
-        const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+        // Try to find by id_public (handles both string CTC1001 and legacy numeric)
+        const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
         return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
     };
 
@@ -269,9 +268,8 @@ const addAnimal = async (appUserId_backend, animalData) => {
                 if (resolved) {
                     animalData.sireId_public = resolved.id_public;
                 } else {
-                    // If candidate is numeric public id but not owned by user, still set numeric if provided
-                    const num = Number(candidate);
-                    if (!Number.isNaN(num)) animalData.sireId_public = num;
+                    // If not owned by user, still set the value as-is (for linkage to other users' animals)
+                    animalData.sireId_public = candidate;
                 }
             }
         }
@@ -283,8 +281,8 @@ const addAnimal = async (appUserId_backend, animalData) => {
                 if (resolvedM) {
                     animalData.damId_public = resolvedM.id_public;
                 } else {
-                    const numM = Number(candidateM);
-                    if (!Number.isNaN(numM)) animalData.damId_public = numM;
+                    // If not owned by user, still set the value as-is (for linkage to other users' animals)
+                    animalData.damId_public = candidateM;
                 }
             }
         }
@@ -326,10 +324,8 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
 
     // Apply filters from query params
     if (filters.id_public !== undefined) {
-        const idNum = Number(filters.id_public);
-        if (!Number.isNaN(idNum)) {
-            query.id_public = idNum;
-        }
+        // Handle both string (CTC1001) and legacy numeric IDs
+        query.id_public = filters.id_public;
     }
     if (filters.gender) query.gender = filters.gender;
     if (filters.species) query.species = filters.species;

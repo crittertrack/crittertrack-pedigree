@@ -193,8 +193,8 @@ router.get('/global/animals', async (req, res) => {
         }
 
         if (query.id_public) {
-            const n = Number(query.id_public);
-            if (!isNaN(n)) q.id_public = n;
+            // Handle both string (CTC1001) and legacy numeric IDs
+            q.id_public = query.id_public;
         }
 
         if (query.gender) {

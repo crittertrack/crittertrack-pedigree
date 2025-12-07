@@ -57,14 +57,14 @@ router.param('id_backend', async (req, res, next, value) => {
             return next();
         }
 
-        // If it's numeric, treat as id_public and resolve to internal _id
-        if (/^\d+$/.test(value)) {
+        // If it's numeric or starts with CTC (public ID format), resolve to internal _id
+        if (/^\d+$/.test(value) || /^CTC\d+$/i.test(value)) {
             // Need the user id to scope the lookup; if not available yet, defer
             const appUserId_backend = req.user && req.user.id;
             if (!appUserId_backend) {
                 return res.status(400).json({ message: 'User context required to resolve animal id.' });
             }
-            const animal = await Animal.findOne({ id_public: Number(value), ownerId: appUserId_backend }).select('_id').lean();
+            const animal = await Animal.findOne({ id_public: value, ownerId: appUserId_backend }).select('_id').lean();
             if (!animal) return res.status(404).json({ message: 'Animal not found.' });
             req.resolvedAnimalId = animal._id.toString();
             return next();
@@ -223,14 +223,13 @@ router.post('/', upload.single('file'), async (req, res) => {
                 }
             }
 
-            // Normalize parent fields: if frontend provided numeric public IDs (fatherId_public, fatherId, etc.)
-            // resolve them to internal backend _id for storage.
-            // Helper: resolve a numeric public id to both backend _id and id_public
+            // Normalize parent fields: if frontend provided public IDs (fatherId_public, fatherId, etc.)
+            // resolve them to check ownership and validate
+            // Helper: resolve a public id to both backend _id and id_public
             const resolveParentPublicToBackend = async (pubVal) => {
                 if (!pubVal) return null;
-                const num = Number(pubVal);
-                if (Number.isNaN(num)) return null;
-                const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+                // Handle both string (CTC1001) and legacy numeric IDs
+                const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
                 return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
             };
 
@@ -247,8 +246,8 @@ router.post('/', upload.single('file'), async (req, res) => {
                             if (resolved) {
                                 animalData.sireId_public = resolved.id_public;
                             } else {
-                                const num = Number(candidate);
-                                if (!Number.isNaN(num)) animalData.sireId_public = num;
+                                // Not owned by user, but still valid - set as-is
+                                animalData.sireId_public = candidate;
                             }
                         } catch (e) { /* ignore resolution errors */ }
                     }
@@ -266,8 +265,8 @@ router.post('/', upload.single('file'), async (req, res) => {
                             if (resolvedM) {
                                 animalData.damId_public = resolvedM.id_public;
                             } else {
-                                const numM = Number(candidateM);
-                                if (!Number.isNaN(numM)) animalData.damId_public = numM;
+                                // Not owned by user, but still valid - set as-is
+                                animalData.damId_public = candidateM;
                             }
                         } catch (e) { /* ignore */ }
                     }
