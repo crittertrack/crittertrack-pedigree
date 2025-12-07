@@ -317,7 +317,8 @@ app.use('/api/bug-reports', authMiddleware, bugReportRoutes);
 
 // Species Routes (Public read, auth for write)
 const speciesRoutes = require('./routes/speciesRoutes');
-app.use('/api/species', speciesRoutes);
+app.get('/api/species*', speciesRoutes); // Public GET
+app.post('/api/species', authMiddleware, speciesRoutes); // Protected POST
 
 // Migration Routes (No auth for one-time migrations - remove after running)
 const migrationRoutes = require('./routes/migrationRoutes');

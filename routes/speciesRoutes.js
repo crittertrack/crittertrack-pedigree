@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { Species } = require('../database/models');
-const authMiddleware = require('../middleware/authMiddleware');
 
 /**
  * GET /api/species
@@ -30,9 +29,9 @@ router.get('/', async (req, res) => {
 
 /**
  * POST /api/species
- * Add a new custom species (requires authentication)
+ * Add a new custom species (requires authentication - applied in index.js)
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const { name, category } = req.body;
         const userId_public = req.user?.id_public || null;
