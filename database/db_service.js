@@ -192,30 +192,30 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     // Apply allowed updates
     if (updates.personalName !== undefined) {
         user.personalName = updates.personalName;
-        // Update public profile personalName simultaneously
-        await PublicProfile.updateOne({ userId_backend: user._id }, { personalName: updates.personalName });
+        // Update public profile personalName simultaneously - use id_public to match correct record
+        await PublicProfile.updateOne({ id_public: user.id_public }, { personalName: updates.personalName });
     }
     if (updates.showPersonalName !== undefined) {
         user.showPersonalName = updates.showPersonalName;
     }
     if (updates.breederName !== undefined) {
         user.breederName = updates.breederName;
-        // Update public profile name simultaneously
-        await PublicProfile.updateOne({ userId_backend: user._id }, { breederName: updates.breederName });
+        // Update public profile name simultaneously - use id_public to match correct record
+        await PublicProfile.updateOne({ id_public: user.id_public }, { breederName: updates.breederName });
     }
     if (updates.showBreederName !== undefined) {
         console.log('[updateUserProfile] Setting showBreederName to:', updates.showBreederName, 'Type:', typeof updates.showBreederName);
         console.log('[updateUserProfile] User._id:', user._id, 'User id_public:', user.id_public);
         user.showBreederName = updates.showBreederName;
-        // Update public profile showBreederName simultaneously
+        // Update public profile showBreederName simultaneously - use id_public to match the correct record
         const publicUpdateResult = await PublicProfile.updateOne(
-            { userId_backend: user._id }, 
+            { id_public: user.id_public }, 
             { showBreederName: updates.showBreederName }
         );
         console.log('[updateUserProfile] PublicProfile update result:', publicUpdateResult);
         
         // Verify the update
-        const verifyProfile = await PublicProfile.findOne({ userId_backend: user._id }).lean();
+        const verifyProfile = await PublicProfile.findOne({ id_public: user.id_public }).lean();
         console.log('[updateUserProfile] Verified PublicProfile showBreederName:', verifyProfile?.showBreederName, 'id_public:', verifyProfile?.id_public);
     }
     if (updates.websiteURL !== undefined) {
@@ -229,18 +229,18 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     }
     if (updates.showGeneticCodePublic !== undefined) {
         user.showGeneticCodePublic = updates.showGeneticCodePublic;
-        // Update public profile showGeneticCodePublic simultaneously
-        await PublicProfile.updateOne({ userId_backend: user._id }, { showGeneticCodePublic: updates.showGeneticCodePublic });
+        // Update public profile showGeneticCodePublic simultaneously - use id_public to match correct record
+        await PublicProfile.updateOne({ id_public: user.id_public }, { showGeneticCodePublic: updates.showGeneticCodePublic });
     }
     if (updates.showRemarksPublic !== undefined) {
         user.showRemarksPublic = updates.showRemarksPublic;
-        // Update public profile showRemarksPublic simultaneously
-        await PublicProfile.updateOne({ userId_backend: user._id }, { showRemarksPublic: updates.showRemarksPublic });
+        // Update public profile showRemarksPublic simultaneously - use id_public to match correct record
+        await PublicProfile.updateOne({ id_public: user.id_public }, { showRemarksPublic: updates.showRemarksPublic });
     }
     if (updates.profileImage !== undefined) {
         user.profileImage = updates.profileImage;
-        // Update public profile image simultaneously
-        await PublicProfile.updateOne({ userId_backend: user._id }, { profileImage: updates.profileImage });
+        // Update public profile image simultaneously - use id_public to match correct record
+        await PublicProfile.updateOne({ id_public: user.id_public }, { profileImage: updates.profileImage });
     }
 
     // Note: Password update would require a separate, secure endpoint that handles current password verification.
