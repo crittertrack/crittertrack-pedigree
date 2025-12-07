@@ -11,7 +11,7 @@ const Counter = mongoose.model('Counter', CounterSchema);
 
 // --- 2. USER SCHEMA (Private/Authentication Data) ---
 const UserSchema = new mongoose.Schema({
-    id_public: { type: Number, required: false, unique: true, sparse: true, index: true },
+    id_public: { type: String, required: false, unique: true, sparse: true, index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     // Password MUST be selected manually in queries or explicitly included in update handlers
     password: { type: String, required: true, select: false }, 
@@ -43,7 +43,7 @@ const User = mongoose.model('User', UserSchema);
 // --- 3. PUBLIC PROFILE SCHEMA (View-Only/Searchable Data) ---
 const PublicProfileSchema = new mongoose.Schema({
     userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    id_public: { type: Number, required: true, unique: true, index: true },
+    id_public: { type: String, required: true, unique: true, index: true },
     personalName: { type: String, required: true, trim: true },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
@@ -58,8 +58,8 @@ const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publ
 // --- 4. ANIMAL SCHEMA (Private Data) ---
 const AnimalSchema = new mongoose.Schema({
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    ownerId_public: { type: Number, required: true }, // Denormalized public owner ID
-    id_public: { type: Number, required: true, unique: true, index: true }, // The unique public Animal ID
+    ownerId_public: { type: String, required: true }, // Denormalized public owner ID
+    id_public: { type: String, required: true, unique: true, index: true }, // The unique public Animal ID
     
     // Key display data
     species: { type: String, required: true, enum: ['Mouse', 'Rat', 'Hamster'] },
@@ -74,7 +74,7 @@ const AnimalSchema = new mongoose.Schema({
     earset: { type: String, default: null },
     
     // Breeder and owner info
-    breederId_public: { type: Number, default: null, index: true }, // Public ID of the breeder (user)
+    breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder (user)
     ownerName: { type: String, default: null }, // Custom owner name (only for local view)
     
     // Ownership and breeding status
@@ -87,8 +87,8 @@ const AnimalSchema = new mongoose.Schema({
     photoUrl: { type: String, default: null },
 
     // Lineage linking (Links to the public ID of the ancestor)
-    sireId_public: { type: Number, default: null },
-    damId_public: { type: Number, default: null },
+    sireId_public: { type: String, default: null },
+    damId_public: { type: String, default: null },
     
     // Optional Litter link (Links to the internal ID of the litter)
     litterId: { type: mongoose.Schema.Types.ObjectId, ref: 'Litter', default: null },
@@ -111,8 +111,8 @@ const Animal = mongoose.model('Animal', AnimalSchema);
 
 // --- 5. PUBLIC ANIMAL SCHEMA (Shared/View-Only Data) ---
 const PublicAnimalSchema = new mongoose.Schema({
-    ownerId_public: { type: Number, required: true, index: true }, // The public owner link
-    id_public: { type: Number, required: true, unique: true, index: true }, // The unique public Animal ID
+    ownerId_public: { type: String, required: true, index: true }, // The public owner link
+    id_public: { type: String, required: true, unique: true, index: true }, // The unique public Animal ID
     
     // Key display data
     species: { type: String, required: true },
@@ -127,7 +127,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     earset: { type: String, default: null },
     
     // Breeder info (public)
-    breederId_public: { type: Number, default: null, index: true }, // Public ID of the breeder
+    breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder
     
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
@@ -139,8 +139,8 @@ const PublicAnimalSchema = new mongoose.Schema({
     photoUrl: { type: String, default: null },
 
     // Lineage linking (Links to the public ID of the ancestor)
-    sireId_public: { type: Number, default: null },
-    damId_public: { type: Number, default: null },
+    sireId_public: { type: String, default: null },
+    damId_public: { type: String, default: null },
     
     // SENSITIVE/OPTIONAL DATA (Copied if toggled on)
     remarks: { type: String, default: '' },
@@ -163,9 +163,9 @@ const LitterSchema = new mongoose.Schema({
     breedingPairCodeName: { type: String, default: null }, 
     
     // Sire/Dam data links to PublicAnimal records for lineage
-    sireId_public: { type: Number, default: null },
+    sireId_public: { type: String, default: null },
     sirePrefixName: { type: String, default: null }, // Denormalized for display
-    damId_public: { type: Number, default: null },
+    damId_public: { type: String, default: null },
     damPrefixName: { type: String, default: null }, // Denormalized for display
     
     pairingDate: { type: Date, default: null },
@@ -173,7 +173,7 @@ const LitterSchema = new mongoose.Schema({
     numberBorn: { type: Number, required: true, min: 0 },
     
     // Public IDs of offspring animals that came from this litter
-    offspringIds_public: { type: [Number], default: [] }, 
+    offspringIds_public: { type: [String], default: [] }, 
     
     // Inbreeding coefficient for this pairing (cached value)
     inbreedingCoefficient: { type: Number, default: null },
@@ -188,22 +188,22 @@ const Litter = mongoose.model('Litter', LitterSchema);
 // --- 6. NOTIFICATION SCHEMA ---
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    userId_public: { type: Number, required: true, index: true },
+    userId_public: { type: String, required: true, index: true },
     type: { type: String, required: true, enum: ['breeder_request', 'parent_request'] },
     status: { type: String, required: true, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
     
     // Request details
     requestedBy_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    requestedBy_public: { type: Number, required: true },
+    requestedBy_public: { type: String, required: true },
     requestedBy_name: { type: String, default: '' }, // Requester's personal or breeder name
-    animalId_public: { type: Number, required: true },
+    animalId_public: { type: String, required: true },
     animalName: { type: String, required: true },
     animalPrefix: { type: String, default: '' }, // Animal prefix
     animalImageUrl: { type: String, default: '' }, // Animal thumbnail
     
     // For parent requests: which parent (sire/dam)
     parentType: { type: String, enum: ['sire', 'dam', null], default: null },
-    targetAnimalId_public: { type: Number, default: null }, // The animal being used as parent
+    targetAnimalId_public: { type: String, default: null }, // The animal being used as parent
     
     // Metadata
     message: { type: String, default: '' },
