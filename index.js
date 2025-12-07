@@ -315,10 +315,15 @@ app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
 const bugReportRoutes = require('./routes/bugReportRoutes');
 app.use('/api/bug-reports', authMiddleware, bugReportRoutes);
 
-// Species Routes (Public read, auth for write)
+// Species Routes (GET is public, POST requires auth)
 const speciesRoutes = require('./routes/speciesRoutes');
-app.get('/api/species*', speciesRoutes); // Public GET
-app.post('/api/species', authMiddleware, speciesRoutes); // Protected POST
+app.use('/api/species', (req, res, next) => {
+    if (req.method === 'POST') {
+        authMiddleware(req, res, next);
+    } else {
+        next();
+    }
+}, speciesRoutes);
 
 // Migration Routes (No auth for one-time migrations - remove after running)
 const migrationRoutes = require('./routes/migrationRoutes');

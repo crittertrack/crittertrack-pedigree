@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 
 /**
  * POST /api/species
- * Add a new custom species (requires authentication - applied in index.js)
+ * Add a new custom species (requires authentication - must be applied when mounting route)
  */
 router.post('/', async (req, res) => {
     try {
