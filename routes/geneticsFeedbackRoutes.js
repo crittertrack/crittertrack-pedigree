@@ -11,7 +11,7 @@ const { sendGeneticsFeedbackNotification } = require('../utils/emailService');
 router.post('/', async (req, res) => {
     try {
         const { phenotype, genotype, feedback } = req.body;
-        const userId = req.user?.id;
+        const userId = req.user?.userId;
 
         // Validation
         if (!phenotype || !genotype || !feedback) {
@@ -37,9 +37,9 @@ router.post('/', async (req, res) => {
             let userEmail = 'Not logged in';
             
             if (userId) {
-                const user = await User.findById(userId).select('username email');
+                const user = await User.findById(userId).select('username email personalName');
                 if (user) {
-                    userName = user.username;
+                    userName = user.username || user.personalName || 'Unknown User';
                     userEmail = user.email;
                 }
             }
