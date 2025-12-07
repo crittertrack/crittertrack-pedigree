@@ -4,10 +4,10 @@
  * 
  * @param {Number} animalId - The public ID of the animal
  * @param {Function} fetchAnimal - Function to fetch animal data by public ID
- * @param {Number} generations - Number of generations to trace back (default: 5)
+ * @param {Number} generations - Number of generations to trace back (default: 50, traces all available)
  * @returns {Number} Inbreeding coefficient as a percentage (0-100)
  */
-async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations = 5) {
+async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations = 50) {
     if (!animalId) return 0;
 
     // Build pedigree tree
@@ -36,18 +36,33 @@ async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations
         }
     }
 
-    return parseFloat((coi * 100).toFixed(4));
+    return parseFloat((coi * 100).toFixed(2));
 }
 
 /**
  * Build a pedigree tree recursively
  */
 async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set()) {
-    if (!animalId || depth === 0 || visited.has(animalId)) {
+    if (!animalId || depth === 0) {
         return null;
     }
 
-    visited.add(animalId);
+    // Allow duplicate animals in pedigree (needed for inbreeding calculation)
+    // Only check visited within the current path to prevent infinite loops
+    if (visited.has(animalId)) {
+        // Return a reference node without further recursion to prevent infinite loops
+        const animal = await fetchAnimal(animalId);
+        return animal ? {
+            id: animalId,
+            name: animal.name,
+            sire: null,
+            dam: null,
+            inbreeding: 0
+        } : null;
+    }
+
+    const newVisited = new Set(visited);
+    newVisited.add(animalId);
 
     const animal = await fetchAnimal(animalId);
     if (!animal) return null;
@@ -58,8 +73,8 @@ async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set()) 
     return {
         id: animalId,
         name: animal.name,
-        sire: sireId ? await buildPedigree(sireId, fetchAnimal, depth - 1, visited) : null,
-        dam: damId ? await buildPedigree(damId, fetchAnimal, depth - 1, visited) : null,
+        sire: sireId ? await buildPedigree(sireId, fetchAnimal, depth - 1, newVisited) : null,
+        dam: damId ? await buildPedigree(damId, fetchAnimal, depth - 1, newVisited) : null,
         inbreeding: 0 // Will be calculated recursively if needed
     };
 }
