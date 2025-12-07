@@ -867,7 +867,7 @@ router.get('/:id_public/offspring', async (req, res) => {
 });
 
 // --- CALCULATE INBREEDING COEFFICIENT FOR AN ANIMAL ---
-router.get('/animals/:id_public/inbreeding', async (req, res) => {
+router.get('/:id_public/inbreeding', async (req, res) => {
     try {
         const { id_public } = req.params;
         const generations = parseInt(req.query.generations) || 5;
