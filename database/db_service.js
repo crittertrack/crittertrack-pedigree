@@ -18,9 +18,9 @@ const SALT_ROUNDS = 10;
 const JWT_LIFETIME = '1d';
 
 /**
- * Utility function to get the next auto-incrementing public ID.
+ * Utility function to get the next auto-incrementing public ID with prefix.
  * @param {string} name - The identifier (e.g., 'userId' or 'animalId').
- * @returns {Promise<number>} The next sequence number.
+ * @returns {Promise<string>} The next sequence ID with prefix (CTU for users, CTC for animals).
  */
 const getNextSequence = async (name) => {
     const ret = await Counter.findByIdAndUpdate(
@@ -29,7 +29,8 @@ const getNextSequence = async (name) => {
         { new: true, upsert: true, setDefaultsOnInsert: true }
     );
     // If we inserted (upsert: true), the first ID will be 1001, which is correct (default seq is 1000).
-    return ret.seq;
+    const prefix = name === 'userId' ? 'CTU' : 'CTC';
+    return prefix + ret.seq;
 };
 
 // --- DATABASE CONNECTION ---
