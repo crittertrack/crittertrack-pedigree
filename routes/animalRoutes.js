@@ -394,12 +394,8 @@ router.get('/', async (req, res) => {
 // Returns: owned animals OR public animals OR animals related to user's animals (as parent/offspring)
 router.get('/any/:id_public', async (req, res) => {
     try {
-        const id_public = parseInt(req.params.id_public, 10);
+        const id_public = req.params.id_public; // Keep as string (supports CTC format)
         const userId = req.user.id;
-        
-        if (isNaN(id_public)) {
-            return res.status(400).json({ message: 'Invalid animal ID.' });
-        }
 
         // First check if user owns this animal
         let animal = await Animal.findOne({ id_public, ownerId: userId }).lean();
@@ -767,11 +763,7 @@ router.delete('/:id_backend', async (req, res) => {
 router.get('/:id_public/offspring', async (req, res) => {
     try {
         const { id_public } = req.params;
-        const animalIdPublic = parseInt(id_public, 10);
-
-        if (isNaN(animalIdPublic)) {
-            return res.status(400).json({ message: 'Invalid animal ID.' });
-        }
+        const animalIdPublic = id_public; // Keep as string (supports CTC format)
 
         const { Litter } = require('../database/models');
         const authenticatedUserId = req.user.id;
@@ -890,19 +882,19 @@ router.get('/animals/:id_public/inbreeding', async (req, res) => {
         };
 
         const coefficient = await calculateInbreedingCoefficient(
-            parseInt(id_public),
+            id_public,
             fetchAnimal,
             generations
         );
 
         // Update cached value if this is an owned animal
-        const animal = await Animal.findOne({ id_public: parseInt(id_public) });
+        const animal = await Animal.findOne({ id_public });
         if (animal) {
             animal.inbreedingCoefficient = coefficient;
             await animal.save();
 
             // Update public animal if it exists
-            const publicAnimal = await PublicAnimal.findOne({ id_public: parseInt(id_public) });
+            const publicAnimal = await PublicAnimal.findOne({ id_public });
             if (publicAnimal) {
                 publicAnimal.inbreedingCoefficient = coefficient;
                 await publicAnimal.save();
@@ -910,7 +902,7 @@ router.get('/animals/:id_public/inbreeding', async (req, res) => {
         }
 
         res.status(200).json({ 
-            id_public: parseInt(id_public),
+            id_public,
             inbreedingCoefficient: coefficient 
         });
     } catch (error) {
