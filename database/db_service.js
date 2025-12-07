@@ -349,6 +349,13 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     if (filters.isNursing !== undefined) {
         query.isNursing = filters.isNursing === 'true' || filters.isNursing === true;
     }
+    if (filters.birthdateBefore) {
+        // Only show animals born before/on the specified date (for parent selection)
+        const dt = new Date(filters.birthdateBefore);
+        if (!isNaN(dt.getTime())) {
+            query.birthDate = { $lte: dt.toISOString().split('T')[0] };
+        }
+    }
 
     // Sort by birth date descending (most recent first)
     const docs = await Animal.find(query).sort({ birthDate: -1 }).lean();
