@@ -433,6 +433,11 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
         // Ensure imageUrl propagates to photoUrl if provided
         if (updates.imageUrl && !updates.photoUrl) updates.photoUrl = updates.imageUrl;
+        
+        // If parents are being updated, invalidate the COI so it recalculates
+        if (updates.sireId_public !== undefined || updates.damId_public !== undefined) {
+            updates.inbreedingCoefficient = null;
+        }
     } catch (err) {
         console.warn('Parent normalization failed in updateAnimal:', err && err.message ? err.message : err);
     }
