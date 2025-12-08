@@ -141,6 +141,36 @@ router.get('/users/newest', async (req, res) => {
     }
 });
 
+// GET /api/public/users/active - Get users who were active recently
+router.get('/users/active', async (req, res) => {
+    try {
+        const minutes = Math.min(parseInt(req.query.minutes || '15', 10), 60);
+        const timeThreshold = new Date(Date.now() - minutes * 60 * 1000);
+        
+        // Find users who have animals updated within the time threshold
+        const recentAnimals = await Animal.find({
+            updatedAt: { $gte: timeThreshold }
+        })
+        .select('ownerId_public')
+        .lean();
+        
+        // Get unique owner IDs
+        const uniqueOwnerIds = [...new Set(recentAnimals.map(a => a.ownerId_public))];
+        
+        // Fetch public profiles for these users
+        const activeUsers = await PublicProfile.find({
+            id_public: { $in: uniqueOwnerIds }
+        })
+        .select('id_public personalName breederName showBreederName profileImage createdAt')
+        .lean();
+        
+        res.status(200).json(activeUsers);
+    } catch (error) {
+        console.error('Error fetching active users:', error);
+        res.status(500).json({ message: 'Internal server error while fetching active users.' });
+    }
+});
+
 // TEMPORARY MIGRATION ENDPOINT - Remove after running once
 router.get('/migrate-profiles-temp', async (req, res) => {
     try {
