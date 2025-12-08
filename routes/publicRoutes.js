@@ -123,6 +123,24 @@ router.get('/profiles/search', async (req, res) => {
     }
 });
 
+// GET /api/public/users/newest - Get newest registered users
+router.get('/users/newest', async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || '10', 10), 50);
+        
+        const newestUsers = await PublicProfile.find({})
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .select('id_public personalName breederName showBreederName profileImage createdAt')
+            .lean();
+        
+        res.status(200).json(newestUsers);
+    } catch (error) {
+        console.error('Error fetching newest users:', error);
+        res.status(500).json({ message: 'Internal server error while fetching newest users.' });
+    }
+});
+
 // TEMPORARY MIGRATION ENDPOINT - Remove after running once
 router.get('/migrate-profiles-temp', async (req, res) => {
     try {
