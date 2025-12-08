@@ -131,7 +131,7 @@ router.get('/users/newest', async (req, res) => {
         const newestUsers = await PublicProfile.find({})
             .sort({ createdAt: -1 })
             .limit(limit)
-            .select('id_public personalName breederName showBreederName profileImage createdAt')
+            .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt')
             .lean();
         
         res.status(200).json(newestUsers);
@@ -161,7 +161,7 @@ router.get('/users/active', async (req, res) => {
         const activeUsers = await PublicProfile.find({
             id_public: { $in: uniqueOwnerIds }
         })
-        .select('id_public personalName breederName showBreederName profileImage createdAt')
+        .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt')
         .lean();
         
         res.status(200).json(activeUsers);
