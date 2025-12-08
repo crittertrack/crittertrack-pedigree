@@ -64,6 +64,7 @@ const AnimalSchema = new mongoose.Schema({
     // Key display data
     species: { type: String, required: true },
     prefix: { type: String, default: null },
+    suffix: { type: String, default: null },
     name: { type: String, required: true },
     gender: { type: String, enum: ['Male', 'Female', 'Unknown'], default: 'Unknown' },
     birthDate: { type: Date, default: Date.now },
@@ -117,6 +118,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     // Key display data
     species: { type: String, required: true },
     prefix: { type: String, default: null },
+    suffix: { type: String, default: null },
     name: { type: String, required: true },
     gender: { type: String },
     birthDate: { type: Date },
