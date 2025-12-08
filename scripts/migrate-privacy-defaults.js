@@ -14,6 +14,9 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 
+// Import the models to register the schemas
+require('../database/models');
+
 async function migratePrivacyDefaults() {
     try {
         // Connect to MongoDB
