@@ -16,7 +16,7 @@ const UserSchema = new mongoose.Schema({
     // Password MUST be selected manually in queries or explicitly included in update handlers
     password: { type: String, required: true, select: false }, 
     personalName: { type: String, required: true, trim: true },
-    showPersonalName: { type: Boolean, default: true },
+    showPersonalName: { type: Boolean, default: false },
     profileImage: { type: String, default: null },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
@@ -45,7 +45,7 @@ const PublicProfileSchema = new mongoose.Schema({
     userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     id_public: { type: String, required: true, unique: true, index: true },
     personalName: { type: String, required: true, trim: true },
-    showPersonalName: { type: Boolean, default: true },
+    showPersonalName: { type: Boolean, default: false },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
     showGeneticCodePublic: { type: Boolean, default: false },
