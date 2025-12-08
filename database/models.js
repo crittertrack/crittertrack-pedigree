@@ -45,6 +45,7 @@ const PublicProfileSchema = new mongoose.Schema({
     userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     id_public: { type: String, required: true, unique: true, index: true },
     personalName: { type: String, required: true, trim: true },
+    showPersonalName: { type: Boolean, default: true },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
     showGeneticCodePublic: { type: Boolean, default: false },

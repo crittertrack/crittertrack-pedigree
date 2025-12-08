@@ -86,6 +86,7 @@ const registerUser = async (userData) => {
         userId_backend: user._id,
         id_public: user.id_public,
         personalName: user.personalName,
+        showPersonalName: user.showPersonalName !== undefined ? user.showPersonalName : true,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
         showGeneticCodePublic: user.showGeneticCodePublic || false,
@@ -197,6 +198,8 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     }
     if (updates.showPersonalName !== undefined) {
         user.showPersonalName = updates.showPersonalName;
+        // Update public profile showPersonalName simultaneously - use id_public to match correct record
+        await PublicProfile.updateOne({ id_public: user.id_public }, { showPersonalName: updates.showPersonalName });
     }
     if (updates.breederName !== undefined) {
         user.breederName = updates.breederName;
@@ -843,6 +846,7 @@ const verifyEmailAndRegister = async (email, code) => {
         userId_backend: user._id,
         id_public: user.id_public,
         personalName: user.personalName,
+        showPersonalName: user.showPersonalName !== undefined ? user.showPersonalName : true,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
         showGeneticCodePublic: user.showGeneticCodePublic || false,
