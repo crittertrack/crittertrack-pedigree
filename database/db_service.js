@@ -337,6 +337,16 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         // Handle both string (CTC1001) and legacy numeric IDs
         query.id_public = filters.id_public;
     }
+    if (filters.name) {
+        // Search in both name and prefix fields (case-insensitive)
+        // This allows searching for "Batty's Whiskers" to match either:
+        // - name: "Batty's Whiskers" OR
+        // - prefix: "Batty's", name: "Whiskers"
+        query.$or = [
+            { name: { $regex: filters.name, $options: 'i' } },
+            { prefix: { $regex: filters.name, $options: 'i' } }
+        ];
+    }
     if (filters.gender) query.gender = filters.gender;
     if (filters.species) query.species = filters.species;
     if (filters.status) query.status = filters.status;
@@ -709,9 +719,10 @@ const getPublicProfile = async (id_public) => {
 
 /**
  * Retrieves all publicly shared animals owned by a user.
+ * Only returns animals actually owned by the user (not borrowed/bred to).
  */
 const getPublicAnimalsByOwner = async (ownerId_public) => { 
-    return PublicAnimal.find({ ownerId_public }).sort({ birthDate: -1 }).lean();
+    return PublicAnimal.find({ ownerId_public, isOwned: true }).sort({ birthDate: -1 }).lean();
 };
 
 
