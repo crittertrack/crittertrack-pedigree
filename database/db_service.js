@@ -312,9 +312,9 @@ const addAnimal = async (appUserId_backend, animalData) => {
     const newAnimal = new Animal({
         ownerId: appUserId_backend,
         id_public,
-        ...animalData,
-        // Default visibility to private
+        // Default visibility to private if not specified
         showOnPublicProfile: false,
+        ...animalData,
     });
     console.log('[addAnimal] Creating animal with:', JSON.stringify({ breederyId: newAnimal.breederyId, geneticCode: newAnimal.geneticCode, remarks: newAnimal.remarks }));
     await newAnimal.save();
@@ -377,7 +377,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         ...d,
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
-        isDisplay: d.showOnPublicProfile || false,
+        isDisplay: d.showOnPublicProfile ?? false,
     }));
 };
 
@@ -392,7 +392,7 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     // Backwards-compatible alias fields for older frontend keys
     animal.fatherId_public = animal.sireId_public || null;
     animal.motherId_public = animal.damId_public || null;
-    animal.isDisplay = animal.showOnPublicProfile || false;
+    animal.isDisplay = animal.showOnPublicProfile ?? false;
     return animal;
 };
 
