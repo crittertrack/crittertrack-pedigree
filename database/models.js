@@ -52,6 +52,10 @@ const PublicProfileSchema = new mongoose.Schema({
     showRemarksPublic: { type: Boolean, default: false },
     profileImage: { type: String, default: null },
     createdAt: { type: Date, default: null }, // Member since date
+    email: { type: String, default: null },
+    showEmailPublic: { type: Boolean, default: false },
+    websiteURL: { type: String, default: null },
+    showWebsiteURL: { type: Boolean, default: false },
 }, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
 

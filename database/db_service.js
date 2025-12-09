@@ -93,6 +93,10 @@ const registerUser = async (userData) => {
         showRemarksPublic: user.showRemarksPublic || false,
         profileImage: user.profileImage,
         createdAt: user.creationDate || new Date(), // Set member since date
+        email: user.email,
+        showEmailPublic: user.showEmailPublic || false,
+        websiteURL: user.websiteURL || null,
+        showWebsiteURL: user.showWebsiteURL || false,
     });
     await publicProfile.save();
 
@@ -223,12 +227,21 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     }
     if (updates.websiteURL !== undefined) {
         user.websiteURL = updates.websiteURL;
+        // Update public profile websiteURL simultaneously
+        await PublicProfile.updateOne({ id_public: user.id_public }, { websiteURL: updates.websiteURL });
     }
     if (updates.showWebsiteURL !== undefined) {
         user.showWebsiteURL = updates.showWebsiteURL;
+        // Update public profile showWebsiteURL simultaneously
+        await PublicProfile.updateOne({ id_public: user.id_public }, { showWebsiteURL: updates.showWebsiteURL });
     }
     if (updates.showEmailPublic !== undefined) {
         user.showEmailPublic = updates.showEmailPublic;
+        // Update public profile showEmailPublic and email simultaneously
+        await PublicProfile.updateOne({ id_public: user.id_public }, { 
+            showEmailPublic: updates.showEmailPublic,
+            email: user.email // Also sync the email field
+        });
     }
     if (updates.showGeneticCodePublic !== undefined) {
         user.showGeneticCodePublic = updates.showGeneticCodePublic;

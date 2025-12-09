@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"ownerId":{"$numberInt":"1"}},"name":"ownerId_1","background":true}],"uuid":"b0bef86f933848099b5621b85111dac0","collectionName":"litters","type":"collection"}
