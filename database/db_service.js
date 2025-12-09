@@ -598,6 +598,16 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
  * Registers a new litter and links it to the owner.
  */
 const addLitter = async (appUserId_backend, litterData) => {
+    // Validate that both parents exist and are the same species
+    if (litterData.sireId_public && litterData.damId_public) {
+        const sire = await Animal.findOne({ id_public: litterData.sireId_public });
+        const dam = await Animal.findOne({ id_public: litterData.damId_public });
+        
+        if (sire && dam && sire.species !== dam.species) {
+            throw new Error('Parents must be the same species');
+        }
+    }
+    
     const newLitter = new Litter({
         ownerId: appUserId_backend,
         ...litterData,
