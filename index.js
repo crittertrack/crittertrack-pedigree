@@ -315,6 +315,10 @@ app.use('/api/litters', authMiddleware, litterRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 
+// Budget Routes (Require authMiddleware)
+const budgetRoutes = require('./routes/budgetRoutes');
+app.use('/api/budget', authMiddleware, budgetRoutes);
+
 // Genetics Feedback Routes (Require authMiddleware)
 const geneticsFeedbackRoutes = require('./routes/geneticsFeedbackRoutes');
 app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
