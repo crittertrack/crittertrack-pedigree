@@ -282,6 +282,21 @@ const SpeciesSchema = new mongoose.Schema({
 const Species = mongoose.model('Species', SpeciesSchema);
 
 
+// --- TRANSACTION SCHEMA (Budget Tracking) ---
+const TransactionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    type: { type: String, enum: ['sale', 'purchase'], required: true, index: true },
+    animalId: { type: String, default: null }, // Public ID of the animal (optional)
+    animalName: { type: String, default: null },
+    price: { type: Number, required: true, min: 0 },
+    date: { type: Date, required: true, index: true },
+    buyer: { type: String, default: null }, // For sales
+    seller: { type: String, default: null }, // For purchases
+    notes: { type: String, default: null }
+}, { timestamps: true });
+const Transaction = mongoose.model('Transaction', TransactionSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -293,5 +308,6 @@ module.exports = {
     GeneticsFeedback,
     BugReport,
     Counter,
-    Species
+    Species,
+    Transaction
 };
