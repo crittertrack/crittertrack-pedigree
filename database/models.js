@@ -66,6 +66,11 @@ const AnimalSchema = new mongoose.Schema({
     ownerId_public: { type: String, required: true }, // Denormalized public owner ID
     id_public: { type: String, required: true, unique: true, index: true }, // The unique public Animal ID
     
+    // Transfer/Ownership tracking
+    originalOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Original breeder/creator
+    soldStatus: { type: String, enum: [null, 'sold', 'purchased'], default: null }, // null = not transferred
+    viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users with view-only access
+    
     // Key display data
     species: { type: String, required: true },
     prefix: { type: String, default: null },
@@ -292,9 +297,31 @@ const TransactionSchema = new mongoose.Schema({
     date: { type: Date, required: true, index: true },
     buyer: { type: String, default: null }, // For sales
     seller: { type: String, default: null }, // For purchases
+    buyerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Buyer's user ID (for transfers)
+    sellerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Seller's user ID (for transfers)
     notes: { type: String, default: null }
 }, { timestamps: true });
 const Transaction = mongoose.model('Transaction', TransactionSchema);
+
+
+// --- ANIMAL TRANSFER SCHEMA (Ownership Transfers) ---
+const AnimalTransferSchema = new mongoose.Schema({
+    fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    animalId_public: { type: String, required: true, index: true }, // Public ID of the animal
+    transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: true },
+    transferType: { type: String, enum: ['sale', 'purchase'], required: true }, // sale = seller initiated, purchase = buyer initiated
+    status: { 
+        type: String, 
+        enum: ['pending', 'accepted', 'declined'], 
+        default: 'pending',
+        index: true 
+    },
+    offerViewOnly: { type: Boolean, default: false }, // For purchases - offer seller view-only access
+    createdAt: { type: Date, default: Date.now },
+    respondedAt: { type: Date, default: null }
+}, { timestamps: true });
+const AnimalTransfer = mongoose.model('AnimalTransfer', AnimalTransferSchema);
 
 
 // --- EXPORTS ---
@@ -309,5 +336,6 @@ module.exports = {
     BugReport,
     Counter,
     Species,
-    Transaction
+    Transaction,
+    AnimalTransfer
 };

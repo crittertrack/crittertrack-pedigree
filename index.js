@@ -319,6 +319,10 @@ app.use('/api/notifications', authMiddleware, notificationRoutes);
 const budgetRoutes = require('./routes/budgetRoutes');
 app.use('/api/budget', authMiddleware, budgetRoutes);
 
+// Transfer Routes (Require authMiddleware)
+const transferRoutes = require('./routes/transferRoutes');
+app.use('/api/transfers', authMiddleware, transferRoutes);
+
 // Genetics Feedback Routes (Require authMiddleware)
 const geneticsFeedbackRoutes = require('./routes/geneticsFeedbackRoutes');
 app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
