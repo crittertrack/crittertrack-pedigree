@@ -108,25 +108,42 @@ router.post('/transactions', async (req, res) => {
                 console.log('[Budget] ✓ Transfer created with ID:', transfer._id);
                 
                 // Create notification for buyer
-                const buyerProfile = await PublicProfile.findOne({ userId_backend: buyerUserId });
-                await Notification.create({
-                    userId: buyerUserId,
-                    userId_public: buyerProfile?.id_public || '',
-                    type: 'transfer_request',
-                    status: 'pending',
-                    animalId_public: animal.id_public,
-                    animalName: animal.name,
-                    animalImageUrl: animal.imageUrl || '',
-                    transferId: transfer._id,
-                    message: `You have received an animal transfer request for ${animal.name} (${animal.id_public}).`,
-                    metadata: {
-                        transferId: transfer._id,
-                        animalId: animal.id_public,
+                try {
+                    console.log('[Budget] Looking up buyer profile for userId:', buyerUserId);
+                    const buyerProfile = await PublicProfile.findOne({ userId_backend: buyerUserId });
+                    console.log('[Budget] Buyer profile found:', buyerProfile ? buyerProfile.id_public : 'NOT FOUND');
+                    
+                    console.log('[Budget] Creating notification for buyer...');
+                    const notificationData = {
+                        userId: buyerUserId,
+                        userId_public: buyerProfile?.id_public || '',
+                        type: 'transfer_request',
+                        status: 'pending',
+                        animalId_public: animal.id_public,
                         animalName: animal.name,
-                        fromUserId: userId
-                    }
-                });
+                        animalImageUrl: animal.imageUrl || '',
+                        transferId: transfer._id,
+                        message: `You have received an animal transfer request for ${animal.name} (${animal.id_public}).`,
+                        metadata: {
+                            transferId: transfer._id,
+                            animalId: animal.id_public,
+                            animalName: animal.name,
+                            fromUserId: userId
+                        }
+                    };
+                    console.log('[Budget] Notification data:', JSON.stringify(notificationData, null, 2));
+                    
+                    const notification = await Notification.create(notificationData);
+                    console.log('[Budget] ✓ Notification created with ID:', notification._id);
+                } catch (notifError) {
+                    console.error('[Budget] ✗ Error creating notification:', notifError);
+                    console.error('[Budget] Notification error details:', notifError.message);
+                }
+            } else {
+                console.log('[Budget] ✗ Animal not found, skipping transfer creation');
             }
+        } else {
+            console.log('[Budget] ✗ Transfer conditions not met');
         }
         
         // PURCHASE with existing user (seller) and existing animal
