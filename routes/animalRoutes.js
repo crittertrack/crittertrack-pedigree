@@ -744,9 +744,12 @@ router.delete('/:id_backend', async (req, res) => {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
 
-        await deleteAnimal(appUserId_backend, animalId_backend);
+        const result = await deleteAnimal(appUserId_backend, animalId_backend);
 
-        res.status(200).json({ message: 'Animal deleted successfully.' });
+        res.status(200).json({ 
+            message: result?.message || 'Animal deleted successfully.',
+            reverted: result?.reverted || false
+        });
     } catch (error) {
         console.error('Error deleting animal:', error);
         if (error.message.includes("not found") || error.message.includes("does not own")) {
