@@ -178,94 +178,103 @@ router.post('/seed-default-species', async (req, res) => {
 });
 
 /**
- * POST /api/migrations/rename-species
- * Migration to rename old species names to new ones and update all references
- * This handles: Mouse → Fancy Mouse, Rat → Fancy Rat, Hamster → specific hamster types
- * Also handles Guinea Pig renaming from user-created to default
+ * POST /api/migrations/cleanup-species
+ * Comprehensive cleanup: remove old species, migrate animals, update latin names
  */
-router.post('/rename-species', async (req, res) => {
+router.post('/cleanup-species', async (req, res) => {
     try {
         const { Animal, PublicAnimal, Species } = require('../database/models');
         
-        // Mapping of old names to new names
-        const renameMap = {
-            'Mouse': 'Fancy Mouse',
-            'Rat': 'Fancy Rat',
-            'Hamster': 'Russian Dwarf Hamster', // Default hamster to Russian Dwarf
-            'Guinea Pig': 'Guinea Pig' // Ensure Guinea Pig is handled
+        const results = {
+            animalsMigrated: 0,
+            publicAnimalsMigrated: 0,
+            speciesRemoved: 0,
+            latinNamesUpdated: 0,
+            customSpeciesRenamed: 0
         };
         
-        let updates = {};
+        // Step 1: Update latin names for new species
+        const speciesLatinUpdates = [
+            { name: 'Fancy Mouse', latinName: 'Mus musculus' },
+            { name: 'Fancy Rat', latinName: 'Rattus norvegicus' }
+        ];
         
-        // First, rename species in the database
-        for (const [oldName, newName] of Object.entries(renameMap)) {
-            const oldSpecies = await Species.findOne({ name: oldName });
-            if (oldSpecies) {
-                updates[oldName] = { old: oldSpecies._id, oldName };
-                
-                // Check if new species exists
-                let newSpecies = await Species.findOne({ name: newName });
-                if (!newSpecies) {
-                    // Create new species if it doesn't exist
-                    const newSpeciesData = {
-                        Mouse: { latinName: 'Mus musculus', category: 'Rodent', isDefault: true },
-                        Rat: { latinName: 'Rattus norvegicus', category: 'Rodent', isDefault: true },
-                        'Russian Dwarf Hamster': { latinName: 'Phodopus sungorus', category: 'Rodent', isDefault: true },
-                        'Guinea Pig': { latinName: 'Cavia porcellus', category: 'Rodent', isDefault: true }
-                    };
-                    
-                    newSpecies = await Species.create({
-                        name: newName,
-                        ...newSpeciesData[newName],
-                        createdBy_public: null
-                    });
-                }
-                
-                updates[oldName].new = newSpecies._id;
-                updates[oldName].newName = newName;
-                
-                console.log(`Species mapping ready: ${oldName} (${oldSpecies._id}) → ${newName} (${newSpecies._id})`);
+        for (const spec of speciesLatinUpdates) {
+            const result = await Species.updateOne(
+                { name: spec.name },
+                { $set: { latinName: spec.latinName } }
+            );
+            if (result.modifiedCount > 0) {
+                results.latinNamesUpdated++;
+                console.log(`✓ Updated latin name for ${spec.name}`);
             }
         }
         
-        // Update all Animal references
-        let animalUpdates = 0;
-        for (const [oldName, mapping] of Object.entries(updates)) {
-            const result = await Animal.updateMany(
-                { species: oldName },
-                { $set: { species: mapping.newName } }
+        // Step 2: Rename custom "Guinea pig" (lowercase) to "Guinea Pig" (proper case)
+        const guineaPigCustom = await Species.findOne({ name: 'Guinea pig', isDefault: false });
+        if (guineaPigCustom) {
+            // Migrate any animals using lowercase version
+            await Animal.updateMany(
+                { species: 'Guinea pig' },
+                { $set: { species: 'Guinea Pig' } }
             );
-            animalUpdates += result.modifiedCount;
-            console.log(`Updated ${result.modifiedCount} Animals from "${oldName}" to "${mapping.newName}"`);
+            await PublicAnimal.updateMany(
+                { species: 'Guinea pig' },
+                { $set: { species: 'Guinea Pig' } }
+            );
+            // Remove the custom species
+            await Species.deleteOne({ name: 'Guinea pig' });
+            results.customSpeciesRenamed++;
+            console.log(`✓ Renamed custom "Guinea pig" to "Guinea Pig" and removed old species`);
         }
         
-        // Update all PublicAnimal references
-        let publicAnimalUpdates = 0;
-        for (const [oldName, mapping] of Object.entries(updates)) {
-            const result = await PublicAnimal.updateMany(
-                { species: oldName },
-                { $set: { species: mapping.newName } }
+        // Step 3: Migrate animals from old species names
+        const migrations = [
+            { from: 'Mouse', to: 'Fancy Mouse' },
+            { from: 'Rat', to: 'Fancy Rat' },
+            { from: 'Hamster', to: 'Russian Dwarf Hamster' }
+        ];
+        
+        for (const migration of migrations) {
+            // Migrate Animals
+            const animalResult = await Animal.updateMany(
+                { species: migration.from },
+                { $set: { species: migration.to } }
             );
-            publicAnimalUpdates += result.modifiedCount;
-            console.log(`Updated ${result.modifiedCount} PublicAnimals from "${oldName}" to "${mapping.newName}"`);
+            results.animalsMigrated += animalResult.modifiedCount;
+            
+            // Migrate PublicAnimals
+            const publicResult = await PublicAnimal.updateMany(
+                { species: migration.from },
+                { $set: { species: migration.to } }
+            );
+            results.publicAnimalsMigrated += publicResult.modifiedCount;
+            
+            if (animalResult.modifiedCount > 0 || publicResult.modifiedCount > 0) {
+                console.log(`✓ Migrated ${animalResult.modifiedCount} animals and ${publicResult.modifiedCount} public animals from "${migration.from}" to "${migration.to}"`);
+            }
+        }
+        
+        // Step 4: Remove old species (after all animals have been migrated)
+        for (const migration of migrations) {
+            const result = await Species.deleteOne({ name: migration.from });
+            if (result.deletedCount > 0) {
+                results.speciesRemoved++;
+                console.log(`✓ Removed old species: ${migration.from}`);
+            }
         }
         
         res.json({
             success: true,
-            message: 'Species renamed successfully',
-            animalUpdates,
-            publicAnimalUpdates,
-            mappings: Object.keys(updates).map(oldName => ({
-                from: oldName,
-                to: updates[oldName].newName
-            }))
+            message: 'Species cleanup completed successfully',
+            ...results
         });
         
     } catch (error) {
-        console.error('Error renaming species:', error);
+        console.error('Error during species cleanup:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to rename species',
+            message: 'Failed to cleanup species',
             error: error.message
         });
     }
