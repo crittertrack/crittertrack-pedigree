@@ -413,6 +413,25 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
  * Updates a specific animal's record.
  */
 const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
+    // Fetch the original animal to check for changes
+    const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend }).lean();
+    
+    if (!originalAnimal) {
+        throw new Error('Animal not found or user does not own this animal.');
+    }
+    
+    // Track if birthdate or parents are being changed
+    let shouldRemoveLitterLink = false;
+    
+    // Check if birthdate is being changed
+    if (updates.birthDate !== undefined) {
+        const originalDate = originalAnimal.birthDate ? new Date(originalAnimal.birthDate).getTime() : null;
+        const newDate = updates.birthDate ? new Date(updates.birthDate).getTime() : null;
+        if (originalDate !== newDate) {
+            shouldRemoveLitterLink = true;
+        }
+    }
+    
     // Normalize parent fields on update: accept numeric public IDs and resolve to internal _id
     const resolveParentPublicToBackend = async (pubVal) => {
         if (!pubVal) return null;
@@ -435,13 +454,24 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             if (candidate !== undefined) {
                 if (candidate === null) {
                     updates.sireId_public = null;
+                    if (originalAnimal.sireId_public !== null) {
+                        shouldRemoveLitterLink = true;
+                    }
                 } else {
                     const resolved = await resolveParentPublicToBackend(candidate);
                     if (resolved) {
                         updates.sireId_public = resolved.id_public;
+                        if (originalAnimal.sireId_public !== resolved.id_public) {
+                            shouldRemoveLitterLink = true;
+                        }
                     } else {
                         const num = Number(candidate);
-                        if (!Number.isNaN(num)) updates.sireId_public = num;
+                        if (!Number.isNaN(num)) {
+                            updates.sireId_public = num;
+                            if (originalAnimal.sireId_public !== num) {
+                                shouldRemoveLitterLink = true;
+                            }
+                        }
                     }
                 }
             }
@@ -452,16 +482,33 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             if (candidateM !== undefined) {
                 if (candidateM === null) {
                     updates.damId_public = null;
+                    if (originalAnimal.damId_public !== null) {
+                        shouldRemoveLitterLink = true;
+                    }
                 } else {
                     const resolvedM = await resolveParentPublicToBackend(candidateM);
                     if (resolvedM) {
                         updates.damId_public = resolvedM.id_public;
+                        if (originalAnimal.damId_public !== resolvedM.id_public) {
+                            shouldRemoveLitterLink = true;
+                        }
                     } else {
                         const numM = Number(candidateM);
-                        if (!Number.isNaN(numM)) updates.damId_public = numM;
+                        if (!Number.isNaN(numM)) {
+                            updates.damId_public = numM;
+                            if (originalAnimal.damId_public !== numM) {
+                                shouldRemoveLitterLink = true;
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        // If birthdate or parents changed, remove litter link
+        if (shouldRemoveLitterLink && originalAnimal.litterId) {
+            updates.litterId = null;
+            console.log(`[updateAnimal] Removing litter link for animal ${originalAnimal.id_public} due to birthdate/parent change`);
         }
 
         // Ensure imageUrl propagates to photoUrl if provided
