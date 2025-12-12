@@ -853,37 +853,53 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
         const originalOwner = await User.findById(animal.originalOwnerId).select('id_public');
         
         if (originalOwner) {
+            const originalOwnerId = animal.originalOwnerId; // Store before clearing
+            
             // Update animal ownership
-            animal.ownerId = animal.originalOwnerId;
+            animal.ownerId = originalOwnerId;
             animal.ownerId_public = originalOwner.id_public;
             animal.soldStatus = null; // Clear sold status
+            animal.originalOwnerId = null; // Clear original owner reference
             
-            // Remove current owner from viewOnlyForUsers if present
+            // Remove original owner from viewOnlyForUsers (they own it now, not view-only)
             animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(
-                userId => userId.toString() !== appUserId_backend.toString()
+                userId => userId.toString() !== originalOwnerId.toString()
             );
             
-            // Add current owner to viewOnlyForUsers (they can still view after "deleting")
+            // Add current owner (buyer who is returning) to viewOnlyForUsers
             if (!animal.viewOnlyForUsers.includes(appUserId_backend)) {
                 animal.viewOnlyForUsers.push(appUserId_backend);
             }
             
             await animal.save();
             
+            // Update PublicAnimal if this animal is public
+            if (animal.showOnPublicProfile) {
+                await PublicAnimal.updateOne(
+                    { id_public: animal.id_public },
+                    { 
+                        $set: { 
+                            ownerId_public: animal.ownerId_public,
+                            status: animal.status
+                        } 
+                    }
+                );
+            }
+            
             // Update user ownedAnimals arrays
             await User.findByIdAndUpdate(appUserId_backend, {
                 $pull: { ownedAnimals: animal._id }
             });
             
-            await User.findByIdAndUpdate(animal.originalOwnerId, {
+            await User.findByIdAndUpdate(originalOwnerId, {
                 $addToSet: { ownedAnimals: animal._id }
             });
             
             // Create notification for original owner
             const { Notification, PublicProfile } = require('./models');
-            const originalOwnerProfile = await PublicProfile.findOne({ userId_backend: animal.originalOwnerId });
+            const originalOwnerProfile = await PublicProfile.findOne({ userId_backend: originalOwnerId });
             await Notification.create({
-                userId: animal.originalOwnerId,
+                userId: originalOwnerId,
                 userId_public: originalOwnerProfile?.id_public || '',
                 type: 'animal_returned',
                 animalId_public: animal.id_public,
