@@ -346,11 +346,14 @@ const addAnimal = async (appUserId_backend, animalData) => {
  * Gets a list of animals owned by the logged-in user.
  */
 const getUsersAnimals = async (appUserId_backend, filters = {}) => {
-    // Start with base query for owned OR view-only animals
+    // Start with base query for owned OR view-only animals (but not hidden ones)
     const baseQuery = {
         $or: [
             { ownerId: appUserId_backend },
-            { viewOnlyForUsers: appUserId_backend }
+            { 
+                viewOnlyForUsers: appUserId_backend,
+                hiddenForUsers: { $ne: appUserId_backend } // Exclude hidden view-only animals
+            }
         ]
     };
 
@@ -895,6 +898,88 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
 };
 
 /**
+ * Hides a view-only animal from a user's list (soft delete for view-only animals)
+ */
+const hideViewOnlyAnimal = async (appUserId_backend, animalId_public) => {
+    // Find the animal
+    const animal = await Animal.findOne({ id_public: animalId_public });
+    if (!animal) {
+        throw new Error('Animal not found.');
+    }
+
+    // Check if user has view-only access
+    const hasViewOnlyAccess = animal.viewOnlyForUsers.some(
+        userId => userId.toString() === appUserId_backend.toString()
+    );
+
+    // Check if user is the owner (owners can't hide their own animals, only delete)
+    const isOwner = animal.ownerId.toString() === appUserId_backend.toString();
+
+    if (isOwner) {
+        throw new Error('You cannot hide animals you own. Use delete instead.');
+    }
+
+    if (!hasViewOnlyAccess) {
+        throw new Error('You do not have view-only access to this animal.');
+    }
+
+    // Add user to hiddenForUsers array
+    if (!animal.hiddenForUsers.includes(appUserId_backend)) {
+        animal.hiddenForUsers.push(appUserId_backend);
+        await animal.save();
+    }
+
+    return { message: 'View-only animal hidden successfully.' };
+};
+
+/**
+ * Restores a hidden view-only animal to a user's list
+ */
+const restoreViewOnlyAnimal = async (appUserId_backend, animalId_public) => {
+    // Find the animal
+    const animal = await Animal.findOne({ id_public: animalId_public });
+    if (!animal) {
+        throw new Error('Animal not found.');
+    }
+
+    // Check if user has view-only access
+    const hasViewOnlyAccess = animal.viewOnlyForUsers.some(
+        userId => userId.toString() === appUserId_backend.toString()
+    );
+
+    if (!hasViewOnlyAccess) {
+        throw new Error('You do not have view-only access to this animal.');
+    }
+
+    // Remove user from hiddenForUsers array
+    animal.hiddenForUsers = animal.hiddenForUsers.filter(
+        userId => userId.toString() !== appUserId_backend.toString()
+    );
+    await animal.save();
+
+    return { message: 'View-only animal restored successfully.' };
+};
+
+/**
+ * Gets all hidden view-only animals for a user
+ */
+const getHiddenViewOnlyAnimals = async (appUserId_backend) => {
+    const animals = await Animal.find({
+        viewOnlyForUsers: appUserId_backend,
+        hiddenForUsers: appUserId_backend
+    }).sort({ birthDate: -1 }).lean();
+
+    return animals.map(d => ({
+        ...d,
+        fatherId_public: d.sireId_public || null,
+        motherId_public: d.damId_public || null,
+        isDisplay: d.showOnPublicProfile ?? false,
+        isViewOnly: true,
+        isHidden: true,
+    }));
+};
+
+/**
  * Request email verification - generates a 6-digit code and stores it with expiry
  * Does NOT create the account yet
  */
@@ -1096,6 +1181,9 @@ module.exports = {
     updateAnimal,
     toggleAnimalPublic,
     deleteAnimal,
+    hideViewOnlyAnimal,
+    restoreViewOnlyAnimal,
+    getHiddenViewOnlyAnimals,
     // Litter functions
     addLitter,
     getUsersLitters,
