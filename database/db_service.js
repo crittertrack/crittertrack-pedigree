@@ -346,16 +346,28 @@ const addAnimal = async (appUserId_backend, animalData) => {
  * Gets a list of animals owned by the logged-in user.
  */
 const getUsersAnimals = async (appUserId_backend, filters = {}) => {
-    // Start with base query for owned OR view-only animals (but not hidden ones)
-    const baseQuery = {
-        $or: [
-            { ownerId: appUserId_backend },
-            { 
-                viewOnlyForUsers: appUserId_backend,
-                hiddenForUsers: { $ne: appUserId_backend } // Exclude hidden view-only animals
-            }
-        ]
-    };
+    // Check if user wants only owned animals (not view-only)
+    const onlyOwned = filters.isOwned === 'true' || filters.isOwned === true;
+    
+    // Start with base query
+    let baseQuery;
+    if (onlyOwned) {
+        // Only animals actually owned by the user (exclude view-only)
+        baseQuery = {
+            ownerId: appUserId_backend
+        };
+    } else {
+        // All animals: owned OR view-only (but not hidden ones)
+        baseQuery = {
+            $or: [
+                { ownerId: appUserId_backend },
+                { 
+                    viewOnlyForUsers: appUserId_backend,
+                    hiddenForUsers: { $ne: appUserId_backend } // Exclude hidden view-only animals
+                }
+            ]
+        };
+    }
 
     const query = { ...baseQuery };
 
@@ -379,9 +391,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     if (filters.gender) query.gender = filters.gender;
     if (filters.species) query.species = filters.species;
     if (filters.status) query.status = filters.status;
-    if (filters.isOwned !== undefined) {
-        query.isOwned = filters.isOwned === 'true' || filters.isOwned === true;
-    }
+    // Remove the isOwned filter since it's already handled in baseQuery
     if (filters.isPregnant !== undefined) {
         query.isPregnant = filters.isPregnant === 'true' || filters.isPregnant === true;
     }
