@@ -55,22 +55,40 @@ router.post('/transactions', async (req, res) => {
         });
         
         await newTransaction.save();
+        console.log('[Budget] Transaction saved with ID:', newTransaction._id);
         
         // Check if this should create a transfer
         let transfer = null;
         
-        console.log('[Budget] Checking transfer conditions:', { type, buyerUserId, animalId, userId });
+        console.log('[Budget] Checking transfer conditions:', { 
+            type, 
+            buyerUserId, 
+            animalId, 
+            userId,
+            typeCheck: type === 'sale',
+            buyerCheck: !!buyerUserId,
+            animalCheck: !!animalId,
+            allCheck: type === 'sale' && buyerUserId && animalId
+        });
         
         // SALE with existing user (buyer) and existing animal
         if (type === 'sale' && buyerUserId && animalId) {
-            console.log('[Budget] Conditions met for sale transfer, looking for animal...');
+            console.log('[Budget] ✓ Conditions met for sale transfer, looking for animal...');
+            console.log('[Budget] Searching for animal with id_public:', animalId, 'and ownerId:', userId);
+            
             // Verify the animal exists and belongs to the seller
             const animal = await Animal.findOne({ id_public: animalId, ownerId: userId });
             
-            console.log('[Budget] Animal found:', animal ? `Yes - ${animal.id_public}` : 'No');
+            console.log('[Budget] Animal lookup result:', animal ? {
+                found: true,
+                id_public: animal.id_public,
+                name: animal.name,
+                ownerId: animal.ownerId,
+                ownerIdMatches: String(animal.ownerId) === String(userId)
+            } : { found: false });
             
             if (animal) {
-                console.log('[Budget] Creating transfer...');
+                console.log('[Budget] ✓ Creating transfer...');
                 // Create pending transfer
                 transfer = await AnimalTransfer.create({
                     fromUserId: userId,
@@ -81,7 +99,7 @@ router.post('/transactions', async (req, res) => {
                     status: 'pending'
                 });
                 
-                console.log('[Budget] Transfer created:', transfer._id);
+                console.log('[Budget] ✓ Transfer created with ID:', transfer._id);
                 
                 // Create notification for buyer
                 const buyerProfile = await PublicProfile.findOne({ userId_backend: buyerUserId });
