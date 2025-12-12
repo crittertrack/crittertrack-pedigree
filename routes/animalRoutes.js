@@ -114,18 +114,19 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
         const animalImageUrl = animal?.imageUrl || '';
         const fullAnimalName = animalPrefix ? `${animalPrefix} ${animalName}` : animalName;
         
-        // Check if notification already exists for this exact request
+        // Check if notification already exists for this exact request (within last 24 hours)
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const existing = await Notification.findOne({
             userId: targetUser._id,
             animalId_public,
             type,
-            status: 'pending',
             parentType: parentType || null,
-            targetAnimalId_public: targetAnimalId_public || null
+            targetAnimalId_public: targetAnimalId_public || null,
+            createdAt: { $gte: oneDayAgo }
         });
         
         if (existing) {
-            console.log(`[Notification] Duplicate notification exists, skipping`);
+            console.log(`[Notification] Duplicate notification exists (created: ${existing.createdAt}), skipping`);
             return; // Don't create duplicate notifications
         }
         
