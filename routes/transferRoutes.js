@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { AnimalTransfer, Animal, Transaction, Notification, User } = require('../database/models');
+const { AnimalTransfer, Animal, Transaction, Notification, User, PublicProfile } = require('../database/models');
 
 // GET /api/transfers - Get all transfers for the logged-in user (sent and received)
 router.get('/', async (req, res) => {
@@ -27,6 +27,8 @@ router.post('/:id/accept', async (req, res) => {
     try {
         const userId = req.user.id;
         const transferId = req.params.id;
+        
+        console.log('[Transfer Accept] UserId:', userId, 'TransferId:', transferId);
         
         const transfer = await AnimalTransfer.findById(transferId);
         
@@ -88,6 +90,12 @@ router.post('/:id/accept', async (req, res) => {
             $addToSet: { ownedAnimals: animal._id }
         });
         
+        // Update the original notification to accepted status
+        await Notification.updateOne(
+            { transferId: transfer._id, userId: userId, type: 'transfer_request' },
+            { $set: { status: 'accepted' } }
+        );
+        
         // Create notification for the sender
         const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
         await Notification.create({
@@ -116,8 +124,9 @@ router.post('/:id/accept', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error accepting transfer:', error);
-        res.status(500).json({ message: 'Internal server error while accepting transfer.' });
+        console.error('[Transfer Accept] Error:', error);
+        console.error('[Transfer Accept] Error stack:', error.stack);
+        res.status(500).json({ message: 'Internal server error while accepting transfer.', error: error.message });
     }
 });
 
@@ -146,6 +155,12 @@ router.post('/:id/decline', async (req, res) => {
         transfer.status = 'declined';
         transfer.respondedAt = new Date();
         await transfer.save();
+        
+        // Update the original notification to declined status
+        await Notification.updateOne(
+            { transferId: transfer._id, userId: userId, type: 'transfer_request' },
+            { $set: { status: 'declined' } }
+        );
         
         // Create notification for the sender
         const animal = await Animal.findOne({ id_public: transfer.animalId_public });
