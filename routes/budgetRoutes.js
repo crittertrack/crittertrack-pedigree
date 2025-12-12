@@ -59,12 +59,18 @@ router.post('/transactions', async (req, res) => {
         // Check if this should create a transfer
         let transfer = null;
         
+        console.log('[Budget] Checking transfer conditions:', { type, buyerUserId, animalId, userId });
+        
         // SALE with existing user (buyer) and existing animal
         if (type === 'sale' && buyerUserId && animalId) {
+            console.log('[Budget] Conditions met for sale transfer, looking for animal...');
             // Verify the animal exists and belongs to the seller
             const animal = await Animal.findOne({ id_public: animalId, ownerId: userId });
             
+            console.log('[Budget] Animal found:', animal ? `Yes - ${animal.id_public}` : 'No');
+            
             if (animal) {
+                console.log('[Budget] Creating transfer...');
                 // Create pending transfer
                 transfer = await AnimalTransfer.create({
                     fromUserId: userId,
@@ -74,6 +80,8 @@ router.post('/transactions', async (req, res) => {
                     transferType: 'sale',
                     status: 'pending'
                 });
+                
+                console.log('[Budget] Transfer created:', transfer._id);
                 
                 // Create notification for buyer
                 const buyerProfile = await PublicProfile.findOne({ userId_backend: buyerUserId });
