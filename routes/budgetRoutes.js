@@ -32,8 +32,8 @@ router.post('/transactions', async (req, res) => {
             return res.status(400).json({ message: 'Invalid transaction type. Must be "sale" or "purchase".' });
         }
         
-        if (!price || isNaN(price) || parseFloat(price) < 0) {
-            return res.status(400).json({ message: 'Invalid price. Must be a positive number.' });
+        if (price === undefined || price === null || price === '' || isNaN(price) || parseFloat(price) < 0) {
+            return res.status(400).json({ message: 'Invalid price. Must be 0 or greater.' });
         }
         
         if (!date) {
@@ -81,7 +81,7 @@ router.put('/transactions/:id', async (req, res) => {
         }
         
         if (price !== undefined && (isNaN(price) || parseFloat(price) < 0)) {
-            return res.status(400).json({ message: 'Invalid price. Must be a positive number.' });
+            return res.status(400).json({ message: 'Invalid price. Must be 0 or greater.' });
         }
         
         // Update fields
