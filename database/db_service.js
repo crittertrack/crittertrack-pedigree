@@ -346,7 +346,15 @@ const addAnimal = async (appUserId_backend, animalData) => {
  * Gets a list of animals owned by the logged-in user.
  */
 const getUsersAnimals = async (appUserId_backend, filters = {}) => {
-    const query = { ownerId: appUserId_backend };
+    // Start with base query for owned OR view-only animals
+    const baseQuery = {
+        $or: [
+            { ownerId: appUserId_backend },
+            { viewOnlyForUsers: appUserId_backend }
+        ]
+    };
+
+    const query = { ...baseQuery };
 
     // Apply filters from query params
     if (filters.id_public !== undefined) {
@@ -355,13 +363,15 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     }
     if (filters.name) {
         // Search in both name and prefix fields (case-insensitive)
-        // This allows searching for "Batty's Whiskers" to match either:
-        // - name: "Batty's Whiskers" OR
-        // - prefix: "Batty's", name: "Whiskers"
-        query.$or = [
-            { name: { $regex: filters.name, $options: 'i' } },
-            { prefix: { $regex: filters.name, $options: 'i' } }
-        ];
+        // Combine with base $or using $and
+        const nameQuery = {
+            $or: [
+                { name: { $regex: filters.name, $options: 'i' } },
+                { prefix: { $regex: filters.name, $options: 'i' } }
+            ]
+        };
+        query.$and = [baseQuery, nameQuery];
+        delete query.$or; // Remove the top-level $or since we're using $and
     }
     if (filters.gender) query.gender = filters.gender;
     if (filters.species) query.species = filters.species;
@@ -386,11 +396,13 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Sort by birth date descending (most recent first)
     const docs = await Animal.find(query).sort({ birthDate: -1 }).lean();
     // Provide backward-compatible alias fields expected by the frontend
+    // Also add isViewOnly flag to identify view-only animals
     return docs.map(d => ({
         ...d,
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
         isDisplay: d.showOnPublicProfile ?? false,
+        isViewOnly: d.ownerId.toString() !== appUserId_backend.toString(),
     }));
 };
 
