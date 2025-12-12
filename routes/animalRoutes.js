@@ -133,7 +133,9 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
         // Create notification with improved message
         let message = '';
         if (type === 'breeder_request') {
-            message = `${requesterName} has set you as the breeder for ${fullAnimalName} (CT${animalId_public})`;
+            // Only add CT prefix if id_public doesn't already start with CT
+            const animalIdDisplay = animalId_public.startsWith('CT') ? animalId_public : `CT${animalId_public}`;
+            message = `${requesterName} has set you as the breeder for ${fullAnimalName} (${animalIdDisplay})`;
         } else if (type === 'parent_request') {
             const parentLabel = parentType === 'sire' ? 'sire (father)' : 'dam (mother)';
             
@@ -142,9 +144,12 @@ async function createLinkageNotification(targetUserId_public, requestedBy_id, re
             const targetAnimalPrefix = targetAnimal?.prefix || '';
             const targetAnimalName = targetAnimal?.name || '';
             const fullTargetAnimalName = targetAnimalPrefix ? `${targetAnimalPrefix} ${targetAnimalName}` : targetAnimalName;
-            const targetAnimalDisplay = fullTargetAnimalName ? `${fullTargetAnimalName} (CT${targetAnimalId_public})` : `CT${targetAnimalId_public}`;
+            // Only add CT prefix if id_public doesn't already start with CT
+            const targetIdDisplay = targetAnimalId_public.startsWith('CT') ? targetAnimalId_public : `CT${targetAnimalId_public}`;
+            const targetAnimalDisplay = fullTargetAnimalName ? `${fullTargetAnimalName} (${targetIdDisplay})` : targetIdDisplay;
             
-            message = `${requesterName} has used your animal ${targetAnimalDisplay} as ${parentLabel} for ${fullAnimalName} (CT${animalId_public})`;
+            const animalIdDisplay = animalId_public.startsWith('CT') ? animalId_public : `CT${animalId_public}`;
+            message = `${requesterName} has used your animal ${targetAnimalDisplay} as ${parentLabel} for ${fullAnimalName} (${animalIdDisplay})`;
         }
         
         const notification = await Notification.create({
