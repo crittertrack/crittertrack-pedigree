@@ -41,7 +41,10 @@ const {
     updateAnimal, 
     toggleAnimalPublic,
     getAnimalByIdAndUser, // Assuming this helper exists
-    deleteAnimal // Assuming this helper exists
+    deleteAnimal, // Assuming this helper exists
+    hideViewOnlyAnimal,
+    restoreViewOnlyAnimal,
+    getHiddenViewOnlyAnimals
 } = require('../database/db_service');
 
 // Resolve internal Animal _id when routes receive either a backend ObjectId
@@ -949,5 +952,51 @@ router.get('/inbreeding/pairing', async (req, res) => {
     }
 });
 
+// POST /api/animals/:id_public/hide
+// Hide a view-only animal from user's list
+router.post('/:id_public/hide', async (req, res) => {
+    try {
+        const id_public = req.params.id_public;
+        const appUserId_backend = req.user.id;
+
+        const result = await hideViewOnlyAnimal(appUserId_backend, id_public);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error hiding view-only animal:', error);
+        res.status(400).json({ message: error.message || 'Failed to hide animal.' });
+    }
+});
+
+// POST /api/animals/:id_public/restore
+// Restore a hidden view-only animal to user's list
+router.post('/:id_public/restore', async (req, res) => {
+    try {
+        const id_public = req.params.id_public;
+        const appUserId_backend = req.user.id;
+
+        const result = await restoreViewOnlyAnimal(appUserId_backend, id_public);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error restoring view-only animal:', error);
+        res.status(400).json({ message: error.message || 'Failed to restore animal.' });
+    }
+});
+
+// GET /api/animals/hidden
+// Get all hidden view-only animals for the user
+router.get('/hidden/list', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+
+        const animals = await getHiddenViewOnlyAnimals(appUserId_backend);
+
+        res.status(200).json(animals);
+    } catch (error) {
+        console.error('Error fetching hidden animals:', error);
+        res.status(500).json({ message: 'Internal server error while fetching hidden animals.' });
+    }
+});
 
 module.exports = router;

@@ -70,6 +70,7 @@ const AnimalSchema = new mongoose.Schema({
     originalOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Original breeder/creator
     soldStatus: { type: String, enum: [null, 'sold', 'purchased'], default: null }, // null = not transferred
     viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users with view-only access
+    hiddenForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who have hidden this view-only animal
     
     // Key display data
     species: { type: String, required: true },
