@@ -131,9 +131,13 @@ router.post('/sync-animal-privacy', async (req, res) => {
 router.post('/seed-default-species', async (req, res) => {
     try {
         const defaultSpecies = [
-            { name: 'Mouse', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Rat', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Hamster', category: 'Rodent', isDefault: true, createdBy_public: null }
+            { name: 'Fancy Mouse', latinName: 'Mus musculus', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Fancy Rat', latinName: 'Rattus norvegicus', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Russian Dwarf Hamster', latinName: 'Phodopus sungorus', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Campbells Dwarf Hamster', latinName: 'Phodopus campbelli', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Chinese Dwarf Hamster', latinName: 'Cricetulus barabensis', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Syrian Hamster', latinName: 'Mesocricetus auratus', category: 'Rodent', isDefault: true, createdBy_public: null },
+            { name: 'Guinea Pig', latinName: 'Cavia porcellus', category: 'Rodent', isDefault: true, createdBy_public: null }
         ];
         
         let created = 0;
@@ -169,6 +173,100 @@ router.post('/seed-default-species', async (req, res) => {
             success: false,
             message: 'Failed to seed default species', 
             error: error.message 
+        });
+    }
+});
+
+/**
+ * POST /api/migrations/rename-species
+ * Migration to rename old species names to new ones and update all references
+ * This handles: Mouse → Fancy Mouse, Rat → Fancy Rat, Hamster → specific hamster types
+ * Also handles Guinea Pig renaming from user-created to default
+ */
+router.post('/rename-species', async (req, res) => {
+    try {
+        const { Animal, PublicAnimal, Species } = require('../database/models');
+        
+        // Mapping of old names to new names
+        const renameMap = {
+            'Mouse': 'Fancy Mouse',
+            'Rat': 'Fancy Rat',
+            'Hamster': 'Russian Dwarf Hamster', // Default hamster to Russian Dwarf
+            'Guinea Pig': 'Guinea Pig' // Ensure Guinea Pig is handled
+        };
+        
+        let updates = {};
+        
+        // First, rename species in the database
+        for (const [oldName, newName] of Object.entries(renameMap)) {
+            const oldSpecies = await Species.findOne({ name: oldName });
+            if (oldSpecies) {
+                updates[oldName] = { old: oldSpecies._id, oldName };
+                
+                // Check if new species exists
+                let newSpecies = await Species.findOne({ name: newName });
+                if (!newSpecies) {
+                    // Create new species if it doesn't exist
+                    const newSpeciesData = {
+                        Mouse: { latinName: 'Mus musculus', category: 'Rodent', isDefault: true },
+                        Rat: { latinName: 'Rattus norvegicus', category: 'Rodent', isDefault: true },
+                        'Russian Dwarf Hamster': { latinName: 'Phodopus sungorus', category: 'Rodent', isDefault: true },
+                        'Guinea Pig': { latinName: 'Cavia porcellus', category: 'Rodent', isDefault: true }
+                    };
+                    
+                    newSpecies = await Species.create({
+                        name: newName,
+                        ...newSpeciesData[newName],
+                        createdBy_public: null
+                    });
+                }
+                
+                updates[oldName].new = newSpecies._id;
+                updates[oldName].newName = newName;
+                
+                console.log(`Species mapping ready: ${oldName} (${oldSpecies._id}) → ${newName} (${newSpecies._id})`);
+            }
+        }
+        
+        // Update all Animal references
+        let animalUpdates = 0;
+        for (const [oldName, mapping] of Object.entries(updates)) {
+            const result = await Animal.updateMany(
+                { species: oldName },
+                { $set: { species: mapping.newName } }
+            );
+            animalUpdates += result.modifiedCount;
+            console.log(`Updated ${result.modifiedCount} Animals from "${oldName}" to "${mapping.newName}"`);
+        }
+        
+        // Update all PublicAnimal references
+        let publicAnimalUpdates = 0;
+        for (const [oldName, mapping] of Object.entries(updates)) {
+            const result = await PublicAnimal.updateMany(
+                { species: oldName },
+                { $set: { species: mapping.newName } }
+            );
+            publicAnimalUpdates += result.modifiedCount;
+            console.log(`Updated ${result.modifiedCount} PublicAnimals from "${oldName}" to "${mapping.newName}"`);
+        }
+        
+        res.json({
+            success: true,
+            message: 'Species renamed successfully',
+            animalUpdates,
+            publicAnimalUpdates,
+            mappings: Object.keys(updates).map(oldName => ({
+                from: oldName,
+                to: updates[oldName].newName
+            }))
+        });
+        
+    } catch (error) {
+        console.error('Error renaming species:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to rename species',
+            error: error.message
         });
     }
 });
