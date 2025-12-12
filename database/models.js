@@ -279,6 +279,7 @@ const BugReport = mongoose.model('BugReport', BugReportSchema);
 // --- 9. SPECIES SCHEMA (Global Species List) ---
 const SpeciesSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true, trim: true, index: true },
+    latinName: { type: String, default: null }, // Scientific name
     category: { 
         type: String, 
         enum: ['Rodent', 'Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'], 
