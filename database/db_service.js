@@ -352,9 +352,16 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Start with base query
     let baseQuery;
     if (onlyOwned) {
-        // Only animals actually owned by the user (exclude view-only)
+        // Only animals marked as owned by the user (via isOwned checkbox)
         baseQuery = {
-            ownerId: appUserId_backend
+            $or: [
+                { ownerId: appUserId_backend, isOwned: true },
+                { 
+                    viewOnlyForUsers: appUserId_backend,
+                    isOwned: true,
+                    hiddenForUsers: { $ne: appUserId_backend }
+                }
+            ]
         };
     } else {
         // All animals: owned OR view-only (but not hidden ones)
