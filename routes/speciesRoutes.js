@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
     try {
-        const { name, category } = req.body;
+        const { name, latinName, category } = req.body;
         const userId_public = req.user?.id_public || null;
         
         if (!name || !name.trim()) {
@@ -57,6 +57,7 @@ router.post('/', async (req, res) => {
         // Create new species
         const newSpecies = new Species({
             name: trimmedName,
+            latinName: latinName && latinName.trim() ? latinName.trim() : null,
             category: category || 'Other',
             isDefault: false,
             createdBy_public: userId_public
