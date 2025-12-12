@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Transaction } = require('../database/models');
+const { Transaction, AnimalTransfer, Animal, Notification, User, PublicProfile } = require('../database/models');
 
 // Middleware to verify authentication is assumed to be applied at the app level
 // req.user.id should contain the authenticated user's MongoDB ObjectId
@@ -25,7 +25,7 @@ router.get('/transactions', async (req, res) => {
 router.post('/transactions', async (req, res) => {
     try {
         const userId = req.user.id;
-        const { type, animalId, animalName, price, date, buyer, seller, notes } = req.body;
+        const { type, animalId, animalName, price, date, buyer, seller, notes, buyerUserId, sellerUserId } = req.body;
         
         // Validation
         if (!type || !['sale', 'purchase'].includes(type)) {
@@ -49,12 +49,83 @@ router.post('/transactions', async (req, res) => {
             date: new Date(date),
             buyer: type === 'sale' ? (buyer || null) : null,
             seller: type === 'purchase' ? (seller || null) : null,
+            buyerUserId: buyerUserId || null,
+            sellerUserId: sellerUserId || null,
             notes: notes || null
         });
         
         await newTransaction.save();
         
-        res.status(201).json(newTransaction);
+        // Check if this should create a transfer
+        let transfer = null;
+        
+        // SALE with existing user (buyer) and existing animal
+        if (type === 'sale' && buyerUserId && animalId) {
+            // Verify the animal exists and belongs to the seller
+            const animal = await Animal.findOne({ id_public: animalId, ownerId: userId });
+            
+            if (animal) {
+                // Create pending transfer
+                transfer = await AnimalTransfer.create({
+                    fromUserId: userId,
+                    toUserId: buyerUserId,
+                    animalId_public: animalId,
+                    transactionId: newTransaction._id,
+                    transferType: 'sale',
+                    status: 'pending'
+                });
+                
+                // Create notification for buyer
+                await Notification.create({
+                    userId: buyerUserId,
+                    type: 'transfer_request',
+                    message: `You have received an animal transfer request for ${animal.name} (${animal.id_public}).`,
+                    metadata: {
+                        transferId: transfer._id,
+                        animalId: animal.id_public,
+                        animalName: animal.name,
+                        fromUserId: userId
+                    }
+                });
+            }
+        }
+        
+        // PURCHASE with existing user (seller) and existing animal
+        if (type === 'purchase' && sellerUserId && animalId) {
+            // Check if the animal exists (might belong to seller or be in their view-only list)
+            const animal = await Animal.findOne({ id_public: animalId });
+            
+            if (animal && animal.ownerId.toString() === sellerUserId.toString()) {
+                // Create transfer with view-only offer
+                transfer = await AnimalTransfer.create({
+                    fromUserId: userId, // buyer
+                    toUserId: sellerUserId, // seller
+                    animalId_public: animalId,
+                    transactionId: newTransaction._id,
+                    transferType: 'purchase',
+                    status: 'pending',
+                    offerViewOnly: true
+                });
+                
+                // Create notification for seller
+                await Notification.create({
+                    userId: sellerUserId,
+                    type: 'view_only_offer',
+                    message: `A buyer has logged a purchase of your animal ${animal.name} (${animal.id_public}). Would you like view-only access?`,
+                    metadata: {
+                        transferId: transfer._id,
+                        animalId: animal.id_public,
+                        animalName: animal.name,
+                        fromUserId: userId
+                    }
+                });
+            }
+        }
+        
+        res.status(201).json({ 
+            transaction: newTransaction,
+            transfer: transfer || null
+        });
     } catch (error) {
         console.error('Error creating transaction:', error);
         res.status(500).json({ message: 'Internal server error while creating transaction.' });
@@ -109,14 +180,27 @@ router.delete('/transactions/:id', async (req, res) => {
         const userId = req.user.id;
         const transactionId = req.params.id;
         
-        // Find and delete the transaction, verifying ownership
-        const transaction = await Transaction.findOneAndDelete({ _id: transactionId, userId });
+        // Find the transaction first to check for linked transfers
+        const transaction = await Transaction.findOne({ _id: transactionId, userId });
         
         if (!transaction) {
             return res.status(404).json({ message: 'Transaction not found or access denied.' });
         }
         
-        res.status(200).json({ message: 'Transaction deleted successfully.' });
+        // Check if there's an accepted transfer linked to this transaction
+        const acceptedTransfer = await AnimalTransfer.findOne({ 
+            transactionId: transactionId,
+            status: 'accepted'
+        });
+        
+        // Delete the transaction (but keep the ownership changes if transfer was accepted)
+        await Transaction.findByIdAndDelete(transactionId);
+        
+        const message = acceptedTransfer 
+            ? 'Transaction deleted. Animal ownership changes remain intact.'
+            : 'Transaction deleted successfully.';
+        
+        res.status(200).json({ message });
     } catch (error) {
         console.error('Error deleting transaction:', error);
         res.status(500).json({ message: 'Internal server error while deleting transaction.' });
