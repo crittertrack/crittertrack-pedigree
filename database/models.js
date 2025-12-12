@@ -203,16 +203,16 @@ const Litter = mongoose.model('Litter', LitterSchema);
 // --- 6. NOTIFICATION SCHEMA ---
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    userId_public: { type: String, required: true, index: true },
-    type: { type: String, required: true, enum: ['breeder_request', 'parent_request'] },
-    status: { type: String, required: true, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
+    userId_public: { type: String, index: true },
+    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'view_only_offer', 'transfer_accepted', 'transfer_declined', 'animal_returned'] },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
     
     // Request details
-    requestedBy_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    requestedBy_public: { type: String, required: true },
+    requestedBy_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    requestedBy_public: { type: String },
     requestedBy_name: { type: String, default: '' }, // Requester's personal or breeder name
-    animalId_public: { type: String, required: true },
-    animalName: { type: String, required: true },
+    animalId_public: { type: String },
+    animalName: { type: String },
     animalPrefix: { type: String, default: '' }, // Animal prefix
     animalImageUrl: { type: String, default: '' }, // Animal thumbnail
     
@@ -220,7 +220,11 @@ const NotificationSchema = new mongoose.Schema({
     parentType: { type: String, enum: ['sire', 'dam', null], default: null },
     targetAnimalId_public: { type: String, default: null }, // The animal being used as parent
     
+    // For transfer notifications
+    transferId: { type: mongoose.Schema.Types.ObjectId, ref: 'AnimalTransfer', default: null },
+    
     // Metadata
+    metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
     message: { type: String, default: '' },
     read: { type: Boolean, default: false, index: true },
     

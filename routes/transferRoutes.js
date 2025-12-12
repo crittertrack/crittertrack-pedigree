@@ -89,9 +89,15 @@ router.post('/:id/accept', async (req, res) => {
         });
         
         // Create notification for the sender
+        const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
         await Notification.create({
             userId: transfer.fromUserId,
+            userId_public: senderProfile?.id_public || '',
             type: 'transfer_accepted',
+            animalId_public: animal.id_public,
+            animalName: animal.name,
+            animalImageUrl: animal.imageUrl || '',
+            transferId: transfer._id,
             message: `Your animal transfer for ${animal.name} (${animal.id_public}) has been accepted.`,
             metadata: {
                 transferId: transfer._id,
@@ -143,10 +149,16 @@ router.post('/:id/decline', async (req, res) => {
         
         // Create notification for the sender
         const animal = await Animal.findOne({ id_public: transfer.animalId_public });
+        const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
         
         await Notification.create({
             userId: transfer.fromUserId,
+            userId_public: senderProfile?.id_public || '',
             type: 'transfer_declined',
+            animalId_public: transfer.animalId_public,
+            animalName: animal?.name || '',
+            animalImageUrl: animal?.imageUrl || '',
+            transferId: transfer._id,
             message: `Your animal transfer for ${animal?.name || transfer.animalId_public} has been declined.`,
             metadata: {
                 transferId: transfer._id,
