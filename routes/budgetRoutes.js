@@ -25,7 +25,13 @@ router.get('/transactions', async (req, res) => {
 router.post('/transactions', async (req, res) => {
     try {
         const userId = req.user.id;
+        console.log('[Budget] === NEW TRANSACTION REQUEST ===');
+        console.log('[Budget] User ID:', userId);
+        console.log('[Budget] Request body:', JSON.stringify(req.body, null, 2));
+        
         const { type, animalId, animalName, price, date, buyer, seller, notes, buyerUserId, sellerUserId } = req.body;
+        
+        console.log('[Budget] Extracted values:', { type, animalId, animalName, buyerUserId, sellerUserId });
         
         // Validation
         if (!type || !['sale', 'purchase'].includes(type)) {
