@@ -862,10 +862,15 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
             });
             
             // Create notification for original owner
-            const { Notification } = require('./models');
+            const { Notification, PublicProfile } = require('./models');
+            const originalOwnerProfile = await PublicProfile.findOne({ userId_backend: animal.originalOwnerId });
             await Notification.create({
                 userId: animal.originalOwnerId,
+                userId_public: originalOwnerProfile?.id_public || '',
                 type: 'animal_returned',
+                animalId_public: animal.id_public,
+                animalName: animal.name,
+                animalImageUrl: animal.imageUrl || '',
                 message: `Animal ${animal.name} (${animal.id_public}) has been returned to you.`,
                 metadata: {
                     animalId: animal.id_public,

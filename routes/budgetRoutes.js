@@ -76,9 +76,16 @@ router.post('/transactions', async (req, res) => {
                 });
                 
                 // Create notification for buyer
+                const buyerProfile = await PublicProfile.findOne({ userId_backend: buyerUserId });
                 await Notification.create({
                     userId: buyerUserId,
+                    userId_public: buyerProfile?.id_public || '',
                     type: 'transfer_request',
+                    status: 'pending',
+                    animalId_public: animal.id_public,
+                    animalName: animal.name,
+                    animalImageUrl: animal.imageUrl || '',
+                    transferId: transfer._id,
                     message: `You have received an animal transfer request for ${animal.name} (${animal.id_public}).`,
                     metadata: {
                         transferId: transfer._id,
@@ -108,9 +115,16 @@ router.post('/transactions', async (req, res) => {
                 });
                 
                 // Create notification for seller
+                const sellerProfile = await PublicProfile.findOne({ userId_backend: sellerUserId });
                 await Notification.create({
                     userId: sellerUserId,
+                    userId_public: sellerProfile?.id_public || '',
                     type: 'view_only_offer',
+                    status: 'pending',
+                    animalId_public: animal.id_public,
+                    animalName: animal.name,
+                    animalImageUrl: animal.imageUrl || '',
+                    transferId: transfer._id,
                     message: `A buyer has logged a purchase of your animal ${animal.name} (${animal.id_public}). Would you like view-only access?`,
                     metadata: {
                         transferId: transfer._id,
