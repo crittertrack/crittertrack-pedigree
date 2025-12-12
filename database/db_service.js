@@ -390,7 +390,15 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     }
     if (filters.gender) query.gender = filters.gender;
     if (filters.species) query.species = filters.species;
-    if (filters.status) query.status = filters.status;
+    if (filters.status) {
+        // Special handling for "Sold" status - it should match view-only animals
+        if (filters.status === 'Sold') {
+            query.viewOnlyForUsers = appUserId_backend;
+            query.hiddenForUsers = { $ne: appUserId_backend };
+        } else {
+            query.status = filters.status;
+        }
+    }
     // Remove the isOwned filter since it's already handled in baseQuery
     if (filters.isPregnant !== undefined) {
         query.isPregnant = filters.isPregnant === 'true' || filters.isPregnant === true;
