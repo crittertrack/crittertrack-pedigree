@@ -110,12 +110,13 @@ router.post('/:id/accept', async (req, res) => {
             { $set: { status: 'accepted' } }
         );
         
-        // Create notification for the sender
+        // Create notification for the sender (informational only, no action needed)
         const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
         await Notification.create({
             userId: transfer.fromUserId,
             userId_public: senderProfile?.id_public || '',
             type: 'transfer_accepted',
+            status: 'accepted', // Not pending - this is informational only
             animalId_public: animal.id_public,
             animalName: animal.name,
             animalImageUrl: animal.imageUrl || '',
@@ -176,7 +177,7 @@ router.post('/:id/decline', async (req, res) => {
             { $set: { status: 'declined' } }
         );
         
-        // Create notification for the sender
+        // Create notification for the sender (informational only, no action needed)
         const animal = await Animal.findOne({ id_public: transfer.animalId_public });
         const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
         
@@ -184,6 +185,7 @@ router.post('/:id/decline', async (req, res) => {
             userId: transfer.fromUserId,
             userId_public: senderProfile?.id_public || '',
             type: 'transfer_declined',
+            status: 'declined', // Not pending - this is informational only
             animalId_public: transfer.animalId_public,
             animalName: animal?.name || '',
             animalImageUrl: animal?.imageUrl || '',
