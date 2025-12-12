@@ -812,6 +812,59 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
         throw new Error('Animal not found or does not own this animal.');
     }
 
+    // Check if this is a transferred animal (has originalOwnerId and it's not the current owner)
+    if (animal.originalOwnerId && animal.originalOwnerId.toString() !== appUserId_backend.toString()) {
+        console.log(`[deleteAnimal] Reverting transferred animal ${animal.id_public} back to original owner`);
+        
+        // Revert ownership back to original owner
+        const originalOwner = await User.findById(animal.originalOwnerId).select('id_public');
+        
+        if (originalOwner) {
+            // Update animal ownership
+            animal.ownerId = animal.originalOwnerId;
+            animal.ownerId_public = originalOwner.id_public;
+            animal.soldStatus = null; // Clear sold status
+            
+            // Remove current owner from viewOnlyForUsers if present
+            animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(
+                userId => userId.toString() !== appUserId_backend.toString()
+            );
+            
+            // Add current owner to viewOnlyForUsers (they can still view after "deleting")
+            if (!animal.viewOnlyForUsers.includes(appUserId_backend)) {
+                animal.viewOnlyForUsers.push(appUserId_backend);
+            }
+            
+            await animal.save();
+            
+            // Update user ownedAnimals arrays
+            await User.findByIdAndUpdate(appUserId_backend, {
+                $pull: { ownedAnimals: animal._id }
+            });
+            
+            await User.findByIdAndUpdate(animal.originalOwnerId, {
+                $addToSet: { ownedAnimals: animal._id }
+            });
+            
+            // Create notification for original owner
+            const { Notification } = require('./models');
+            await Notification.create({
+                userId: animal.originalOwnerId,
+                type: 'animal_returned',
+                message: `Animal ${animal.name} (${animal.id_public}) has been returned to you.`,
+                metadata: {
+                    animalId: animal.id_public,
+                    animalName: animal.name,
+                    fromUserId: appUserId_backend
+                }
+            });
+            
+            console.log(`[deleteAnimal] Animal ${animal.id_public} reverted to original owner ${originalOwner.id_public}`);
+            return { reverted: true, message: 'Animal returned to original owner.' };
+        }
+    }
+
+    // Normal deletion for non-transferred animals
     // Remove the private animal record
     await Animal.deleteOne({ _id: animalId_backend });
 
@@ -826,7 +879,7 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
         console.warn('Failed to delete public animal record for id_public', animal.id_public, e && e.message ? e.message : e);
     }
 
-    return;
+    return { reverted: false, message: 'Animal deleted successfully.' };
 };
 
 /**
