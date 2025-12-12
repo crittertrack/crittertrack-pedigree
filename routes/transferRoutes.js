@@ -81,6 +81,20 @@ router.post('/:id/accept', async (req, res) => {
         
         await animal.save();
         
+        // Update PublicAnimal if this animal is public
+        if (animal.showOnPublicProfile) {
+            const PublicAnimal = require('../database/models').PublicAnimal;
+            await PublicAnimal.updateOne(
+                { id_public: animal.id_public },
+                { 
+                    $set: { 
+                        ownerId_public: animal.ownerId_public,
+                        status: animal.status
+                    } 
+                }
+            );
+        }
+        
         // Update user ownedAnimals arrays
         await User.findByIdAndUpdate(previousOwner, {
             $pull: { ownedAnimals: animal._id }
