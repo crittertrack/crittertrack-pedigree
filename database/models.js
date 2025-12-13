@@ -96,6 +96,9 @@ const AnimalSchema = new mongoose.Schema({
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
     
+    // Tags for local organization (lines, enclosures, etc)
+    tags: [{ type: String, trim: true }],
+    
     // Image URLs (optional)
     imageUrl: { type: String, default: null },
     photoUrl: { type: String, default: null },
@@ -150,6 +153,9 @@ const PublicAnimalSchema = new mongoose.Schema({
     isPregnant: { type: Boolean, default: false },
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
+    
+    // Tags for local organization (lines, enclosures, etc)
+    tags: [{ type: String, trim: true }],
 
     // Public-facing image URLs
     imageUrl: { type: String, default: null },
