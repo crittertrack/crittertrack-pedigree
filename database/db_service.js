@@ -382,13 +382,15 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         query.id_public = filters.id_public;
     }
     if (filters.name) {
-        // Search in name, prefix, and tags fields (case-insensitive)
+        // Search in name, prefix, breederyId (registry code), id_public, and tags fields (case-insensitive)
         // Combine with base $or using $and
         const regex = new RegExp(filters.name, 'i');
         const nameQuery = {
             $or: [
                 { name: { $regex: filters.name, $options: 'i' } },
                 { prefix: { $regex: filters.name, $options: 'i' } },
+                { breederyId: { $regex: filters.name, $options: 'i' } },
+                { id_public: { $regex: filters.name, $options: 'i' } },
                 { tags: regex }
             ]
         };
