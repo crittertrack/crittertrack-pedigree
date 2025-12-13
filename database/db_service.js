@@ -411,6 +411,9 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     if (filters.isNursing !== undefined) {
         query.isNursing = filters.isNursing === 'true' || filters.isNursing === true;
     }
+    if (filters.isInMating !== undefined) {
+        query.isInMating = filters.isInMating === 'true' || filters.isInMating === true;
+    }
     if (filters.birthdateBefore) {
         // Only show animals born before/on the specified date (for parent selection)
         const dt = new Date(filters.birthdateBefore);
