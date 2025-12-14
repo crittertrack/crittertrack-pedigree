@@ -82,7 +82,12 @@ router.post('/:id/accept', async (req, res) => {
         }
         
         // Get the new owner's public ID
-        const newOwner = await User.findById(userId).select('id_public');
+        let newOwner = await User.findById(userId).select('id_public');
+        if (!newOwner) {
+            console.error('[Transfer Accept] Could not find new owner user document');
+            // Create a fallback - this shouldn't happen but let's be safe
+            newOwner = { id_public: 'UNKNOWN' };
+        }
         console.log('[Transfer Accept] New owner found:', newOwner?.id_public);
         
         // Update animal ownership
@@ -125,31 +130,36 @@ router.post('/:id/accept', async (req, res) => {
         console.log('[Transfer Accept] Added animal to new owner ownedAnimals');
         
         // Update the original notification to accepted status
-        await Notification.updateOne(
+        const notificationUpdate = await Notification.updateOne(
             { transferId: transfer._id, userId: userId, type: 'transfer_request' },
             { $set: { status: 'accepted' } }
         );
-        console.log('[Transfer Accept] Notification updated');
+        console.log('[Transfer Accept] Notification update result:', notificationUpdate);
         
         // Create notification for the sender (informational only, no action needed)
-        const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
-        await Notification.create({
-            userId: transfer.fromUserId,
-            userId_public: senderProfile?.id_public || '',
-            type: 'transfer_accepted',
-            status: 'accepted', // Not pending - this is informational only
-            animalId_public: animal.id_public,
-            animalName: animal.name,
-            animalImageUrl: animal.imageUrl || '',
-            transferId: transfer._id,
-            message: `Your animal transfer for ${animal.name} (${animal.id_public}) has been accepted.`,
-            metadata: {
+        try {
+            const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
+            await Notification.create({
+                userId: transfer.fromUserId,
+                userId_public: senderProfile?.id_public || '',
+                type: 'transfer_accepted',
+                status: 'accepted', // Not pending - this is informational only
+                animalId_public: animal.id_public,
+                animalName: animal.name,
+                animalImageUrl: animal.imageUrl || '',
                 transferId: transfer._id,
-                animalId: animal.id_public,
-                animalName: animal.name
-            }
-        });
-        console.log('[Transfer Accept] Notification created for sender');
+                message: `Your animal transfer for ${animal.name} (${animal.id_public}) has been accepted.`,
+                metadata: {
+                    transferId: transfer._id,
+                    animalId: animal.id_public,
+                    animalName: animal.name
+                }
+            });
+            console.log('[Transfer Accept] Notification created for sender');
+        } catch (notifError) {
+            console.error('[Transfer Accept] Failed to create sender notification:', notifError.message);
+            // Don't fail the whole transfer if notification creation fails
+        }
         
         console.log('[Transfer Accept] ✓ Transfer accepted successfully');
         res.status(200).json({ 
