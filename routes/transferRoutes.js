@@ -304,10 +304,10 @@ router.post('/:id/accept-view-only', async (req, res) => {
         }
         
         // Update transfer
-        transfer.status = 'approved'; // Use 'approved' instead of 'accepted'
+        transfer.status = 'accepted'; // AnimalTransfer enum uses 'accepted'
         transfer.respondedAt = new Date();
         await transfer.save();
-        console.log('[View-Only Accept] Transfer status updated to approved');
+        console.log('[View-Only Accept] Transfer status updated to accepted');
         
         // Update the original notification to approved status
         const notificationUpdate = await Notification.updateOne(
