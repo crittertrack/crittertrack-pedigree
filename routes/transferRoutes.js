@@ -131,10 +131,13 @@ router.post('/:id/accept', async (req, res) => {
         
         // Update the original notification to accepted status
         const notificationUpdate = await Notification.updateOne(
-            { transferId: transfer._id, userId: userId, type: 'transfer_request' },
+            { transferId: transfer._id, type: 'transfer_request' },
             { $set: { status: 'accepted' } }
         );
         console.log('[Transfer Accept] Notification update result:', notificationUpdate);
+        if (notificationUpdate.matchedCount === 0) {
+            console.warn('[Transfer Accept] WARNING: No notification found for this transfer');
+        }
         
         // Create notification for the sender (informational only, no action needed)
         try {
