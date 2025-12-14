@@ -277,7 +277,7 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
 // Tutorial completion tracking
 app.post('/api/users/tutorial-complete', authMiddleware, async (req, res) => {
     try {
-        const { tutorialId, isOnboardingComplete } = req.body;
+        const { tutorialId, isOnboardingComplete, isAdvancedFeaturesComplete } = req.body;
         const { PublicProfile } = require('./database/models');
         
         const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
@@ -295,12 +295,18 @@ app.post('/api/users/tutorial-complete', authMiddleware, async (req, res) => {
             userProfile.hasCompletedOnboarding = true;
         }
 
+        // Mark advanced features as complete if specified
+        if (isAdvancedFeaturesComplete) {
+            userProfile.hasCompletedAdvancedFeatures = true;
+        }
+
         await userProfile.save();
         
         res.json({ 
             message: 'Tutorial progress saved',
             completedTutorials: userProfile.completedTutorials,
-            hasCompletedOnboarding: userProfile.hasCompletedOnboarding
+            hasCompletedOnboarding: userProfile.hasCompletedOnboarding,
+            hasCompletedAdvancedFeatures: userProfile.hasCompletedAdvancedFeatures
         });
     } catch (error) {
         console.error('Error saving tutorial completion:', error);
@@ -319,7 +325,8 @@ app.get('/api/users/tutorial-progress', authMiddleware, async (req, res) => {
 
         res.json({
             completedTutorials: userProfile.completedTutorials || [],
-            hasCompletedOnboarding: userProfile.hasCompletedOnboarding || false
+            hasCompletedOnboarding: userProfile.hasCompletedOnboarding || false,
+            hasCompletedAdvancedFeatures: userProfile.hasCompletedAdvancedFeatures || false
         });
     } catch (error) {
         console.error('Error fetching tutorial progress:', error);
