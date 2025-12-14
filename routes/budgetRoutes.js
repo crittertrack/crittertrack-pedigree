@@ -132,7 +132,7 @@ router.post('/transactions', async (req, res) => {
                         animalName: animal.name,
                         animalImageUrl: animal.imageUrl || '',
                         transferId: transfer._id,
-                        message: `You have received an animal transfer request for ${animal.name} (${animal.id_public}).`,
+                        message: `${sellerName} has sent you an animal transfer request for ${animal.name} (${animal.id_public}).`,
                         metadata: {
                             transferId: transfer._id,
                             animalId: animal.id_public,
