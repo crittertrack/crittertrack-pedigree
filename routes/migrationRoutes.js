@@ -280,4 +280,78 @@ router.post('/cleanup-species', async (req, res) => {
     }
 });
 
+// Fix specific animal's viewOnlyForUsers array
+router.post('/fix-animal-viewonly', async (req, res) => {
+    try {
+        const { animalId, removeUserId } = req.body;
+        
+        if (!animalId || !removeUserId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing animalId or removeUserId'
+            });
+        }
+
+        // Find the animal
+        const animal = await Animal.findOne({ id_public: animalId });
+        
+        if (!animal) {
+            return res.status(404).json({
+                success: false,
+                message: `Animal ${animalId} not found`
+            });
+        }
+
+        // Find the user's backend ID
+        const userProfile = await PublicProfile.findOne({ id_public: removeUserId });
+        
+        if (!userProfile) {
+            return res.status(404).json({
+                success: false,
+                message: `User ${removeUserId} not found`
+            });
+        }
+
+        const userBackendId = userProfile.userId_backend;
+
+        // Check if user is in viewOnlyForUsers
+        const hasViewOnly = animal.viewOnlyForUsers.some(
+            userId => userId.toString() === userBackendId.toString()
+        );
+
+        if (!hasViewOnly) {
+            return res.json({
+                success: true,
+                message: `User ${removeUserId} is not in viewOnlyForUsers for ${animalId}`,
+                alreadyFixed: true
+            });
+        }
+
+        // Remove user from viewOnlyForUsers
+        animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(
+            userId => userId.toString() !== userBackendId.toString()
+        );
+        
+        await animal.save();
+
+        res.json({
+            success: true,
+            message: `Successfully removed ${removeUserId} from viewOnlyForUsers for ${animalId}`,
+            animal: {
+                id_public: animal.id_public,
+                name: animal.name,
+                viewOnlyForUsers: animal.viewOnlyForUsers
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fixing animal viewOnly:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fix animal viewOnly',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
