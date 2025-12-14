@@ -90,10 +90,18 @@ router.post('/transactions', async (req, res) => {
                 id_public: animal.id_public,
                 name: animal.name,
                 ownerId: animal.ownerId,
-                ownerIdMatches: String(animal.ownerId) === String(userId)
+                ownerIdMatches: String(animal.ownerId) === String(userId),
+                soldStatus: animal.soldStatus
             } : { found: false });
             
-            if (animal) {
+            if (!animal) {
+                console.log('[Budget] ✗ Animal not found, skipping transfer creation');
+            } else if (animal.soldStatus === 'sold') {
+                console.log('[Budget] ✗ Animal already sold, cannot sell again');
+                return res.status(400).json({ 
+                    message: `Cannot sell ${animal.name} - this animal has already been sold. You can only view it.` 
+                });
+            } else {
                 console.log('[Budget] ✓ Creating transfer...');
                 // Create pending transfer
                 transfer = await AnimalTransfer.create({
@@ -148,8 +156,6 @@ router.post('/transactions', async (req, res) => {
                     console.error('[Budget] ✗ Error creating notification:', notifError);
                     console.error('[Budget] Notification error details:', notifError.message);
                 }
-            } else {
-                console.log('[Budget] ✗ Animal not found, skipping transfer creation');
             }
         } else {
             console.log('[Budget] ✗ Transfer conditions not met');
