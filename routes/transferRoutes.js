@@ -33,15 +33,25 @@ router.post('/:id/accept', async (req, res) => {
         const transfer = await AnimalTransfer.findById(transferId);
         
         if (!transfer) {
+            console.log('[Transfer Accept] Transfer not found with ID:', transferId);
             return res.status(404).json({ message: 'Transfer not found.' });
         }
         
-        // Verify the user is the recipient
+        console.log('[Transfer Accept] Transfer found:', {
+            fromUserId: transfer.fromUserId.toString(),
+            toUserId: transfer.toUserId.toString(),
+            status: transfer.status
+        });
+        
+        // Verify the user is the recipient - convert both to strings for comparison
         if (transfer.toUserId.toString() !== userId.toString()) {
+            console.log('[Transfer Accept] Authorization failed - user is not recipient');
+            console.log('[Transfer Accept] transfer.toUserId:', transfer.toUserId.toString(), 'userId:', userId.toString());
             return res.status(403).json({ message: 'You are not authorized to accept this transfer.' });
         }
         
         if (transfer.status !== 'pending') {
+            console.log('[Transfer Accept] Transfer already responded:', transfer.status);
             return res.status(400).json({ message: 'Transfer has already been responded to.' });
         }
         
@@ -49,13 +59,18 @@ router.post('/:id/accept', async (req, res) => {
         const animal = await Animal.findOne({ id_public: transfer.animalId_public });
         
         if (!animal) {
+            console.log('[Transfer Accept] Animal not found:', transfer.animalId_public);
             return res.status(404).json({ message: 'Animal not found.' });
         }
+        
+        console.log('[Transfer Accept] Animal found:', animal.id_public, 'Current owner:', animal.ownerId.toString());
         
         // Update transfer status
         transfer.status = 'accepted';
         transfer.respondedAt = new Date();
         await transfer.save();
+        
+        console.log('[Transfer Accept] Transfer status updated to accepted');
         
         // Transfer ownership
         const previousOwner = animal.ownerId;
@@ -68,6 +83,7 @@ router.post('/:id/accept', async (req, res) => {
         
         // Get the new owner's public ID
         const newOwner = await User.findById(userId).select('id_public');
+        console.log('[Transfer Accept] New owner found:', newOwner?.id_public);
         
         // Update animal ownership
         animal.ownerId = userId;
@@ -80,6 +96,7 @@ router.post('/:id/accept', async (req, res) => {
         }
         
         await animal.save();
+        console.log('[Transfer Accept] Animal ownership transferred, viewOnly access added');
         
         // Update PublicAnimal if this animal is public
         if (animal.showOnPublicProfile) {
@@ -93,22 +110,26 @@ router.post('/:id/accept', async (req, res) => {
                     } 
                 }
             );
+            console.log('[Transfer Accept] PublicAnimal updated');
         }
         
         // Update user ownedAnimals arrays
         await User.findByIdAndUpdate(previousOwner, {
             $pull: { ownedAnimals: animal._id }
         });
+        console.log('[Transfer Accept] Removed animal from previous owner ownedAnimals');
         
         await User.findByIdAndUpdate(userId, {
             $addToSet: { ownedAnimals: animal._id }
         });
+        console.log('[Transfer Accept] Added animal to new owner ownedAnimals');
         
         // Update the original notification to accepted status
         await Notification.updateOne(
             { transferId: transfer._id, userId: userId, type: 'transfer_request' },
             { $set: { status: 'accepted' } }
         );
+        console.log('[Transfer Accept] Notification updated');
         
         // Create notification for the sender (informational only, no action needed)
         const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
@@ -128,7 +149,9 @@ router.post('/:id/accept', async (req, res) => {
                 animalName: animal.name
             }
         });
+        console.log('[Transfer Accept] Notification created for sender');
         
+        console.log('[Transfer Accept] ✓ Transfer accepted successfully');
         res.status(200).json({ 
             message: 'Transfer accepted successfully.', 
             transfer,
