@@ -56,6 +56,8 @@ const PublicProfileSchema = new mongoose.Schema({
     showEmailPublic: { type: Boolean, default: false },
     websiteURL: { type: String, default: null },
     showWebsiteURL: { type: Boolean, default: false },
+    completedTutorials: { type: [String], default: [] }, // Array of completed tutorial IDs
+    hasCompletedOnboarding: { type: Boolean, default: false }, // Track if user completed initial onboarding
 }, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
 

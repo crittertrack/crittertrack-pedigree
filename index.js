@@ -274,6 +274,59 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
     }
 });
 
+// Tutorial completion tracking
+app.post('/api/users/tutorial-complete', authMiddleware, async (req, res) => {
+    try {
+        const { tutorialId, isOnboardingComplete } = req.body;
+        const { PublicProfile } = require('./database/models');
+        
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        // Add tutorial to completedTutorials if not already there
+        if (!userProfile.completedTutorials.includes(tutorialId)) {
+            userProfile.completedTutorials.push(tutorialId);
+        }
+
+        // Mark onboarding as complete if specified
+        if (isOnboardingComplete) {
+            userProfile.hasCompletedOnboarding = true;
+        }
+
+        await userProfile.save();
+        
+        res.json({ 
+            message: 'Tutorial progress saved',
+            completedTutorials: userProfile.completedTutorials,
+            hasCompletedOnboarding: userProfile.hasCompletedOnboarding
+        });
+    } catch (error) {
+        console.error('Error saving tutorial completion:', error);
+        res.status(500).json({ message: 'Failed to save tutorial progress' });
+    }
+});
+
+app.get('/api/users/tutorial-progress', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        res.json({
+            completedTutorials: userProfile.completedTutorials || [],
+            hasCompletedOnboarding: userProfile.hasCompletedOnboarding || false
+        });
+    } catch (error) {
+        console.error('Error fetching tutorial progress:', error);
+        res.status(500).json({ message: 'Failed to fetch tutorial progress' });
+    }
+});
+
 // Delete user account
 app.delete('/api/users/account', authMiddleware, async (req, res) => {
     try {
