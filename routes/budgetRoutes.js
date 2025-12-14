@@ -163,14 +163,34 @@ router.post('/transactions', async (req, res) => {
         
         // PURCHASE with existing user (seller) and existing animal
         if (type === 'purchase' && sellerUserId && animalId) {
-            // Check if the animal exists (might belong to seller or be in their view-only list)
-            const animal = await Animal.findOne({ id_public: animalId });
+            console.log('[Budget] ✓ Conditions met for purchase with view-only offer');
+            console.log('[Budget] Searching for animal with id_public:', animalId, 'owned by buyer:', userId);
             
-            if (animal && animal.ownerId.toString() === sellerUserId.toString()) {
+            // Check if the animal exists and is owned by the BUYER (current user)
+            const animal = await Animal.findOne({ id_public: animalId, ownerId: userId });
+            
+            console.log('[Budget] Animal lookup result:', animal ? {
+                found: true,
+                id_public: animal.id_public,
+                name: animal.name,
+                ownerId: animal.ownerId,
+                ownerIdMatches: String(animal.ownerId) === String(userId),
+                soldStatus: animal.soldStatus
+            } : { found: false });
+            
+            if (!animal) {
+                console.log('[Budget] ✗ Animal not found or not owned by buyer, skipping view-only offer');
+            } else if (animal.soldStatus === 'purchased') {
+                console.log('[Budget] ✗ Animal already marked as purchased, cannot create duplicate view-only offer');
+                return res.status(400).json({ 
+                    message: `${animal.name} is already marked as purchased. Cannot create duplicate purchase record.` 
+                });
+            } else {
+                console.log('[Budget] ✓ Creating transfer with view-only offer...');
                 // Create transfer with view-only offer
                 transfer = await AnimalTransfer.create({
-                    fromUserId: userId, // buyer
-                    toUserId: sellerUserId, // seller
+                    fromUserId: userId, // buyer (current owner)
+                    toUserId: sellerUserId, // seller/breeder (will get view-only)
                     animalId_public: animalId,
                     transactionId: newTransaction._id,
                     transferType: 'purchase',
@@ -178,25 +198,49 @@ router.post('/transactions', async (req, res) => {
                     offerViewOnly: true
                 });
                 
-                // Create notification for seller
-                const sellerProfile = await PublicProfile.findOne({ userId_backend: sellerUserId });
-                await Notification.create({
-                    userId: sellerUserId,
-                    userId_public: sellerProfile?.id_public || '',
-                    type: 'view_only_offer',
-                    status: 'pending',
-                    animalId_public: animal.id_public,
-                    animalName: animal.name,
-                    animalImageUrl: animal.imageUrl || '',
-                    transferId: transfer._id,
-                    message: `A buyer has logged a purchase of your animal ${animal.name} (${animal.id_public}). Would you like view-only access?`,
-                    metadata: {
-                        transferId: transfer._id,
-                        animalId: animal.id_public,
+                console.log('[Budget] ✓ Transfer created with ID:', transfer._id);
+                
+                // Create notification for seller/breeder
+                try {
+                    console.log('[Budget] Looking up seller/breeder profile for userId:', sellerUserId);
+                    const sellerProfile = await PublicProfile.findOne({ userId_backend: sellerUserId });
+                    console.log('[Budget] Seller profile found:', sellerProfile ? sellerProfile.id_public : 'NOT FOUND');
+                    
+                    // Get buyer profile for requestedBy fields
+                    console.log('[Budget] Looking up buyer profile for userId:', userId);
+                    const buyerProfile = await PublicProfile.findOne({ userId_backend: userId });
+                    const buyerName = buyerProfile?.breederName || buyerProfile?.personalName || '';
+                    console.log('[Budget] Buyer profile found:', buyerProfile ? buyerProfile.id_public : 'NOT FOUND', 'Name:', buyerName);
+                    
+                    console.log('[Budget] Creating view-only notification for seller/breeder...');
+                    const notificationData = {
+                        userId: sellerUserId,
+                        userId_public: sellerProfile?.id_public || '',
+                        type: 'view_only_offer',
+                        status: 'pending',
+                        requestedBy_id: userId,
+                        requestedBy_public: buyerProfile?.id_public || '',
+                        requestedBy_name: buyerName,
+                        animalId_public: animal.id_public,
                         animalName: animal.name,
-                        fromUserId: userId
-                    }
-                });
+                        animalImageUrl: animal.imageUrl || '',
+                        transferId: transfer._id,
+                        message: `${buyerName} has logged a purchase of your animal ${animal.name} (${animal.id_public}). Would you like view-only access?`,
+                        metadata: {
+                            transferId: transfer._id,
+                            animalId: animal.id_public,
+                            animalName: animal.name,
+                            fromUserId: userId
+                        }
+                    };
+                    console.log('[Budget] Notification data:', JSON.stringify(notificationData, null, 2));
+                    
+                    const notification = await Notification.create(notificationData);
+                    console.log('[Budget] ✓ Notification created with ID:', notification._id);
+                } catch (notifError) {
+                    console.error('[Budget] ✗ Error creating notification:', notifError);
+                    console.error('[Budget] Notification error details:', notifError.message);
+                }
             }
         }
         
