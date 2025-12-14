@@ -256,19 +256,31 @@ router.post('/:id/accept-view-only', async (req, res) => {
         const userId = req.user.id;
         const transferId = req.params.id;
         
+        console.log('[View-Only Accept] UserId:', userId, 'TransferId:', transferId);
+        
         const transfer = await AnimalTransfer.findById(transferId);
         
         if (!transfer) {
+            console.log('[View-Only Accept] Transfer not found');
             return res.status(404).json({ message: 'Transfer not found.' });
         }
+        
+        console.log('[View-Only Accept] Transfer found:', {
+            fromUserId: transfer.fromUserId.toString(),
+            toUserId: transfer.toUserId.toString(),
+            offerViewOnly: transfer.offerViewOnly,
+            status: transfer.status
+        });
         
         // For purchase transfers, the fromUserId is the buyer, toUserId is the seller
         // The seller (toUserId) can accept view-only access
         if (transfer.toUserId.toString() !== userId.toString()) {
+            console.log('[View-Only Accept] Authorization failed');
             return res.status(403).json({ message: 'You are not authorized to respond to this offer.' });
         }
         
         if (!transfer.offerViewOnly) {
+            console.log('[View-Only Accept] Not a view-only offer');
             return res.status(400).json({ message: 'This transfer does not have a view-only offer.' });
         }
         
@@ -276,32 +288,59 @@ router.post('/:id/accept-view-only', async (req, res) => {
         const animal = await Animal.findOne({ id_public: transfer.animalId_public });
         
         if (!animal) {
+            console.log('[View-Only Accept] Animal not found');
             return res.status(404).json({ message: 'Animal not found.' });
         }
+        
+        console.log('[View-Only Accept] Animal found:', animal.id_public);
         
         // Add user to viewOnlyForUsers if not already there
         if (!animal.viewOnlyForUsers.includes(userId)) {
             animal.viewOnlyForUsers.push(userId);
             await animal.save();
+            console.log('[View-Only Accept] Added user to viewOnlyForUsers');
+        } else {
+            console.log('[View-Only Accept] User already has view-only access');
         }
         
         // Update transfer
-        transfer.status = 'accepted';
+        transfer.status = 'approved'; // Use 'approved' instead of 'accepted'
         transfer.respondedAt = new Date();
         await transfer.save();
+        console.log('[View-Only Accept] Transfer status updated to approved');
+        
+        // Update the original notification to approved status
+        const notificationUpdate = await Notification.updateOne(
+            { transferId: transfer._id, type: 'view_only_offer' },
+            { $set: { status: 'approved' } }
+        );
+        console.log('[View-Only Accept] Notification update result:', notificationUpdate);
         
         // Create notification for the buyer
-        await Notification.create({
-            userId: transfer.fromUserId,
-            type: 'view_only_accepted',
-            message: `Seller has accepted view-only access to ${animal.name} (${animal.id_public}).`,
-            metadata: {
+        try {
+            const buyerProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
+            await Notification.create({
+                userId: transfer.fromUserId,
+                userId_public: buyerProfile?.id_public || '',
+                type: 'view_only_accepted',
+                status: 'approved',
+                animalId_public: animal.id_public,
+                animalName: animal.name,
+                animalImageUrl: animal.imageUrl || '',
                 transferId: transfer._id,
-                animalId: animal.id_public,
-                animalName: animal.name
-            }
-        });
+                message: `Seller has accepted view-only access to ${animal.name} (${animal.id_public}).`,
+                metadata: {
+                    transferId: transfer._id,
+                    animalId: animal.id_public,
+                    animalName: animal.name
+                }
+            });
+            console.log('[View-Only Accept] Notification created for buyer');
+        } catch (notifError) {
+            console.error('[View-Only Accept] Failed to create buyer notification:', notifError.message);
+        }
         
+        console.log('[View-Only Accept] ✓ View-only access granted successfully');
         res.status(200).json({ 
             message: 'View-only access granted.', 
             transfer,
