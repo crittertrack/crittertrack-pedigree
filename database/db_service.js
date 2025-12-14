@@ -884,14 +884,10 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
             animal.originalOwnerId = null; // Clear original owner reference
             
             // Remove original owner from viewOnlyForUsers (they own it now, not view-only)
+            // AND remove current owner (buyer returning the animal) - they should NOT have view-only access after returning
             animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(
-                userId => userId.toString() !== originalOwnerId.toString()
+                userId => userId.toString() !== originalOwnerId.toString() && userId.toString() !== appUserId_backend.toString()
             );
-            
-            // Add current owner (buyer who is returning) to viewOnlyForUsers
-            if (!animal.viewOnlyForUsers.includes(appUserId_backend)) {
-                animal.viewOnlyForUsers.push(appUserId_backend);
-            }
             
             await animal.save();
             
