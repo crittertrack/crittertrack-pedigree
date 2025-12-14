@@ -129,10 +129,10 @@ router.post('/:id/accept', async (req, res) => {
         });
         console.log('[Transfer Accept] Added animal to new owner ownedAnimals');
         
-        // Update the original notification to accepted status
+        // Update the original notification to approved status
         const notificationUpdate = await Notification.updateOne(
             { transferId: transfer._id, type: 'transfer_request' },
-            { $set: { status: 'accepted' } }
+            { $set: { status: 'approved' } }
         );
         console.log('[Transfer Accept] Notification update result:', notificationUpdate);
         if (notificationUpdate.matchedCount === 0) {
@@ -149,7 +149,7 @@ router.post('/:id/accept', async (req, res) => {
                 userId: transfer.fromUserId,
                 userId_public: senderProfile?.id_public || '',
                 type: 'transfer_accepted',
-                status: 'accepted', // Not pending - this is informational only
+                status: 'approved', // Informational only - no action needed
                 animalId_public: animal.id_public,
                 animalName: animal.name,
                 animalImageUrl: animal.imageUrl || '',
