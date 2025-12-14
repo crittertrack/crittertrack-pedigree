@@ -113,12 +113,21 @@ router.post('/transactions', async (req, res) => {
                     const buyerProfile = await PublicProfile.findOne({ userId_backend: buyerUserId });
                     console.log('[Budget] Buyer profile found:', buyerProfile ? buyerProfile.id_public : 'NOT FOUND');
                     
+                    // Get seller (requestedBy) profile and name
+                    console.log('[Budget] Looking up seller profile for userId:', userId);
+                    const sellerProfile = await PublicProfile.findOne({ userId_backend: userId });
+                    const sellerName = sellerProfile?.breederName || sellerProfile?.personalName || '';
+                    console.log('[Budget] Seller profile found:', sellerProfile ? sellerProfile.id_public : 'NOT FOUND', 'Name:', sellerName);
+                    
                     console.log('[Budget] Creating notification for buyer...');
                     const notificationData = {
                         userId: buyerUserId,
                         userId_public: buyerProfile?.id_public || '',
                         type: 'transfer_request',
                         status: 'pending',
+                        requestedBy_id: userId,
+                        requestedBy_public: sellerProfile?.id_public || '',
+                        requestedBy_name: sellerName,
                         animalId_public: animal.id_public,
                         animalName: animal.name,
                         animalImageUrl: animal.imageUrl || '',
