@@ -141,8 +141,11 @@ router.post('/:id/accept', async (req, res) => {
         
         // Create notification for the sender (informational only, no action needed)
         try {
+            console.log('[Transfer Accept] Creating sender notification for userId:', transfer.fromUserId);
             const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
-            await Notification.create({
+            console.log('[Transfer Accept] Sender profile found:', senderProfile ? senderProfile.id_public : 'NOT FOUND');
+            
+            const notificationData = {
                 userId: transfer.fromUserId,
                 userId_public: senderProfile?.id_public || '',
                 type: 'transfer_accepted',
@@ -157,10 +160,14 @@ router.post('/:id/accept', async (req, res) => {
                     animalId: animal.id_public,
                     animalName: animal.name
                 }
-            });
-            console.log('[Transfer Accept] Notification created for sender');
+            };
+            console.log('[Transfer Accept] Creating notification with data:', JSON.stringify(notificationData, null, 2));
+            
+            const createdNotification = await Notification.create(notificationData);
+            console.log('[Transfer Accept] Notification created successfully with ID:', createdNotification._id);
         } catch (notifError) {
-            console.error('[Transfer Accept] Failed to create sender notification:', notifError.message);
+            console.error('[Transfer Accept] Failed to create sender notification:', notifError);
+            console.error('[Transfer Accept] Error stack:', notifError.stack);
             // Don't fail the whole transfer if notification creation fails
         }
         
