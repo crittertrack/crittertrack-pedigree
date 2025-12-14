@@ -314,6 +314,29 @@ app.post('/api/users/tutorial-complete', authMiddleware, async (req, res) => {
     }
 });
 
+// Dismiss welcome banner
+app.post('/api/users/dismiss-welcome-banner', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        userProfile.hasSeenWelcomeBanner = true;
+        await userProfile.save();
+
+        res.json({ 
+            success: true, 
+            hasSeenWelcomeBanner: true 
+        });
+    } catch (error) {
+        console.error('Error dismissing welcome banner:', error);
+        res.status(500).json({ message: 'Failed to dismiss welcome banner' });
+    }
+});
+
 app.get('/api/users/tutorial-progress', authMiddleware, async (req, res) => {
     try {
         const { PublicProfile } = require('./database/models');
@@ -326,7 +349,8 @@ app.get('/api/users/tutorial-progress', authMiddleware, async (req, res) => {
         res.json({
             completedTutorials: userProfile.completedTutorials || [],
             hasCompletedOnboarding: userProfile.hasCompletedOnboarding || false,
-            hasCompletedAdvancedFeatures: userProfile.hasCompletedAdvancedFeatures || false
+            hasCompletedAdvancedFeatures: userProfile.hasCompletedAdvancedFeatures || false,
+            hasSeenWelcomeBanner: userProfile.hasSeenWelcomeBanner || false
         });
     } catch (error) {
         console.error('Error fetching tutorial progress:', error);
