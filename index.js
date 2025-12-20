@@ -415,6 +415,10 @@ app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
 const bugReportRoutes = require('./routes/bugReportRoutes');
 app.use('/api/bug-reports', authMiddleware, bugReportRoutes);
 
+// Message Routes (Require authMiddleware)
+const messageRoutes = require('./routes/messageRoutes');
+app.use('/api/messages', authMiddleware, messageRoutes);
+
 // Species Routes (GET is public, POST requires auth except migration)
 const speciesRoutes = require('./routes/speciesRoutes');
 app.use('/api/species', (req, res, next) => {
