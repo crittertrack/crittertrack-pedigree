@@ -255,9 +255,22 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         await PublicProfile.updateOne({ id_public: user.id_public }, { showRemarksPublic: updates.showRemarksPublic });
     }
     if (updates.allowMessages !== undefined) {
-        user.allowMessages = updates.allowMessages;
-        // Store in public profile as well
-        await PublicProfile.updateOne({ id_public: user.id_public }, { allowMessages: updates.allowMessages });
+        const parsedAllowMessages = (value) => {
+            if (value === undefined || value === null) return undefined;
+            if (typeof value === 'string') {
+                const lower = value.toLowerCase();
+                if (lower === 'true') return true;
+                if (lower === 'false') return false;
+            }
+            return Boolean(value);
+        };
+
+        const allowMessagesBool = parsedAllowMessages(updates.allowMessages);
+        if (allowMessagesBool !== undefined) {
+            user.allowMessages = allowMessagesBool;
+            // Store in public profile as well
+            await PublicProfile.updateOne({ id_public: user.id_public }, { allowMessages: allowMessagesBool });
+        }
     }
     if (updates.profileImage !== undefined) {
         user.profileImage = updates.profileImage;
