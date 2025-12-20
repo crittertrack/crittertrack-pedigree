@@ -362,6 +362,10 @@ router.post('/', upload.single('file'), async (req, res) => {
             }
         }
 
+        // Sync to publicanimals collection
+        const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
+        await syncAnimalToPublic(newAnimal);
+
         res.status(201).json({
             message: 'Animal registered successfully!',
             id_public: newAnimal.id_public,
@@ -695,6 +699,10 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                 }
             }
         }
+
+        // Sync to publicanimals collection
+        const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
+        await syncAnimalToPublic(updatedAnimal);
 
         res.status(200).json({
             message: 'Animal updated successfully!',
