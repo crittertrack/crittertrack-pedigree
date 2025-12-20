@@ -32,6 +32,11 @@ router.post('/send', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // Check if sender allows messages (prevent sending if disabled)
+        if (!sender.allowMessages) {
+            return res.status(403).json({ error: 'You have disabled messages. Enable messages to send them.' });
+        }
+
         // Check if receiver allows messages
         if (!receiver.allowMessages) {
             return res.status(403).json({ error: 'This user has disabled messages' });
