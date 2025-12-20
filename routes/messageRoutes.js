@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Message, MessageReport, User } = require('../database/models');
-const { authenticateToken } = require('../utils/authMiddleware');
+const { Message, MessageReport, User, PublicProfile } = require('../database/models');
 
 // Helper function to generate conversation ID (consistent ordering)
 const getConversationId = (userId1, userId2) => {
@@ -10,10 +9,10 @@ const getConversationId = (userId1, userId2) => {
 };
 
 // POST /api/messages/send - Send a message
-router.post('/send', authenticateToken, async (req, res) => {
+router.post('/send', async (req, res) => {
     try {
         const { receiverId, message } = req.body;
-        const senderId = req.user.userId;
+        const senderId = req.user.id;
 
         if (!receiverId || !message) {
             return res.status(400).json({ error: 'receiverId and message are required' });
@@ -65,10 +64,28 @@ router.post('/send', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/messages/conversations - Get list of conversations
-router.get('/conversations', authenticateToken, async (req, res) => {
+// GET /api/messages/resolve/:id_public - Resolve public ID to backend user ID
+router.get('/resolve/:id_public', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const { id_public } = req.params;
+        if (!id_public) {
+            return res.status(400).json({ error: 'id_public is required' });
+        }
+        const profile = await PublicProfile.findOne({ id_public }).select('userId_backend id_public').lean();
+        if (!profile) {
+            return res.status(404).json({ error: 'Public profile not found' });
+        }
+        return res.json({ userId: profile.userId_backend });
+    } catch (error) {
+        console.error('Error resolving public ID:', error);
+        return res.status(500).json({ error: 'Failed to resolve public ID' });
+    }
+});
+
+// GET /api/messages/conversations - Get list of conversations
+router.get('/conversations', async (req, res) => {
+    try {
+        const userId = req.user.id;
 
         // Find all messages where user is sender or receiver (excluding deleted)
         const messages = await Message.find({
@@ -124,9 +141,9 @@ router.get('/conversations', authenticateToken, async (req, res) => {
 });
 
 // GET /api/messages/conversation/:otherUserId - Get messages in a conversation
-router.get('/conversation/:otherUserId', authenticateToken, async (req, res) => {
+router.get('/conversation/:otherUserId', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
         const { otherUserId } = req.params;
 
         if (userId === otherUserId) {
@@ -162,9 +179,9 @@ router.get('/conversation/:otherUserId', authenticateToken, async (req, res) => 
 });
 
 // DELETE /api/messages/:messageId - Delete a message (hide from user's view)
-router.delete('/:messageId', authenticateToken, async (req, res) => {
+router.delete('/:messageId', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
         const { messageId } = req.params;
 
         const message = await Message.findById(messageId);
@@ -191,9 +208,9 @@ router.delete('/:messageId', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/messages/conversation/:otherUserId - Delete entire conversation
-router.delete('/conversation/:otherUserId', authenticateToken, async (req, res) => {
+router.delete('/conversation/:otherUserId', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
         const { otherUserId } = req.params;
 
         const conversationId = getConversationId(userId, otherUserId);
@@ -213,9 +230,9 @@ router.delete('/conversation/:otherUserId', authenticateToken, async (req, res) 
 });
 
 // POST /api/messages/block/:userId - Block a user
-router.post('/block/:userId', authenticateToken, async (req, res) => {
+router.post('/block/:userId', async (req, res) => {
     try {
-        const currentUserId = req.user.userId;
+        const currentUserId = req.user.id;
         const { userId } = req.params;
 
         if (currentUserId === userId) {
@@ -234,9 +251,9 @@ router.post('/block/:userId', authenticateToken, async (req, res) => {
 });
 
 // POST /api/messages/unblock/:userId - Unblock a user
-router.post('/unblock/:userId', authenticateToken, async (req, res) => {
+router.post('/unblock/:userId', async (req, res) => {
     try {
-        const currentUserId = req.user.userId;
+        const currentUserId = req.user.id;
         const { userId } = req.params;
 
         await User.findByIdAndUpdate(currentUserId, {
@@ -251,9 +268,9 @@ router.post('/unblock/:userId', authenticateToken, async (req, res) => {
 });
 
 // GET /api/messages/blocked - Get list of blocked users
-router.get('/blocked', authenticateToken, async (req, res) => {
+router.get('/blocked', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
         
         const user = await User.findById(userId).select('blockedUsers').lean();
         const blockedUserIds = user.blockedUsers || [];
@@ -274,9 +291,9 @@ router.get('/blocked', authenticateToken, async (req, res) => {
 });
 
 // POST /api/messages/report - Report a message
-router.post('/report', authenticateToken, async (req, res) => {
+router.post('/report', async (req, res) => {
     try {
-        const reporterId = req.user.userId;
+        const reporterId = req.user.id;
         const { messageId, reportedUserId, reason } = req.body;
 
         if (!messageId || !reportedUserId || !reason) {
@@ -310,9 +327,9 @@ router.post('/report', authenticateToken, async (req, res) => {
 });
 
 // GET /api/messages/unread-count - Get count of unread messages
-router.get('/unread-count', authenticateToken, async (req, res) => {
+router.get('/unread-count', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id;
 
         const count = await Message.countDocuments({
             receiverId: userId,
