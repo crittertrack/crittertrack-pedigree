@@ -39,6 +39,12 @@ const UserSchema = new mongoose.Schema({
     // Messaging preferences
     allowMessages: { type: Boolean, default: true },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users blocked from messaging
+    // Email notification preferences
+    emailNotificationPreference: { 
+        type: String, 
+        enum: ['none', 'all', 'requestsOnly', 'messagesOnly'],
+        default: 'none' 
+    },
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -60,6 +66,11 @@ const PublicProfileSchema = new mongoose.Schema({
     websiteURL: { type: String, default: null },
     showWebsiteURL: { type: Boolean, default: false },
     allowMessages: { type: Boolean, default: true },
+    emailNotificationPreference: { 
+        type: String, 
+        enum: ['none', 'all', 'requestsOnly', 'messagesOnly'],
+        default: 'none' 
+    },
     completedTutorials: { type: [String], default: [] }, // Array of completed tutorial IDs
     hasCompletedOnboarding: { type: Boolean, default: false }, // Track if user completed initial onboarding
     hasCompletedAdvancedFeatures: { type: Boolean, default: false }, // Track if user completed advanced features

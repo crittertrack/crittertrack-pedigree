@@ -393,4 +393,55 @@ router.post('/enable-allow-messages', async (req, res) => {
     }
 });
 
+// Migration: Set emailNotificationPreference to 'none' for all existing users without this field
+router.post('/set-email-notification-defaults', async (req, res) => {
+    try {
+        console.log('[Migration] Starting emailNotificationPreference migration...');
+
+        // Update all Users where emailNotificationPreference is not set, null, or undefined
+        const userResult = await User.updateMany(
+            { 
+                $or: [
+                    { emailNotificationPreference: null }, 
+                    { emailNotificationPreference: undefined },
+                    { emailNotificationPreference: { $exists: false } }
+                ] 
+            },
+            { emailNotificationPreference: 'none' }
+        );
+        console.log(`[Migration] Updated ${userResult.modifiedCount} User documents`);
+
+        // Update all PublicProfiles where emailNotificationPreference is not set, null, or undefined
+        const profileResult = await PublicProfile.updateMany(
+            { 
+                $or: [
+                    { emailNotificationPreference: null }, 
+                    { emailNotificationPreference: undefined },
+                    { emailNotificationPreference: { $exists: false } }
+                ] 
+            },
+            { emailNotificationPreference: 'none' }
+        );
+        console.log(`[Migration] Updated ${profileResult.modifiedCount} PublicProfile documents`);
+
+        // Verify the updates
+        const userCount = await User.countDocuments({ emailNotificationPreference: { $exists: true } });
+        const profileCount = await PublicProfile.countDocuments({ emailNotificationPreference: { $exists: true } });
+
+        const result = {
+            message: 'Email notification preference migration completed successfully',
+            usersUpdated: userResult.modifiedCount,
+            profilesUpdated: profileResult.modifiedCount,
+            totalUsersWithPreference: userCount,
+            totalProfilesWithPreference: profileCount,
+        };
+
+        console.log('[Migration] Result:', result);
+        res.json(result);
+    } catch (error) {
+        console.error('[Migration] Error:', error);
+        res.status(500).json({ error: 'Migration failed', details: error.message });
+    }
+});
+
 module.exports = router;

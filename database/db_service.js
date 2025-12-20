@@ -79,6 +79,7 @@ const registerUser = async (userData) => {
         breederName: userData.breederName || userData.personalName,
         showBreederName: userData.showBreederName || false,
         allowMessages: true, // Enable messages by default
+        emailNotificationPreference: 'none', // Disable email notifications by default
     });
     await user.save();
 
@@ -99,6 +100,7 @@ const registerUser = async (userData) => {
         websiteURL: user.websiteURL || null,
         showWebsiteURL: user.showWebsiteURL || false,
         allowMessages: true, // Enable messages by default
+        emailNotificationPreference: 'none', // Disable email notifications by default
     });
     await publicProfile.save();
 
@@ -122,6 +124,7 @@ const registerUser = async (userData) => {
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         allowMessages: user.allowMessages,
+        emailNotificationPreference: user.emailNotificationPreference,
     };
     
     return { token, userProfile };
@@ -180,6 +183,7 @@ const getUserProfileById = async (appUserId_backend) => {
         showGeneticCodePublic: user.showGeneticCodePublic,
         showRemarksPublic: user.showRemarksPublic,
         allowMessages: user.allowMessages !== undefined ? user.allowMessages : true,
+        emailNotificationPreference: user.emailNotificationPreference || 'none',
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
@@ -282,6 +286,14 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     }
     if (updates.allowMessages !== undefined) {
         user.allowMessages = updates.allowMessages;
+    }
+    if (updates.emailNotificationPreference !== undefined) {
+        const validOptions = ['none', 'all', 'requestsOnly', 'messagesOnly'];
+        if (validOptions.includes(updates.emailNotificationPreference)) {
+            user.emailNotificationPreference = updates.emailNotificationPreference;
+            // Update public profile as well
+            await PublicProfile.updateOne({ id_public: user.id_public }, { emailNotificationPreference: updates.emailNotificationPreference });
+        }
     }
 
     // Note: Password update would require a separate, secure endpoint that handles current password verification.
