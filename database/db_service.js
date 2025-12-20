@@ -125,6 +125,7 @@ const registerUser = async (userData) => {
         creationDate: user.creationDate,
         allowMessages: user.allowMessages,
         emailNotificationPreference: user.emailNotificationPreference,
+        country: user.country,
     };
     
     return { token, userProfile };
@@ -184,6 +185,7 @@ const getUserProfileById = async (appUserId_backend) => {
         showRemarksPublic: user.showRemarksPublic,
         allowMessages: user.allowMessages !== undefined ? user.allowMessages : true,
         emailNotificationPreference: user.emailNotificationPreference || 'none',
+        country: user.country,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
@@ -294,6 +296,11 @@ const updateUserProfile = async (appUserId_backend, updates) => {
             // Update public profile as well
             await PublicProfile.updateOne({ id_public: user.id_public }, { emailNotificationPreference: updates.emailNotificationPreference });
         }
+    }
+    if (updates.country !== undefined) {
+        user.country = updates.country;
+        // Update public profile as well
+        await PublicProfile.updateOne({ id_public: user.id_public }, { country: updates.country });
     }
 
     // Note: Password update would require a separate, secure endpoint that handles current password verification.
