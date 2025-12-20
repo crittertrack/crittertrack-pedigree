@@ -45,6 +45,8 @@ const UserSchema = new mongoose.Schema({
         enum: ['none', 'all', 'requestsOnly', 'messagesOnly'],
         default: 'none' 
     },
+    // User location
+    country: { type: String, default: null },
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -71,6 +73,7 @@ const PublicProfileSchema = new mongoose.Schema({
         enum: ['none', 'all', 'requestsOnly', 'messagesOnly'],
         default: 'none' 
     },
+    country: { type: String, default: null },
     completedTutorials: { type: [String], default: [] }, // Array of completed tutorial IDs
     hasCompletedOnboarding: { type: Boolean, default: false }, // Track if user completed initial onboarding
     hasCompletedAdvancedFeatures: { type: Boolean, default: false }, // Track if user completed advanced features
