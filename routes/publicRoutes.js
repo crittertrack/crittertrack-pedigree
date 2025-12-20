@@ -270,7 +270,12 @@ router.get('/global/animals', async (req, res) => {
             }
         }
 
-        const limit = Math.min(parseInt(query.limit || '50', 10) || 50, 500);
+        // Filter by status if provided
+        if (query.status) {
+            q.status = query.status;
+        }
+
+        const limit = Math.min(parseInt(query.limit || '500', 10) || 500, 500);
 
         console.log('Global animals search - Query filter:', q, 'Limit:', limit);
         const docs = await Model.find(q).limit(limit).lean();
