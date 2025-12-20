@@ -176,12 +176,11 @@ const getUserProfileById = async (appUserId_backend) => {
         showEmailPublic: user.showEmailPublic,
         showGeneticCodePublic: user.showGeneticCodePublic,
         showRemarksPublic: user.showRemarksPublic,
-        allowMessages: user.allowMessages,
+        allowMessages: user.allowMessages !== undefined ? user.allowMessages : true,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
         ownedLitters: user.ownedLitters, // Array of internal litter IDs
-        allowMessages: user.allowMessages !== undefined ? user.allowMessages : true, // Default to true for backward compatibility
     };
 };
 
