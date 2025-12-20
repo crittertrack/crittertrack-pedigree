@@ -354,4 +354,43 @@ router.post('/fix-animal-viewonly', async (req, res) => {
     }
 });
 
+// Migration: Enable allowMessages for all existing users
+router.post('/enable-allow-messages', async (req, res) => {
+    try {
+        console.log('[Migration] Starting allowMessages migration...');
+
+        // Update all Users where allowMessages is not set, null, or false
+        const userResult = await User.updateMany(
+            { $or: [{ allowMessages: null }, { allowMessages: undefined }, { allowMessages: false }] },
+            { allowMessages: true }
+        );
+        console.log(`[Migration] Updated ${userResult.modifiedCount} User documents`);
+
+        // Update all PublicProfiles where allowMessages is not set, null, or false
+        const profileResult = await PublicProfile.updateMany(
+            { $or: [{ allowMessages: null }, { allowMessages: undefined }, { allowMessages: false }] },
+            { allowMessages: true }
+        );
+        console.log(`[Migration] Updated ${profileResult.modifiedCount} PublicProfile documents`);
+
+        // Verify the updates
+        const userCount = await User.countDocuments({ allowMessages: true });
+        const profileCount = await PublicProfile.countDocuments({ allowMessages: true });
+
+        const result = {
+            message: 'Migration completed successfully',
+            usersUpdated: userResult.modifiedCount,
+            profilesUpdated: profileResult.modifiedCount,
+            totalUsersEnabled: userCount,
+            totalProfilesEnabled: profileCount,
+        };
+
+        console.log('[Migration] Result:', result);
+        res.json(result);
+    } catch (error) {
+        console.error('[Migration] Error:', error);
+        res.status(500).json({ error: 'Migration failed', details: error.message });
+    }
+});
+
 module.exports = router;
