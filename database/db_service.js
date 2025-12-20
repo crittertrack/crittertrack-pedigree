@@ -176,6 +176,7 @@ const getUserProfileById = async (appUserId_backend) => {
         showEmailPublic: user.showEmailPublic,
         showGeneticCodePublic: user.showGeneticCodePublic,
         showRemarksPublic: user.showRemarksPublic,
+        allowMessages: user.allowMessages,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
@@ -253,6 +254,11 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         user.showRemarksPublic = updates.showRemarksPublic;
         // Update public profile showRemarksPublic simultaneously - use id_public to match correct record
         await PublicProfile.updateOne({ id_public: user.id_public }, { showRemarksPublic: updates.showRemarksPublic });
+    }
+    if (updates.allowMessages !== undefined) {
+        user.allowMessages = updates.allowMessages;
+        // Store in public profile as well
+        await PublicProfile.updateOne({ id_public: user.id_public }, { allowMessages: updates.allowMessages });
     }
     if (updates.profileImage !== undefined) {
         user.profileImage = updates.profileImage;
