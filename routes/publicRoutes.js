@@ -275,10 +275,11 @@ router.get('/global/animals', async (req, res) => {
             q.status = query.status;
         }
 
-        const limit = Math.min(parseInt(query.limit || '500', 10) || 500, 500);
+        // Allow unlimited results if no limit specified, otherwise cap at 1000
+        const limit = query.limit ? Math.min(parseInt(query.limit, 10) || 1000, 1000) : 0;
 
-        console.log('Global animals search - Query filter:', q, 'Limit:', limit);
-        const docs = await Model.find(q).limit(limit).lean();
+        console.log('Global animals search - Query filter:', q, 'Limit:', limit === 0 ? 'unlimited' : limit);
+        const docs = limit > 0 ? await Model.find(q).limit(limit).lean() : await Model.find(q).lean();
         console.log('Global animals search - Results count:', docs.length);
         return res.status(200).json(docs);
     } catch (error) {
