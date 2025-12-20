@@ -36,6 +36,9 @@ const UserSchema = new mongoose.Schema({
     // Array of internal Animal and Litter IDs owned by this user for easy lookup
     ownedAnimals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Animal' }], 
     ownedLitters: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Litter' }],
+    // Messaging preferences
+    allowMessages: { type: Boolean, default: true },
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users blocked from messaging
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -342,6 +345,31 @@ const AnimalTransferSchema = new mongoose.Schema({
 const AnimalTransfer = mongoose.model('AnimalTransfer', AnimalTransferSchema);
 
 
+// --- 12. MESSAGE SCHEMA ---
+const MessageSchema = new mongoose.Schema({
+    conversationId: { type: String, required: true, index: true }, // Format: smaller_userId_larger_userId
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    message: { type: String, required: true, maxlength: 5000 },
+    read: { type: Boolean, default: false },
+    deleted: { type: Boolean, default: false },
+    deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who deleted this message from their view
+}, { timestamps: true });
+MessageSchema.index({ conversationId: 1, createdAt: -1 }); // Efficient conversation queries
+const Message = mongoose.model('Message', MessageSchema);
+
+
+// --- 13. MESSAGE REPORT SCHEMA ---
+const MessageReportSchema = new mongoose.Schema({
+    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
+    reason: { type: String, required: true, maxlength: 1000 },
+    status: { type: String, enum: ['pending', 'reviewed', 'resolved'], default: 'pending' },
+}, { timestamps: true });
+const MessageReport = mongoose.model('MessageReport', MessageReportSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -355,5 +383,7 @@ module.exports = {
     Counter,
     Species,
     Transaction,
-    AnimalTransfer
+    AnimalTransfer,
+    Message,
+    MessageReport
 };

@@ -180,6 +180,7 @@ const getUserProfileById = async (appUserId_backend) => {
         creationDate: user.creationDate,
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
         ownedLitters: user.ownedLitters, // Array of internal litter IDs
+        allowMessages: user.allowMessages !== undefined ? user.allowMessages : true, // Default to true for backward compatibility
     };
 };
 
@@ -257,6 +258,9 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         user.profileImage = updates.profileImage;
         // Update public profile image simultaneously - use id_public to match correct record
         await PublicProfile.updateOne({ id_public: user.id_public }, { profileImage: updates.profileImage });
+    }
+    if (updates.allowMessages !== undefined) {
+        user.allowMessages = updates.allowMessages;
     }
 
     // Note: Password update would require a separate, secure endpoint that handles current password verification.
