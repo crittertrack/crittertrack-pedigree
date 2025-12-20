@@ -123,7 +123,7 @@ router.get('/conversations', async (req, res) => {
 
         // Fetch user info for all conversation partners
         const otherUserIds = conversations.map(c => c.otherUserId);
-        const users = await User.find({ _id: { $in: otherUserIds } }).select('id_public personalName breederName profileImage showPersonalName showBreederName').lean();
+        const users = await User.find({ _id: { $in: otherUserIds } }).select('id_public personalName breederName profileImage showPersonalName showBreederName allowMessages').lean();
         
         const userMap = new Map(users.map(u => [u._id.toString(), u]));
 
@@ -166,7 +166,7 @@ router.get('/conversation/:otherUserId', async (req, res) => {
         }, { read: true });
 
         // Get other user info
-        const otherUser = await User.findById(otherUserId).select('id_public personalName breederName profileImage showPersonalName showBreederName').lean();
+        const otherUser = await User.findById(otherUserId).select('id_public personalName breederName profileImage showPersonalName showBreederName allowMessages').lean();
 
         res.json({
             messages,
