@@ -78,6 +78,7 @@ const registerUser = async (userData) => {
         personalName: userData.personalName,
         breederName: userData.breederName || userData.personalName,
         showBreederName: userData.showBreederName || false,
+        allowMessages: true, // Enable messages by default
     });
     await user.save();
 
@@ -97,6 +98,7 @@ const registerUser = async (userData) => {
         showEmailPublic: user.showEmailPublic || false,
         websiteURL: user.websiteURL || null,
         showWebsiteURL: user.showWebsiteURL || false,
+        allowMessages: true, // Enable messages by default
     });
     await publicProfile.save();
 
@@ -119,6 +121,7 @@ const registerUser = async (userData) => {
         showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
+        allowMessages: user.allowMessages,
     };
     
     return { token, userProfile };
