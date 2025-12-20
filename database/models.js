@@ -59,6 +59,7 @@ const PublicProfileSchema = new mongoose.Schema({
     showEmailPublic: { type: Boolean, default: false },
     websiteURL: { type: String, default: null },
     showWebsiteURL: { type: Boolean, default: false },
+    allowMessages: { type: Boolean, default: true },
     completedTutorials: { type: [String], default: [] }, // Array of completed tutorial IDs
     hasCompletedOnboarding: { type: Boolean, default: false }, // Track if user completed initial onboarding
     hasCompletedAdvancedFeatures: { type: Boolean, default: false }, // Track if user completed advanced features
