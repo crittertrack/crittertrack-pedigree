@@ -431,11 +431,13 @@ router.get('/', async (req, res) => {
 // GET /api/animals/any/:id_public
 // Fetch ANY animal by id_public (authenticated users can view any animal's basic info)
 // This is for displaying parents/offspring that user doesn't own
-// Returns: owned animals OR public animals OR animals related to user's animals (as parent/offspring)
+// If viewFromNotification=true, allows access to animals mentioned in breeder/parent notifications
+// Returns: owned animals OR public animals OR animals related to user's animals (as parent/offspring) OR animals from notifications
 router.get('/any/:id_public', async (req, res) => {
     try {
         const id_public = req.params.id_public; // Keep as string (supports CTC format)
         const userId = req.user.id;
+        const viewFromNotification = req.query.viewFromNotification === 'true';
 
         // First check if user owns this animal
         let animal = await Animal.findOne({ id_public, ownerId: userId }).lean();
@@ -457,6 +459,12 @@ router.get('/any/:id_public', async (req, res) => {
         animal = await Animal.findOne({ id_public }).lean();
         
         if (animal) {
+            // If viewing from notification, always allow access to the animal details
+            if (viewFromNotification) {
+                console.log(`[viewFromNotification] Allowing user to view animal ${id_public} from notification`);
+                return res.status(200).json(animal);
+            }
+
             // Check if any of the user's animals are parents of this animal
             const userAnimals = await Animal.find({ ownerId: userId }).select('id_public').lean();
             const userAnimalIds = userAnimals.map(a => a.id_public);
@@ -525,10 +533,26 @@ router.get('/any/:id_public', async (req, res) => {
 
 // GET /api/animals/:id_backend
 // 3. Gets a single animal's private details.
+// If viewFromNotification=true and animal exists, return it regardless of ownership (for notification recipients to view animals mentioned in breeder/parent notifications)
 router.get('/:id_backend', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
+        const viewFromNotification = req.query.viewFromNotification === 'true';
+
+        // If viewing from notification, allow access to any animal's data
+        if (viewFromNotification) {
+            const animal = await Animal.findById(animalId_backend)
+                .populate('ownerId', 'id_public')
+                .lean();
+            
+            if (!animal) {
+                return res.status(404).json({ message: 'Animal not found.' });
+            }
+            
+            console.log(`[viewFromNotification] Allowing user to view animal ${animal.id_public} for notification purposes`);
+            return res.status(200).json(animal);
+        }
 
         // Uses a helper that also checks ownership
         const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
