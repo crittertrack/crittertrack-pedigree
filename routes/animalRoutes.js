@@ -374,11 +374,6 @@ router.post('/', upload.single('file'), async (req, res) => {
                     if (isOriginalOwnerAsDamOwner) {
                         console.log(`[Notification Skip] Dam owner is original owner of transferred animal - skipping notification`);
                     } else {
-                    // Skip notification if animal was transferred and dam owner is the original owner
-                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.ownerId.id_public === originalOwnerPublicId;
-                    if (isOriginalOwnerAsDamOwner) {
-                        console.log(`[Notification Skip] Dam owner is original owner of transferred animal - skipping notification`);
-                    } else {
                         await createLinkageNotification(
                             damOwner.ownerId.id_public,
                             req.user.id,
