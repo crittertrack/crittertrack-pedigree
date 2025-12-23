@@ -300,6 +300,15 @@ router.post('/', upload.single('file'), async (req, res) => {
         // Create notifications for breeder and parent linkages (if targeting other users' data)
         const currentUserPublicId = req.user.id_public;
         
+        // Check if this animal was transferred (has originalOwnerId)
+        const isTransferred = !!newAnimal.originalOwnerId;
+        let originalOwnerPublicId = null;
+        if (isTransferred) {
+            const originalOwner = await User.findById(newAnimal.originalOwnerId).select('id_public');
+            originalOwnerPublicId = originalOwner?.id_public;
+            console.log(`[Notification Check] Animal was transferred, original owner: CT${originalOwnerPublicId}`);
+        }
+        
         // Check if breeder was set and it's not the current user
         if (newAnimal.breederId_public && newAnimal.breederId_public !== currentUserPublicId) {
             console.log(`Checking breeder notification: breederId_public=${newAnimal.breederId_public}, currentUserPublicId=${currentUserPublicId}`);
@@ -307,16 +316,22 @@ router.post('/', upload.single('file'), async (req, res) => {
             const localCheck = await Animal.findOne({ id_public: newAnimal.breederId_public, ownerId: appUserId_backend });
             console.log(`Local check for breeder animal: ${localCheck ? 'found' : 'not found'}`);
             if (!localCheck) {
-                // It's someone else's user ID - create notification
-                console.log(`Creating breeder notification for user CT${newAnimal.breederId_public}`);
-                await createLinkageNotification(
-                    newAnimal.breederId_public,
-                    req.user.id,
-                    currentUserPublicId,
-                    newAnimal.id_public,
-                    newAnimal.name,
-                    'breeder_request'
-                );
+                // Skip notification if animal was transferred and breeder is the original owner
+                const isOriginalOwnerAsBreeder = isTransferred && newAnimal.breederId_public === originalOwnerPublicId;
+                if (isOriginalOwnerAsBreeder) {
+                    console.log(`[Notification Skip] Breeder is original owner of transferred animal - skipping notification`);
+                } else {
+                    // It's someone else's user ID - create notification
+                    console.log(`Creating breeder notification for user CT${newAnimal.breederId_public}`);
+                    await createLinkageNotification(
+                        newAnimal.breederId_public,
+                        req.user.id,
+                        currentUserPublicId,
+                        newAnimal.id_public,
+                        newAnimal.name,
+                        'breeder_request'
+                    );
+                }
             }
         }
         
@@ -327,16 +342,22 @@ router.post('/', upload.single('file'), async (req, res) => {
                 // It's someone else's animal - create notification
                 const sireOwner = await Animal.findOne({ id_public: newAnimal.sireId_public }).populate('ownerId', 'id_public');
                 if (sireOwner && sireOwner.ownerId && sireOwner.ownerId.id_public) {
-                    await createLinkageNotification(
-                        sireOwner.ownerId.id_public,
-                        req.user.id,
-                        currentUserPublicId,
-                        newAnimal.id_public,
-                        newAnimal.name,
-                        'parent_request',
-                        'sire',
-                        newAnimal.sireId_public
-                    );
+                    // Skip notification if animal was transferred and sire owner is the original owner
+                    const isOriginalOwnerAsSireOwner = isTransferred && sireOwner.ownerId.id_public === originalOwnerPublicId;
+                    if (isOriginalOwnerAsSireOwner) {
+                        console.log(`[Notification Skip] Sire owner is original owner of transferred animal - skipping notification`);
+                    } else {
+                        await createLinkageNotification(
+                            sireOwner.ownerId.id_public,
+                            req.user.id,
+                            currentUserPublicId,
+                            newAnimal.id_public,
+                            newAnimal.name,
+                            'parent_request',
+                            'sire',
+                            newAnimal.sireId_public
+                        );
+                    }
                 }
             }
         }
@@ -348,16 +369,27 @@ router.post('/', upload.single('file'), async (req, res) => {
                 // It's someone else's animal - create notification
                 const damOwner = await Animal.findOne({ id_public: newAnimal.damId_public }).populate('ownerId', 'id_public');
                 if (damOwner && damOwner.ownerId && damOwner.ownerId.id_public) {
-                    await createLinkageNotification(
-                        damOwner.ownerId.id_public,
-                        req.user.id,
-                        currentUserPublicId,
-                        newAnimal.id_public,
-                        newAnimal.name,
-                        'parent_request',
-                        'dam',
-                        newAnimal.damId_public
-                    );
+                    // Skip notification if animal was transferred and dam owner is the original owner
+                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.ownerId.id_public === originalOwnerPublicId;
+                    if (isOriginalOwnerAsDamOwner) {
+                        console.log(`[Notification Skip] Dam owner is original owner of transferred animal - skipping notification`);
+                    } else {
+                    // Skip notification if animal was transferred and dam owner is the original owner
+                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.ownerId.id_public === originalOwnerPublicId;
+                    if (isOriginalOwnerAsDamOwner) {
+                        console.log(`[Notification Skip] Dam owner is original owner of transferred animal - skipping notification`);
+                    } else {
+                        await createLinkageNotification(
+                            damOwner.ownerId.id_public,
+                            req.user.id,
+                            currentUserPublicId,
+                            newAnimal.id_public,
+                            newAnimal.name,
+                            'parent_request',
+                            'dam',
+                            newAnimal.damId_public
+                        );
+                    }
                 }
             }
         }
@@ -636,6 +668,15 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const currentUserPublicId = req.user.id_public;
         console.log(`[UPDATE] Current user public ID from req.user: ${currentUserPublicId}`);
         
+        // Check if this animal was transferred (has originalOwnerId)
+        const isTransferred = !!updatedAnimal.originalOwnerId;
+        let originalOwnerPublicId = null;
+        if (isTransferred) {
+            const originalOwner = await User.findById(updatedAnimal.originalOwnerId).select('id_public');
+            originalOwnerPublicId = originalOwner?.id_public;
+            console.log(`[UPDATE][Notification Check] Animal was transferred, original owner: CT${originalOwnerPublicId}`);
+        }
+        
         // Check if breeder was set and it's not the current user
         if (updatedAnimal.breederId_public && updatedAnimal.breederId_public !== currentUserPublicId) {
             console.log(`[UPDATE] Checking breeder notification: breederId_public=${updatedAnimal.breederId_public}, currentUserPublicId=${currentUserPublicId}`);
@@ -643,16 +684,22 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             const localCheck = await Animal.findOne({ id_public: updatedAnimal.breederId_public, ownerId: appUserId_backend });
             console.log(`[UPDATE] Local check for breeder animal: ${localCheck ? 'found' : 'not found'}`);
             if (!localCheck) {
-                // It's someone else's user ID - create notification
-                console.log(`[UPDATE] Creating breeder notification for user CT${updatedAnimal.breederId_public}`);
-                await createLinkageNotification(
-                    updatedAnimal.breederId_public,
-                    req.user.id,
-                    currentUserPublicId,
-                    updatedAnimal.id_public,
-                    updatedAnimal.name,
-                    'breeder_request'
-                );
+                // Skip notification if animal was transferred and breeder is the original owner
+                const isOriginalOwnerAsBreeder = isTransferred && updatedAnimal.breederId_public === originalOwnerPublicId;
+                if (isOriginalOwnerAsBreeder) {
+                    console.log(`[UPDATE][Notification Skip] Breeder is original owner of transferred animal - skipping notification`);
+                } else {
+                    // It's someone else's user ID - create notification
+                    console.log(`[UPDATE] Creating breeder notification for user CT${updatedAnimal.breederId_public}`);
+                    await createLinkageNotification(
+                        updatedAnimal.breederId_public,
+                        req.user.id,
+                        currentUserPublicId,
+                        updatedAnimal.id_public,
+                        updatedAnimal.name,
+                        'breeder_request'
+                    );
+                }
             }
         }
         
@@ -664,16 +711,22 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                 // Find who owns this animal
                 const sireOwner = await Animal.findOne({ id_public: updatedAnimal.sireId_public }).populate('ownerId', 'id_public');
                 if (sireOwner && sireOwner.ownerId && sireOwner.ownerId.id_public) {
-                    await createLinkageNotification(
-                        sireOwner.ownerId.id_public,
-                        req.user.id,
-                        currentUserPublicId,
-                        updatedAnimal.id_public,
-                        updatedAnimal.name,
-                        'parent_request',
-                        'sire',
-                        updatedAnimal.sireId_public
-                    );
+                    // Skip notification if animal was transferred and sire owner is the original owner
+                    const isOriginalOwnerAsSireOwner = isTransferred && sireOwner.ownerId.id_public === originalOwnerPublicId;
+                    if (isOriginalOwnerAsSireOwner) {
+                        console.log(`[UPDATE][Notification Skip] Sire owner is original owner of transferred animal - skipping notification`);
+                    } else {
+                        await createLinkageNotification(
+                            sireOwner.ownerId.id_public,
+                            req.user.id,
+                            currentUserPublicId,
+                            updatedAnimal.id_public,
+                            updatedAnimal.name,
+                            'parent_request',
+                            'sire',
+                            updatedAnimal.sireId_public
+                        );
+                    }
                 }
             }
         }
@@ -686,16 +739,22 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                 // Find who owns this animal
                 const damOwner = await Animal.findOne({ id_public: updatedAnimal.damId_public }).populate('ownerId', 'id_public');
                 if (damOwner && damOwner.ownerId && damOwner.ownerId.id_public) {
-                    await createLinkageNotification(
-                        damOwner.ownerId.id_public,
-                        req.user.id,
-                        currentUserPublicId,
-                        updatedAnimal.id_public,
-                        updatedAnimal.name,
-                        'parent_request',
-                        'dam',
-                        updatedAnimal.damId_public
-                    );
+                    // Skip notification if animal was transferred and dam owner is the original owner
+                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.ownerId.id_public === originalOwnerPublicId;
+                    if (isOriginalOwnerAsDamOwner) {
+                        console.log(`[UPDATE][Notification Skip] Dam owner is original owner of transferred animal - skipping notification`);
+                    } else {
+                        await createLinkageNotification(
+                            damOwner.ownerId.id_public,
+                            req.user.id,
+                            currentUserPublicId,
+                            updatedAnimal.id_public,
+                            updatedAnimal.name,
+                            'parent_request',
+                            'dam',
+                            updatedAnimal.damId_public
+                        );
+                    }
                 }
             }
         }
