@@ -138,6 +138,11 @@ const AnimalSchema = new mongoose.Schema({
     
     // Tab 2: Status & Privacy Fields
     currentOwner: { type: String, default: null },
+    ownershipHistory: [{
+        name: { type: String },
+        startDate: { type: String },
+        endDate: { type: String, default: null }
+    }],
     
     // Tab 3: Physical Profile Fields
     coatPattern: { type: String, default: null },
