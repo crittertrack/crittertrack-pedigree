@@ -136,6 +136,80 @@ const AnimalSchema = new mongoose.Schema({
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
     
+    // Tab 2: Status & Privacy Fields
+    currentOwner: { type: String, default: null },
+    
+    // Tab 3: Physical Profile Fields
+    coatPattern: { type: String, default: null },
+    lifeStage: { type: String, default: null },
+    
+    // Tab 4: Identification Fields
+    microchipNumber: { type: String, default: null },
+    pedigreeRegistrationId: { type: String, default: null },
+    breed: { type: String, default: null },
+    strain: { type: String, default: null },
+    
+    // Tab 5: Lineage & Origin Fields
+    origin: { type: String, default: 'Captive-bred' },
+    
+    // Tab 6: Reproduction & Breeding Fields
+    isNeutered: { type: Boolean, default: false },
+    heatStatus: { type: String, default: null },
+    lastHeatDate: { type: Date, default: null },
+    ovulationDate: { type: Date, default: null },
+    matingDates: { type: String, default: null },
+    expectedDueDate: { type: Date, default: null },
+    litterCount: { type: String, default: null },
+    nursingStartDate: { type: Date, default: null },
+    weaningDate: { type: Date, default: null },
+    
+    // Tab 7: Health & Veterinary Fields
+    vaccinations: { type: String, default: null },
+    dewormingRecords: { type: String, default: null },
+    parasiteControl: { type: String, default: null },
+    medicalConditions: { type: String, default: null },
+    allergies: { type: String, default: null },
+    medications: { type: String, default: null },
+    medicalProcedures: { type: String, default: null },
+    labResults: { type: String, default: null },
+    vetVisits: { type: String, default: null },
+    primaryVet: { type: String, default: null },
+    
+    // Tab 8: Nutrition & Husbandry Fields
+    dietType: { type: String, default: null },
+    feedingSchedule: { type: String, default: null },
+    supplements: { type: String, default: null },
+    housingType: { type: String, default: null },
+    bedding: { type: String, default: null },
+    temperatureRange: { type: String, default: null },
+    enrichment: { type: String, default: null },
+    
+    // Tab 9: Behavior & Welfare Fields
+    temperament: { type: String, default: null },
+    handlingTolerance: { type: String, default: null },
+    socialStructure: { type: String, default: null },
+    activityCycle: { type: String, default: null },
+    
+    // Tab 11: End of Life & Legal Fields
+    causeOfDeath: { type: String, default: null },
+    necropsyResults: { type: String, default: null },
+    insurance: { type: String, default: null },
+    legalStatus: { type: String, default: null },
+    
+    // Growth tracking
+    growthRecords: [{ 
+        id: { type: String },
+        date: { type: String },
+        weight: { type: String },
+        length: { type: String },
+        bcs: { type: String },
+        notes: { type: String }
+    }],
+    measurementUnits: {
+        weight: { type: String, default: 'g' },
+        length: { type: String, default: 'cm' }
+    },
+    
     // Inbreeding coefficient (cached value)
     inbreedingCoefficient: { type: Number, default: null },
     
