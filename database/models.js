@@ -187,6 +187,9 @@ const AnimalSchema = new mongoose.Schema({
     housingType: { type: String, default: null },
     bedding: { type: String, default: null },
     temperatureRange: { type: String, default: null },
+    humidity: { type: String, default: null },
+    lighting: { type: String, default: null },
+    noise: { type: String, default: null },
     enrichment: { type: String, default: null },
     
     // Tab 9: Behavior & Welfare Fields
