@@ -269,7 +269,9 @@ const PublicAnimalSchema = new mongoose.Schema({
     status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
+    coatPattern: { type: String, default: null },
     earset: { type: String, default: null },
+    lifeStage: { type: String, default: null },
     
     // Breeder info (public)
     breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder
@@ -294,6 +296,69 @@ const PublicAnimalSchema = new mongoose.Schema({
     // SENSITIVE/OPTIONAL DATA (Copied if toggled on)
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
+    
+    // Identification fields
+    microchipNumber: { type: String, default: null },
+    pedigreeRegistrationId: { type: String, default: null },
+    breed: { type: String, default: null },
+    strain: { type: String, default: null },
+    
+    // Origin field
+    origin: { type: String, default: null },
+    
+    // Reproduction fields
+    isNeutered: { type: Boolean, default: false },
+    heatStatus: { type: String, default: null },
+    lastHeatDate: { type: Date, default: null },
+    ovulationDate: { type: Date, default: null },
+    matingDates: { type: Date, default: null },
+    expectedDueDate: { type: Date, default: null },
+    litterCount: { type: Number, default: null },
+    nursingStartDate: { type: Date, default: null },
+    weaningDate: { type: Date, default: null },
+    
+    // Growth and measurement data
+    growthRecords: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    measurementUnits: { 
+        weight: { type: String, default: 'g' },
+        length: { type: String, default: 'cm' }
+    },
+    
+    // Nutrition/Husbandry/Environment fields
+    dietType: { type: String, default: null },
+    feedingSchedule: { type: String, default: null },
+    supplements: { type: String, default: null },
+    housingType: { type: String, default: null },
+    bedding: { type: String, default: null },
+    enrichment: { type: String, default: null },
+    temperatureRange: { type: String, default: null },
+    humidity: { type: String, default: null },
+    lighting: { type: String, default: null },
+    noise: { type: String, default: null },
+    
+    // Health Records (stored as JSON strings)
+    vaccinations: { type: String, default: null },
+    dewormingRecords: { type: String, default: null },
+    parasiteControl: { type: String, default: null },
+    medicalConditions: { type: String, default: null },
+    allergies: { type: String, default: null },
+    medications: { type: String, default: null },
+    medicalProcedures: { type: String, default: null },
+    labResults: { type: String, default: null },
+    vetVisits: { type: String, default: null },
+    primaryVet: { type: String, default: null },
+    
+    // Behavior fields
+    temperament: { type: String, default: null },
+    handlingTolerance: { type: String, default: null },
+    socialStructure: { type: String, default: null },
+    activityCycle: { type: String, default: null },
+    
+    // End of Life fields
+    causeOfDeath: { type: String, default: null },
+    necropsyResults: { type: String, default: null },
+    insurance: { type: String, default: null },
+    legalStatus: { type: String, default: null },
     
     // Public display settings
     isDisplay: { type: Boolean, default: false }, // Main public visibility toggle
