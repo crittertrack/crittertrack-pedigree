@@ -676,6 +676,17 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Sync section privacy and display settings to public record
             isDisplay: updatedAnimal.isDisplay || false,
             sectionPrivacy: updatedAnimal.sectionPrivacy || {},
+            // Include Nutrition/Husbandry/Environment fields
+            dietType: updatedAnimal.dietType || null,
+            feedingSchedule: updatedAnimal.feedingSchedule || null,
+            supplements: updatedAnimal.supplements || null,
+            housingType: updatedAnimal.housingType || null,
+            bedding: updatedAnimal.bedding || null,
+            enrichment: updatedAnimal.enrichment || null,
+            temperatureRange: updatedAnimal.temperatureRange || null,
+            humidity: updatedAnimal.humidity || null,
+            lighting: updatedAnimal.lighting || null,
+            noise: updatedAnimal.noise || null,
         };
 
         // Use upsert to create if doesn't exist, update if it does
