@@ -577,6 +577,13 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
         console.log('[PUT /api/animals/:id] Request received for animal:', animalId_backend);
+        console.log('[PUT /api/animals/:id] Health records in request:', {
+            vaccinations: updates.vaccinations,
+            dewormingRecords: updates.dewormingRecords,
+            parasiteControl: updates.parasiteControl,
+            medicalProcedures: updates.medicalProcedures,
+            labResults: updates.labResults
+        });
         console.log('[PUT /api/animals/:id] Updates:', JSON.stringify({ 
             breederId_public: updates.breederId_public,
             breederyId: updates.breederyId, 

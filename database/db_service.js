@@ -626,6 +626,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         breederyId: updates.breederyId, 
         geneticCode: updates.geneticCode, 
         remarks: updates.remarks,
+        vaccinations: updates.vaccinations ? updates.vaccinations.substring(0, 50) : 'null',
+        dewormingRecords: updates.dewormingRecords ? updates.dewormingRecords.substring(0, 50) : 'null',
+        parasiteControl: updates.parasiteControl ? updates.parasiteControl.substring(0, 50) : 'null',
         sectionPrivacy: updates.sectionPrivacy,
         isDisplay: updates.isDisplay
     }));
@@ -638,6 +641,13 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     if (!updatedAnimal) {
         throw new Error('Animal not found or user does not own this animal.');
     }
+    
+    // Debug log the saved record
+    console.log('[updateAnimal] Animal saved with health records:', {
+        vaccinations: updatedAnimal.vaccinations ? updatedAnimal.vaccinations.substring(0, 50) : 'null',
+        dewormingRecords: updatedAnimal.dewormingRecords ? updatedAnimal.dewormingRecords.substring(0, 50) : 'null',
+        parasiteControl: updatedAnimal.parasiteControl ? updatedAnimal.parasiteControl.substring(0, 50) : 'null'
+    });
 
     // If the animal is public, update or create the corresponding PublicAnimal record
     if (updatedAnimal.showOnPublicProfile || updatedAnimal.isDisplay) {
