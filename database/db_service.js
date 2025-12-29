@@ -622,7 +622,13 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
 
     // Use findOneAndUpdate to ensure ownership and get the updated document
-    console.log('[updateAnimal] Updating with:', JSON.stringify({ breederyId: updates.breederyId, geneticCode: updates.geneticCode, remarks: updates.remarks }));
+    console.log('[updateAnimal] Updating with:', JSON.stringify({ 
+        breederyId: updates.breederyId, 
+        geneticCode: updates.geneticCode, 
+        remarks: updates.remarks,
+        sectionPrivacy: updates.sectionPrivacy,
+        isDisplay: updates.isDisplay
+    }));
     const updatedAnimal = await Animal.findOneAndUpdate(
         { _id: animalId_backend, ownerId: appUserId_backend },
         { $set: updates },
@@ -634,7 +640,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
 
     // If the animal is public, update or create the corresponding PublicAnimal record
-    if (updatedAnimal.showOnPublicProfile) {
+    if (updatedAnimal.showOnPublicProfile || updatedAnimal.isDisplay) {
         // Fetch owner's privacy settings
         const owner = await User.findById(appUserId_backend);
         const showGeneticCodePublic = owner?.showGeneticCodePublic ?? false;
@@ -667,6 +673,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Include remarks/genetic code based on owner's privacy settings
             remarks: showRemarksPublic ? (updatedAnimal.remarks || '') : '',
             geneticCode: showGeneticCodePublic ? (updatedAnimal.geneticCode || null) : null,
+            // Sync section privacy and display settings to public record
+            isDisplay: updatedAnimal.isDisplay || false,
+            sectionPrivacy: updatedAnimal.sectionPrivacy || {},
         };
 
         // Use upsert to create if doesn't exist, update if it does
@@ -734,6 +743,9 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             // Store toggle settings on the public record for update purposes
             includeRemarks: toggleData.includeRemarks,
             includeGeneticCode: toggleData.includeGeneticCode,
+            // Sync section privacy and display settings
+            isDisplay: animal.isDisplay || false,
+            sectionPrivacy: animal.sectionPrivacy || {},
         };
 
         // Use upsert to create or replace the record
