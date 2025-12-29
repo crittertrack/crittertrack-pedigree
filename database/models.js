@@ -220,8 +220,30 @@ const AnimalSchema = new mongoose.Schema({
     
     // Public visibility toggles
     showOnPublicProfile: { type: Boolean, default: false, index: true },
+    isDisplay: { type: Boolean, default: false }, // Main toggle for public profile visibility
     includeRemarks: { type: Boolean, default: false }, // If public, include remarks
     includeGeneticCode: { type: Boolean, default: false }, // If public, include genetic code
+    
+    // Section-level privacy settings (true = public, false = private)
+    sectionPrivacy: {
+        appearance: { type: Boolean, default: true },
+        identification: { type: Boolean, default: true },
+        health: { type: Boolean, default: true },
+        reproductive: { type: Boolean, default: true },
+        genetics: { type: Boolean, default: true },
+        husbandry: { type: Boolean, default: true },
+        behavior: { type: Boolean, default: true },
+        records: { type: Boolean, default: true },
+        endOfLife: { type: Boolean, default: true },
+        remarks: { type: Boolean, default: true },
+        owner: { type: Boolean, default: true },
+        lifeStage: { type: Boolean, default: true },
+        measurements: { type: Boolean, default: true },
+        origin: { type: Boolean, default: true },
+        medicalHistory: { type: Boolean, default: true },
+        environment: { type: Boolean, default: true },
+        activity: { type: Boolean, default: true }
+    },
 
 }, { timestamps: true });
 const Animal = mongoose.model('Animal', AnimalSchema);
@@ -269,6 +291,28 @@ const PublicAnimalSchema = new mongoose.Schema({
     // SENSITIVE/OPTIONAL DATA (Copied if toggled on)
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
+    
+    // Public display settings
+    isDisplay: { type: Boolean, default: false }, // Main public visibility toggle
+    sectionPrivacy: {
+        appearance: { type: Boolean, default: true },
+        identification: { type: Boolean, default: true },
+        health: { type: Boolean, default: true },
+        reproductive: { type: Boolean, default: true },
+        genetics: { type: Boolean, default: true },
+        husbandry: { type: Boolean, default: true },
+        behavior: { type: Boolean, default: true },
+        records: { type: Boolean, default: true },
+        endOfLife: { type: Boolean, default: true },
+        remarks: { type: Boolean, default: true },
+        owner: { type: Boolean, default: true },
+        lifeStage: { type: Boolean, default: true },
+        measurements: { type: Boolean, default: true },
+        origin: { type: Boolean, default: true },
+        medicalHistory: { type: Boolean, default: true },
+        environment: { type: Boolean, default: true },
+        activity: { type: Boolean, default: true }
+    },
     
     // Inbreeding coefficient (cached value)
     inbreedingCoefficient: { type: Number, default: null },
