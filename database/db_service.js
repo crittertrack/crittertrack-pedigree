@@ -658,7 +658,10 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             birthDate: updatedAnimal.birthDate,
             color: updatedAnimal.color,
             coat: updatedAnimal.coat,
+            coatPattern: updatedAnimal.coatPattern || null,
+            earset: updatedAnimal.earset || null,
             status: updatedAnimal.status || null,
+            lifeStage: updatedAnimal.lifeStage || null,
             breederId_public: updatedAnimal.breederId_public || null,
             // Ensure public record includes image URLs if present
             imageUrl: updatedAnimal.imageUrl || null,
@@ -676,6 +679,23 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Sync section privacy and display settings to public record
             isDisplay: updatedAnimal.isDisplay || false,
             sectionPrivacy: updatedAnimal.sectionPrivacy || {},
+            // Include Identification fields
+            microchipNumber: updatedAnimal.microchipNumber || null,
+            pedigreeRegistrationId: updatedAnimal.pedigreeRegistrationId || null,
+            breed: updatedAnimal.breed || null,
+            strain: updatedAnimal.strain || null,
+            // Include Origin field
+            origin: updatedAnimal.origin || null,
+            // Include Reproduction fields
+            isNeutered: updatedAnimal.isNeutered || false,
+            heatStatus: updatedAnimal.heatStatus || null,
+            lastHeatDate: updatedAnimal.lastHeatDate || null,
+            ovulationDate: updatedAnimal.ovulationDate || null,
+            matingDates: updatedAnimal.matingDates || null,
+            expectedDueDate: updatedAnimal.expectedDueDate || null,
+            litterCount: updatedAnimal.litterCount || null,
+            nursingStartDate: updatedAnimal.nursingStartDate || null,
+            weaningDate: updatedAnimal.weaningDate || null,
             // Include Nutrition/Husbandry/Environment fields
             dietType: updatedAnimal.dietType || null,
             feedingSchedule: updatedAnimal.feedingSchedule || null,
@@ -691,8 +711,26 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             vaccinations: updatedAnimal.vaccinations || null,
             dewormingRecords: updatedAnimal.dewormingRecords || null,
             parasiteControl: updatedAnimal.parasiteControl || null,
+            medicalConditions: updatedAnimal.medicalConditions || null,
+            allergies: updatedAnimal.allergies || null,
+            medications: updatedAnimal.medications || null,
             medicalProcedures: updatedAnimal.medicalProcedures || null,
             labResults: updatedAnimal.labResults || null,
+            vetVisits: updatedAnimal.vetVisits || null,
+            primaryVet: updatedAnimal.primaryVet || null,
+            // Include Behavior fields
+            temperament: updatedAnimal.temperament || null,
+            handlingTolerance: updatedAnimal.handlingTolerance || null,
+            socialStructure: updatedAnimal.socialStructure || null,
+            activityCycle: updatedAnimal.activityCycle || null,
+            // Include End of Life fields
+            causeOfDeath: updatedAnimal.causeOfDeath || null,
+            necropsyResults: updatedAnimal.necropsyResults || null,
+            insurance: updatedAnimal.insurance || null,
+            legalStatus: updatedAnimal.legalStatus || null,
+            // Include Growth and measurement data
+            growthRecords: updatedAnimal.growthRecords || null,
+            measurementUnits: updatedAnimal.measurementUnits || null,
         };
 
         // Use upsert to create if doesn't exist, update if it does
