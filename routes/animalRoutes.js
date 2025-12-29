@@ -557,6 +557,15 @@ router.get('/:id_backend', async (req, res) => {
         // Uses a helper that also checks ownership
         const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
 
+        // Debug: Log health records being returned
+        console.log(`[GET /api/animals/:id] Returning animal ${animal.id_public} with health records:`, {
+            vaccinations: animal.vaccinations ? `${animal.vaccinations.length} bytes` : 'null',
+            dewormingRecords: animal.dewormingRecords ? `${animal.dewormingRecords.length} bytes` : 'null',
+            parasiteControl: animal.parasiteControl ? `${animal.parasiteControl.length} bytes` : 'null',
+            medicalProcedures: animal.medicalProcedures ? `${animal.medicalProcedures.length} bytes` : 'null',
+            labResults: animal.labResults ? `${animal.labResults.length} bytes` : 'null'
+        });
+
         res.status(200).json(animal);
     } catch (error) {
         console.error('Error fetching single animal:', error);

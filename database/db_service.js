@@ -643,10 +643,13 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
     
     // Debug log the saved record
-    console.log('[updateAnimal] Animal saved with health records:', {
-        vaccinations: updatedAnimal.vaccinations ? updatedAnimal.vaccinations.substring(0, 50) : 'null',
-        dewormingRecords: updatedAnimal.dewormingRecords ? updatedAnimal.dewormingRecords.substring(0, 50) : 'null',
-        parasiteControl: updatedAnimal.parasiteControl ? updatedAnimal.parasiteControl.substring(0, 50) : 'null'
+    console.log('[updateAnimal] ✅ Health records SAVED to database:', {
+        vaccinationsLength: updatedAnimal.vaccinations ? updatedAnimal.vaccinations.length : 0,
+        dewormingRecordsLength: updatedAnimal.dewormingRecords ? updatedAnimal.dewormingRecords.length : 0,
+        parasiteControlLength: updatedAnimal.parasiteControl ? updatedAnimal.parasiteControl.length : 0,
+        hasVaccinations: !!updatedAnimal.vaccinations,
+        hasDewormingRecords: !!updatedAnimal.dewormingRecords,
+        hasParasiteControl: !!updatedAnimal.parasiteControl
     });
 
     // If the animal is public, update or create the corresponding PublicAnimal record
