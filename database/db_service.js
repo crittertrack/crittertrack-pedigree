@@ -687,6 +687,12 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             humidity: updatedAnimal.humidity || null,
             lighting: updatedAnimal.lighting || null,
             noise: updatedAnimal.noise || null,
+            // Include Preventive Care health records
+            vaccinations: updatedAnimal.vaccinations || null,
+            dewormingRecords: updatedAnimal.dewormingRecords || null,
+            parasiteControl: updatedAnimal.parasiteControl || null,
+            medicalProcedures: updatedAnimal.medicalProcedures || null,
+            labResults: updatedAnimal.labResults || null,
         };
 
         // Use upsert to create if doesn't exist, update if it does
