@@ -99,7 +99,7 @@ const AnimalSchema = new mongoose.Schema({
     prefix: { type: String, default: null },
     suffix: { type: String, default: null },
     name: { type: String, required: true },
-    gender: { type: String, enum: ['Male', 'Female', 'Unknown'], default: 'Unknown' },
+    gender: { type: String, enum: ['Male', 'Female', 'Intersex', 'Unknown'], default: 'Unknown' },
     birthDate: { type: Date, default: Date.now },
     deceasedDate: { type: Date, default: null },
     breederyId: { type: String, default: null },
