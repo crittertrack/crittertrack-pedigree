@@ -12,9 +12,10 @@ const fromEmail = 'CritterTrack <noreply@crittertrack.net>';
 
 // Verify email configuration
 if (!process.env.RESEND_API_KEY) {
-    console.error('RESEND_API_KEY not configured - 2FA emails will fail');
+    console.error('❌ RESEND_API_KEY not configured - 2FA emails will fail');
 } else {
     console.log('✓ Resend email service ready for 2FA');
+    console.log('✓ Using email from:', fromEmail);
 }
 
 // Helper: Get client IP address from request
@@ -112,6 +113,10 @@ async function send2FAEmail(email, code, username) {
     try {
         console.log('Sending 2FA verification code to:', email);
         
+        if (!process.env.RESEND_API_KEY) {
+            throw new Error('RESEND_API_KEY is not configured');
+        }
+
         const result = await resend.emails.send({
             from: fromEmail,
             to: email,
@@ -136,10 +141,15 @@ async function send2FAEmail(email, code, username) {
             `
         });
         
-        console.log('✓ 2FA verification code email sent to:', email);
+        console.log('✓ 2FA verification code email sent successfully to:', email, 'Result:', result);
         return result;
     } catch (error) {
-        console.error('Error sending 2FA email via Resend:', error);
+        console.error('❌ Error sending 2FA email via Resend:', error);
+        console.error('Error details:', {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+        });
         throw error;
     }
 }
