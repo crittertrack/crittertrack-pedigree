@@ -675,6 +675,7 @@ router.get('/suspicious-logins', async (req, res) => {
 /**
  * POST /api/admin/users/:userId/set-role
  * Assign admin/moderator/user role to a user (admin-only)
+ * If promoting to moderator/admin, generates and emails a secure password
  */
 router.post('/users/:userId/set-role', async (req, res) => {
     try {
@@ -703,25 +704,88 @@ router.post('/users/:userId/set-role', async (req, res) => {
             });
         }
 
-        // Update user role
-        const user = await User.findByIdAndUpdate(
-            userId,
-            { role: role },
-            { new: true, runValidators: true }
-        ).select('email personalName role');
-
+        // Fetch user
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({
                 error: 'User not found'
             });
         }
 
+        const previousRole = user.role;
+
+        // Generate secure admin password if promoting to moderator/admin
+        let adminPassword = null;
+        let generatedPassword = null;
+        if (['moderator', 'admin'].includes(role)) {
+            // Generate a secure random password: 12 characters with mixed case, numbers, symbols
+            generatedPassword = crypto.randomBytes(12).toString('base64').replace(/[/+=]/g, '').slice(0, 12);
+            
+            // Hash the password with bcryptjs
+            const bcrypt = require('bcryptjs');
+            adminPassword = await bcrypt.hash(generatedPassword, 10);
+            user.adminPassword = adminPassword;
+        } else {
+            // If demoting away from moderator/admin, clear the password
+            user.adminPassword = null;
+        }
+
+        // Update role
+        user.role = role;
+        await user.save();
+
+        // If promoted to moderator/admin, send them the password via email
+        if (['moderator', 'admin'].includes(role) && generatedPassword) {
+            try {
+                await resend.emails.send({
+                    from: fromEmail,
+                    to: user.email,
+                    subject: `Your CritterTrack ${role.charAt(0).toUpperCase() + role.slice(1)} Access Credentials`,
+                    html: `
+                        <h2>Welcome to the CritterTrack Admin Panel</h2>
+                        <p>Hi ${user.personalName || 'there'},</p>
+                        <p>You have been promoted to <strong>${role}</strong> on CritterTrack.</p>
+                        
+                        <h3>Your Admin Panel Access</h3>
+                        <p>To access the admin panel, use the following credentials:</p>
+                        <ul>
+                            <li><strong>Email:</strong> ${user.email}</li>
+                            <li><strong>Admin Password:</strong> <code style="background: #f0f0f0; padding: 5px;">${generatedPassword}</code></li>
+                        </ul>
+                        
+                        <p><strong>⚠️ Important:</strong></p>
+                        <ul>
+                            <li>Save this password in a secure location</li>
+                            <li>This password is specific to admin panel access (different from your login password)</li>
+                            <li>Only admins can regenerate this password if lost</li>
+                            <li>Do not share this password with anyone</li>
+                        </ul>
+                        
+                        <h3>How to Access</h3>
+                        <ol>
+                            <li>Log in to CritterTrack with your normal email and password</li>
+                            <li>Click "Admin Panel" button</li>
+                            <li>Enter the admin password above</li>
+                            <li>Complete the 2FA verification</li>
+                            <li>You'll have full admin access</li>
+                        </ol>
+                        
+                        <p>Questions? Contact support@crittertrack.net</p>
+                    `
+                });
+                console.log(`✓ Admin credentials emailed to ${user.email}`);
+            } catch (emailError) {
+                console.error('Failed to send admin credentials email:', emailError);
+                // Don't fail the whole operation, but log it
+            }
+        }
+
         // Log role change
-        console.log(`✓ Role changed for user ${user.email}: ${role}`);
+        console.log(`✓ Role changed for user ${user.email}: ${previousRole} → ${role}`);
 
         res.status(200).json({
             success: true,
-            message: `User role updated to ${role}`,
+            message: `User role updated to ${role}${generatedPassword ? ' - admin credentials sent to their email' : ''}`,
             user: {
                 id: user._id,
                 email: user.email,
@@ -776,6 +840,169 @@ router.get('/users/with-roles', async (req, res) => {
         console.error('Error fetching users with roles:', error);
         res.status(500).json({
             error: 'Failed to fetch users',
+            details: error.message
+        });
+    }
+});
+
+// ========================================
+// ADMIN PASSWORD MANAGEMENT
+// ========================================
+
+/**
+ * POST /api/admin/verify-password
+ * Verify the admin password
+ * Body: { password: "string" }
+ */
+router.post('/verify-password', async (req, res) => {
+    try {
+        const { password } = req.body;
+        const userId = req.user?.id;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password required' });
+        }
+
+        // Fetch user with adminPassword field
+        const user = await User.findById(userId).select('+adminPassword');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Check if user is admin or moderator
+        if (!['admin', 'moderator'].includes(user.role)) {
+            return res.status(403).json({ 
+                error: 'Only admins and moderators can access this' 
+            });
+        }
+
+        // Check if admin password is set
+        if (!user.adminPassword) {
+            return res.status(403).json({ 
+                error: 'Admin password not set. Please contact an admin.',
+                needsSetup: true
+            });
+        }
+
+        // Verify password
+        const bcrypt = require('bcryptjs');
+        const passwordMatch = await bcrypt.compare(password, user.adminPassword);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ error: 'Incorrect admin password' });
+        }
+
+        // Password is correct - return success
+        res.json({ 
+            success: true,
+            message: 'Admin password verified' 
+        });
+
+    } catch (error) {
+        console.error('Error verifying admin password:', error);
+        res.status(500).json({
+            error: 'Failed to verify password',
+            details: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/admin/regenerate-admin-password/:userId
+ * Regenerate admin password for a user (admin-only)
+ * Generates new password and emails it to the user
+ */
+router.post('/regenerate-admin-password/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const requestingUserId = req.user?.id;
+
+        // Verify requesting user is admin
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({
+                error: 'Admin access required'
+            });
+        }
+
+        // Fetch user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                error: 'User not found'
+            });
+        }
+
+        // Can only regenerate for admins/moderators
+        if (!['admin', 'moderator'].includes(user.role)) {
+            return res.status(400).json({
+                error: 'Can only regenerate passwords for admins and moderators'
+            });
+        }
+
+        // Generate new secure password
+        const generatedPassword = crypto.randomBytes(12).toString('base64').replace(/[/+=]/g, '').slice(0, 12);
+        
+        // Hash it
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+        
+        // Save it
+        user.adminPassword = hashedPassword;
+        await user.save();
+
+        // Send email with new password
+        try {
+            await resend.emails.send({
+                from: fromEmail,
+                to: user.email,
+                subject: `Your CritterTrack Admin Panel Password Has Been Regenerated`,
+                html: `
+                    <h2>Admin Panel Password Regenerated</h2>
+                    <p>Hi ${user.personalName || 'there'},</p>
+                    <p>Your admin panel password has been regenerated by an administrator.</p>
+                    
+                    <h3>Your New Admin Panel Password</h3>
+                    <p>Use this password to access the admin panel:</p>
+                    <div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <code style="font-size: 16px; font-weight: bold;">${generatedPassword}</code>
+                    </div>
+                    
+                    <p><strong>⚠️ Important:</strong></p>
+                    <ul>
+                        <li>Save this password in a secure location</li>
+                        <li>Do not share this password with anyone</li>
+                        <li>This replaces your previous admin panel password</li>
+                    </ul>
+                    
+                    <h3>How to Access</h3>
+                    <ol>
+                        <li>Log in to CritterTrack with your normal email and password</li>
+                        <li>Click "Admin Panel" button</li>
+                        <li>Enter the new admin password above</li>
+                        <li>Complete the 2FA verification</li>
+                    </ol>
+                    
+                    <p>Questions? Contact support@crittertrack.net</p>
+                `
+            });
+            console.log(`✓ New admin credentials emailed to ${user.email}`);
+        } catch (emailError) {
+            console.error('Failed to send password regeneration email:', emailError);
+        }
+
+        res.json({
+            success: true,
+            message: `Admin password regenerated and sent to ${user.email}`
+        });
+
+    } catch (error) {
+        console.error('Error regenerating admin password:', error);
+        res.status(500).json({
+            error: 'Failed to regenerate password',
             details: error.message
         });
     }

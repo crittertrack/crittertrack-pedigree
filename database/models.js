@@ -54,6 +54,7 @@ const UserSchema = new mongoose.Schema({
         default: 'user', 
         index: true 
     },
+    adminPassword: { type: String, default: null, select: false }, // Hashed admin-only password
     last_login: { type: Date, default: null },
     last_login_ip: { type: String, default: null },
     two_factor_enabled: { type: Boolean, default: true },
