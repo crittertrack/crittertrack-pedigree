@@ -254,11 +254,12 @@ router.post('/send-2fa-code', async (req, res) => {
  */
 router.post('/verify-2fa', async (req, res) => {
     try {
-        const { code, userId } = req.body;
+        const { code } = req.body;
+        const userId = req.user?.id; // Get from auth middleware
 
         if (!code || !userId) {
             return res.status(400).json({
-                error: 'Code and userId required'
+                error: 'Code required and user must be authenticated'
             });
         }
 
