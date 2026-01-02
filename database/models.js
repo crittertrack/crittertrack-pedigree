@@ -606,7 +606,5 @@ module.exports = {
     MessageReport,
     ProfileReport,
     AnimalReport,
-    AuditLog,
-    TwoFactorSecret,
-    TwoFactorBackupCode
+    AuditLog
 };
