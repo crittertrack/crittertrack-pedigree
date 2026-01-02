@@ -497,8 +497,34 @@ router.post('/reports/submit', async (req, res) => {
             return res.status(400).json({ error: 'Description too long (max 2000 characters)' });
         }
 
+        // Convert public IDs to internal MongoDB IDs
+        let internalContentId = null;
+        let internalContentOwnerId = null;
+
+        try {
+            // If contentId looks like a public ID, convert it
+            if (contentType === 'animal') {
+                const animal = await Animal.findOne({ id_public: contentId }).select('_id userId');
+                if (animal) {
+                    internalContentId = animal._id;
+                    internalContentOwnerId = internalContentOwnerId || animal.userId;
+                }
+            } else if (contentType === 'profile') {
+                const user = await User.findOne({ id_public: contentId }).select('_id');
+                if (user) {
+                    internalContentId = user._id;
+                    internalContentOwnerId = internalContentOwnerId || user._id;
+                }
+            }
+        } catch (lookupError) {
+            console.warn('Failed to lookup internal IDs:', lookupError);
+        }
+
+        // Use provided contentOwnerId if it's already an internal ID, otherwise use looked up ID
+        const finalContentOwnerId = (contentOwnerId && contentOwnerId.length === 24) ? contentOwnerId : internalContentOwnerId;
+
         // Prevent users from reporting their own content
-        if (contentOwnerId && String(req.user.id) === String(contentOwnerId)) {
+        if (finalContentOwnerId && String(req.user.id) === String(finalContentOwnerId)) {
             return res.status(400).json({ error: 'Cannot report your own content' });
         }
 
@@ -507,8 +533,8 @@ router.post('/reports/submit', async (req, res) => {
             reporterId: req.user.id,
             reporterEmail: req.user.email,
             contentType,
-            contentId,
-            contentOwnerId: contentOwnerId || null,
+            contentId: internalContentId,
+            contentOwnerId: finalContentOwnerId || null,
             category,
             description,
             status: 'open',

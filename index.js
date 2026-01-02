@@ -63,16 +63,17 @@ const authMiddleware = async (req, res, next) => {
         // 3. Attach user payload to the request (req.user.id will be the MongoDB _id)
         req.user = decoded.user;
         
-        // 4. Fetch and attach user's public ID and role for authorization
+        // 4. Fetch and attach user's public ID, email, and role for authorization
         try {
-            const user = await User.findById(req.user.id).select('id_public role');
+            const user = await User.findById(req.user.id).select('id_public email role');
             if (user) {
                 req.user.id_public = user.id_public;
+                req.user.email = user.email;
                 req.user.role = user.role || 'user'; // Attach role for authorization checks
             }
         } catch (dbError) {
-            console.error("Failed to fetch user public ID and role:", dbError.message);
-            // Continue anyway - id_public and role are optional for most routes
+            console.error("Failed to fetch user details:", dbError.message);
+            // Continue anyway - id_public, email and role are optional for most routes
         }
         
         // 5. Proceed to the next middleware/route handler
