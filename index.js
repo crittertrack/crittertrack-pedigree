@@ -15,6 +15,9 @@ const {
 // Import User model for authMiddleware
 const { User } = require('./database/models');
 
+// Import 2FA models for authentication
+const { TwoFactorCode, LoginAuditLog } = require('./database/2faModels');
+
 // --- Route Imports (Using existing folders: routes, database) ---
 // Note: There is NO require for './middleware/auth' here.
 const authRoutes = require('./routes/authRoutes'); 
@@ -60,15 +63,16 @@ const authMiddleware = async (req, res, next) => {
         // 3. Attach user payload to the request (req.user.id will be the MongoDB _id)
         req.user = decoded.user;
         
-        // 4. Fetch and attach user's public ID for notification creation
+        // 4. Fetch and attach user's public ID and role for authorization
         try {
-            const user = await User.findById(req.user.id).select('id_public');
+            const user = await User.findById(req.user.id).select('id_public role');
             if (user) {
                 req.user.id_public = user.id_public;
+                req.user.role = user.role || 'user'; // Attach role for authorization checks
             }
         } catch (dbError) {
-            console.error("Failed to fetch user public ID:", dbError.message);
-            // Continue anyway - id_public is optional for most routes
+            console.error("Failed to fetch user public ID and role:", dbError.message);
+            // Continue anyway - id_public and role are optional for most routes
         }
         
         // 5. Proceed to the next middleware/route handler
@@ -432,6 +436,10 @@ app.use('/api/species', (req, res, next) => {
 // Migration Routes (No auth for one-time migrations - remove after running)
 const migrationRoutes = require('./routes/migrationRoutes');
 app.use('/api/migrations', migrationRoutes);
+
+// Two-Factor Authentication Routes (2FA for admin/moderator access)
+const twoFactorRoutes = require('./routes/twoFactorRoutes');
+app.use('/api/admin', twoFactorRoutes); // 2FA endpoints: send-code, verify-code, resend-code, track-login, login-history, suspicious-logins
 
 
 // --- Error Handling Middleware ---

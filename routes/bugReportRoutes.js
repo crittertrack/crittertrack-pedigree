@@ -64,12 +64,12 @@ router.post('/', async (req, res) => {
 // Get all bug reports (admin only)
 router.get('/admin', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.id || req.user.userId;
         const { User } = require('../database/models');
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select('role');
 
-        if (!user || user.email !== 'crittertrackowner@gmail.com') {
-            return res.status(403).json({ error: 'Admin access required' });
+        if (!user || !['admin', 'moderator'].includes(user.role)) {
+            return res.status(403).json({ error: 'Admin or moderator access required' });
         }
 
         const reports = await BugReport.find()

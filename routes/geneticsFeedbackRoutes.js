@@ -73,13 +73,13 @@ router.post('/', async (req, res) => {
 
 /**
  * GET /genetics-feedback/admin
- * Get all feedback submissions (admin only)
+ * Get all feedback submissions (admin or moderator only)
  */
 router.get('/admin', async (req, res) => {
     try {
-        // Check if user is admin
-        if (!req.user?.isAdmin) {
-            return res.status(403).json({ message: 'Access denied. Admin only.' });
+        // Check if user has admin or moderator role
+        if (!req.user?.role || !['admin', 'moderator'].includes(req.user.role)) {
+            return res.status(403).json({ message: 'Access denied. Admin or moderator access required.' });
         }
 
         const feedback = await GeneticsFeedback.findAll({
@@ -103,13 +103,13 @@ router.get('/admin', async (req, res) => {
 
 /**
  * PATCH /genetics-feedback/:id/status
- * Update feedback status (admin only)
+ * Update feedback status (admin or moderator only)
  */
 router.patch('/:id/status', async (req, res) => {
     try {
-        // Check if user is admin
-        if (!req.user?.isAdmin) {
-            return res.status(403).json({ message: 'Access denied. Admin only.' });
+        // Check if user has admin or moderator role
+        if (!req.user?.role || !['admin', 'moderator'].includes(req.user.role)) {
+            return res.status(403).json({ message: 'Access denied. Admin or moderator access required.' });
         }
 
         const { id } = req.params;

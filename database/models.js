@@ -47,6 +47,16 @@ const UserSchema = new mongoose.Schema({
     },
     // User location
     country: { type: String, default: null },
+    // Admin/Moderator fields for 2FA
+    role: { 
+        type: String, 
+        enum: ['user', 'moderator', 'admin'], 
+        default: 'user', 
+        index: true 
+    },
+    last_login: { type: Date, default: null },
+    last_login_ip: { type: String, default: null },
+    two_factor_enabled: { type: Boolean, default: true },
 });
 const User = mongoose.model('User', UserSchema);
 
