@@ -272,9 +272,13 @@ router.post('/verify-moderation-password', (req, res, next) => {
         if (err) {
             return res.status(401).json({ error: 'Invalid or expired token' });
         }
-        req.user = decoded;
         
-        // Now handle the actual password verification
+        // JWT payload structure: { user: { id: ... } }
+        const userId = decoded?.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Invalid token payload' });
+        }
+        
         try {
             const { password } = req.body;
             
@@ -284,7 +288,7 @@ router.post('/verify-moderation-password', (req, res, next) => {
 
             // Get user from database to verify moderation password and role
             const { User } = require('../database/models');
-            const user = await User.findById(req.user.id).select('+adminPassword');
+            const user = await User.findById(userId).select('+adminPassword');
 
             if (!user) {
                 return res.status(401).json({ error: 'User not found' });
@@ -338,7 +342,12 @@ router.post('/verify-moderation-2fa', (req, res, next) => {
         if (err) {
             return res.status(401).json({ error: 'Invalid or expired token' });
         }
-        req.user = decoded;
+
+        // JWT payload structure: { user: { id: ... } }
+        const userId = decoded?.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Invalid token payload' });
+        }
 
         try {
             const { code } = req.body;
@@ -349,7 +358,7 @@ router.post('/verify-moderation-2fa', (req, res, next) => {
 
             // Get user from database
             const { User } = require('../database/models');
-            const user = await User.findById(req.user.id);
+            const user = await User.findById(userId);
 
             if (!user) {
                 return res.status(401).json({ error: 'User not found' });
@@ -366,7 +375,7 @@ router.post('/verify-moderation-2fa', (req, res, next) => {
 
             // Find a valid, unused 2FA code for this user
             const twoFACode = await TwoFactorCode.findOne({
-                user_id: req.user.id,
+                user_id: userId,
                 used: false,
                 blocked: false,
                 expires_at: { $gt: new Date() }
