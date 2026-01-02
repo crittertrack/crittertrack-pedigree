@@ -255,5 +255,107 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
+// --- MODERATION MODE AUTHENTICATION ---
+
+// POST /api/auth/verify-moderation-password
+// Verify moderation password (separate from login password)
+router.post('/verify-moderation-password', async (req, res) => {
+    try {
+        const { password } = req.body;
+        
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required' });
+        }
+
+        // Only mods and admins can enter moderation mode
+        if (!req.user.isModerator && !req.user.isAdmin) {
+            return res.status(403).json({ error: 'You do not have moderation permissions' });
+        }
+
+        // Get user from database to verify password
+        const { User } = require('../database/models');
+        const user = await User.findById(req.user.id).select('+password');
+
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // Compare password
+        const bcrypt = require('bcryptjs');
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid password' });
+        }
+
+        // Check if user has 2FA enabled
+        const requiresTwoFactor = user.twoFactorEnabled || false;
+
+        res.status(200).json({
+            success: true,
+            requiresTwoFactor,
+            message: 'Password verified'
+        });
+    } catch (error) {
+        console.error('Error verifying moderation password:', error);
+        res.status(500).json({ error: 'Failed to verify password' });
+    }
+});
+
+// POST /api/auth/verify-moderation-2fa
+// Verify 2FA code for moderation mode
+router.post('/verify-moderation-2fa', async (req, res) => {
+    try {
+        const { code } = req.body;
+
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        if (!code) {
+            return res.status(400).json({ error: '2FA code is required' });
+        }
+
+        // Get user from database
+        const { User } = require('../database/models');
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // If user doesn't have 2FA enabled, return error
+        if (!user.twoFactorEnabled) {
+            return res.status(400).json({ error: '2FA not enabled for this account' });
+        }
+
+        // Import speakeasy for TOTP verification
+        const speakeasy = require('speakeasy');
+
+        // Verify the code
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: code,
+            window: 2 // Allow 2 time windows (30s each) of drift
+        });
+
+        if (!verified) {
+            return res.status(401).json({ error: 'Invalid 2FA code' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: '2FA verified, you can now enter moderation mode'
+        });
+    } catch (error) {
+        console.error('Error verifying 2FA code:', error);
+        res.status(500).json({ error: 'Failed to verify 2FA code' });
+    }
+});
 
 module.exports = router;
