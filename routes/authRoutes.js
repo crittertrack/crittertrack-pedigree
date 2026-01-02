@@ -276,17 +276,22 @@ router.post('/verify-moderation-password', async (req, res) => {
             return res.status(403).json({ error: 'You do not have moderation permissions' });
         }
 
-        // Get user from database to verify password
+        // Get user from database to verify moderation password
         const { User } = require('../database/models');
-        const user = await User.findById(req.user.id).select('+password');
+        const user = await User.findById(req.user.id).select('+adminPassword');
 
         if (!user) {
             return res.status(401).json({ error: 'User not found' });
         }
 
-        // Compare password
+        // Check if user has an admin password set
+        if (!user.adminPassword) {
+            return res.status(401).json({ error: 'Moderation password not configured for this user' });
+        }
+
+        // Compare password with admin password
         const bcrypt = require('bcryptjs');
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await bcrypt.compare(password, user.adminPassword);
 
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Invalid password' });
