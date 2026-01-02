@@ -259,130 +259,153 @@ router.post('/reset-password', async (req, res) => {
 
 // POST /api/auth/verify-moderation-password
 // Verify moderation password (separate from login password)
-router.post('/verify-moderation-password', async (req, res) => {
-    try {
-        const { password } = req.body;
-        
-        if (!req.user || !req.user.id) {
-            return res.status(401).json({ error: 'Unauthorized - must be logged in' });
-        }
-
-        if (!password) {
-            return res.status(400).json({ error: 'Password is required' });
-        }
-
-        // Get user from database to verify moderation password and role
-        const { User } = require('../database/models');
-        const user = await User.findById(req.user.id).select('+adminPassword');
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
-
-        // Only mods and admins can enter moderation mode
-        if (!['admin', 'moderator'].includes(user.role)) {
-            return res.status(403).json({ error: 'You do not have moderation permissions' });
-        }
-
-        // Check if user has an admin password set
-        if (!user.adminPassword) {
-            return res.status(401).json({ error: 'Moderation password not configured for this user' });
-        }
-
-        // Compare password with admin password using bcrypt
-        const bcrypt = require('bcryptjs');
-        const isPasswordValid = await bcrypt.compare(password, user.adminPassword);
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid password' });
-        }
-
-        // Check if user has 2FA enabled
-        const requiresTwoFactor = user.two_factor_enabled || false;
-
-        res.status(200).json({
-            success: true,
-            requiresTwoFactor,
-            message: 'Password verified successfully'
-        });
-    } catch (error) {
-        console.error('Error verifying moderation password:', error);
-        res.status(500).json({ error: 'Failed to verify password' });
+// REQUIRES: JWT token in Authorization header
+router.post('/verify-moderation-password', (req, res, next) => {
+    // Inline auth middleware for this route
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ error: 'No authorization token provided' });
     }
+
+    const jwt = require('jsonwebtoken');
+    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: 'Invalid or expired token' });
+        }
+        req.user = decoded;
+        
+        // Now handle the actual password verification
+        try {
+            const { password } = req.body;
+            
+            if (!password) {
+                return res.status(400).json({ error: 'Password is required' });
+            }
+
+            // Get user from database to verify moderation password and role
+            const { User } = require('../database/models');
+            const user = await User.findById(req.user.id).select('+adminPassword');
+
+            if (!user) {
+                return res.status(401).json({ error: 'User not found' });
+            }
+
+            // Only mods and admins can enter moderation mode
+            if (!['admin', 'moderator'].includes(user.role)) {
+                return res.status(403).json({ error: 'You do not have moderation permissions' });
+            }
+
+            // Check if user has an admin password set
+            if (!user.adminPassword) {
+                return res.status(401).json({ error: 'Moderation password not configured for this user' });
+            }
+
+            // Compare password with admin password using bcrypt
+            const bcrypt = require('bcryptjs');
+            const isPasswordValid = await bcrypt.compare(password, user.adminPassword);
+
+            if (!isPasswordValid) {
+                return res.status(401).json({ error: 'Invalid password' });
+            }
+
+            // Check if user has 2FA enabled
+            const requiresTwoFactor = user.two_factor_enabled || false;
+
+            res.status(200).json({
+                success: true,
+                requiresTwoFactor,
+                message: 'Password verified successfully'
+            });
+        } catch (error) {
+            console.error('Error verifying moderation password:', error);
+            res.status(500).json({ error: 'Failed to verify password' });
+        }
+    });
 });
 
 // POST /api/auth/verify-moderation-2fa
 // Verify 2FA code for moderation mode
-router.post('/verify-moderation-2fa', async (req, res) => {
-    try {
-        const { code } = req.body;
-
-        if (!req.user || !req.user.id) {
-            return res.status(401).json({ error: 'Unauthorized - must be logged in' });
-        }
-
-        if (!code) {
-            return res.status(400).json({ error: '2FA code is required' });
-        }
-
-        // Get user from database
-        const { User } = require('../database/models');
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(401).json({ error: 'User not found' });
-        }
-
-        // If user doesn't have 2FA enabled, return error
-        if (!user.two_factor_enabled) {
-            return res.status(400).json({ error: '2FA not enabled for this account' });
-        }
-
-        // Verify the code from TwoFactorCode collection
-        const { TwoFactorCode } = require('../database/2faModels');
-        const crypto = require('crypto');
-
-        // Find a valid, unused 2FA code for this user
-        const twoFACode = await TwoFactorCode.findOne({
-            user_id: req.user.id,
-            used: false,
-            blocked: false,
-            expires_at: { $gt: new Date() }
-        }).sort({ created_at: -1 });
-
-        if (!twoFACode) {
-            return res.status(401).json({ error: 'No valid 2FA code found. Please request a new code.' });
-        }
-
-        // Verify the code against the hash
-        const codeHash = crypto.createHash('sha256').update(code + twoFACode.salt).digest('hex');
-        
-        if (codeHash !== twoFACode.code_hash) {
-            // Increment attempts
-            twoFACode.attempts += 1;
-            twoFACode.last_attempt_at = new Date();
-            
-            // Block after 5 failed attempts
-            if (twoFACode.attempts >= 5) {
-                twoFACode.blocked = true;
-            }
-            
-            await twoFACode.save();
-            return res.status(401).json({ error: 'Invalid 2FA code' });
-        }
-
-        // Mark code as used
-        twoFACode.used = true;
-        await twoFACode.save();
-
-        res.status(200).json({
-            success: true,
-            message: '2FA verified successfully - moderation mode activated'
-        });
-    } catch (error) {
-        console.error('Error verifying 2FA code:', error);
-        res.status(500).json({ error: 'Failed to verify 2FA code' });
+// REQUIRES: JWT token in Authorization header
+router.post('/verify-moderation-2fa', (req, res, next) => {
+    // Inline auth middleware for this route
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ error: 'No authorization token provided' });
     }
+
+    const jwt = require('jsonwebtoken');
+    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: 'Invalid or expired token' });
+        }
+        req.user = decoded;
+
+        try {
+            const { code } = req.body;
+
+            if (!code) {
+                return res.status(400).json({ error: '2FA code is required' });
+            }
+
+            // Get user from database
+            const { User } = require('../database/models');
+            const user = await User.findById(req.user.id);
+
+            if (!user) {
+                return res.status(401).json({ error: 'User not found' });
+            }
+
+            // If user doesn't have 2FA enabled, return error
+            if (!user.two_factor_enabled) {
+                return res.status(400).json({ error: '2FA not enabled for this account' });
+            }
+
+            // Verify the code from TwoFactorCode collection
+            const { TwoFactorCode } = require('../database/2faModels');
+            const crypto = require('crypto');
+
+            // Find a valid, unused 2FA code for this user
+            const twoFACode = await TwoFactorCode.findOne({
+                user_id: req.user.id,
+                used: false,
+                blocked: false,
+                expires_at: { $gt: new Date() }
+            }).sort({ created_at: -1 });
+
+            if (!twoFACode) {
+                return res.status(401).json({ error: 'No valid 2FA code found. Please request a new code.' });
+            }
+
+            // Verify the code against the hash
+            const codeHash = crypto.createHash('sha256').update(code + twoFACode.salt).digest('hex');
+            
+            if (codeHash !== twoFACode.code_hash) {
+                // Increment attempts
+                twoFACode.attempts += 1;
+                twoFACode.last_attempt_at = new Date();
+                
+                // Block after 5 failed attempts
+                if (twoFACode.attempts >= 5) {
+                    twoFACode.blocked = true;
+                }
+                
+                await twoFACode.save();
+                return res.status(401).json({ error: 'Invalid 2FA code' });
+            }
+
+            // Mark code as used
+            twoFACode.used = true;
+            await twoFACode.save();
+
+            res.status(200).json({
+                success: true,
+                message: '2FA verified successfully - moderation mode activated'
+            });
+        } catch (error) {
+            console.error('Error verifying 2FA code:', error);
+            res.status(500).json({ error: 'Failed to verify 2FA code' });
+        }
+    });
 });
 
 module.exports = router;
