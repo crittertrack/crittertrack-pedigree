@@ -448,20 +448,19 @@ router.post('/resend-2fa-code', async (req, res) => {
 router.post('/track-login', async (req, res) => {
     try {
         const {
-            userId,
             username,
             userAgent,
             deviceInfo = {},
-            status = 'success',
-            twoFactorPending = false,
             timestamp
         } = req.body;
 
-        // Validate required fields
+        // Get userId from auth middleware (req.user.id is the MongoDB _id)
+        const userId = req.user?.id;
+        
         if (!userId) {
-            console.warn('track-login: Missing userId in request body');
+            console.warn('track-login: Missing authenticated user (req.user.id)');
             return res.status(400).json({
-                error: 'userId required'
+                error: 'User must be authenticated'
             });
         }
 
@@ -503,6 +502,16 @@ router.post('/track-login', async (req, res) => {
             console.warn('track-login: Error checking suspicious login:', checkError.message);
         }
 
+        // Map frontend status values to valid enum values
+        // Frontend sends: 'password_verified_awaiting_code', 'password_verified_2fa_code_sent', 'success_2fa_verified'
+        // Valid enum: 'success', 'failed', 'suspicious'
+        let logStatus = 'success';
+        if (req.body.status?.includes('failed') || req.body.status?.includes('incorrect')) {
+            logStatus = 'failed';
+        } else if (suspiciousCheck.isSuspicious) {
+            logStatus = 'suspicious';
+        }
+
         // Create login audit log
         const loginLog = new LoginAuditLog({
             user_id: userId,
@@ -515,8 +524,8 @@ router.post('/track-login', async (req, res) => {
             screen_resolution: screenResolution,
             timezone: timezone,
             device_name: deviceName,
-            status: status,
-            two_factor_verified: !twoFactorPending,
+            status: logStatus,
+            two_factor_verified: !req.body.twoFactorPending,
             failure_reason: null,
             is_suspicious: suspiciousCheck.isSuspicious,
             suspicious_reason: suspiciousCheck.reason || null
@@ -525,7 +534,7 @@ router.post('/track-login', async (req, res) => {
         await loginLog.save();
 
         // Update user's last login info - handle errors gracefully
-        if (status === 'success' && !twoFactorPending) {
+        if (logStatus === 'success') {
             try {
                 await User.findByIdAndUpdate(userId, {
                     last_login: new Date(),
