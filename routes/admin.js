@@ -461,8 +461,8 @@ router.get('/moderator-chat', async (req, res) => {
 // COMMUNITY REPORT ENDPOINTS
 // ============================================
 
-// POST /api/reports - Submit a content report (any authenticated user)
-router.post('/submit', async (req, res) => {
+// POST /api/admin/reports/submit - Submit a content report (any authenticated user)
+router.post('/reports/submit', async (req, res) => {
     try {
         if (!req.user) return res.status(401).json({ error: 'Authentication required' });
 
@@ -529,7 +529,7 @@ router.post('/submit', async (req, res) => {
 });
 
 // GET /api/admin/reports - List reports (moderators only)
-router.get('/list', async (req, res) => {
+router.get('/reports/list', async (req, res) => {
     try {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
@@ -567,7 +567,7 @@ router.get('/list', async (req, res) => {
 });
 
 // PATCH /api/admin/reports/:reportId/status - Update report status (moderators only)
-router.patch('/:reportId/status', async (req, res) => {
+router.patch('/reports/:reportId/status', async (req, res) => {
     try {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
@@ -608,7 +608,7 @@ router.patch('/:reportId/status', async (req, res) => {
 });
 
 // POST /api/admin/reports/:reportId/action - Take action on report (admins only)
-router.post('/:reportId/action', async (req, res) => {
+router.post('/reports/:reportId/action', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin access required' });
 
