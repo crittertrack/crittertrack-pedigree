@@ -113,6 +113,7 @@ const registerUser = async (userData) => {
     const userProfile = {
         id_public: user.id_public,
         email: user.email,
+        role: user.role,
         personalName: user.personalName,
         showPersonalName: user.showPersonalName,
         breederName: user.breederName,
@@ -175,6 +176,7 @@ const getUserProfileById = async (appUserId_backend) => {
     return {
         id_public: user.id_public,
         email: user.email,
+        role: user.role,
         personalName: user.personalName,
         showPersonalName: user.showPersonalName,
         breederName: user.breederName,
