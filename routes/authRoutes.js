@@ -181,17 +181,6 @@ router.post('/login', async (req, res) => {
         if (!email || !password) {
             return res.status(400).json({ message: 'Email and password are required for login.' });
         }
-        
-        // Check if email is verified
-        const { User } = require('../database/models');
-        const user = await User.findOne({ email });
-        
-        if (user && !user.emailVerified) {
-            return res.status(403).json({ 
-                message: 'Email not verified. Please verify your email first.',
-                needsVerification: true
-            });
-        }
 
         // Call the service function to log in and return the token
         const { token, userProfile } = await loginUser(email, password);
