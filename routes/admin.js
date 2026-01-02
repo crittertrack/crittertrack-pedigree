@@ -570,18 +570,43 @@ router.get('/reports/list', async (req, res) => {
             filter.category = category;
         }
 
-        // Fetch reports
+        // Fetch reports with populated references
         const reports = await CommunityReport.find(filter)
+            .populate('reporterId', 'email personalName id_public')
+            .populate('contentOwnerId', 'email personalName breederName id_public')
+            .populate('moderatorId', 'email personalName id_public')
             .sort(sort)
             .limit(parseInt(limit))
             .skip(parseInt(skip))
             .lean();
 
+        // Enrich reports with content details
+        const enrichedReports = await Promise.all(reports.map(async (report) => {
+            let contentDetails = null;
+            
+            try {
+                if (report.contentType === 'animal' && report.contentId) {
+                    const animal = await Animal.findById(report.contentId).select('name id_public species gender').lean();
+                    contentDetails = animal;
+                } else if (report.contentType === 'profile' && report.contentId) {
+                    const profileUser = await User.findById(report.contentId).select('personalName breederName email id_public').lean();
+                    contentDetails = profileUser;
+                }
+            } catch (err) {
+                console.warn('Failed to fetch content details:', err);
+            }
+            
+            return {
+                ...report,
+                contentDetails
+            };
+        }));
+
         // Get total count for pagination
         const total = await CommunityReport.countDocuments(filter);
 
         res.json({
-            reports,
+            reports: enrichedReports,
             total,
             limit: parseInt(limit),
             skip: parseInt(skip)
