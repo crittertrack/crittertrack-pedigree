@@ -80,6 +80,7 @@ const registerUser = async (userData) => {
         showBreederName: userData.showBreederName || false,
         allowMessages: true, // Enable messages by default
         emailNotificationPreference: 'none', // Disable email notifications by default
+        role: 'user', // All new users start as regular users
     });
     await user.save();
 
