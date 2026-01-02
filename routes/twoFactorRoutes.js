@@ -151,15 +151,19 @@ async function send2FAEmail(email, code, username) {
 router.post('/send-2fa-code', async (req, res) => {
     try {
         const { email, userId } = req.body;
+        const authUserId = req.user?.id; // Get from auth middleware
 
-        if (!email || !userId) {
+        // Use userId from body if provided, otherwise use auth token user ID
+        const targetUserId = userId || authUserId;
+
+        if (!email || !targetUserId) {
             return res.status(400).json({ 
-                error: 'Email and userId required' 
+                error: 'Email required and user must be authenticated' 
             });
         }
 
         // Verify user is admin or moderator
-        const user = await User.findById(userId);
+        const user = await User.findById(targetUserId);
         if (!user) {
             return res.status(404).json({ 
                 error: 'User not found' 
