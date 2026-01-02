@@ -439,7 +439,7 @@ app.use('/api/migrations', migrationRoutes);
 
 // Two-Factor Authentication Routes (2FA for admin/moderator access)
 const twoFactorRoutes = require('./routes/twoFactorRoutes');
-app.use('/api/admin', twoFactorRoutes); // 2FA endpoints: send-code, verify-code, resend-code, track-login, login-history, suspicious-logins
+app.use('/api/admin', authMiddleware, twoFactorRoutes); // 2FA endpoints: send-code, verify-code, resend-code, track-login, login-history, suspicious-logins
 
 
 // --- Error Handling Middleware ---
