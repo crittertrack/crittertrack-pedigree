@@ -58,6 +58,20 @@ const UserSchema = new mongoose.Schema({
     last_login: { type: Date, default: null },
     last_login_ip: { type: String, default: null },
     two_factor_enabled: { type: Boolean, default: true },
+    
+    // Moderation tracking fields
+    warningCount: { type: Number, default: 0 },
+    accountStatus: { 
+        type: String, 
+        enum: ['active', 'suspended', 'banned'], 
+        default: 'active',
+        index: true
+    },
+    suspensionReason: { type: String, default: null },
+    suspensionDate: { type: Date, default: null },
+    banReason: { type: String, default: null },
+    banDate: { type: Date, default: null },
+    moderatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -660,6 +674,63 @@ const CommunityReportSchema = new mongoose.Schema({
 const CommunityReport = mongoose.model('CommunityReport', CommunityReportSchema);
 
 
+// --- 15. AUDIT LOG SCHEMA (Track all moderation actions) ---
+const AuditLogSchema = new mongoose.Schema({
+    moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    moderatorEmail: { type: String, required: true },
+    action: { 
+        type: String, 
+        enum: [
+            'user_suspended', 'user_banned', 'user_warned', 'user_unbanned', 'user_activated',
+            'user_role_changed', 'user_deleted', 'user_password_reset',
+            'content_removed', 'content_edited', 'content_hidden', 'content_restored',
+            'report_resolved', 'report_dismissed', 'report_status_changed',
+            'setting_changed', 'backup_created', 'backup_restored',
+            'broadcast_sent', 'message_sent', 'animal_deleted', 'profile_hidden'
+        ],
+        required: true,
+        index: true
+    },
+    targetType: { 
+        type: String, 
+        enum: ['user', 'animal', 'profile', 'litter', 'report', 'system', 'setting'],
+        required: true 
+    },
+    targetId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    targetName: { type: String }, // User email, animal name, etc for easy reference
+    details: { type: Object }, // Stores what changed (before/after values)
+    reason: { type: String, maxlength: 1000 },
+    ipAddress: { type: String },
+    userAgent: { type: String }
+}, { timestamps: true });
+AuditLogSchema.index({ createdAt: -1 }); // For chronological queries
+AuditLogSchema.index({ moderatorId: 1, createdAt: -1 }); // For moderator activity
+AuditLogSchema.index({ targetType: 1, targetId: 1 }); // For finding actions on specific targets
+const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
+
+
+// --- 16. SYSTEM SETTINGS SCHEMA (Persistent settings storage) ---
+const SystemSettingsSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true, index: true },
+    value: { type: mongoose.Schema.Types.Mixed, required: true },
+    type: { 
+        type: String, 
+        enum: ['boolean', 'string', 'number', 'object', 'array'],
+        required: true 
+    },
+    category: {
+        type: String,
+        enum: ['features', 'security', 'content', 'backup', 'maintenance', 'moderation'],
+        required: true,
+        index: true
+    },
+    description: { type: String },
+    lastModified: { type: Date, default: Date.now },
+    modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -676,5 +747,7 @@ module.exports = {
     AnimalTransfer,
     Message,
     MessageReport,
-    CommunityReport
+    CommunityReport,
+    AuditLog,
+    SystemSettings
 };

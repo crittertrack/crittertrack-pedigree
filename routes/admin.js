@@ -4,7 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { LoginAuditLog } = require('../database/2faModels');
-const { Animal, PublicProfile, PublicAnimal, User, CommunityReport } = require('../database/models');
+const { Animal, PublicProfile, PublicAnimal, User, CommunityReport, AuditLog } = require('../database/models');
+const { createAuditLog, getAuditLogs } = require('../utils/auditLogger');
 
 // Helper: Check if user is admin
 const isAdmin = (req) => {
@@ -37,9 +38,56 @@ router.patch('/users/:userId/status', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
-        const { status } = req.body; // 'active', 'suspended', 'banned'
-        const user = await User.findByIdAndUpdate(req.params.userId, { status }, { new: true });
-        res.json(user);
+        const { status, reason } = req.body; // 'active', 'suspended', 'banned'
+        
+        if (!['active', 'suspended', 'banned'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const oldStatus = user.accountStatus;
+        
+        // Update user status
+        const updates = { accountStatus: status };
+        
+        if (status === 'suspended') {
+            updates.suspensionReason = reason || 'Account suspended by administrator';
+            updates.suspensionDate = new Date();
+            updates.moderatedBy = req.user.id;
+        } else if (status === 'banned') {
+            updates.banReason = reason || 'Account banned by administrator';
+            updates.banDate = new Date();
+            updates.moderatedBy = req.user.id;
+        }
+        
+        const updatedUser = await User.findByIdAndUpdate(req.params.userId, updates, { new: true });
+        
+        // Create audit log
+        const actionMap = {
+            active: 'user_activated',
+            suspended: 'user_suspended',
+            banned: 'user_banned'
+        };
+        
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: actionMap[status],
+            targetType: 'user',
+            targetId: user._id,
+            targetName: user.email,
+            details: { oldStatus, newStatus: status },
+            reason: reason || 'No reason provided',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+        
+        res.json({ 
+            success: true, 
+            message: `User ${status}`,
+            user: updatedUser 
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -85,6 +133,168 @@ router.get('/users/:userId/login-history', async (req, res) => {
             .sort({ timestamp: -1 })
             .limit(50)
             .lean();
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH /api/admin/users/:userId/role - Change user role (admin only)
+router.patch('/users/:userId/role', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { role } = req.body;
+        
+        if (!['user', 'moderator', 'admin'].includes(role)) {
+            return res.status(400).json({ error: 'Invalid role' });
+        }
+
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const oldRole = user.role;
+        user.role = role;
+        await user.save();
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'user_role_changed',
+            targetType: 'user',
+            targetId: user._id,
+            targetName: user.email,
+            details: { oldRole, newRole: role },
+            reason: `Role changed from ${oldRole} to ${role}`,
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({ 
+            success: true, 
+            message: `User role changed to ${role}`,
+            user: { id: user._id, email: user.email, role: user.role }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/admin/users/:userId/warn - Issue warning to user
+router.post('/users/:userId/warn', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { reason } = req.body;
+        
+        const user = await User.findByIdAndUpdate(
+            req.params.userId,
+            { $inc: { warningCount: 1 } },
+            { new: true }
+        );
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Auto-suspend after 3 warnings
+        if (user.warningCount >= 3) {
+            user.accountStatus = 'suspended';
+            user.suspensionReason = 'Automatic suspension after 3 warnings';
+            user.suspensionDate = new Date();
+            user.moderatedBy = req.user.id;
+            await user.save();
+        }
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'user_warned',
+            targetType: 'user',
+            targetId: user._id,
+            targetName: user.email,
+            details: { 
+                warningCount: user.warningCount,
+                autoSuspended: user.warningCount >= 3
+            },
+            reason: reason || 'No reason provided',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({ 
+            success: true, 
+            message: `Warning issued (${user.warningCount} total)`,
+            user: {
+                id: user._id,
+                email: user.email,
+                warningCount: user.warningCount,
+                accountStatus: user.accountStatus
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/users/:userId/summary - Get user content summary
+router.get('/users/:userId/summary', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const userId = req.params.userId;
+        const user = await User.findById(userId).select('email personalName breederName role accountStatus warningCount createdAt last_login');
+        
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Get content counts
+        const animalCount = await Animal.countDocuments({ ownerId: userId });
+        const publicAnimalCount = await PublicAnimal.countDocuments({ ownerId: userId });
+        const litterCount = user.ownedLitters ? user.ownedLitters.length : 0;
+        
+        // Get reports filed by and against this user
+        const reportsFiled = await CommunityReport.countDocuments({ reporterId: userId });
+        const reportsAgainst = await CommunityReport.countDocuments({ contentOwnerId: userId });
+
+        res.json({
+            user: {
+                id: user._id,
+                email: user.email,
+                personalName: user.personalName,
+                breederName: user.breederName,
+                role: user.role,
+                accountStatus: user.accountStatus,
+                warningCount: user.warningCount,
+                createdAt: user.createdAt,
+                lastLogin: user.last_login
+            },
+            content: {
+                totalAnimals: animalCount,
+                publicAnimals: publicAnimalCount,
+                litters: litterCount
+            },
+            moderation: {
+                reportsFiled,
+                reportsAgainst
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/users/:userId/moderation-history - Get moderation actions against user
+router.get('/users/:userId/moderation-history', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const history = await AuditLog.find({ 
+            targetType: 'user',
+            targetId: req.params.userId
+        })
+            .populate('moderatorId', 'email personalName')
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean();
+
         res.json(history);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -762,6 +972,24 @@ router.post('/reports/:reportId/action', async (req, res) => {
             resolvedAt: new Date()
         });
 
+        // Create audit log for the action
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'report_resolved',
+            targetType: 'report',
+            targetId: reportId,
+            targetName: `Report on ${report.contentType}`,
+            details: {
+                actionTaken: action,
+                reportedField: report.reportedField,
+                contentType: report.contentType,
+                replacementText: action === 'replace_content' ? replacementText : undefined
+            },
+            reason: reason || 'No reason provided',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
         res.json({
             success: true,
             message: `Action '${action}' completed on report`
@@ -825,6 +1053,170 @@ router.post('/cleanup-orphans', async (req, res) => {
     } catch (err) {
         console.error('Admin cleanup error:', err && err.stack ? err.stack : err);
         return res.status(500).json({ message: 'Failed to run cleanup', error: err && err.message ? err.message : String(err) });
+    }
+});
+
+// ============================================
+// AUDIT LOG ENDPOINTS
+// ============================================
+
+// GET /api/admin/audit-logs/list - Get audit logs with filtering
+router.get('/audit-logs/list', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { moderatorId, action, targetType, targetId, startDate, endDate, limit, skip, sort } = req.query;
+
+        const result = await getAuditLogs(
+            { moderatorId, action, targetType, targetId, startDate, endDate },
+            { limit, skip, sort }
+        );
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error fetching audit logs:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/audit-logs/moderator/:moderatorId - Get actions by specific moderator
+router.get('/audit-logs/moderator/:moderatorId', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { limit = 50, skip = 0 } = req.query;
+
+        const logs = await AuditLog.find({ moderatorId: req.params.moderatorId })
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .skip(parseInt(skip))
+            .lean();
+
+        const total = await AuditLog.countDocuments({ moderatorId: req.params.moderatorId });
+
+        res.json({ logs, total });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// ANIMAL MODERATION ENDPOINTS
+// ============================================
+
+// PATCH /api/admin/animals/:animalId/hide - Hide animal from public view
+router.patch('/animals/:animalId/hide', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { reason } = req.body;
+        const animal = await Animal.findById(req.params.animalId);
+        
+        if (!animal) return res.status(404).json({ error: 'Animal not found' });
+
+        // Remove from PublicAnimal collection
+        await PublicAnimal.deleteOne({ id_public: animal.id_public });
+        
+        // Update animal to not be public
+        animal.showOnPublicProfile = false;
+        await animal.save();
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'content_hidden',
+            targetType: 'animal',
+            targetId: animal._id,
+            targetName: animal.name,
+            details: { ownerId: animal.ownerId },
+            reason: reason || 'Hidden by moderator',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Animal hidden from public view'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/admin/animals/:animalId - Force delete animal (admin only)
+router.delete('/animals/:animalId', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { reason } = req.body;
+        const animal = await Animal.findById(req.params.animalId);
+        
+        if (!animal) return res.status(404).json({ error: 'Animal not found' });
+
+        const animalData = { name: animal.name, id_public: animal.id_public, ownerId: animal.ownerId };
+
+        // Remove from public collection
+        await PublicAnimal.deleteOne({ id_public: animal.id_public });
+        
+        // Delete the animal
+        await Animal.deleteOne({ _id: req.params.animalId });
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'animal_deleted',
+            targetType: 'animal',
+            targetId: animal._id,
+            targetName: animalData.name,
+            details: animalData,
+            reason: reason || 'Deleted by admin',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Animal permanently deleted'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH /api/admin/profiles/:userId/hide - Hide public profile
+router.patch('/profiles/:userId/hide', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { reason } = req.body;
+        const user = await User.findById(req.params.userId);
+        
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Update public profile visibility
+        await PublicProfile.updateOne(
+            { userId_backend: user._id },
+            { $set: { showPersonalName: false, showBreederName: false } }
+        );
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'profile_hidden',
+            targetType: 'profile',
+            targetId: user._id,
+            targetName: user.email,
+            reason: reason || 'Hidden by moderator',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Public profile hidden'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
