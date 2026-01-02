@@ -772,44 +772,6 @@ router.post('/reports/:reportId/action', async (req, res) => {
     }
 });
 
-            case 'suspend_user':
-                if (report.contentOwnerId) {
-                    await User.findByIdAndUpdate(report.contentOwnerId, {
-                        accountStatus: 'suspended',
-                        suspensionReason: reason || 'Community guideline violation'
-                    });
-                }
-                break;
-
-            case 'ban_user':
-                if (report.contentOwnerId) {
-                    await User.findByIdAndUpdate(report.contentOwnerId, {
-                        accountStatus: 'banned',
-                        banReason: reason || 'Serious community guideline violation'
-                    });
-                }
-                break;
-        }
-
-        // Update report with action taken
-        await CommunityReport.findByIdAndUpdate(reportId, {
-            status: 'resolved',
-            actionTaken: action,
-            moderatorId: req.user.id,
-            moderatorNotes: reason || '',
-            resolvedAt: new Date()
-        });
-
-        res.json({
-            success: true,
-            message: `Action '${action}' completed on report`
-        });
-    } catch (error) {
-        console.error('Report action error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // ============================================
 // ORIGINAL: Cleanup orphans endpoint
 // ============================================
