@@ -1,0 +1,25 @@
+# Pre-commit hooks configuration for CritterTrack Backend
+# This prevents secrets and sensitive data from being committed to git
+
+repos:
+  # Detect private keys
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+
+  # Prevent .env files from being committed
+  - repo: local
+    hooks:
+      - id: no-env-files
+        name: Prevent .env files from being committed
+        entry: \.env
+        language: pygrep
+        types: [text]
+      
+      - id: no-secrets
+        name: Prevent secrets from being committed
+        entry: (MONGODB_URI|RESEND_API_KEY|JWT_SECRET|CLOUDFLARE|BEARER|password|secret|token)
+        language: pygrep
+        types: [text]
+        exclude: node_modules|\.git|package-lock\.json|yarn\.lock
