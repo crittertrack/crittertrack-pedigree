@@ -191,7 +191,7 @@ router.post('/send-2fa-code', async (req, res) => {
         // Rate limit: Check for recent code requests (max 1 per minute)
         const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
         const recentCode = await TwoFactorCode.findOne({
-            user_id: userId,
+            user_id: targetUserId,
             created_at: { $gte: oneMinuteAgo }
         });
 
@@ -209,7 +209,7 @@ router.post('/send-2fa-code', async (req, res) => {
         // Store code in database (5 minute expiry)
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
         const twoFACode = new TwoFactorCode({
-            user_id: userId,
+            user_id: targetUserId,
             username: user.personalName || 'Admin',
             email: email,
             code_hash: hash,
