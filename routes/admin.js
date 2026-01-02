@@ -1220,4 +1220,315 @@ router.patch('/profiles/:userId/hide', async (req, res) => {
     }
 });
 
+// ============================================
+// COMMUNICATION ENDPOINTS
+// ============================================
+
+// POST /api/admin/broadcast - Send broadcast message to users
+router.post('/broadcast', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { subject, message, recipientType, specificUserIds } = req.body;
+        
+        if (!subject || !message) {
+            return res.status(400).json({ error: 'Subject and message required' });
+        }
+
+        // Determine recipients based on type
+        let recipients = [];
+        
+        if (recipientType === 'specific' && specificUserIds) {
+            recipients = await User.find({ _id: { $in: specificUserIds } }).select('_id email personalName');
+        } else if (recipientType === 'all') {
+            recipients = await User.find({}).select('_id email personalName');
+        } else if (recipientType === 'active') {
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            recipients = await User.find({ last_login: { $gte: thirtyDaysAgo } }).select('_id email personalName');
+        } else if (recipientType === 'moderators') {
+            recipients = await User.find({ role: { $in: ['moderator', 'admin'] } }).select('_id email personalName');
+        } else if (recipientType === 'country' && req.body.country) {
+            recipients = await User.find({ country: req.body.country }).select('_id email personalName');
+        } else {
+            return res.status(400).json({ error: 'Invalid recipient type' });
+        }
+
+        // Create notifications for all recipients
+        const { Notification } = require('../database/models');
+        const notifications = recipients.map(user => ({
+            userId: user._id,
+            type: 'announcement',
+            message: `${subject}: ${message}`,
+            isRead: false,
+            createdAt: new Date()
+        }));
+
+        if (notifications.length > 0) {
+            await Notification.insertMany(notifications);
+        }
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'broadcast_sent',
+            targetType: 'system',
+            targetId: null,
+            targetName: 'Broadcast Message',
+            details: {
+                subject,
+                recipientType,
+                recipientCount: recipients.length,
+                messageLength: message.length
+            },
+            reason: `Broadcast to ${recipients.length} users`,
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({
+            success: true,
+            message: `Broadcast sent to ${recipients.length} users`,
+            recipientCount: recipients.length
+        });
+    } catch (error) {
+        console.error('Broadcast error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/broadcast-history - Get past broadcasts
+router.get('/broadcast-history', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { limit = 20, skip = 0 } = req.query;
+
+        const broadcasts = await AuditLog.find({ 
+            action: 'broadcast_sent'
+        })
+            .populate('moderatorId', 'email personalName')
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .skip(parseInt(skip))
+            .lean();
+
+        const total = await AuditLog.countDocuments({ action: 'broadcast_sent' });
+
+        res.json({
+            broadcasts,
+            total,
+            limit: parseInt(limit),
+            skip: parseInt(skip)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/admin/message-user - Send direct message to user
+router.post('/message-user', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { userId, message } = req.body;
+
+        if (!userId || !message) {
+            return res.status(400).json({ error: 'User ID and message required' });
+        }
+
+        const { Notification } = require('../database/models');
+        
+        await Notification.create({
+            userId,
+            type: 'moderator_message',
+            message,
+            isRead: false,
+            createdAt: new Date()
+        });
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'message_sent',
+            targetType: 'user',
+            targetId: userId,
+            targetName: 'Direct Message',
+            details: { messageLength: message.length },
+            reason: 'Moderator message to user',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({
+            success: true,
+            message: 'Message sent to user'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// SYSTEM SETTINGS ENDPOINTS
+// ============================================
+
+// GET /api/admin/system-settings - Get all system settings
+router.get('/system-settings/all', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { SystemSettings } = require('../database/models');
+        const settings = await SystemSettings.find({}).lean();
+
+        // Convert array to object for easier frontend use
+        const settingsObj = {};
+        settings.forEach(setting => {
+            settingsObj[setting.key] = {
+                value: setting.value,
+                type: setting.type,
+                category: setting.category,
+                description: setting.description,
+                lastModified: setting.lastModified
+            };
+        });
+
+        res.json(settingsObj);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/system-settings/:key - Get specific setting
+router.get('/system-settings/:key', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { SystemSettings } = require('../database/models');
+        const setting = await SystemSettings.findOne({ key: req.params.key }).lean();
+
+        if (!setting) {
+            return res.status(404).json({ error: 'Setting not found' });
+        }
+
+        res.json(setting);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT /api/admin/system-settings/:key - Update setting
+router.put('/system-settings/:key', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { value, type, category, description } = req.body;
+
+        if (value === undefined) {
+            return res.status(400).json({ error: 'Value required' });
+        }
+
+        const { SystemSettings } = require('../database/models');
+        
+        const oldSetting = await SystemSettings.findOne({ key: req.params.key });
+        const oldValue = oldSetting ? oldSetting.value : null;
+
+        const setting = await SystemSettings.findOneAndUpdate(
+            { key: req.params.key },
+            {
+                value,
+                type: type || 'string',
+                category: category || 'features',
+                description: description || '',
+                lastModified: new Date(),
+                modifiedBy: req.user.id
+            },
+            { upsert: true, new: true }
+        );
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'setting_changed',
+            targetType: 'setting',
+            targetId: setting._id,
+            targetName: req.params.key,
+            details: {
+                oldValue,
+                newValue: value,
+                category: setting.category
+            },
+            reason: `Setting '${req.params.key}' updated`,
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({
+            success: true,
+            setting
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/admin/maintenance/toggle - Toggle maintenance mode
+router.post('/maintenance/toggle', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { enabled, message } = req.body;
+
+        const { SystemSettings } = require('../database/models');
+        
+        await SystemSettings.findOneAndUpdate(
+            { key: 'maintenance_mode_enabled' },
+            {
+                value: enabled,
+                type: 'boolean',
+                category: 'maintenance',
+                lastModified: new Date(),
+                modifiedBy: req.user.id
+            },
+            { upsert: true }
+        );
+
+        if (message) {
+            await SystemSettings.findOneAndUpdate(
+                { key: 'maintenance_mode_message' },
+                {
+                    value: message,
+                    type: 'string',
+                    category: 'maintenance',
+                    lastModified: new Date(),
+                    modifiedBy: req.user.id
+                },
+                { upsert: true }
+            );
+        }
+
+        // Create audit log
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'setting_changed',
+            targetType: 'system',
+            targetId: null,
+            targetName: 'Maintenance Mode',
+            details: { enabled, message },
+            reason: enabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled',
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({
+            success: true,
+            maintenanceMode: {
+                enabled,
+                message
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
