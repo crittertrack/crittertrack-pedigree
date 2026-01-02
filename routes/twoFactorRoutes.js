@@ -1134,4 +1134,45 @@ router.post('/regenerate-admin-password/:userId', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/admin/dashboard-stats
+ * Get dashboard statistics for the admin panel
+ * Protected by authMiddleware
+ */
+router.get('/dashboard-stats', async (req, res) => {
+    try {
+        const { User, Animal } = require('../database/models');
+        
+        // Get total users
+        const totalUsers = await User.countDocuments({});
+        
+        // Get active users (logged in within last 30 days)
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const activeUsers = await User.countDocuments({
+            lastLogin: { $gte: thirtyDaysAgo }
+        });
+        
+        // Get total animals
+        const totalAnimals = await Animal.countDocuments({});
+        
+        // Get pending reports (placeholder - adjust based on your report model)
+        const pendingReports = 0; // Update if you have a Reports model
+        
+        res.json({
+            totalUsers,
+            activeUsers,
+            totalAnimals,
+            pendingReports,
+            systemHealth: 'good',
+            lastBackup: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Mock last backup
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        res.status(500).json({
+            error: 'Failed to fetch dashboard stats',
+            details: error.message
+        });
+    }
+});
+
 module.exports = router;
