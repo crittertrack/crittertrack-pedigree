@@ -587,6 +587,62 @@ const MessageReportSchema = new mongoose.Schema({
 const MessageReport = mongoose.model('MessageReport', MessageReportSchema);
 
 
+// --- COMMUNITY REPORT SCHEMA (User-submitted reports for inappropriate content/violations) ---
+const CommunityReportSchema = new mongoose.Schema({
+    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    reporterEmail: { type: String, required: true },
+    
+    // What is being reported
+    contentType: { 
+        type: String, 
+        enum: ['animal', 'profile', 'other'], 
+        required: true 
+    },
+    contentId: { type: mongoose.Schema.Types.ObjectId, required: false }, // Animal ID or User ID if applicable
+    contentOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+    
+    // Report category
+    category: {
+        type: String,
+        enum: [
+            'inappropriate_content',
+            'harassment_bullying',
+            'spam',
+            'copyright_violation',
+            'community_guidelines_violation',
+            'other'
+        ],
+        required: true
+    },
+    
+    // Reporter's explanation
+    description: { type: String, required: true, maxlength: 2000 },
+    
+    // Moderation status
+    status: { 
+        type: String, 
+        enum: ['open', 'in_review', 'resolved', 'dismissed'],
+        default: 'open'
+    },
+    
+    // Moderator action
+    moderatorNotes: { type: String, maxlength: 1000 },
+    moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    actionTaken: {
+        type: String,
+        enum: ['none', 'content_removed', 'user_warned', 'user_suspended', 'user_banned'],
+        default: 'none'
+    },
+    
+    // Timestamps
+    createdAt: { type: Date, default: Date.now },
+    resolvedAt: { type: Date },
+    
+}, { timestamps: true });
+
+const CommunityReport = mongoose.model('CommunityReport', CommunityReportSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -602,5 +658,6 @@ module.exports = {
     Transaction,
     AnimalTransfer,
     Message,
-    MessageReport
+    MessageReport,
+    CommunityReport
 };

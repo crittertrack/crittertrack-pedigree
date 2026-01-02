@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { LoginAuditLog } = require('../database/2faModels');
-const { Animal, PublicProfile, PublicAnimal, User } = require('../database/models');
+const { Animal, PublicProfile, PublicAnimal, User, CommunityReport } = require('../database/models');
 
 // Helper: Check if user is admin
 const isAdmin = (req) => {
@@ -453,6 +453,237 @@ router.get('/moderator-chat', async (req, res) => {
         // TODO: Implement moderator chat
         res.json([]);
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================================
+// COMMUNITY REPORT ENDPOINTS
+// ============================================
+
+// POST /api/reports - Submit a content report (any authenticated user)
+router.post('/submit', async (req, res) => {
+    try {
+        if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+
+        const { contentType, contentId, category, description, contentOwnerId } = req.body;
+
+        // Validate required fields
+        if (!contentType || !contentId || !category || !description) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Validate contentType
+        const validContentTypes = ['animal', 'profile', 'other'];
+        if (!validContentTypes.includes(contentType)) {
+            return res.status(400).json({ error: 'Invalid content type' });
+        }
+
+        // Validate category - only specific violations allowed (NOT data accuracy)
+        const validCategories = [
+            'inappropriate_content',
+            'harassment_bullying',
+            'spam',
+            'copyright_violation',
+            'community_guidelines_violation',
+            'other'
+        ];
+        if (!validCategories.includes(category)) {
+            return res.status(400).json({ error: 'Invalid report category' });
+        }
+
+        // Validate description length
+        if (description.length > 2000) {
+            return res.status(400).json({ error: 'Description too long (max 2000 characters)' });
+        }
+
+        // Prevent users from reporting their own content
+        if (contentOwnerId && String(req.user.id) === String(contentOwnerId)) {
+            return res.status(400).json({ error: 'Cannot report your own content' });
+        }
+
+        // Create report
+        const report = new CommunityReport({
+            reporterId: req.user.id,
+            reporterEmail: req.user.email,
+            contentType,
+            contentId,
+            contentOwnerId: contentOwnerId || null,
+            category,
+            description,
+            status: 'open',
+            createdAt: new Date()
+        });
+
+        const saved = await report.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Report submitted successfully',
+            reportId: saved._id
+        });
+    } catch (error) {
+        console.error('Report submission error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/reports - List reports (moderators only)
+router.get('/list', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
+
+        const { status, category, sort = '-createdAt', limit = 50, skip = 0 } = req.query;
+
+        // Build filter
+        const filter = {};
+        if (status && ['open', 'in_review', 'resolved', 'dismissed'].includes(status)) {
+            filter.status = status;
+        }
+        if (category) {
+            filter.category = category;
+        }
+
+        // Fetch reports
+        const reports = await CommunityReport.find(filter)
+            .sort(sort)
+            .limit(parseInt(limit))
+            .skip(parseInt(skip))
+            .lean();
+
+        // Get total count for pagination
+        const total = await CommunityReport.countDocuments(filter);
+
+        res.json({
+            reports,
+            total,
+            limit: parseInt(limit),
+            skip: parseInt(skip)
+        });
+    } catch (error) {
+        console.error('Report listing error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH /api/admin/reports/:reportId/status - Update report status (moderators only)
+router.patch('/:reportId/status', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
+
+        const { reportId } = req.params;
+        const { status, moderatorNotes } = req.body;
+
+        // Validate status
+        const validStatuses = ['open', 'in_review', 'resolved', 'dismissed'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        // Update report
+        const report = await CommunityReport.findByIdAndUpdate(
+            reportId,
+            {
+                status,
+                moderatorId: req.user.id,
+                moderatorNotes: moderatorNotes || '',
+                resolvedAt: ['resolved', 'dismissed'].includes(status) ? new Date() : null
+            },
+            { new: true }
+        );
+
+        if (!report) {
+            return res.status(404).json({ error: 'Report not found' });
+        }
+
+        res.json({
+            success: true,
+            message: `Report status updated to ${status}`,
+            report
+        });
+    } catch (error) {
+        console.error('Report status update error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/admin/reports/:reportId/action - Take action on report (admins only)
+router.post('/:reportId/action', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin access required' });
+
+        const { reportId } = req.params;
+        const { action, reason } = req.body; // action: remove_content, warn_user, suspend_user, ban_user
+
+        const validActions = ['remove_content', 'warn_user', 'suspend_user', 'ban_user'];
+        if (!validActions.includes(action)) {
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        // Get the report
+        const report = await CommunityReport.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ error: 'Report not found' });
+        }
+
+        // Execute action
+        switch (action) {
+            case 'remove_content':
+                if (report.contentType === 'animal') {
+                    await Animal.findByIdAndDelete(report.contentId);
+                } else if (report.contentType === 'profile') {
+                    await PublicProfile.findByIdAndDelete(report.contentId);
+                }
+                break;
+
+            case 'warn_user':
+                if (report.contentOwnerId) {
+                    const user = await User.findByIdAndUpdate(
+                        report.contentOwnerId,
+                        { $inc: { warningCount: 1 } },
+                        { new: true }
+                    );
+                    if (user && user.warningCount >= 3) {
+                        // Auto-suspend after 3 warnings
+                        await User.findByIdAndUpdate(report.contentOwnerId, { accountStatus: 'suspended' });
+                    }
+                }
+                break;
+
+            case 'suspend_user':
+                if (report.contentOwnerId) {
+                    await User.findByIdAndUpdate(report.contentOwnerId, {
+                        accountStatus: 'suspended',
+                        suspensionReason: reason || 'Community guideline violation'
+                    });
+                }
+                break;
+
+            case 'ban_user':
+                if (report.contentOwnerId) {
+                    await User.findByIdAndUpdate(report.contentOwnerId, {
+                        accountStatus: 'banned',
+                        banReason: reason || 'Serious community guideline violation'
+                    });
+                }
+                break;
+        }
+
+        // Update report with action taken
+        await CommunityReport.findByIdAndUpdate(reportId, {
+            status: 'resolved',
+            actionTaken: action,
+            moderatorId: req.user.id,
+            moderatorNotes: reason || '',
+            resolvedAt: new Date()
+        });
+
+        res.json({
+            success: true,
+            message: `Action '${action}' completed on report`
+        });
+    } catch (error) {
+        console.error('Report action error:', error);
         res.status(500).json({ error: error.message });
     }
 });
