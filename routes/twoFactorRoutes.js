@@ -850,6 +850,117 @@ router.get('/users/with-roles', async (req, res) => {
 // ========================================
 
 /**
+ * POST /api/admin/setup-admin-password
+ * One-time setup endpoint for initial admin password creation
+ * Only works if user is admin AND doesn't have a password yet
+ * Generates secure password and emails it
+ */
+router.post('/setup-admin-password', async (req, res) => {
+    try {
+        const userId = req.user?.id;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        // Fetch user with adminPassword field
+        const user = await User.findById(userId).select('+adminPassword');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Only admins can use this endpoint
+        if (user.role !== 'admin') {
+            return res.status(403).json({ 
+                error: 'Only admins can set up admin password' 
+            });
+        }
+
+        // Check if password already exists
+        if (user.adminPassword) {
+            return res.status(400).json({ 
+                error: 'Admin password already set. Only admins can regenerate it via the regenerate endpoint.',
+                alreadySet: true
+            });
+        }
+
+        // Generate secure password: 12 characters with mixed case, numbers, symbols
+        const generatedPassword = crypto.randomBytes(12).toString('base64').replace(/[/+=]/g, '').slice(0, 12);
+        
+        // Hash it
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+        
+        // Save it
+        user.adminPassword = hashedPassword;
+        await user.save();
+
+        // Send email with password
+        try {
+            await resend.emails.send({
+                from: fromEmail,
+                to: user.email,
+                subject: `Your CritterTrack Admin Password - Initial Setup`,
+                html: `
+                    <h2>Welcome to CritterTrack Administration</h2>
+                    <p>Hi ${user.personalName || 'there'},</p>
+                    <p>Your administrator account has been set up successfully.</p>
+                    
+                    <h3>Your Admin Panel Access</h3>
+                    <p>Use this password to access the moderation panel:</p>
+                    <div style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <code style="font-size: 16px; font-weight: bold;">${generatedPassword}</code>
+                    </div>
+                    
+                    <p><strong>⚠️ Important:</strong></p>
+                    <ul>
+                        <li>Save this password in a secure location</li>
+                        <li>This is your admin-only password (different from your login password)</li>
+                        <li>Do not share this password with anyone</li>
+                        <li>Only you or another admin can regenerate this password if lost</li>
+                    </ul>
+                    
+                    <h3>How to Access</h3>
+                    <ol>
+                        <li>Log in to CritterTrack with your normal email and password</li>
+                        <li>Click "Moderation Panel" button</li>
+                        <li>Enter the admin password above</li>
+                        <li>Complete the 2FA verification</li>
+                        <li>You'll have full admin access</li>
+                    </ol>
+                    
+                    <h3>Admin Responsibilities</h3>
+                    <ul>
+                        <li>Manage moderator accounts</li>
+                        <li>Oversee all moderation activities</li>
+                        <li>Configure system settings</li>
+                        <li>Review audit logs and data integrity</li>
+                        <li>Handle escalated issues</li>
+                    </ul>
+                    
+                    <p>Questions? Contact support@crittertrack.net</p>
+                `
+            });
+            console.log(`✓ Admin password setup email sent to ${user.email}`);
+        } catch (emailError) {
+            console.error('Failed to send setup email:', emailError);
+        }
+
+        res.json({
+            success: true,
+            message: `Admin password generated and sent to ${user.email}`
+        });
+
+    } catch (error) {
+        console.error('Error setting up admin password:', error);
+        res.status(500).json({
+            error: 'Failed to set up admin password',
+            details: error.message
+        });
+    }
+});
+
+/**
  * POST /api/admin/verify-password
  * Verify the admin password
  * Body: { password: "string" }
