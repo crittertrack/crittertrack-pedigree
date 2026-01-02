@@ -5,6 +5,31 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = 'CritterTrack <noreply@crittertrack.net>';
 
 /**
+ * Generic send email function
+ */
+const sendEmail = async (to, subject, htmlContent) => {
+    try {
+        console.log('Attempting to send email to:', to);
+        console.log('Using Resend API key:', process.env.RESEND_API_KEY ? 'Set' : 'NOT SET');
+        
+        const result = await resend.emails.send({
+            from: fromEmail,
+            to: to,
+            subject: subject,
+            html: htmlContent
+        });
+        
+        console.log('✓ Email sent successfully to:', to);
+        return result;
+    } catch (error) {
+        console.error('Error sending email to', to, ':', error);
+        console.error('Error details:', error.message);
+        console.error('Error response:', error.response?.data);
+        throw error;
+    }
+};
+
+/**
  * Send verification code email
  */
 const sendVerificationEmail = async (email, code) => {
@@ -143,6 +168,7 @@ const sendGeneticsFeedbackNotification = async (feedbackData) => {
 };
 
 module.exports = {
+    sendEmail,
     sendVerificationEmail,
     sendPasswordResetEmail,
     sendBugReportNotification,
