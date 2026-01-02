@@ -466,7 +466,7 @@ router.post('/reports/submit', async (req, res) => {
     try {
         if (!req.user) return res.status(401).json({ error: 'Authentication required' });
 
-        const { contentType, contentId, category, description, contentOwnerId } = req.body;
+        const { contentType, contentId, category, description, contentOwnerId, reportedField } = req.body;
 
         // Validate required fields
         if (!contentType || !contentId || !category || !description) {
@@ -535,6 +535,7 @@ router.post('/reports/submit', async (req, res) => {
             contentType,
             contentId: internalContentId,
             contentOwnerId: finalContentOwnerId || null,
+            reportedField: reportedField || 'other',
             category,
             description,
             status: 'open',
@@ -658,15 +659,20 @@ router.patch('/reports/:reportId/status', async (req, res) => {
     }
 });
 
-// POST /api/admin/reports/:reportId/action - Take action on report (admins only)
+// POST /api/admin/reports/:reportId/action - Take action on report (mods/admins only)
 router.post('/reports/:reportId/action', async (req, res) => {
     try {
-        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin access required' });
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
         const { reportId } = req.params;
-        const { action, reason } = req.body; // action: remove_content, warn_user, suspend_user, ban_user
+        const { action, reason, replacementText } = req.body;
+        
+        // Ban is admin only
+        if (action === 'ban_user' && !isAdmin(req)) {
+            return res.status(403).json({ error: 'Only admins can ban users' });
+        }
 
-        const validActions = ['remove_content', 'warn_user', 'suspend_user', 'ban_user'];
+        const validActions = ['remove_content', 'replace_content', 'warn_user', 'suspend_user', 'ban_user'];
         if (!validActions.includes(action)) {
             return res.status(400).json({ error: 'Invalid action' });
         }
@@ -680,10 +686,36 @@ router.post('/reports/:reportId/action', async (req, res) => {
         // Execute action
         switch (action) {
             case 'remove_content':
+                // Only remove non-mandatory fields
+                const nonMandatoryFields = ['animal_description', 'animal_remarks', 'animal_color', 'profile_description', 'profile_website'];
+                if (!nonMandatoryFields.includes(report.reportedField)) {
+                    return res.status(400).json({ error: 'Cannot remove mandatory field. Use replace_content instead.' });
+                }
+                
                 if (report.contentType === 'animal') {
-                    await Animal.findByIdAndDelete(report.contentId);
+                    const fieldMap = { 'animal_image': 'photoUrl', 'animal_description': 'description', 'animal_remarks': 'remarks' };
+                    const dbField = fieldMap[report.reportedField] || report.reportedField;
+                    await Animal.findByIdAndUpdate(report.contentId, { [dbField]: null });
                 } else if (report.contentType === 'profile') {
-                    await PublicProfile.findByIdAndDelete(report.contentId);
+                    const fieldMap = { 'profile_image': 'profileImage', 'profile_description': 'description' };
+                    const dbField = fieldMap[report.reportedField] || report.reportedField;
+                    await PublicProfile.findByIdAndUpdate(report.contentId, { [dbField]: null });
+                }
+                break;
+
+            case 'replace_content':
+                if (!replacementText) {
+                    return res.status(400).json({ error: 'Replacement text required' });
+                }
+                
+                if (report.contentType === 'animal') {
+                    const fieldMap = { 'animal_name': 'name', 'animal_color': 'color', 'animal_description': 'description', 'animal_remarks': 'remarks' };
+                    const dbField = fieldMap[report.reportedField] || report.reportedField;
+                    await Animal.findByIdAndUpdate(report.contentId, { [dbField]: replacementText });
+                } else if (report.contentType === 'profile') {
+                    const fieldMap = { 'profile_name': 'personalName', 'profile_description': 'description' };
+                    const dbField = fieldMap[report.reportedField] || report.reportedField;
+                    await PublicProfile.findByIdAndUpdate(report.contentId, { [dbField]: replacementText });
                 }
                 break;
 
@@ -700,6 +732,45 @@ router.post('/reports/:reportId/action', async (req, res) => {
                     }
                 }
                 break;
+
+            case 'suspend_user':
+                if (report.contentOwnerId) {
+                    await User.findByIdAndUpdate(report.contentOwnerId, {
+                        accountStatus: 'suspended',
+                        suspensionReason: reason || 'Community guideline violation'
+                    });
+                }
+                break;
+
+            case 'ban_user':
+                if (report.contentOwnerId) {
+                    await User.findByIdAndUpdate(report.contentOwnerId, {
+                        accountStatus: 'banned',
+                        banReason: reason || 'Serious community guideline violation'
+                    });
+                }
+                break;
+        }
+
+        // Update report with action taken
+        await CommunityReport.findByIdAndUpdate(reportId, {
+            status: 'resolved',
+            actionTaken: action === 'replace_content' ? 'content_replaced' : action === 'remove_content' ? 'content_removed' : action,
+            replacedWith: action === 'replace_content' ? replacementText : null,
+            moderatorId: req.user.id,
+            moderatorNotes: reason || '',
+            resolvedAt: new Date()
+        });
+
+        res.json({
+            success: true,
+            message: `Action '${action}' completed on report`
+        });
+    } catch (error) {
+        console.error('Report action error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
             case 'suspend_user':
                 if (report.contentOwnerId) {

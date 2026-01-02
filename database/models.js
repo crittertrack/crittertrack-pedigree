@@ -601,6 +601,20 @@ const CommunityReportSchema = new mongoose.Schema({
     contentId: { type: mongoose.Schema.Types.ObjectId, required: false }, // Animal ID or User ID if applicable
     contentOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     
+    // What specific field/part was reported
+    reportedField: { 
+        type: String, 
+        enum: [
+            // Animal fields
+            'animal_name', 'animal_color', 'animal_image', 'animal_description', 'animal_remarks',
+            // Profile fields
+            'profile_name', 'profile_image', 'profile_breeder_name', 'profile_description', 'profile_website',
+            // Generic
+            'other'
+        ],
+        default: 'other'
+    },
+    
     // Report category
     category: {
         type: String,
@@ -630,9 +644,12 @@ const CommunityReportSchema = new mongoose.Schema({
     moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     actionTaken: {
         type: String,
-        enum: ['none', 'content_removed', 'user_warned', 'user_suspended', 'user_banned'],
+        enum: ['none', 'content_removed', 'content_replaced', 'user_warned', 'user_suspended', 'user_banned'],
         default: 'none'
     },
+    
+    // For replaced content, store what was changed
+    replacedWith: { type: String, maxlength: 500 },
     
     // Timestamps
     createdAt: { type: Date, default: Date.now },
