@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Message, MessageReport, User, PublicProfile } = require('../database/models');
+const { assertCleanText, ProfanityError } = require('../utils/profanityFilter');
 
 // Helper function to generate conversation ID (consistent ordering)
 const getConversationId = (userId1, userId2) => {
@@ -14,9 +15,12 @@ router.post('/send', async (req, res) => {
         const { receiverId, message } = req.body;
         const senderId = req.user.id;
 
-        if (!receiverId || !message) {
+        if (!receiverId || typeof message !== 'string' || !message.trim()) {
             return res.status(400).json({ error: 'receiverId and message are required' });
         }
+
+        const normalizedMessage = message.trim();
+        assertCleanText(normalizedMessage, 'message');
 
         if (senderId === receiverId) {
             return res.status(400).json({ error: 'Cannot send message to yourself' });
@@ -53,7 +57,7 @@ router.post('/send', async (req, res) => {
             conversationId,
             senderId,
             receiverId,
-            message: message.trim(),
+            message: normalizedMessage,
             read: false
         });
 
@@ -65,6 +69,9 @@ router.post('/send', async (req, res) => {
         });
     } catch (error) {
         console.error('Error sending message:', error);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ error: error.message });
+        }
         res.status(500).json({ error: 'Failed to send message' });
     }
 });
@@ -295,41 +302,43 @@ router.get('/blocked', async (req, res) => {
     }
 });
 
+// This endpoint is being moved to /api/reports/message
+// The logic will be handled in reportRoutes.js to centralize all reporting functionality.
 // POST /api/messages/report - Report a message
-router.post('/report', async (req, res) => {
-    try {
-        const reporterId = req.user.id;
-        const { messageId, reportedUserId, reason } = req.body;
+// router.post('/report', async (req, res) => {
+//     try {
+//         const reporterId = req.user.id;
+//         const { messageId, reportedUserId, reason } = req.body;
 
-        if (!messageId || !reportedUserId || !reason) {
-            return res.status(400).json({ error: 'messageId, reportedUserId, and reason are required' });
-        }
+//         if (!messageId || !reportedUserId || !reason) {
+//             return res.status(400).json({ error: 'messageId, reportedUserId, and reason are required' });
+//         }
 
-        const message = await Message.findById(messageId);
-        if (!message) {
-            return res.status(404).json({ error: 'Message not found' });
-        }
+//         const message = await Message.findById(messageId);
+//         if (!message) {
+//             return res.status(404).json({ error: 'Message not found' });
+//         }
 
-        // Verify reporter is part of the conversation
-        if (message.senderId.toString() !== reporterId && message.receiverId.toString() !== reporterId) {
-            return res.status(403).json({ error: 'Not authorized' });
-        }
+//         // Verify reporter is part of the conversation
+//         if (message.senderId.toString() !== reporterId && message.receiverId.toString() !== reporterId) {
+//             return res.status(403).json({ error: 'Not authorized' });
+//         }
 
-        const report = new MessageReport({
-            reporterId,
-            reportedUserId,
-            messageId,
-            reason: reason.trim()
-        });
+//         const report = new MessageReport({
+//             reporterId,
+//             reportedUserId,
+//             messageId,
+//             reason: reason.trim()
+//         });
 
-        await report.save();
+//         await report.save();
 
-        res.status(201).json({ message: 'Report submitted successfully' });
-    } catch (error) {
-        console.error('Error reporting message:', error);
-        res.status(500).json({ error: 'Failed to submit report' });
-    }
-});
+//         res.status(201).json({ message: 'Report submitted successfully' });
+//     } catch (error) {
+//         console.error('Error reporting message:', error);
+//         res.status(500).json({ error: 'Failed to submit report' });
+//     }
+// });
 
 // GET /api/messages/unread-count - Get count of unread messages
 router.get('/unread-count', async (req, res) => {

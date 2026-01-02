@@ -13,6 +13,7 @@ const {
     sendVerificationEmail, 
     sendPasswordResetEmail 
 } = require('../utils/emailService');
+const { ProfanityError } = require('../utils/profanityFilter');
 
 // --- Authentication Route Controllers (NO AUTH REQUIRED) ---
 
@@ -55,6 +56,9 @@ router.post('/register-request', async (req, res) => {
         console.error('Error requesting email verification:', error);
         console.error('Error details:', error.message);
         console.error('Error stack:', error.stack);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
         if (error.message.includes('already registered')) {
             return res.status(409).json({ message: error.message });
         }
@@ -82,6 +86,9 @@ router.post('/verify-email', async (req, res) => {
         });
     } catch (error) {
         console.error('Error verifying email:', error);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
         if (error.message.includes('Invalid') || error.message.includes('expired')) {
             return res.status(400).json({ message: error.message });
         }
@@ -124,6 +131,9 @@ router.post('/resend-verification', async (req, res) => {
         });
     } catch (error) {
         console.error('Error resending verification:', error);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Failed to resend verification code.' });
     }
 });
@@ -149,6 +159,9 @@ router.post('/register', async (req, res) => {
         });
     } catch (error) {
         console.error('Error registering user:', error);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
         // 409 Conflict for duplicate email
         if (error.message.includes('E11000')) {
             return res.status(409).json({ message: 'Email already in use.' });

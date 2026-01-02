@@ -5,6 +5,7 @@ const path = require('path');
 const { Notification, User, PublicProfile, PublicAnimal } = require('../database/models');
 const fs = require('fs');
 const { calculateInbreedingCoefficient, calculatePairingInbreeding } = require('../utils/inbreeding');
+const { ProfanityError } = require('../utils/profanityFilter');
 // simple disk storage for images (adjust for S3 in production)
 const uploadDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -405,6 +406,9 @@ router.post('/', upload.single('file'), async (req, res) => {
         }
         if (error && error.message === 'INVALID_FILE_TYPE') {
             return res.status(415).json({ message: 'Unsupported file type. Only PNG and JPEG images are allowed.' });
+        }
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
         }
         res.status(500).json({ message: 'Internal server error during animal registration.', error: error && error.message ? error.message : String(error) });
     }
@@ -814,6 +818,9 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         // Use 404 if the animal isn't found or doesn't belong to the user
         if (error && (error.message.includes("not found") || error.message.includes("does not own"))) {
             return res.status(404).json({ message: error.message });
+        }
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
         }
 
         // Return error message to assist debugging (remove in production)

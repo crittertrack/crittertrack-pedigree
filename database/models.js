@@ -522,213 +522,75 @@ const BugReportSchema = new mongoose.Schema({
 const BugReport = mongoose.model('BugReport', BugReportSchema);
 
 
-// --- 9. SPECIES SCHEMA (Global Species List) ---
-const SpeciesSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true, trim: true, index: true },
-    latinName: { type: String, default: null }, // Scientific name
-    category: { 
-        type: String, 
-        enum: ['Rodent', 'Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'], 
-        default: 'Other',
-        index: true 
-    },
-    isDefault: { type: Boolean, default: false, index: true },
-    createdBy_public: { type: String, default: null }, // User ID who created this species (null for defaults)
-    createdAt: { type: Date, default: Date.now }
-}, { timestamps: true });
-const Species = mongoose.model('Species', SpeciesSchema);
-
-
-// --- TRANSACTION SCHEMA (Budget Tracking) ---
-const TransactionSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    type: { type: String, enum: ['sale', 'purchase'], required: true, index: true },
-    animalId: { type: String, default: null }, // Public ID of the animal (optional)
-    animalName: { type: String, default: null },
-    price: { type: Number, required: true, min: 0 },
-    date: { type: Date, required: true, index: true },
-    buyer: { type: String, default: null }, // For sales
-    seller: { type: String, default: null }, // For purchases
-    buyerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Buyer's user ID (for transfers)
-    sellerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Seller's user ID (for transfers)
-    notes: { type: String, default: null }
-}, { timestamps: true });
-const Transaction = mongoose.model('Transaction', TransactionSchema);
-
-
-// --- ANIMAL TRANSFER SCHEMA (Ownership Transfers) ---
-const AnimalTransferSchema = new mongoose.Schema({
-    fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    animalId_public: { type: String, required: true, index: true }, // Public ID of the animal
-    transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: true },
-    transferType: { type: String, enum: ['sale', 'purchase'], required: true }, // sale = seller initiated, purchase = buyer initiated
+// --- 9. MESSAGE REPORT SCHEMA ---
+const MessageReportSchema = new mongoose.Schema({
+    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
+    reason: { type: String, required: true },
     status: { 
         type: String, 
-        enum: ['pending', 'accepted', 'declined'], 
+        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
         default: 'pending',
         index: true 
     },
-    offerViewOnly: { type: Boolean, default: false }, // For purchases - offer seller view-only access
-    createdAt: { type: Date, default: Date.now },
-    respondedAt: { type: Date, default: null }
-}, { timestamps: true });
-const AnimalTransfer = mongoose.model('AnimalTransfer', AnimalTransferSchema);
-
-
-// --- 12. MESSAGE SCHEMA ---
-const MessageSchema = new mongoose.Schema({
-    conversationId: { type: String, required: true, index: true }, // Format: smaller_userId_larger_userId
-    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    message: { type: String, required: true, maxlength: 5000 },
-    read: { type: Boolean, default: false },
-    deleted: { type: Boolean, default: false },
-    deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who deleted this message from their view
-}, { timestamps: true });
-MessageSchema.index({ conversationId: 1, createdAt: -1 }); // Efficient conversation queries
-const Message = mongoose.model('Message', MessageSchema);
-
-
-// --- 13. MESSAGE REPORT SCHEMA ---
-const MessageReportSchema = new mongoose.Schema({
-    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
-    reason: { type: String, required: true, maxlength: 1000 },
-    status: { type: String, enum: ['pending', 'reviewed', 'resolved'], default: 'pending' },
+    adminNotes: { type: String, default: null },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
 }, { timestamps: true });
 const MessageReport = mongoose.model('MessageReport', MessageReportSchema);
 
 
-// --- COMMUNITY REPORT SCHEMA (User-submitted reports for inappropriate content/violations) ---
-const CommunityReportSchema = new mongoose.Schema({
-    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    reporterEmail: { type: String, required: true },
-    
-    // What is being reported
-    contentType: { 
-        type: String, 
-        enum: ['animal', 'profile', 'other'], 
-        required: true 
-    },
-    contentId: { type: mongoose.Schema.Types.ObjectId, required: false }, // Animal ID or User ID if applicable
-    contentOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
-    
-    // What specific field/part was reported
-    reportedField: { 
-        type: String, 
-        enum: [
-            // Animal fields
-            'animal_name', 'animal_color', 'animal_image', 'animal_description', 'animal_remarks',
-            // Profile fields
-            'profile_name', 'profile_image', 'profile_breeder_name', 'profile_description', 'profile_website',
-            // Generic
-            'other'
-        ],
-        default: 'other'
-    },
-    
-    // Report category
-    category: {
-        type: String,
-        enum: [
-            'inappropriate_content',
-            'harassment_bullying',
-            'spam',
-            'copyright_violation',
-            'community_guidelines_violation',
-            'other'
-        ],
-        required: true
-    },
-    
-    // Reporter's explanation
-    description: { type: String, required: true, maxlength: 2000 },
-    
-    // Moderation status
+// --- 10. PROFILE REPORT SCHEMA ---
+const ProfileReportSchema = new mongoose.Schema({
+    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    reason: { type: String, required: true },
     status: { 
         type: String, 
-        enum: ['open', 'in_review', 'resolved', 'dismissed'],
-        default: 'open'
+        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
+        default: 'pending',
+        index: true 
     },
-    
-    // Moderator action
-    moderatorNotes: { type: String, maxlength: 1000 },
-    moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    actionTaken: {
-        type: String,
-        enum: ['none', 'content_removed', 'content_replaced', 'user_warned', 'user_suspended', 'user_banned'],
-        default: 'none'
-    },
-    
-    // For replaced content, store what was changed
-    replacedWith: { type: String, maxlength: 500 },
-    
-    // Timestamps
-    createdAt: { type: Date, default: Date.now },
-    resolvedAt: { type: Date },
-    
+    adminNotes: { type: String, default: null },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
 }, { timestamps: true });
+const ProfileReport = mongoose.model('ProfileReport', ProfileReportSchema);
 
-const CommunityReport = mongoose.model('CommunityReport', CommunityReportSchema);
+
+// --- 11. ANIMAL REPORT SCHEMA ---
+const AnimalReportSchema = new mongoose.Schema({
+    reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    reportedAnimalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Animal', required: true, index: true },
+    reason: { type: String, required: true },
+    status: { 
+        type: String, 
+        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
+        default: 'pending',
+        index: true 
+    },
+    adminNotes: { type: String, default: null },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
+}, { timestamps: true });
+const AnimalReport = mongoose.model('AnimalReport', AnimalReportSchema);
 
 
-// --- 15. AUDIT LOG SCHEMA (Track all moderation actions) ---
+// --- 12. AUDIT LOG SCHEMA ---
 const AuditLogSchema = new mongoose.Schema({
     moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    moderatorEmail: { type: String, required: true },
-    action: { 
-        type: String, 
-        enum: [
-            'user_suspended', 'user_banned', 'user_warned', 'user_unbanned', 'user_activated',
-            'user_role_changed', 'user_deleted', 'user_password_reset',
-            'content_removed', 'content_edited', 'content_hidden', 'content_restored',
-            'report_resolved', 'report_dismissed', 'report_status_changed',
-            'setting_changed', 'backup_created', 'backup_restored',
-            'broadcast_sent', 'message_sent', 'animal_deleted', 'profile_hidden'
-        ],
-        required: true,
-        index: true
-    },
-    targetType: { 
-        type: String, 
-        enum: ['user', 'animal', 'profile', 'litter', 'report', 'system', 'setting'],
-        required: true 
-    },
-    targetId: { type: mongoose.Schema.Types.ObjectId, index: true },
-    targetName: { type: String }, // User email, animal name, etc for easy reference
-    details: { type: Object }, // Stores what changed (before/after values)
-    reason: { type: String, maxlength: 1000 },
-    ipAddress: { type: String },
-    userAgent: { type: String }
+    moderatorEmail: { type: String, default: null },
+    action: { type: String, required: true }, // e.g., 'suspend_user', 'delete_animal_image'
+    targetType: { type: String, required: true }, // e.g., 'User', 'Animal', 'Message'
+    targetId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    targetName: { type: String, default: null },
+    details: { type: mongoose.Schema.Types.Mixed, default: {} }, // e.g., { reason: 'Inappropriate content' }
+    reason: { type: String, default: null },
+    ipAddress: { type: String, default: null },
+    userAgent: { type: String, default: null }
 }, { timestamps: true });
-AuditLogSchema.index({ createdAt: -1 }); // For chronological queries
-AuditLogSchema.index({ moderatorId: 1, createdAt: -1 }); // For moderator activity
-AuditLogSchema.index({ targetType: 1, targetId: 1 }); // For finding actions on specific targets
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
-
-
-// --- 16. SYSTEM SETTINGS SCHEMA (Persistent settings storage) ---
-const SystemSettingsSchema = new mongoose.Schema({
-    key: { type: String, required: true, unique: true, index: true },
-    value: { type: mongoose.Schema.Types.Mixed, required: true },
-    type: { 
-        type: String, 
-        enum: ['boolean', 'string', 'number', 'object', 'array'],
-        required: true 
-    },
-    category: {
-        type: String,
-        enum: ['features', 'security', 'content', 'backup', 'maintenance', 'moderation'],
-        required: true,
-        index: true
-    },
-    description: { type: String },
-    lastModified: { type: Date, default: Date.now },
-    modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-});
-const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
 
 
 // --- EXPORTS ---
@@ -741,13 +603,10 @@ module.exports = {
     Notification,
     GeneticsFeedback,
     BugReport,
-    Counter,
-    Species,
-    Transaction,
-    AnimalTransfer,
-    Message,
     MessageReport,
-    CommunityReport,
+    ProfileReport,
+    AnimalReport,
     AuditLog,
-    SystemSettings
+    TwoFactorSecret,
+    TwoFactorBackupCode
 };

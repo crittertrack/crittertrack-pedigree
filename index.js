@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); // <-- REQUIRED for inlined Auth Middleware
 require('dotenv').config();
+const { ProfanityError } = require('./utils/profanityFilter');
 
 // Database Connection Service and User Profile Controllers
 const { 
@@ -26,6 +27,8 @@ const litterRoutes = require('./routes/litterRoutes');
 const pedigreeRoutes = require('./routes/pedigreeRoutes');
 const publicRoutes = require('./routes/publicRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const moderationRoutes = require('./routes/moderationRoutes');
 // const adminRoutes = require('./routes/adminRoutes');
 
 
@@ -275,6 +278,9 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
         res.json({ message: 'Profile updated successfully!', user: updatedUser });
     } catch (error) {
         console.error('Error updating user profile:', error.message);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Internal server error during profile update.' });
     }
 });
@@ -403,6 +409,8 @@ app.use('/api/animals', authMiddleware, animalRoutes);
 app.use('/api/litters', authMiddleware, litterRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
+app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/moderation', authMiddleware, moderationRoutes);
 
 // Budget Routes (Require authMiddleware)
 const budgetRoutes = require('./routes/budgetRoutes');

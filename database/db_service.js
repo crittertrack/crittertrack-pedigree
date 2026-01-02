@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { assertCleanText } = require('../utils/profanityFilter');
 
 const {
     User,
@@ -16,6 +17,104 @@ const {
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me';
 const SALT_ROUNDS = 10;
 const JWT_LIFETIME = '1d';
+
+const enforceCleanFields = (payload = {}, fieldLabelMap = {}) => {
+    Object.entries(fieldLabelMap).forEach(([field, label]) => {
+        const value = payload[field];
+        if (typeof value === 'string') {
+            assertCleanText(value, label);
+            payload[field] = value.trim();
+        }
+    });
+};
+
+const enforceCleanArrayFields = (values, label) => {
+    if (!Array.isArray(values)) return;
+    values.forEach((value, idx) => {
+        if (typeof value === 'string') {
+            assertCleanText(value, `${label} #${idx + 1}`);
+            values[idx] = value.trim();
+        }
+    });
+};
+
+const enforceCleanNestedArrayFields = (items, nestedKey, labelPrefix) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, idx) => {
+        if (item && typeof item[nestedKey] === 'string') {
+            assertCleanText(item[nestedKey], `${labelPrefix} #${idx + 1}`);
+            item[nestedKey] = item[nestedKey].trim();
+        }
+    });
+};
+
+const USER_TEXT_FIELDS = {
+    personalName: 'personal name',
+    breederName: 'breeder name',
+    country: 'country'
+};
+
+const ANIMAL_TEXT_FIELDS = {
+    name: 'animal name',
+    prefix: 'animal prefix',
+    suffix: 'animal suffix',
+    species: 'animal species',
+    gender: 'animal gender',
+    breederyId: 'registry identifier',
+    breederId_public: 'breeder id',
+    status: 'animal status',
+    color: 'animal color',
+    coat: 'animal coat',
+    coatPattern: 'coat pattern',
+    earset: 'earset',
+    ownerName: 'owner name',
+    remarks: 'animal remarks',
+    geneticCode: 'genetic code',
+    currentOwner: 'current owner field',
+    lifeStage: 'life stage',
+    microchipNumber: 'microchip number',
+    pedigreeRegistrationId: 'pedigree registration id',
+    breed: 'breed',
+    strain: 'strain',
+    origin: 'origin',
+    dietType: 'diet type',
+    feedingSchedule: 'feeding schedule',
+    supplements: 'supplements',
+    housingType: 'housing type',
+    bedding: 'bedding',
+    temperatureRange: 'temperature range',
+    humidity: 'humidity',
+    lighting: 'lighting',
+    noise: 'noise notes',
+    enrichment: 'enrichment',
+    temperament: 'temperament',
+    handlingTolerance: 'handling tolerance',
+    socialStructure: 'social structure',
+    activityCycle: 'activity cycle',
+    causeOfDeath: 'cause of death',
+    necropsyResults: 'necropsy results',
+    insurance: 'insurance',
+    legalStatus: 'legal status',
+    vaccinations: 'vaccination notes',
+    dewormingRecords: 'deworming records',
+    parasiteControl: 'parasite control',
+    medicalConditions: 'medical conditions',
+    allergies: 'allergies',
+    medications: 'medications',
+    medicalProcedures: 'medical procedures',
+    labResults: 'lab results',
+    vetVisits: 'veterinary visits',
+    primaryVet: 'primary veterinarian',
+    heatStatus: 'heat status',
+    matingDates: 'mating dates'
+};
+
+const enforceCleanAnimalText = (animalData = {}) => {
+    enforceCleanFields(animalData, ANIMAL_TEXT_FIELDS);
+    enforceCleanArrayFields(animalData.tags, 'animal tag');
+    enforceCleanNestedArrayFields(animalData.ownershipHistory, 'name', 'ownership entry');
+    enforceCleanNestedArrayFields(animalData.growthRecords, 'notes', 'growth record note');
+};
 
 /**
  * Utility function to get the next auto-incrementing public ID with prefix.
@@ -63,6 +162,7 @@ const connectDB = async (uri) => {
  * Registers a new user.
  */
 const registerUser = async (userData) => {
+    enforceCleanFields(userData, USER_TEXT_FIELDS);
     // 1. Hash password
     const salt = await bcrypt.genSalt(SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
@@ -200,6 +300,7 @@ const getUserProfileById = async (appUserId_backend) => {
  * Updates a user's profile information.
  */
 const updateUserProfile = async (appUserId_backend, updates) => {
+    enforceCleanFields(updates, USER_TEXT_FIELDS);
     // Find the user by ID
     const user = await User.findById(appUserId_backend);
 
@@ -368,6 +469,8 @@ const addAnimal = async (appUserId_backend, animalData) => {
     } catch (err) {
         console.warn('Parent normalization failed in addAnimal:', err && err.message ? err.message : err);
     }
+
+    enforceCleanAnimalText(animalData);
 
     const newAnimal = new Animal({
         ownerId: appUserId_backend,
@@ -623,6 +726,8 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     } catch (err) {
         console.warn('Parent normalization failed in updateAnimal:', err && err.message ? err.message : err);
     }
+
+    enforceCleanAnimalText(updates);
 
     // Use findOneAndUpdate to ensure ownership and get the updated document
     console.log('[updateAnimal] Updating with:', JSON.stringify({ 
@@ -1168,6 +1273,14 @@ const getHiddenViewOnlyAnimals = async (appUserId_backend) => {
  * Does NOT create the account yet
  */
 const requestEmailVerification = async (email, personalName, breederName, showBreederName, password) => {
+    if (typeof personalName === 'string') {
+        assertCleanText(personalName, 'personal name');
+    }
+    if (typeof breederName === 'string') {
+        assertCleanText(breederName, 'breeder name');
+    }
+    const normalizedPersonalName = typeof personalName === 'string' ? personalName.trim() : personalName;
+    const normalizedBreederName = typeof breederName === 'string' ? breederName.trim() : breederName;
     // Check if email is already registered
     const existingUser = await User.findOne({ email });
     if (existingUser && existingUser.emailVerified) {
@@ -1187,8 +1300,8 @@ const requestEmailVerification = async (email, personalName, breederName, showBr
     if (existingUser) {
         // Update existing unverified user
         existingUser.password = hashedPassword;
-        existingUser.personalName = personalName;
-        existingUser.breederName = breederName || personalName;
+        existingUser.personalName = normalizedPersonalName;
+        existingUser.breederName = normalizedBreederName || normalizedPersonalName;
         existingUser.showBreederName = showBreederName || false;
         existingUser.verificationCode = verificationCode;
         existingUser.verificationCodeExpires = verificationCodeExpires;
@@ -1198,8 +1311,8 @@ const requestEmailVerification = async (email, personalName, breederName, showBr
         const user = new User({
             email,
             password: hashedPassword,
-            personalName,
-            breederName: breederName || personalName,
+            personalName: normalizedPersonalName,
+            breederName: normalizedBreederName || normalizedPersonalName,
             showBreederName: showBreederName || false,
             emailVerified: false,
             verificationCode,
@@ -1234,6 +1347,8 @@ const verifyEmailAndRegister = async (email, code) => {
     if (user.emailVerified) {
         throw new Error('Email already verified');
     }
+
+    enforceCleanFields(user, USER_TEXT_FIELDS);
 
     // Get next public ID
     const id_public = await getNextSequence('userId');
