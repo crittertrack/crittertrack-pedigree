@@ -453,25 +453,41 @@ router.post('/track-login', async (req, res) => {
             userAgent,
             deviceInfo = {},
             status = 'success',
-            twoFactorVerified = false,
-            failureReason = null
+            twoFactorPending = false,
+            timestamp
         } = req.body;
 
-        if (!userId || !username) {
+        // Validate required fields
+        if (!userId) {
+            console.warn('track-login: Missing userId in request body');
             return res.status(400).json({
-                error: 'userId and username required'
+                error: 'userId required'
+            });
+        }
+
+        if (!username) {
+            console.warn('track-login: Missing username in request body');
+            return res.status(400).json({
+                error: 'username required'
             });
         }
 
         // Get IP address from server
         const ipAddress = getClientIP(req);
 
-        // Get user email
-        const user = await User.findById(userId);
-        const email = user?.email || 'unknown@example.com';
+        // Get user email - handle missing user gracefully
+        let email = 'unknown@example.com';
+        try {
+            const user = await User.findById(userId);
+            if (user?.email) {
+                email = user.email;
+            }
+        } catch (userError) {
+            console.warn('track-login: Error looking up user email:', userError.message);
+        }
 
         // Parse device name from User-Agent
-        const deviceName = parseDeviceName(userAgent);
+        const deviceName = userAgent ? parseDeviceName(userAgent) : 'Unknown Device';
 
         // Extract platform, language, etc. from deviceInfo
         const platform = deviceInfo.platform || null;
@@ -479,8 +495,13 @@ router.post('/track-login', async (req, res) => {
         const screenResolution = deviceInfo.screenResolution || null;
         const timezone = deviceInfo.timezone || null;
 
-        // Detect if suspicious
-        const suspiciousCheck = await detectSuspiciousLogin(userId, ipAddress, null);
+        // Detect if suspicious - wrap in try-catch since it's not critical
+        let suspiciousCheck = { isSuspicious: false };
+        try {
+            suspiciousCheck = await detectSuspiciousLogin(userId, ipAddress, null);
+        } catch (checkError) {
+            console.warn('track-login: Error checking suspicious login:', checkError.message);
+        }
 
         // Create login audit log
         const loginLog = new LoginAuditLog({
@@ -488,27 +509,31 @@ router.post('/track-login', async (req, res) => {
             username: username,
             email: email,
             ip_address: ipAddress,
-            user_agent: userAgent,
+            user_agent: userAgent || 'Unknown',
             platform: platform,
             language: language,
             screen_resolution: screenResolution,
             timezone: timezone,
             device_name: deviceName,
             status: status,
-            two_factor_verified: twoFactorVerified,
-            failure_reason: failureReason,
+            two_factor_verified: !twoFactorPending,
+            failure_reason: null,
             is_suspicious: suspiciousCheck.isSuspicious,
             suspicious_reason: suspiciousCheck.reason || null
         });
 
         await loginLog.save();
 
-        // Update user's last login info
-        if (status === 'success' && twoFactorVerified) {
-            await User.findByIdAndUpdate(userId, {
-                last_login: new Date(),
-                last_login_ip: ipAddress
-            });
+        // Update user's last login info - handle errors gracefully
+        if (status === 'success' && !twoFactorPending) {
+            try {
+                await User.findByIdAndUpdate(userId, {
+                    last_login: new Date(),
+                    last_login_ip: ipAddress
+                });
+            } catch (updateError) {
+                console.warn('track-login: Error updating user last login:', updateError.message);
+            }
         }
 
         res.status(200).json({
