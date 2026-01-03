@@ -107,7 +107,7 @@ router.get('/users', async (req, res) => {
 router.post('/users/:userId/status', requireModerator, async (req, res) => {
     try {
         const { status, reason, durationDays, ipBan } = req.body;
-        const userId = req.params.userId;
+        let userId = req.params.userId;
         const allowedStatuses = ['active', 'suspended', 'banned'];
 
         console.log('[MODERATION STATUS] Updating user status:', { userId, status, reason, durationDays, ipBan });
@@ -148,7 +148,14 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
 
         updates.moderatedBy = req.user.id;
 
-        const user = await User.findByIdAndUpdate(userId, updates, { new: true });
+        // Try to find and update user - first try as MongoDB ID, then try as id_public
+        let user = await User.findByIdAndUpdate(userId, updates, { new: true });
+        
+        if (!user) {
+            // Try finding by id_public (public ID like "CTU8")
+            user = await User.findOneAndUpdate({ id_public: userId }, updates, { new: true });
+        }
+
         if (!user) {
             console.log('[MODERATION STATUS] User not found:', userId);
             return res.status(404).json({ message: 'User not found.' });
@@ -183,11 +190,17 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
 router.post('/users/:userId/warn', async (req, res) => {
     try {
         const { reason, category } = req.body;
-        const userId = req.params.userId;
+        let userId = req.params.userId;
         
         console.log('[MODERATION WARN] Warning user:', { userId, reason, category });
 
-        const user = await User.findById(userId);
+        // Try to find user - first try as MongoDB ID, then try as id_public
+        let user = await User.findById(userId);
+        
+        if (!user) {
+            // Try finding by id_public (public ID like "CTU8")
+            user = await User.findOne({ id_public: userId });
+        }
 
         if (!user) {
             console.log('[MODERATION WARN] User not found:', userId);
@@ -237,11 +250,17 @@ router.post('/users/:userId/warn', async (req, res) => {
 router.post('/users/:userId/lift-warning', async (req, res) => {
     try {
         const { reason } = req.body;
-        const userId = req.params.userId;
+        let userId = req.params.userId;
         
         console.log('[MODERATION LIFT_WARNING] Lifting warning for user:', { userId, reason });
 
-        const user = await User.findById(userId);
+        // Try to find user - first try as MongoDB ID, then try as id_public
+        let user = await User.findById(userId);
+        
+        if (!user) {
+            // Try finding by id_public (public ID like "CTU8")
+            user = await User.findOne({ id_public: userId });
+        }
 
         if (!user) {
             console.log('[MODERATION LIFT_WARNING] User not found:', userId);
