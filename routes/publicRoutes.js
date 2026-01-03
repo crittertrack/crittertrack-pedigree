@@ -131,10 +131,13 @@ router.get('/users/newest', async (req, res) => {
         const newestUsers = await PublicProfile.find({})
             .sort({ createdAt: -1 })
             .limit(limit)
-            .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt')
+            .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus')
             .lean();
         
-        res.status(200).json(newestUsers);
+        // Filter out banned users
+        const activeUsers = newestUsers.filter(u => u.accountStatus !== 'banned');
+        
+        res.status(200).json(activeUsers);
     } catch (error) {
         console.error('Error fetching newest users:', error);
         res.status(500).json({ message: 'Internal server error while fetching newest users.' });
@@ -157,11 +160,12 @@ router.get('/users/active', async (req, res) => {
         // Get unique owner IDs
         const uniqueOwnerIds = [...new Set(recentAnimals.map(a => a.ownerId_public))];
         
-        // Fetch public profiles for these users
+        // Fetch public profiles for these users, excluding banned users
         const activeUsers = await PublicProfile.find({
-            id_public: { $in: uniqueOwnerIds }
+            id_public: { $in: uniqueOwnerIds },
+            accountStatus: { $ne: 'banned' }
         })
-        .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt')
+        .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus')
         .lean();
         
         res.status(200).json(activeUsers);
