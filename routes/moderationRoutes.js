@@ -6,7 +6,10 @@ const {
     User,
     ProfileReport,
     AnimalReport,
-    MessageReport
+    MessageReport,
+    Animal,
+    PublicProfile,
+    PublicAnimal
 } = require('../database/models');
 
 const requireModerator = checkRole(['moderator', 'admin']);
@@ -100,11 +103,14 @@ router.get('/users', async (req, res) => {
     }
 });
 
-// POST /api/moderation/users/:userId/status - admin only status changes
-router.post('/users/:userId/status', requireAdmin, async (req, res) => {
+// POST /api/moderation/users/:userId/status - moderator and admin status changes
+router.post('/users/:userId/status', requireModerator, async (req, res) => {
     try {
-        const { status, reason } = req.body;
+        const { status, reason, durationDays, ipBan } = req.body;
+        const userId = req.params.userId;
         const allowedStatuses = ['active', 'suspended', 'banned'];
+
+        console.log('[MODERATION STATUS] Updating user status:', { userId, status, reason, durationDays, ipBan });
 
         if (!allowedStatuses.includes(status)) {
             return res.status(400).json({ message: 'Invalid account status requested.' });
@@ -125,19 +131,33 @@ router.post('/users/:userId/status', requireAdmin, async (req, res) => {
             updates.suspensionDate = now;
             updates.banReason = null;
             updates.banDate = null;
+            if (durationDays) {
+                updates.suspensionExpiry = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+            }
         }
 
         if (status === 'banned') {
             updates.banReason = reason || 'Banned by moderator';
             updates.banDate = now;
+            if (ipBan) {
+                updates.bannedIPs = updates.bannedIPs || [];
+                // In a real implementation, we'd get the user's IP from the session
+                console.log('[MODERATION STATUS] IP ban requested (would need IP tracking)');
+            }
         }
 
         updates.moderatedBy = req.user.id;
 
-        const user = await User.findByIdAndUpdate(req.params.userId, updates, { new: true });
+        const user = await User.findByIdAndUpdate(userId, updates, { new: true });
         if (!user) {
+            console.log('[MODERATION STATUS] User not found:', userId);
             return res.status(404).json({ message: 'User not found.' });
         }
+
+        console.log('[MODERATION STATUS] User status updated successfully:', { 
+            email: user.email, 
+            newStatus: status 
+        });
 
         await createAuditLog({
             ...buildAuditMetadata(req),
@@ -145,7 +165,7 @@ router.post('/users/:userId/status', requireAdmin, async (req, res) => {
             targetType: 'user',
             targetId: user._id,
             targetName: `${user.email} (${user.id_public || 'No ID'})`,
-            details: { newStatus: status },
+            details: { newStatus: status, durationDays, ipBan },
             reason: reason || null
         });
 
@@ -154,7 +174,7 @@ router.post('/users/:userId/status', requireAdmin, async (req, res) => {
             user
         });
     } catch (error) {
-        console.error('Failed to update user status:', error);
+        console.error('[MODERATION STATUS] Failed to update user status:', error);
         res.status(500).json({ message: 'Unable to update user status.' });
     }
 });
@@ -163,9 +183,14 @@ router.post('/users/:userId/status', requireAdmin, async (req, res) => {
 router.post('/users/:userId/warn', async (req, res) => {
     try {
         const { reason, category } = req.body;
-        const user = await User.findById(req.params.userId);
+        const userId = req.params.userId;
+        
+        console.log('[MODERATION WARN] Warning user:', { userId, reason, category });
+
+        const user = await User.findById(userId);
 
         if (!user) {
+            console.log('[MODERATION WARN] User not found:', userId);
             return res.status(404).json({ message: 'User not found.' });
         }
 
@@ -176,6 +201,12 @@ router.post('/users/:userId/warn', async (req, res) => {
             user.suspensionDate = new Date();
         }
         await user.save();
+
+        console.log('[MODERATION WARN] User warned successfully:', { 
+            email: user.email, 
+            warningCount: user.warningCount, 
+            newStatus: user.accountStatus 
+        });
 
         // Send warning notification to user
         const { Notification } = require('../database/models');
@@ -209,7 +240,7 @@ router.post('/users/:userId/warn', async (req, res) => {
             accountStatus: user.accountStatus
         });
     } catch (error) {
-        console.error('Failed to warn user:', error);
+        console.error('[MODERATION WARN] Failed to warn user:', error);
         res.status(500).json({ message: 'Unable to record warning.' });
     }
 });
@@ -428,45 +459,73 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
         const { contentType, contentId } = req.params;
         const { fieldEdits, reason } = req.body;
 
+        console.log('[MODERATION EDIT] Editing content:', { contentType, contentId, fieldEdits, reason });
+
         if (!fieldEdits || typeof fieldEdits !== 'object') {
             return res.status(400).json({ message: 'fieldEdits object is required' });
         }
 
-        const { Animal, PublicProfile, PublicAnimal } = require('../database/models');
         let updated = null;
         let targetName = '';
+        const mongoose = require('mongoose');
+        const isObjectId = mongoose.Types.ObjectId.isValid(contentId);
 
         if (contentType === 'profile') {
-            // Update profile fields
-            const user = await User.findByIdAndUpdate(
-                contentId,
-                fieldEdits,
-                { new: true, runValidators: true }
-            );
+            // Try to find by ObjectId first, then by public ID
+            let user = null;
+            
+            if (isObjectId) {
+                user = await User.findByIdAndUpdate(
+                    contentId,
+                    fieldEdits,
+                    { new: true, runValidators: true }
+                );
+            } else {
+                // Try by public ID
+                user = await User.findOneAndUpdate(
+                    { id_public: contentId },
+                    fieldEdits,
+                    { new: true, runValidators: true }
+                );
+            }
             
             if (!user) {
+                console.log('[MODERATION EDIT] Profile not found:', contentId);
                 return res.status(404).json({ message: 'Profile not found' });
             }
 
             // Also update public profile if exists
             await PublicProfile.findOneAndUpdate(
-                { userId_backend: contentId },
+                { userId_backend: user._id },
                 fieldEdits,
                 { runValidators: true }
             );
 
             updated = user;
             targetName = `${user.email || user.personalName} (${user.id_public || 'No ID'})`;
+            console.log('[MODERATION EDIT] Updated profile:', targetName);
         } 
         else if (contentType === 'animal') {
-            // Update animal fields
-            const animal = await Animal.findByIdAndUpdate(
-                contentId,
-                fieldEdits,
-                { new: true, runValidators: true }
-            );
+            // Try to find by ObjectId first, then by public ID
+            let animal = null;
+            
+            if (isObjectId) {
+                animal = await Animal.findByIdAndUpdate(
+                    contentId,
+                    fieldEdits,
+                    { new: true, runValidators: true }
+                );
+            } else {
+                // Try by public ID
+                animal = await Animal.findOneAndUpdate(
+                    { id_public: contentId },
+                    fieldEdits,
+                    { new: true, runValidators: true }
+                );
+            }
 
             if (!animal) {
+                console.log('[MODERATION EDIT] Animal not found:', contentId);
                 return res.status(404).json({ message: 'Animal not found' });
             }
 
@@ -479,6 +538,7 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
 
             updated = animal;
             targetName = `${animal.name} (${animal.id_public || 'No ID'})`;
+            console.log('[MODERATION EDIT] Updated animal:', targetName);
         }
         else {
             return res.status(400).json({ message: 'Invalid content type. Must be profile or animal' });
@@ -503,7 +563,7 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
             updated
         });
     } catch (error) {
-        console.error('Failed to edit content:', error);
+        console.error('[MODERATION EDIT] Failed to edit content:', error);
         res.status(500).json({ message: 'Unable to edit content', error: error.message });
     }
 });
