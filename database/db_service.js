@@ -1328,13 +1328,16 @@ const requestEmailVerification = async (email, personalName, breederName, showBr
  * Verify email code and complete registration
  */
 const verifyEmailAndRegister = async (email, code) => {
-    // Find user with verification code
-    const user = await User.findOne({ 
-        email,
-        verificationCode: code 
-    }).select('+verificationCode +verificationCodeExpires');
+    // Find user with email and select the verification code field
+    const user = await User.findOne({ email })
+        .select('+verificationCode +verificationCodeExpires');
 
     if (!user) {
+        throw new Error('Invalid verification code');
+    }
+
+    // Verify the code matches
+    if (user.verificationCode !== code) {
         throw new Error('Invalid verification code');
     }
 
