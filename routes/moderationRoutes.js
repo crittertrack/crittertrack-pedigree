@@ -297,13 +297,13 @@ router.post('/users/:userId/warn', async (req, res) => {
     }
 });
 
-// POST /api/moderation/users/:userId/lift-warning - mark oldest active warning as lifted
+// POST /api/moderation/users/:userId/lift-warning - mark specific warning as lifted
 router.post('/users/:userId/lift-warning', async (req, res) => {
     try {
-        const { reason } = req.body;
+        const { reason, warningIndex } = req.body;
         let userId = req.params.userId;
         
-        console.log('[MODERATION LIFT_WARNING] Lifting warning for user:', { userId, reason });
+        console.log('[MODERATION LIFT_WARNING] Lifting warning for user:', { userId, reason, warningIndex });
 
         // Try to find user - first try as MongoDB ID, then try as id_public
         let user = await User.findById(userId);
@@ -318,17 +318,31 @@ router.post('/users/:userId/lift-warning', async (req, res) => {
             return res.status(404).json({ message: 'User not found.' });
         }
 
-        // Find the oldest active (non-lifted) warning and mark it as lifted
+        // Validate user has warnings
         if (!user.warnings || user.warnings.length === 0) {
-            return res.status(400).json({ message: 'User has no active warnings to lift.' });
+            return res.status(400).json({ message: 'User has no warnings to lift.' });
         }
 
-        const activeWarning = user.warnings.find(w => !w.isLifted);
-        if (!activeWarning) {
-            return res.status(400).json({ message: 'User has no active warnings to lift.' });
+        // If warningIndex is provided, lift that specific warning
+        // Otherwise, lift the oldest active warning (backward compatibility)
+        let warningToLift = null;
+        
+        if (warningIndex !== undefined && warningIndex !== null) {
+            // Lift specific warning by index
+            if (warningIndex < 0 || warningIndex >= user.warnings.length) {
+                return res.status(400).json({ message: 'Invalid warning index.' });
+            }
+            warningToLift = user.warnings[warningIndex];
+        } else {
+            // Lift oldest active warning (default behavior)
+            warningToLift = user.warnings.find(w => !w.isLifted);
         }
 
-        activeWarning.isLifted = true;
+        if (!warningToLift) {
+            return res.status(400).json({ message: 'Warning already lifted or not found.' });
+        }
+
+        warningToLift.isLifted = true;
         
         // Update warningCount to match active (non-lifted) warnings
         user.warningCount = user.warnings.filter(w => !w.isLifted).length;
@@ -346,14 +360,14 @@ router.post('/users/:userId/lift-warning', async (req, res) => {
             targetType: 'user',
             targetId: user._id,
             targetName: `${user.email} (${user.id_public || 'No ID'})`,
-            details: { warningCount: user.warningCount },
+            details: { warningCount: user.warningCount, warningIndex: warningIndex },
             reason: reason || null
         });
 
         res.json({
             message: 'Warning lifted.',
             warningCount: user.warningCount,
-            warnings: user.warnings.filter(w => !w.isLifted),
+            warnings: user.warnings,
             accountStatus: user.accountStatus
         });
     } catch (error) {
