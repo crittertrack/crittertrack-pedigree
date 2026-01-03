@@ -77,7 +77,7 @@ router.patch('/users/:userId/status', async (req, res) => {
             action: actionMap[status],
             targetType: 'user',
             targetId: user._id,
-            targetName: user.email,
+            targetName: `${user.email} (${user.id_public || 'No ID'})`,
             details: { oldStatus, newStatus: status },
             reason: reason || 'No reason provided',
             ipAddress: req.ip || req.connection.remoteAddress
@@ -164,7 +164,7 @@ router.patch('/users/:userId/role', async (req, res) => {
             action: 'user_role_changed',
             targetType: 'user',
             targetId: user._id,
-            targetName: user.email,
+            targetName: `${user.email} (${user.id_public || 'No ID'})`,
             details: { oldRole, newRole: role },
             reason: `Role changed from ${oldRole} to ${role}`,
             ipAddress: req.ip || req.connection.remoteAddress
@@ -241,7 +241,7 @@ router.get('/users/:userId/summary', async (req, res) => {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
 
         const userId = req.params.userId;
-        const user = await User.findById(userId).select('email personalName breederName role accountStatus warningCount createdAt last_login');
+        const user = await User.findById(userId).select('email personalName breederName role accountStatus warningCount createdAt last_login id_public');
         
         if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -1195,7 +1195,7 @@ router.patch('/animals/:animalId/hide', async (req, res) => {
             action: 'content_hidden',
             targetType: 'animal',
             targetId: animal._id,
-            targetName: animal.name,
+            targetName: `${animal.name} (${animal.id_public || 'No ID'})`,
             details: { ownerId: animal.ownerId },
             reason: reason || 'Hidden by moderator',
             ipAddress: req.ip || req.connection.remoteAddress
@@ -1235,7 +1235,7 @@ router.delete('/animals/:animalId', async (req, res) => {
             action: 'animal_deleted',
             targetType: 'animal',
             targetId: animal._id,
-            targetName: animalData.name,
+            targetName: `${animalData.name} (${animalData.id_public || 'No ID'})`,
             details: animalData,
             reason: reason || 'Deleted by admin',
             ipAddress: req.ip || req.connection.remoteAddress
@@ -1273,7 +1273,7 @@ router.patch('/profiles/:userId/hide', async (req, res) => {
             action: 'profile_hidden',
             targetType: 'profile',
             targetId: user._id,
-            targetName: user.email,
+            targetName: `${user.email} (${user.id_public || 'No ID'})`,
             reason: reason || 'Hidden by moderator',
             ipAddress: req.ip || req.connection.remoteAddress
         });
@@ -1306,16 +1306,16 @@ router.post('/broadcast', async (req, res) => {
         let recipients = [];
         
         if (recipientType === 'specific' && specificUserIds) {
-            recipients = await User.find({ _id: { $in: specificUserIds } }).select('_id email personalName');
+            recipients = await User.find({ _id: { $in: specificUserIds } }).select('_id email personalName id_public');
         } else if (recipientType === 'all') {
-            recipients = await User.find({}).select('_id email personalName');
+            recipients = await User.find({}).select('_id email personalName id_public');
         } else if (recipientType === 'active') {
             const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-            recipients = await User.find({ last_login: { $gte: thirtyDaysAgo } }).select('_id email personalName');
+            recipients = await User.find({ last_login: { $gte: thirtyDaysAgo } }).select('_id email personalName id_public');
         } else if (recipientType === 'moderators') {
-            recipients = await User.find({ role: { $in: ['moderator', 'admin'] } }).select('_id email personalName');
+            recipients = await User.find({ role: { $in: ['moderator', 'admin'] } }).select('_id email personalName id_public');
         } else if (recipientType === 'country' && req.body.country) {
-            recipients = await User.find({ country: req.body.country }).select('_id email personalName');
+            recipients = await User.find({ country: req.body.country }).select('_id email personalName id_public');
         } else {
             return res.status(400).json({ error: 'Invalid recipient type' });
         }

@@ -123,7 +123,7 @@ router.post('/users/:userId/status', requireAdmin, async (req, res) => {
             action: 'user_status_updated',
             targetType: 'user',
             targetId: user._id,
-            targetName: user.email,
+            targetName: `${user.email} (${user.id_public || 'No ID'})`,
             details: { newStatus: status },
             reason: reason || null
         });
@@ -161,7 +161,7 @@ router.post('/users/:userId/warn', async (req, res) => {
             action: 'user_warned',
             targetType: 'user',
             targetId: user._id,
-            targetName: user.email,
+            targetName: `${user.email} (${user.id_public || 'No ID'})`,
             details: { warningCount: user.warningCount },
             reason: reason || null
         });
@@ -190,7 +190,7 @@ const reportModelMap = {
         model: AnimalReport,
         populate: [
             { path: 'reporterId', select: 'personalName breederName email id_public' },
-            { path: 'reportedAnimalId', select: 'name id_public ownerId species' }
+            { path: 'reportedAnimalId', select: 'name id_public ownerId species gender' }
         ]
     },
     message: {
@@ -323,7 +323,7 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
             );
 
             updated = user;
-            targetName = user.email || user.personalName || contentId;
+            targetName = `${user.email || user.personalName} (${user.id_public || 'No ID'})`;
         } 
         else if (contentType === 'animal') {
             // Update animal fields
@@ -345,7 +345,7 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
             );
 
             updated = animal;
-            targetName = animal.name || animal.id_public || contentId;
+            targetName = `${animal.name} (${animal.id_public || 'No ID'})`;
         }
         else {
             return res.status(400).json({ message: 'Invalid content type. Must be profile or animal' });
