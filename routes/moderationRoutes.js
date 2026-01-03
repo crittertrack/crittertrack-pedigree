@@ -208,21 +208,9 @@ router.post('/users/:userId/warn', async (req, res) => {
             newStatus: user.accountStatus 
         });
 
-        // Send warning notification to user
-        const { Notification } = require('../database/models');
-        await Notification.create({
-            userId: user._id,
-            userId_public: user.id_public,
-            type: 'moderator_warning',
-            message: reason || 'You have received a warning from the moderation team.',
-            metadata: {
-                warningCount: user.warningCount,
-                category: category || 'general',
-                issuedBy: req.user.email,
-                timestamp: new Date()
-            },
-            read: false
-        });
+        // Note: We do NOT create a notification here. Warnings are displayed via the user's warningCount
+        // which the frontend will show in a warning banner on the dashboard.
+        // We create an audit log so moderators can see the history.
 
         await createAuditLog({
             ...buildAuditMetadata(req),
