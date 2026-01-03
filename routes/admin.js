@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { LoginAuditLog } = require('../database/2faModels');
-const { Animal, PublicProfile, PublicAnimal, User, CommunityReport, AuditLog } = require('../database/models');
+const { Animal, PublicProfile, PublicAnimal, User, ProfileReport, AnimalReport, MessageReport, AuditLog } = require('../database/models');
 const { createAuditLog, getAuditLogs } = require('../utils/auditLogger');
 
 // Helper: Check if user is admin
@@ -251,8 +251,16 @@ router.get('/users/:userId/summary', async (req, res) => {
         const litterCount = user.ownedLitters ? user.ownedLitters.length : 0;
         
         // Get reports filed by and against this user
-        const reportsFiled = await CommunityReport.countDocuments({ reporterId: userId });
-        const reportsAgainst = await CommunityReport.countDocuments({ contentOwnerId: userId });
+        const reportsFiled = await Promise.all([
+            ProfileReport.countDocuments({ reporterId: userId }),
+            AnimalReport.countDocuments({ reporterId: userId }),
+            MessageReport.countDocuments({ reporterId: userId })
+        ]).then(counts => counts.reduce((a, b) => a + b, 0));
+        
+        const reportsAgainst = await Promise.all([
+            ProfileReport.countDocuments({ reportedUserId: userId }),
+            MessageReport.countDocuments({ reportedUserId: userId })
+        ]).then(counts => counts.reduce((a, b) => a + b, 0));
 
         res.json({
             user: {
@@ -774,51 +782,87 @@ router.get('/reports/list', async (req, res) => {
 
         // Build filter
         const filter = {};
-        if (status && ['open', 'in_review', 'resolved', 'dismissed'].includes(status)) {
+        if (status && ['pending', 'reviewed', 'resolved', 'dismissed'].includes(status)) {
             filter.status = status;
         }
-        if (category) {
-            filter.category = category;
-        }
 
-        // Fetch reports with populated references
-        const reports = await CommunityReport.find(filter)
-            .populate('reporterId', 'email personalName id_public')
-            .populate('contentOwnerId', 'email personalName breederName id_public')
-            .populate('moderatorId', 'email personalName id_public')
-            .sort(sort)
-            .limit(parseInt(limit))
-            .skip(parseInt(skip))
-            .lean();
+        // Fetch all three types of reports
+        const [profileReports, animalReports, messageReports] = await Promise.all([
+            ProfileReport.find(filter)
+                .populate('reporterId', 'email personalName id_public')
+                .populate('reportedUserId', 'email personalName breederName id_public')
+                .populate('reviewedBy', 'email personalName id_public')
+                .sort(sort)
+                .lean(),
+            AnimalReport.find(filter)
+                .populate('reporterId', 'email personalName id_public')
+                .populate('reportedAnimalId', 'name id_public species gender ownerId')
+                .populate('reviewedBy', 'email personalName id_public')
+                .sort(sort)
+                .lean(),
+            MessageReport.find(filter)
+                .populate('reporterId', 'email personalName id_public')
+                .populate('reportedUserId', 'email personalName breederName id_public')
+                .populate('messageId', 'message senderId receiverId')
+                .populate('reviewedBy', 'email personalName id_public')
+                .sort(sort)
+                .lean()
+        ]);
 
-        // Enrich reports with content details
-        const enrichedReports = await Promise.all(reports.map(async (report) => {
-            let contentDetails = null;
-            
-            try {
-                if (report.contentType === 'animal' && report.contentId) {
-                    const animal = await Animal.findById(report.contentId).select('name id_public species gender').lean();
-                    contentDetails = animal;
-                } else if (report.contentType === 'profile' && report.contentId) {
-                    const profileUser = await User.findById(report.contentId).select('personalName breederName email id_public').lean();
-                    contentDetails = profileUser;
+        // Normalize reports to common format
+        const normalizedReports = [
+            ...profileReports.map(r => ({
+                ...r,
+                reportType: 'profile',
+                contentType: 'profile',
+                contentId: r.reportedUserId?._id,
+                contentOwnerId: r.reportedUserId,
+                contentDetails: {
+                    name: r.reportedUserId?.personalName || r.reportedUserId?.breederName,
+                    id_public: r.reportedUserId?.id_public,
+                    email: r.reportedUserId?.email
                 }
-            } catch (err) {
-                console.warn('Failed to fetch content details:', err);
-            }
-            
-            return {
-                ...report,
-                contentDetails
-            };
-        }));
+            })),
+            ...animalReports.map(r => ({
+                ...r,
+                reportType: 'animal',
+                contentType: 'animal',
+                contentId: r.reportedAnimalId?._id,
+                contentOwnerId: r.reportedAnimalId?.ownerId,
+                contentDetails: {
+                    name: r.reportedAnimalId?.name,
+                    id_public: r.reportedAnimalId?.id_public,
+                    species: r.reportedAnimalId?.species,
+                    gender: r.reportedAnimalId?.gender
+                }
+            })),
+            ...messageReports.map(r => ({
+                ...r,
+                reportType: 'message',
+                contentType: 'message',
+                contentId: r.messageId?._id,
+                contentOwnerId: r.reportedUserId,
+                contentDetails: {
+                    message: r.messageId?.message,
+                    senderId: r.messageId?.senderId,
+                    receiverId: r.messageId?.receiverId
+                }
+            }))
+        ];
 
-        // Get total count for pagination
-        const total = await CommunityReport.countDocuments(filter);
+        // Sort combined results
+        normalizedReports.sort((a, b) => {
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return sort.startsWith('-') ? dateB - dateA : dateA - dateB;
+        });
+
+        // Apply pagination
+        const paginatedReports = normalizedReports.slice(parseInt(skip), parseInt(skip) + parseInt(limit));
 
         res.json({
-            reports: enrichedReports,
-            total,
+            reports: paginatedReports,
+            total: normalizedReports.length,
             limit: parseInt(limit),
             skip: parseInt(skip)
         });
@@ -834,22 +878,31 @@ router.patch('/reports/:reportId/status', async (req, res) => {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
         const { reportId } = req.params;
-        const { status, moderatorNotes } = req.body;
+        const { status, moderatorNotes, reportType } = req.body;
 
         // Validate status
-        const validStatuses = ['open', 'in_review', 'resolved', 'dismissed'];
+        const validStatuses = ['pending', 'reviewed', 'resolved', 'dismissed'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
 
+        // Determine which model to use
+        const ReportModel = reportType === 'profile' ? ProfileReport :
+                           reportType === 'animal' ? AnimalReport :
+                           reportType === 'message' ? MessageReport : null;
+        
+        if (!ReportModel) {
+            return res.status(400).json({ error: 'Invalid report type. Must be profile, animal, or message' });
+        }
+
         // Update report
-        const report = await CommunityReport.findByIdAndUpdate(
+        const report = await ReportModel.findByIdAndUpdate(
             reportId,
             {
                 status,
-                moderatorId: req.user.id,
-                moderatorNotes: moderatorNotes || '',
-                resolvedAt: ['resolved', 'dismissed'].includes(status) ? new Date() : null
+                reviewedBy: req.user.id,
+                adminNotes: moderatorNotes || '',
+                reviewedAt: ['resolved', 'dismissed'].includes(status) ? new Date() : null
             },
             { new: true }
         );
@@ -875,7 +928,7 @@ router.post('/reports/:reportId/action', async (req, res) => {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
         const { reportId } = req.params;
-        const { action, reason, replacementText } = req.body;
+        const { action, reason, replacementText, reportType } = req.body;
         
         // Ban is admin only
         if (action === 'ban_user' && !isAdmin(req)) {
@@ -887,11 +940,25 @@ router.post('/reports/:reportId/action', async (req, res) => {
             return res.status(400).json({ error: 'Invalid action' });
         }
 
+        // Determine which model to use
+        const ReportModel = reportType === 'profile' ? ProfileReport :
+                           reportType === 'animal' ? AnimalReport :
+                           reportType === 'message' ? MessageReport : null;
+        
+        if (!ReportModel) {
+            return res.status(400).json({ error: 'Invalid report type' });
+        }
+
         // Get the report
-        const report = await CommunityReport.findById(reportId);
+        const report = await ReportModel.findById(reportId);
         if (!report) {
             return res.status(404).json({ error: 'Report not found' });
         }
+        
+        // Get content owner ID based on report type
+        const contentOwnerId = reportType === 'profile' ? report.reportedUserId :
+                              reportType === 'animal' ? (await Animal.findById(report.reportedAnimalId).select('ownerId'))?.ownerId :
+                              reportType === 'message' ? report.reportedUserId : null;
 
         // Execute action
         switch (action) {
@@ -930,46 +997,46 @@ router.post('/reports/:reportId/action', async (req, res) => {
                 break;
 
             case 'warn_user':
-                if (report.contentOwnerId) {
+                if (contentOwnerId) {
                     const user = await User.findByIdAndUpdate(
-                        report.contentOwnerId,
+                        contentOwnerId,
                         { $inc: { warningCount: 1 } },
                         { new: true }
                     );
                     if (user && user.warningCount >= 3) {
                         // Auto-suspend after 3 warnings
-                        await User.findByIdAndUpdate(report.contentOwnerId, { accountStatus: 'suspended' });
+                        await User.findByIdAndUpdate(contentOwnerId, { accountStatus: 'suspended' });
                     }
                 }
                 break;
 
             case 'suspend_user':
-                if (report.contentOwnerId) {
-                    await User.findByIdAndUpdate(report.contentOwnerId, {
+                if (contentOwnerId) {
+                    await User.findByIdAndUpdate(contentOwnerId, {
                         accountStatus: 'suspended',
-                        suspensionReason: reason || 'Community guideline violation'
+                        suspensionReason: reason || 'Community guideline violation',
+                        moderatedBy: req.user.id
                     });
                 }
                 break;
 
             case 'ban_user':
-                if (report.contentOwnerId) {
-                    await User.findByIdAndUpdate(report.contentOwnerId, {
+                if (contentOwnerId) {
+                    await User.findByIdAndUpdate(contentOwnerId, {
                         accountStatus: 'banned',
-                        banReason: reason || 'Serious community guideline violation'
+                        banReason: reason || 'Serious community guideline violation',
+                        moderatedBy: req.user.id
                     });
                 }
                 break;
         }
 
         // Update report with action taken
-        await CommunityReport.findByIdAndUpdate(reportId, {
+        await ReportModel.findByIdAndUpdate(reportId, {
             status: 'resolved',
-            actionTaken: action === 'replace_content' ? 'content_replaced' : action === 'remove_content' ? 'content_removed' : action,
-            replacedWith: action === 'replace_content' ? replacementText : null,
-            moderatorId: req.user.id,
-            moderatorNotes: reason || '',
-            resolvedAt: new Date()
+            adminNotes: reason || `Action: ${action}`,
+            reviewedBy: req.user.id,
+            reviewedAt: new Date()
         });
 
         // Create audit log for the action
