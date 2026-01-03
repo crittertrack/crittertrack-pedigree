@@ -1022,7 +1022,75 @@ const addLitter = async (appUserId_backend, litterData) => {
  */
 const getUsersLitters = async (appUserId_backend) => {
     // Sort by birth date descending (most recent first)
-    return Litter.find({ ownerId: appUserId_backend }).sort({ birthDate: -1 }).lean();
+    const litters = await Litter.find({ ownerId: appUserId_backend }).sort({ birthDate: -1 }).lean();
+    
+    // Populate parent data for each litter (including hidden/transferred animals)
+    const littersWithParents = await Promise.all(
+        litters.map(async (litter) => {
+            let sire = null;
+            let dam = null;
+            
+            // Fetch sire data
+            if (litter.sireId_public) {
+                // Try user's own animals first
+                sire = await Animal.findOne({ 
+                    id_public: litter.sireId_public,
+                    ownerId: appUserId_backend 
+                }).select('id_public name prefix suffix gender imageUrl photoUrl species').lean();
+                
+                // If not found in own animals, check any Animal (including transferred/hidden)
+                if (!sire) {
+                    sire = await Animal.findOne({ id_public: litter.sireId_public })
+                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
+                        .lean();
+                    if (sire) {
+                        sire.isTransferred = true; // Flag as not owned
+                    }
+                }
+                
+                // Last resort: check PublicAnimal
+                if (!sire) {
+                    sire = await PublicAnimal.findOne({ id_public: litter.sireId_public })
+                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
+                        .lean();
+                }
+            }
+            
+            // Fetch dam data
+            if (litter.damId_public) {
+                // Try user's own animals first
+                dam = await Animal.findOne({ 
+                    id_public: litter.damId_public,
+                    ownerId: appUserId_backend 
+                }).select('id_public name prefix suffix gender imageUrl photoUrl species').lean();
+                
+                // If not found in own animals, check any Animal (including transferred/hidden)
+                if (!dam) {
+                    dam = await Animal.findOne({ id_public: litter.damId_public })
+                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
+                        .lean();
+                    if (dam) {
+                        dam.isTransferred = true; // Flag as not owned
+                    }
+                }
+                
+                // Last resort: check PublicAnimal
+                if (!dam) {
+                    dam = await PublicAnimal.findOne({ id_public: litter.damId_public })
+                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
+                        .lean();
+                }
+            }
+            
+            return {
+                ...litter,
+                sire,
+                dam
+            };
+        })
+    );
+    
+    return littersWithParents;
 };
 
 /**
