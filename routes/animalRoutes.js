@@ -1114,4 +1114,44 @@ router.get('/hidden/list', async (req, res) => {
     }
 });
 
+// POST /api/animals/bulk-publish
+// Bulk publish all user's animals (make them public and create PublicAnimal records)
+router.post('/bulk-publish', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        
+        // Get all user's animals
+        const animals = await getUsersAnimals(appUserId_backend);
+        
+        let publishedCount = 0;
+        let alreadyPublicCount = 0;
+        
+        for (const animal of animals) {
+            if (animal.showOnPublicProfile) {
+                alreadyPublicCount++;
+                continue;
+            }
+            
+            // Make animal public with default settings (no remarks/genetic code)
+            await toggleAnimalPublic(appUserId_backend, animal._id, {
+                makePublic: true,
+                includeRemarks: false,
+                includeGeneticCode: false
+            });
+            
+            publishedCount++;
+        }
+        
+        res.status(200).json({
+            message: 'Bulk publish completed',
+            publishedCount,
+            alreadyPublicCount,
+            totalAnimals: animals.length
+        });
+    } catch (error) {
+        console.error('Error bulk publishing animals:', error);
+        res.status(500).json({ message: 'Internal server error during bulk publish' });
+    }
+});
+
 module.exports = router;
