@@ -406,6 +406,16 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         // Update public profile as well
         await PublicProfile.updateOne({ id_public: user.id_public }, { country: updates.country });
     }
+    if (updates.bio !== undefined) {
+        user.bio = updates.bio;
+        // Update public profile as well
+        await PublicProfile.updateOne({ id_public: user.id_public }, { bio: updates.bio });
+    }
+    if (updates.showBio !== undefined) {
+        user.showBio = updates.showBio;
+        // Update public profile as well
+        await PublicProfile.updateOne({ id_public: user.id_public }, { showBio: updates.showBio });
+    }
 
     // Note: Password update would require a separate, secure endpoint that handles current password verification.
     
