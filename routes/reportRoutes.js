@@ -23,6 +23,8 @@ router.post('/profile', protect, async (req, res) => {
         const { reportedUserId, reportedUserPublicId, reason } = req.body;
         const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
 
+        console.log('[REPORT PROFILE] Received profile report:', { reporterId, reportedUserId, reportedUserPublicId, reason: trimmedReason });
+
         if ((!reportedUserId && !reportedUserPublicId) || !trimmedReason) {
             return res.status(400).json({ error: 'reportedUserId (or reportedUserPublicId) and reason are required' });
         }
@@ -42,6 +44,7 @@ router.post('/profile', protect, async (req, res) => {
         }
 
         if (!targetUser) {
+            console.log('[REPORT PROFILE] User not found:', { reportedUserId, reportedUserPublicId });
             return res.status(404).json({ error: 'User to be reported not found' });
         }
 
@@ -53,9 +56,11 @@ router.post('/profile', protect, async (req, res) => {
 
         await report.save();
 
+        console.log('[REPORT PROFILE] Report saved successfully:', { reportId: report._id, reporterId, reportedUserId: targetUser._id });
+
         res.status(201).json({ message: 'Profile report submitted successfully' });
     } catch (error) {
-        console.error('Error reporting profile:', error);
+        console.error('[REPORT PROFILE] Error reporting profile:', error);
         res.status(500).json({ error: 'Failed to submit profile report' });
     }
 });
@@ -66,6 +71,8 @@ router.post('/animal', protect, async (req, res) => {
         const reporterId = req.user.id;
         const { reportedAnimalId, reportedAnimalPublicId, reason } = req.body;
         const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+
+        console.log('[REPORT ANIMAL] Received animal report:', { reporterId, reportedAnimalId, reportedAnimalPublicId, reason: trimmedReason });
 
         if ((!reportedAnimalId && !reportedAnimalPublicId) || !trimmedReason) {
             return res.status(400).json({ error: 'reportedAnimalId (or reportedAnimalPublicId) and reason are required' });
@@ -86,6 +93,7 @@ router.post('/animal', protect, async (req, res) => {
         }
 
         if (!targetAnimal) {
+            console.log('[REPORT ANIMAL] Animal not found:', { reportedAnimalId, reportedAnimalPublicId });
             return res.status(404).json({ error: 'Animal to be reported not found' });
         }
 
@@ -97,9 +105,11 @@ router.post('/animal', protect, async (req, res) => {
 
         await report.save();
 
+        console.log('[REPORT ANIMAL] Report saved successfully:', { reportId: report._id, reporterId, reportedAnimalId: targetAnimal._id });
+
         res.status(201).json({ message: 'Animal report submitted successfully' });
     } catch (error) {
-        console.error('Error reporting animal:', error);
+        console.error('[REPORT ANIMAL] Error reporting animal:', error);
         res.status(500).json({ error: 'Failed to submit animal report' });
     }
 });

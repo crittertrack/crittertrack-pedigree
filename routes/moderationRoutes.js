@@ -224,7 +224,10 @@ router.get('/reports', async (req, res) => {
         const { type = 'profile', status, limit = 25, skip = 0 } = req.query;
         const config = reportModelMap[type];
 
+        console.log('[MODERATION REPORTS] Fetching reports with params:', { type, status, limit, skip });
+
         if (!config) {
+            console.log('[MODERATION REPORTS] Invalid report type:', type);
             return res.status(400).json({ message: 'Invalid report type.' });
         }
 
@@ -232,6 +235,8 @@ router.get('/reports', async (req, res) => {
         if (status) {
             filter.status = status;
         }
+
+        console.log('[MODERATION REPORTS] Using filter:', filter);
 
         const query = config.model.find(filter)
             .sort({ createdAt: -1 })
@@ -243,6 +248,9 @@ router.get('/reports', async (req, res) => {
         const reports = await query.lean();
         const total = await config.model.countDocuments(filter);
 
+        console.log(`[MODERATION REPORTS] Found ${reports.length} ${type} reports (total: ${total})`);
+        console.log('[MODERATION REPORTS] First report sample:', reports[0] || 'No reports');
+
         res.json({
             reports,
             total,
@@ -250,7 +258,7 @@ router.get('/reports', async (req, res) => {
             skip: parseInt(skip, 10)
         });
     } catch (error) {
-        console.error('Failed to fetch reports:', error);
+        console.error('[MODERATION REPORTS] Error fetching reports:', error);
         res.status(500).json({ message: 'Unable to fetch reports.' });
     }
 });
