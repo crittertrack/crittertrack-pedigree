@@ -289,6 +289,94 @@ router.post('/reports/:type/:reportId/status', async (req, res) => {
     }
 });
 
+// DELETE /api/moderation/users/:userId/image - Remove user profile image
+router.delete('/users/:userId/image', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { reason } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const oldImage = user.profileImage;
+
+        // Remove from User and PublicProfile
+        await User.findByIdAndUpdate(userId, { profileImage: null });
+        await require('../database/models').PublicProfile.findOneAndUpdate(
+            { userId_backend: userId },
+            { profileImage: null }
+        );
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'profile_image_removed',
+            targetType: 'user',
+            targetId: userId,
+            targetName: `${user.email} (${user.id_public || 'No ID'})`,
+            details: { oldImage },
+            reason: reason || 'Image removed by moderator'
+        });
+
+        res.json({
+            message: 'Profile image removed successfully'
+        });
+    } catch (error) {
+        console.error('Failed to remove profile image:', error);
+        res.status(500).json({ message: 'Unable to remove profile image' });
+    }
+});
+
+// DELETE /api/moderation/animals/:animalId/image - Remove animal image
+router.delete('/animals/:animalId/image', async (req, res) => {
+    try {
+        const { animalId } = req.params;
+        const { reason } = req.body;
+
+        const { Animal, PublicAnimal } = require('../database/models');
+        
+        const animal = await Animal.findById(animalId);
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found' });
+        }
+
+        const oldImageUrl = animal.imageUrl;
+        const oldPhotoUrl = animal.photoUrl;
+
+        // Remove both imageUrl and photoUrl
+        await Animal.findByIdAndUpdate(animalId, { 
+            imageUrl: null,
+            photoUrl: null 
+        });
+        
+        await PublicAnimal.findOneAndUpdate(
+            { id_public: animal.id_public },
+            { 
+                imageUrl: null,
+                photoUrl: null 
+            }
+        );
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'animal_image_removed',
+            targetType: 'animal',
+            targetId: animalId,
+            targetName: `${animal.name} (${animal.id_public || 'No ID'})`,
+            details: { oldImageUrl, oldPhotoUrl },
+            reason: reason || 'Image removed by moderator'
+        });
+
+        res.json({
+            message: 'Animal image removed successfully'
+        });
+    } catch (error) {
+        console.error('Failed to remove animal image:', error);
+        res.status(500).json({ message: 'Unable to remove animal image' });
+    }
+});
+
 // PATCH /api/moderation/content/:contentType/:contentId/edit - Edit/redact content fields
 router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
     try {
