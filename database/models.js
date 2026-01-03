@@ -444,6 +444,10 @@ const LitterSchema = new mongoose.Schema({
     birthDate: { type: Date, required: true },
     numberBorn: { type: Number, required: true, min: 0 },
     
+    // Optional administrative breakdown of males/females
+    maleCount: { type: Number, default: null },
+    femaleCount: { type: Number, default: null },
+    
     // Public IDs of offspring animals that came from this litter
     offspringIds_public: { type: [String], default: [] }, 
     

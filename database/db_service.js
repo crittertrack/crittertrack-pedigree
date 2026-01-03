@@ -1097,9 +1097,20 @@ const getUsersLitters = async (appUserId_backend) => {
  * Updates a specific litter's record.
  */
 const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
+    // Ensure null values are preserved (don't convert to undefined)
+    const sanitizedUpdates = { ...updates };
+    
+    // Explicitly handle maleCount and femaleCount to preserve null values
+    if ('maleCount' in updates) {
+        sanitizedUpdates.maleCount = updates.maleCount === '' ? null : updates.maleCount;
+    }
+    if ('femaleCount' in updates) {
+        sanitizedUpdates.femaleCount = updates.femaleCount === '' ? null : updates.femaleCount;
+    }
+
     const updatedLitter = await Litter.findOneAndUpdate(
         { _id: litterId_backend, ownerId: appUserId_backend },
-        { $set: updates },
+        { $set: sanitizedUpdates },
         { new: true, runValidators: true }
     );
 
