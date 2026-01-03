@@ -450,7 +450,7 @@ const Litter = mongoose.model('Litter', LitterSchema);
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     userId_public: { type: String, index: true },
-    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'view_only_offer', 'transfer_accepted', 'transfer_declined', 'animal_returned'] },
+    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'view_only_offer', 'transfer_accepted', 'transfer_declined', 'animal_returned', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned'] },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', index: true },
     
     // Request details

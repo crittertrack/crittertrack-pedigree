@@ -141,7 +141,7 @@ router.post('/users/:userId/status', requireAdmin, async (req, res) => {
 // POST /api/moderation/users/:userId/warn - increment warning count
 router.post('/users/:userId/warn', async (req, res) => {
     try {
-        const { reason } = req.body;
+        const { reason, category } = req.body;
         const user = await User.findById(req.params.userId);
 
         if (!user) {
@@ -155,6 +155,22 @@ router.post('/users/:userId/warn', async (req, res) => {
             user.suspensionDate = new Date();
         }
         await user.save();
+
+        // Send warning notification to user
+        const { Notification } = require('../database/models');
+        await Notification.create({
+            userId: user._id,
+            userId_public: user.id_public,
+            type: 'moderator_warning',
+            message: reason || 'You have received a warning from the moderation team.',
+            metadata: {
+                warningCount: user.warningCount,
+                category: category || 'general',
+                issuedBy: req.user.email,
+                timestamp: new Date()
+            },
+            read: false
+        });
 
         await createAuditLog({
             ...buildAuditMetadata(req),
