@@ -522,7 +522,19 @@ const BugReportSchema = new mongoose.Schema({
 const BugReport = mongoose.model('BugReport', BugReportSchema);
 
 
-// --- 9. MESSAGE REPORT SCHEMA ---
+// --- 9. MESSAGE SCHEMA ---
+const MessageSchema = new mongoose.Schema({
+    conversationId: { type: String, required: true, index: true }, // Format: "userId1_userId2" (sorted)
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    message: { type: String, required: true },
+    read: { type: Boolean, default: false, index: true },
+    deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who have deleted this message
+}, { timestamps: true });
+const Message = mongoose.model('Message', MessageSchema);
+
+
+// --- 10. MESSAGE REPORT SCHEMA ---
 const MessageReportSchema = new mongoose.Schema({
     reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -541,7 +553,7 @@ const MessageReportSchema = new mongoose.Schema({
 const MessageReport = mongoose.model('MessageReport', MessageReportSchema);
 
 
-// --- 10. PROFILE REPORT SCHEMA ---
+// --- 11. PROFILE REPORT SCHEMA ---
 const ProfileReportSchema = new mongoose.Schema({
     reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -559,7 +571,7 @@ const ProfileReportSchema = new mongoose.Schema({
 const ProfileReport = mongoose.model('ProfileReport', ProfileReportSchema);
 
 
-// --- 11. ANIMAL REPORT SCHEMA ---
+// --- 12. ANIMAL REPORT SCHEMA ---
 const AnimalReportSchema = new mongoose.Schema({
     reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     reportedAnimalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Animal', required: true, index: true },
@@ -577,7 +589,7 @@ const AnimalReportSchema = new mongoose.Schema({
 const AnimalReport = mongoose.model('AnimalReport', AnimalReportSchema);
 
 
-// --- 12. AUDIT LOG SCHEMA ---
+// --- 13. AUDIT LOG SCHEMA ---
 const AuditLogSchema = new mongoose.Schema({
     moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     moderatorEmail: { type: String, default: null },
@@ -603,6 +615,7 @@ module.exports = {
     Notification,
     GeneticsFeedback,
     BugReport,
+    Message,
     MessageReport,
     ProfileReport,
     AnimalReport,
