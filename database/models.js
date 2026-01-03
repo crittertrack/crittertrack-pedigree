@@ -645,6 +645,39 @@ const SystemSettingsSchema = new mongoose.Schema({
 const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
 
 
+// --- 16. TRANSACTION SCHEMA (for budget tracking) ---
+const TransactionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    type: { type: String, enum: ['sale', 'purchase'], required: true, index: true },
+    animalId: { type: String, default: null }, // id_public of the animal
+    animalName: { type: String, default: null },
+    price: { type: Number, required: true, default: 0 },
+    date: { type: Date, required: true, index: true },
+    buyer: { type: String, default: null },
+    seller: { type: String, default: null },
+    buyerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    sellerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    notes: { type: String, default: null },
+    createdAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+const Transaction = mongoose.model('Transaction', TransactionSchema);
+
+
+// --- 17. ANIMAL TRANSFER SCHEMA ---
+const AnimalTransferSchema = new mongoose.Schema({
+    fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    animalId_public: { type: String, required: true, index: true },
+    transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', default: null },
+    transferType: { type: String, enum: ['sale', 'purchase', 'gift'], required: true },
+    status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending', index: true },
+    offerViewOnly: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now, index: true },
+    completedAt: { type: Date, default: null }
+}, { timestamps: true });
+const AnimalTransfer = mongoose.model('AnimalTransfer', AnimalTransferSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     Counter,
@@ -662,5 +695,7 @@ module.exports = {
     AnimalReport,
     AuditLog,
     SystemSettings,
-    Species
+    Species,
+    Transaction,
+    AnimalTransfer
 };
