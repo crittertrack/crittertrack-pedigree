@@ -186,6 +186,43 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
     }
 });
 
+// GET /api/moderation/users/:userId/info - get user's warning and status info (moderator view)
+router.get('/users/:userId/info', requireModerator, async (req, res) => {
+    try {
+        let userId = req.params.userId;
+        
+        // Try to find user - first try as MongoDB ID, then try as id_public
+        let user = await User.findById(userId);
+        
+        if (!user) {
+            // Try finding by id_public (public ID like "CTU8")
+            user = await User.findOne({ id_public: userId });
+        }
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Return user info from moderator perspective
+        res.json({
+            id_public: user.id_public,
+            email: user.email,
+            personalName: user.personalName,
+            breederName: user.breederName,
+            warningCount: user.warningCount || 0,
+            warnings: user.warnings || [],
+            accountStatus: user.accountStatus || 'active',
+            suspensionReason: user.suspensionReason,
+            suspensionDate: user.suspensionDate,
+            banReason: user.banReason,
+            banDate: user.banDate
+        });
+    } catch (error) {
+        console.error('[MODERATION INFO] Failed to get user info:', error);
+        res.status(500).json({ message: 'Unable to fetch user info.' });
+    }
+});
+
 // POST /api/moderation/users/:userId/warn - add individual warning record
 router.post('/users/:userId/warn', async (req, res) => {
     try {
