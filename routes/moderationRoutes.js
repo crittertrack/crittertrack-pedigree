@@ -233,6 +233,55 @@ router.post('/users/:userId/warn', async (req, res) => {
     }
 });
 
+// POST /api/moderation/users/:userId/lift-warning - decrease warning count
+router.post('/users/:userId/lift-warning', async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const userId = req.params.userId;
+        
+        console.log('[MODERATION LIFT_WARNING] Lifting warning for user:', { userId, reason });
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            console.log('[MODERATION LIFT_WARNING] User not found:', userId);
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Decrease warning count, but don't go below 0
+        user.warningCount = Math.max(0, (user.warningCount || 1) - 1);
+        
+        // If user was auto-suspended due to 3 warnings and now has fewer, we could reactivate
+        // But we'll let moderators manually change status if needed
+        
+        await user.save();
+
+        console.log('[MODERATION LIFT_WARNING] Warning lifted successfully:', { 
+            email: user.email, 
+            warningCount: user.warningCount
+        });
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'warning_lifted',
+            targetType: 'user',
+            targetId: user._id,
+            targetName: `${user.email} (${user.id_public || 'No ID'})`,
+            details: { warningCount: user.warningCount },
+            reason: reason || null
+        });
+
+        res.json({
+            message: 'Warning lifted.',
+            warningCount: user.warningCount,
+            accountStatus: user.accountStatus
+        });
+    } catch (error) {
+        console.error('[MODERATION LIFT_WARNING] Failed to lift warning:', error);
+        res.status(500).json({ message: 'Unable to lift warning.' });
+    }
+});
+
 // Helper to resolve report model details based on type
 const reportModelMap = {
     profile: {
