@@ -636,6 +636,7 @@ const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
 
 // --- EXPORTS ---
 module.exports = {
+    Counter,
     User,
     PublicProfile,
     Animal,
