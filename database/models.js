@@ -609,7 +609,19 @@ const AuditLogSchema = new mongoose.Schema({
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
 
 
-// --- 14. SYSTEM SETTINGS SCHEMA ---
+// --- 14. SPECIES SCHEMA ---
+const SpeciesSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true, index: true, trim: true },
+    latinName: { type: String, default: null, trim: true },
+    category: { type: String, required: true, index: true }, // e.g., 'Rodent', 'Reptile', etc.
+    isDefault: { type: Boolean, default: false, index: true }, // Built-in species vs user-added
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // User who added custom species
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+const Species = mongoose.model('Species', SpeciesSchema);
+
+
+// --- 15. SYSTEM SETTINGS SCHEMA ---
 const SystemSettingsSchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true, index: true },
     value: { type: mongoose.Schema.Types.Mixed, required: true }, // Can be string, boolean, number, etc.
@@ -637,5 +649,6 @@ module.exports = {
     ProfileReport,
     AnimalReport,
     AuditLog,
-    SystemSettings
+    SystemSettings,
+    Species
 };
