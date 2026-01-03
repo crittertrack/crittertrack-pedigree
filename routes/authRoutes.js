@@ -76,6 +76,8 @@ router.post('/verify-email', async (req, res) => {
             return res.status(400).json({ message: 'Email and verification code are required.' });
         }
 
+        console.log('Verification attempt - Email:', email, 'Code:', code, 'Code length:', code.length, 'Code type:', typeof code);
+
         // Verify code and create account
         const { token, userProfile } = await verifyEmailAndRegister(email, code);
 
@@ -85,7 +87,8 @@ router.post('/verify-email', async (req, res) => {
             userProfile
         });
     } catch (error) {
-        console.error('Error verifying email:', error);
+        console.error('Error verifying email:', error.message);
+        console.error('Full error:', error);
         if (error instanceof ProfanityError) {
             return res.status(error.statusCode || 400).json({ message: error.message });
         }

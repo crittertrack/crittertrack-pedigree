@@ -1332,6 +1332,17 @@ const verifyEmailAndRegister = async (email, code) => {
     const user = await User.findOne({ email })
         .select('+verificationCode +verificationCodeExpires');
 
+    console.log('Verification lookup - Email:', email);
+    console.log('User found:', !!user);
+    if (user) {
+        console.log('Stored code:', user.verificationCode, 'Length:', user.verificationCode?.length);
+        console.log('Provided code:', code, 'Length:', code?.length);
+        console.log('Codes match:', user.verificationCode === code);
+        console.log('Code expiry:', user.verificationCodeExpires, 'Now:', new Date());
+        console.log('Expired:', user.verificationCodeExpires < new Date());
+        console.log('Already verified:', user.emailVerified);
+    }
+
     if (!user) {
         throw new Error('Invalid verification code');
     }
