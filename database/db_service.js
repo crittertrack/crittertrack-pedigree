@@ -51,7 +51,8 @@ const enforceCleanNestedArrayFields = (items, nestedKey, labelPrefix) => {
 const USER_TEXT_FIELDS = {
     personalName: 'personal name',
     breederName: 'breeder name',
-    country: 'country'
+    country: 'country',
+    bio: 'bio'
 };
 
 const ANIMAL_TEXT_FIELDS = {
@@ -289,6 +290,8 @@ const getUserProfileById = async (appUserId_backend) => {
         allowMessages: user.allowMessages !== undefined ? user.allowMessages : true,
         emailNotificationPreference: user.emailNotificationPreference || 'none',
         country: user.country,
+        bio: user.bio,
+        showBio: user.showBio !== undefined ? user.showBio : true,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
@@ -407,19 +410,25 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         await PublicProfile.updateOne({ id_public: user.id_public }, { country: updates.country });
     }
     if (updates.bio !== undefined) {
+        console.log('[updateUserProfile] Setting bio to:', updates.bio, 'Type:', typeof updates.bio);
         user.bio = updates.bio;
         // Update public profile as well
-        await PublicProfile.updateOne({ id_public: user.id_public }, { bio: updates.bio });
+        const bioUpdateResult = await PublicProfile.updateOne({ id_public: user.id_public }, { bio: updates.bio });
+        console.log('[updateUserProfile] PublicProfile bio update result:', bioUpdateResult);
     }
     if (updates.showBio !== undefined) {
+        console.log('[updateUserProfile] Setting showBio to:', updates.showBio, 'Type:', typeof updates.showBio);
         user.showBio = updates.showBio;
         // Update public profile as well
-        await PublicProfile.updateOne({ id_public: user.id_public }, { showBio: updates.showBio });
+        const showBioUpdateResult = await PublicProfile.updateOne({ id_public: user.id_public }, { showBio: updates.showBio });
+        console.log('[updateUserProfile] PublicProfile showBio update result:', showBioUpdateResult);
     }
 
     // Note: Password update would require a separate, secure endpoint that handles current password verification.
     
+    console.log('[updateUserProfile] Saving user with bio:', user.bio, 'showBio:', user.showBio);
     await user.save();
+    console.log('[updateUserProfile] User saved successfully, bio:', user.bio, 'showBio:', user.showBio);
 
     // Return the updated, clean profile
     return getUserProfileById(user.id);

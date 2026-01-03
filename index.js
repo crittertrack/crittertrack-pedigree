@@ -254,6 +254,8 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
         console.log('[PROFILE UPDATE] Received updates:', {
             showBreederName: updates.showBreederName,
             breederName: updates.breederName,
+            bio: updates.bio,
+            showBio: updates.showBio,
             profileImage: updates.profileImage ? 'present' : 'none'
         });
 
