@@ -289,6 +289,92 @@ router.post('/reports/:type/:reportId/status', async (req, res) => {
     }
 });
 
+// PATCH /api/moderation/content/:contentType/:contentId/edit - Edit/redact content fields
+router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
+    try {
+        const { contentType, contentId } = req.params;
+        const { fieldEdits, reason } = req.body;
+
+        if (!fieldEdits || typeof fieldEdits !== 'object') {
+            return res.status(400).json({ message: 'fieldEdits object is required' });
+        }
+
+        const { Animal, PublicProfile, PublicAnimal } = require('../database/models');
+        let updated = null;
+        let targetName = '';
+
+        if (contentType === 'profile') {
+            // Update profile fields
+            const user = await User.findByIdAndUpdate(
+                contentId,
+                fieldEdits,
+                { new: true, runValidators: true }
+            );
+            
+            if (!user) {
+                return res.status(404).json({ message: 'Profile not found' });
+            }
+
+            // Also update public profile if exists
+            await PublicProfile.findOneAndUpdate(
+                { userId_backend: contentId },
+                fieldEdits,
+                { runValidators: true }
+            );
+
+            updated = user;
+            targetName = user.email || user.personalName || contentId;
+        } 
+        else if (contentType === 'animal') {
+            // Update animal fields
+            const animal = await Animal.findByIdAndUpdate(
+                contentId,
+                fieldEdits,
+                { new: true, runValidators: true }
+            );
+
+            if (!animal) {
+                return res.status(404).json({ message: 'Animal not found' });
+            }
+
+            // Also update public animal if exists
+            await PublicAnimal.findOneAndUpdate(
+                { id_public: animal.id_public },
+                fieldEdits,
+                { runValidators: true }
+            );
+
+            updated = animal;
+            targetName = animal.name || animal.id_public || contentId;
+        }
+        else {
+            return res.status(400).json({ message: 'Invalid content type. Must be profile or animal' });
+        }
+
+        // Create audit log
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'content_edited',
+            targetType: contentType,
+            targetId: contentId,
+            targetName,
+            details: { 
+                fieldsEdited: Object.keys(fieldEdits),
+                changes: fieldEdits
+            },
+            reason: reason || 'Content moderation edit'
+        });
+
+        res.json({
+            message: 'Content updated successfully',
+            updated
+        });
+    } catch (error) {
+        console.error('Failed to edit content:', error);
+        res.status(500).json({ message: 'Unable to edit content', error: error.message });
+    }
+});
+
 // GET /api/moderation/audit-logs - admins only
 router.get('/audit-logs', requireAdmin, async (req, res) => {
     try {
