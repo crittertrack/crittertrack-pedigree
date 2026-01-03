@@ -415,9 +415,23 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
                             ownerId: authenticatedUserId 
                         }).lean();
                         
-                        // If not found in private, try PublicAnimal
+                        // If not found in own animals, try PublicAnimal
                         if (!otherParent) {
                             otherParent = await PublicAnimal.findOne({ id_public: group.otherParentId }).lean();
+                        }
+
+                        // If still not found, check Animal collection (for hidden/private animals)
+                        // Only return basic display info, no sensitive data
+                        if (!otherParent) {
+                            const privateParent = await Animal.findOne({ id_public: group.otherParentId })
+                                .select('id_public name prefix suffix gender imageUrl photoUrl species')
+                                .lean();
+                            if (privateParent) {
+                                otherParent = {
+                                    ...privateParent,
+                                    isHidden: true // Flag to indicate this parent is not publicly accessible
+                                };
+                            }
                         }
                     } else {
                         // For unauthenticated users: ONLY show public parents
