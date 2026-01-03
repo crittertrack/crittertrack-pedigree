@@ -249,8 +249,18 @@ router.post('/transactions', async (req, res) => {
             transfer: transfer || null
         });
     } catch (error) {
-        console.error('Error creating transaction:', error);
-        res.status(500).json({ message: 'Internal server error while creating transaction.' });
+        console.error('[Budget] ✗ Error creating transaction:', error);
+        console.error('[Budget] Error stack:', error.stack);
+        console.error('[Budget] Error details:', {
+            message: error.message,
+            name: error.name,
+            code: error.code
+        });
+        res.status(500).json({ 
+            message: 'Failed to save transaction.',
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
