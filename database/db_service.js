@@ -254,6 +254,11 @@ const loginUser = async (email, password) => {
         // Check if suspension has expired
         if (user.suspensionExpiry && new Date() > new Date(user.suspensionExpiry)) {
             // Auto-reactivate if expiry passed
+            console.log('[LOGIN] Suspension expired for user:', { 
+                email: user.email, 
+                suspensionExpiry: user.suspensionExpiry,
+                suspensionReason: user.suspensionReason
+            });
             user.accountStatus = 'active';
             user.suspensionReason = null;
             user.suspensionDate = null;
