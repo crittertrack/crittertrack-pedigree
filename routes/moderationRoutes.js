@@ -38,6 +38,27 @@ router.get('/me', (req, res) => {
     });
 });
 
+// GET /api/moderation/debug/reports-count - diagnostic endpoint to check if any reports exist
+router.get('/debug/reports-count', async (req, res) => {
+    try {
+        const profileCount = await ProfileReport.countDocuments();
+        const animalCount = await AnimalReport.countDocuments();
+        const messageCount = await MessageReport.countDocuments();
+
+        console.log('[MODERATION DEBUG] Report counts:', { profileCount, animalCount, messageCount });
+
+        res.json({
+            profileReports: profileCount,
+            animalReports: animalCount,
+            messageReports: messageCount,
+            total: profileCount + animalCount + messageCount
+        });
+    } catch (error) {
+        console.error('[MODERATION DEBUG] Error getting report counts:', error);
+        res.status(500).json({ message: 'Failed to get report counts' });
+    }
+});
+
 // GET /api/moderation/users - list users for moderation view
 router.get('/users', async (req, res) => {
     try {
