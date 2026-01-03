@@ -22,6 +22,8 @@ const UserSchema = new mongoose.Schema({
     showBreederName: { type: Boolean, default: false },
     websiteURL: { type: String, default: null },
     showWebsiteURL: { type: Boolean, default: false },
+    bio: { type: String, default: null, trim: true },
+    showBio: { type: Boolean, default: true },
     showEmailPublic: { type: Boolean, default: false },
     showGeneticCodePublic: { type: Boolean, default: false },
     showRemarksPublic: { type: Boolean, default: false },
@@ -92,6 +94,8 @@ const PublicProfileSchema = new mongoose.Schema({
     showEmailPublic: { type: Boolean, default: false },
     websiteURL: { type: String, default: null },
     showWebsiteURL: { type: Boolean, default: false },
+    bio: { type: String, default: null, trim: true },
+    showBio: { type: Boolean, default: true },
     allowMessages: { type: Boolean, default: true },
     emailNotificationPreference: { 
         type: String, 
