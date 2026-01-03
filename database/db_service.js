@@ -1385,6 +1385,8 @@ const verifyEmailAndRegister = async (email, code) => {
         showGeneticCodePublic: user.showGeneticCodePublic || false,
         showRemarksPublic: user.showRemarksPublic || false,
         profileImage: user.profileImage,
+        bio: user.bio || null,
+        showBio: user.showBio !== undefined ? user.showBio : true,
         createdAt: user.creationDate || new Date(),
     });
     await publicProfile.save();
@@ -1407,6 +1409,8 @@ const verifyEmailAndRegister = async (email, code) => {
         showGeneticCodePublic: user.showGeneticCodePublic,
         showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
+        bio: user.bio,
+        showBio: user.showBio,
         creationDate: user.creationDate,
     };
 
