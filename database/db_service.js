@@ -317,6 +317,9 @@ const getUserProfileById = async (appUserId_backend) => {
         showBio: user.showBio !== undefined ? user.showBio : true,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
+        warningCount: user.warningCount || 0,
+        warnings: user.warnings || [],
+        accountStatus: user.accountStatus || 'active',
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
         ownedLitters: user.ownedLitters, // Array of internal litter IDs
     };

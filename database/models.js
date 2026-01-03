@@ -63,6 +63,13 @@ const UserSchema = new mongoose.Schema({
     
     // Moderation tracking fields
     warningCount: { type: Number, default: 0 },
+    warnings: [{
+        date: { type: Date, default: Date.now },
+        reason: { type: String, default: 'No reason specified' },
+        category: { type: String, default: 'general' },
+        moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+        isLifted: { type: Boolean, default: false }
+    }],
     accountStatus: { 
         type: String, 
         enum: ['active', 'suspended', 'banned'], 

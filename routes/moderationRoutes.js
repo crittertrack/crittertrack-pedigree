@@ -186,7 +186,7 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
     }
 });
 
-// POST /api/moderation/users/:userId/warn - increment warning count
+// POST /api/moderation/users/:userId/warn - add individual warning record
 router.post('/users/:userId/warn', async (req, res) => {
     try {
         const { reason, category } = req.body;
@@ -207,7 +207,24 @@ router.post('/users/:userId/warn', async (req, res) => {
             return res.status(404).json({ message: 'User not found.' });
         }
 
-        user.warningCount = (user.warningCount || 0) + 1;
+        // Add new warning record to warnings array
+        const newWarning = {
+            date: new Date(),
+            reason: reason || 'No reason specified',
+            category: category || 'general',
+            moderatorId: req.user.id,
+            isLifted: false
+        };
+        
+        if (!user.warnings) {
+            user.warnings = [];
+        }
+        user.warnings.push(newWarning);
+        
+        // Update warningCount to match active (non-lifted) warnings
+        user.warningCount = user.warnings.filter(w => !w.isLifted).length;
+
+        // Auto-suspend at 3 active warnings
         if (user.warningCount >= 3 && user.accountStatus === 'active') {
             user.accountStatus = 'suspended';
             user.suspensionReason = 'Automatically suspended after 3 warnings.';
@@ -221,23 +238,20 @@ router.post('/users/:userId/warn', async (req, res) => {
             newStatus: user.accountStatus 
         });
 
-        // Note: We do NOT create a notification here. Warnings are displayed via the user's warningCount
-        // which the frontend will show in a warning banner on the dashboard.
-        // We create an audit log so moderators can see the history.
-
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: 'user_warned',
             targetType: 'user',
             targetId: user._id,
             targetName: `${user.email} (${user.id_public || 'No ID'})`,
-            details: { warningCount: user.warningCount },
+            details: { warningCount: user.warningCount, reason: reason || null },
             reason: reason || null
         });
 
         res.json({
             message: 'Warning recorded.',
             warningCount: user.warningCount,
+            warnings: user.warnings.filter(w => !w.isLifted),
             accountStatus: user.accountStatus
         });
     } catch (error) {
@@ -246,7 +260,7 @@ router.post('/users/:userId/warn', async (req, res) => {
     }
 });
 
-// POST /api/moderation/users/:userId/lift-warning - decrease warning count
+// POST /api/moderation/users/:userId/lift-warning - mark oldest active warning as lifted
 router.post('/users/:userId/lift-warning', async (req, res) => {
     try {
         const { reason } = req.body;
@@ -267,11 +281,20 @@ router.post('/users/:userId/lift-warning', async (req, res) => {
             return res.status(404).json({ message: 'User not found.' });
         }
 
-        // Decrease warning count, but don't go below 0
-        user.warningCount = Math.max(0, (user.warningCount || 1) - 1);
+        // Find the oldest active (non-lifted) warning and mark it as lifted
+        if (!user.warnings || user.warnings.length === 0) {
+            return res.status(400).json({ message: 'User has no active warnings to lift.' });
+        }
+
+        const activeWarning = user.warnings.find(w => !w.isLifted);
+        if (!activeWarning) {
+            return res.status(400).json({ message: 'User has no active warnings to lift.' });
+        }
+
+        activeWarning.isLifted = true;
         
-        // If user was auto-suspended due to 3 warnings and now has fewer, we could reactivate
-        // But we'll let moderators manually change status if needed
+        // Update warningCount to match active (non-lifted) warnings
+        user.warningCount = user.warnings.filter(w => !w.isLifted).length;
         
         await user.save();
 
@@ -293,6 +316,7 @@ router.post('/users/:userId/lift-warning', async (req, res) => {
         res.json({
             message: 'Warning lifted.',
             warningCount: user.warningCount,
+            warnings: user.warnings.filter(w => !w.isLifted),
             accountStatus: user.accountStatus
         });
     } catch (error) {
