@@ -199,6 +199,10 @@ router.post('/login', async (req, res) => {
         if (error.message.includes('Invalid credentials') || error.message.includes('User not found')) {
             return res.status(401).json({ message: error.message });
         }
+        // 403 Forbidden for suspended or banned accounts
+        if (error.message.includes('Account suspended') || error.message.includes('Account banned')) {
+            return res.status(403).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Internal server error during login.' });
     }
 });
