@@ -245,18 +245,41 @@ const loginUser = async (email, password) => {
         throw new Error('Invalid credentials: User not found.');
     }
 
-    // 2. Compare password
+    // 2. Check account status - prevent login if suspended or banned
+    if (user.accountStatus === 'banned') {
+        throw new Error(`Account banned: ${user.banReason || 'Your account has been permanently banned.'}`);
+    }
+
+    if (user.accountStatus === 'suspended') {
+        // Check if suspension has expired
+        if (user.suspensionExpiry && new Date() > new Date(user.suspensionExpiry)) {
+            // Auto-reactivate if expiry passed
+            user.accountStatus = 'active';
+            user.suspensionReason = null;
+            user.suspensionDate = null;
+            user.suspensionExpiry = null;
+            await user.save();
+        } else {
+            // Still suspended
+            const expiryTime = user.suspensionExpiry 
+                ? Math.ceil((new Date(user.suspensionExpiry) - new Date()) / 1000) 
+                : null;
+            throw new Error(`Account suspended: ${user.suspensionReason || 'Your account has been suspended.'} ${expiryTime ? `Expires in ${Math.ceil(expiryTime / 3600)} hour(s).` : ''}`);
+        }
+    }
+
+    // 3. Compare password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
         throw new Error('Invalid credentials: Password mismatch.');
     }
 
-    // 3. Generate JWT Token
+    // 4. Generate JWT Token
     const payload = { user: { id: user.id } }; // Use user.id (internal _id)
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_LIFETIME });
 
-    // 4. Return the token and a safe version of the user profile
+    // 5. Return the token and a safe version of the user profile
     const userProfile = await getUserProfileById(user.id);
 
     return { token, userProfile };
