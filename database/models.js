@@ -605,6 +605,19 @@ const AuditLogSchema = new mongoose.Schema({
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
 
 
+// --- 14. SYSTEM SETTINGS SCHEMA ---
+const SystemSettingsSchema = new mongoose.Schema({
+    key: { type: String, required: true, unique: true, index: true },
+    value: { type: mongoose.Schema.Types.Mixed, required: true }, // Can be string, boolean, number, etc.
+    type: { type: String, enum: ['string', 'boolean', 'number', 'object', 'array'], required: true },
+    category: { type: String, default: 'general', index: true }, // e.g., 'maintenance', 'security', 'general'
+    description: { type: String, default: null },
+    lastModified: { type: Date, default: Date.now },
+    modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+}, { timestamps: true });
+const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     User,
@@ -619,5 +632,6 @@ module.exports = {
     MessageReport,
     ProfileReport,
     AnimalReport,
-    AuditLog
+    AuditLog,
+    SystemSettings
 };

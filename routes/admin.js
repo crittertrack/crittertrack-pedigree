@@ -1471,6 +1471,24 @@ router.put('/system-settings/:key', async (req, res) => {
     }
 });
 
+// GET /api/admin/maintenance-status - Check current maintenance mode status
+router.get('/maintenance-status', async (req, res) => {
+    try {
+        const { SystemSettings } = require('../database/models');
+        
+        const enabledSetting = await SystemSettings.findOne({ key: 'maintenance_mode_enabled' }).lean();
+        const messageSetting = await SystemSettings.findOne({ key: 'maintenance_mode_message' }).lean();
+        
+        res.json({
+            active: enabledSetting?.value || false,
+            message: messageSetting?.value || 'System is under maintenance. Please check back later.'
+        });
+    } catch (error) {
+        console.error('Error fetching maintenance status:', error);
+        res.status(500).json({ error: 'Failed to fetch maintenance status' });
+    }
+});
+
 // POST /api/admin/maintenance/toggle - Toggle maintenance mode
 router.post('/maintenance/toggle', async (req, res) => {
     try {
