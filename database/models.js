@@ -263,6 +263,14 @@ const AnimalSchema = new mongoose.Schema({
     includeRemarks: { type: Boolean, default: false }, // If public, include remarks
     includeGeneticCode: { type: Boolean, default: false }, // If public, include genetic code
     
+    // Availability for sale/stud (for showcase)
+    isForSale: { type: Boolean, default: false },
+    salePriceCurrency: { type: String, default: 'USD' },
+    salePriceAmount: { type: Number, default: null },
+    availableForBreeding: { type: Boolean, default: false },
+    studFeeCurrency: { type: String, default: 'USD' },
+    studFeeAmount: { type: Number, default: null },
+    
     // Section-level privacy settings (true = public, false = private)
     sectionPrivacy: {
         appearance: { type: Boolean, default: true },
@@ -317,6 +325,14 @@ const PublicAnimalSchema = new mongoose.Schema({
     isPregnant: { type: Boolean, default: false },
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
+    
+    // Availability for sale/stud (for showcase)
+    isForSale: { type: Boolean, default: false },
+    salePriceCurrency: { type: String, default: 'USD' },
+    salePriceAmount: { type: Number, default: null },
+    availableForBreeding: { type: Boolean, default: false },
+    studFeeCurrency: { type: String, default: 'USD' },
+    studFeeAmount: { type: Number, default: null },
     
     // Tags for local organization (lines, enclosures, etc)
     tags: [{ type: String, trim: true }],
