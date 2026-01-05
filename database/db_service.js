@@ -269,7 +269,8 @@ const loginUser = async (email, password) => {
             const expiryTime = user.suspensionExpiry 
                 ? Math.ceil((new Date(user.suspensionExpiry) - new Date()) / 1000) 
                 : null;
-            throw new Error(`Account suspended: ${user.suspensionReason || 'Your account has been suspended.'} ${expiryTime ? `Expires in ${Math.ceil(expiryTime / 3600)} hour(s).` : ''}`);
+            const expiryTimestamp = user.suspensionExpiry ? new Date(user.suspensionExpiry).getTime() : null;
+            throw new Error(`Account suspended: ${user.suspensionReason || 'Your account has been suspended.'} ${expiryTime ? `Expires in ${Math.ceil(expiryTime / 3600)} hour(s).` : ''} ${expiryTimestamp ? `ExpiryTimestamp: ${expiryTimestamp}` : ''}`);
         }
     }
 
