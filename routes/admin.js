@@ -431,17 +431,72 @@ router.post('/animals/bulk-update', async (req, res) => {
 // 3. DATA QUALITY & INTEGRITY
 // ============================================
 
-// GET /api/admin/audit-logs - Get system audit logs
+// GET /api/admin/audit-logs - Get system audit logs with filtering and pagination
 router.get('/audit-logs', async (req, res) => {
     try {
-        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
-        const logs = await LoginAuditLog.find({})
-            .sort({ timestamp: -1 })
-            .limit(100)
-            .lean();
-        res.json(logs);
+        const { 
+            page = 1, 
+            limit = 50, 
+            action, 
+            moderator, 
+            targetUser, 
+            startDate, 
+            endDate,
+            search 
+        } = req.query;
+
+        const query = {};
+
+        // Filter by action type
+        if (action && action !== 'all') {
+            query.action = action;
+        }
+
+        // Filter by moderator
+        if (moderator) {
+            query.moderatorId = moderator;
+        }
+
+        // Filter by target user
+        if (targetUser) {
+            query.targetUserId = targetUser;
+        }
+
+        // Filter by date range
+        if (startDate || endDate) {
+            query.timestamp = {};
+            if (startDate) query.timestamp.$gte = new Date(startDate);
+            if (endDate) query.timestamp.$lte = new Date(endDate);
+        }
+
+        // Search in details or reason
+        if (search) {
+            query.$or = [
+                { reason: { $regex: search, $options: 'i' } },
+                { 'details.reason': { $regex: search, $options: 'i' } },
+                { ipAddress: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [logs, total] = await Promise.all([
+            AuditLog.find(query)
+                .populate('moderatorId', 'personalName breederName email id_public role')
+                .populate('targetUserId', 'personalName breederName email id_public')
+                .populate('targetAnimalId', 'name id_public')
+                .sort({ timestamp: -1 })
+                .limit(parseInt(limit))
+                .skip(skip)
+                .lean(),
+            AuditLog.countDocuments(query)
+        ]);
+
+        res.json({ logs, total, page: parseInt(page), limit: parseInt(limit) });
     } catch (error) {
+        console.error('Error fetching audit logs:', error);
         res.status(500).json({ error: error.message });
     }
 });
