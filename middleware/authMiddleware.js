@@ -22,6 +22,17 @@ const protect = async (req, res, next) => {
             return res.status(401).json({ message: 'Not authorized, user not found.' });
         }
 
+        // Check if user account is suspended or banned
+        if (user.accountStatus === 'suspended' || user.accountStatus === 'banned') {
+            return res.status(403).json({ 
+                message: user.accountStatus === 'suspended' 
+                    ? 'Account suspended. Please log in again for updated status.' 
+                    : 'Account banned.',
+                accountStatus: user.accountStatus,
+                forceLogout: true
+            });
+        }
+
         req.user = user;
         return next();
     } catch (error) {
