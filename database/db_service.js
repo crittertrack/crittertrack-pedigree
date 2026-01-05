@@ -164,6 +164,18 @@ const connectDB = async (uri) => {
  */
 const registerUser = async (userData) => {
     enforceCleanFields(userData, USER_TEXT_FIELDS);
+    
+    // Check if IP is banned (if IP is provided)
+    if (userData.ip) {
+        const bannedUser = await User.findOne({ 
+            bannedIP: userData.ip,
+            banType: 'ip-ban'
+        });
+        if (bannedUser) {
+            throw new Error('This IP address has been banned from creating accounts.');
+        }
+    }
+    
     // 1. Hash password
     const salt = await bcrypt.genSalt(SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
@@ -247,7 +259,8 @@ const loginUser = async (email, password) => {
 
     // 2. Check account status - prevent login if suspended or banned
     if (user.accountStatus === 'banned') {
-        throw new Error(`Account banned: ${user.banReason || 'Your account has been permanently banned.'}`);
+        const banTypeLabel = user.banType === 'ip-ban' ? ' (IP Ban)' : '';
+        throw new Error(`Account banned: ${user.banReason || 'Your account has been permanently banned.'}${banTypeLabel}`);
     }
 
     if (user.accountStatus === 'suspended') {
@@ -1458,7 +1471,18 @@ const requestEmailVerification = async (email, personalName, breederName, showBr
 /**
  * Verify email code and complete registration
  */
-const verifyEmailAndRegister = async (email, code) => {
+const verifyEmailAndRegister = async (email, code, userIP = null) => {
+    // Check if IP is banned (if IP is provided)
+    if (userIP) {
+        const bannedUser = await User.findOne({ 
+            bannedIP: userIP,
+            banType: 'ip-ban'
+        });
+        if (bannedUser) {
+            throw new Error('This IP address has been banned from creating accounts.');
+        }
+    }
+    
     // Find user with email and select the verification code field
     const user = await User.findOne({ email })
         .select('+verificationCode +verificationCodeExpires');

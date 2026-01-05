@@ -78,8 +78,11 @@ router.post('/verify-email', async (req, res) => {
 
         console.log('Verification attempt - Email:', email, 'Code:', code, 'Code length:', code.length, 'Code type:', typeof code);
 
+        // Add IP address for IP ban checking
+        const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+
         // Verify code and create account
-        const { token, userProfile } = await verifyEmailAndRegister(email, code);
+        const { token, userProfile } = await verifyEmailAndRegister(email, code, userIP);
 
         res.status(201).json({
             message: 'Email verified! Account created successfully.',
@@ -151,6 +154,9 @@ router.post('/register', async (req, res) => {
         if (!userData.email || !userData.password || !userData.personalName) {
             return res.status(400).json({ message: 'Email, password, and personal name are required for registration.' });
         }
+
+        // Add IP address to user data for IP ban checking
+        userData.ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
 
         // Call the service function to register and return the token
         const { token, userProfile } = await registerUser(userData);

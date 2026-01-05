@@ -125,6 +125,8 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
             updates.suspensionExpiry = null;
             updates.banReason = null;
             updates.banDate = null;
+            updates.banType = null;
+            updates.bannedIP = null;
         }
 
         if (status === 'suspended') {
@@ -140,10 +142,12 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
         if (status === 'banned') {
             updates.banReason = reason || 'Banned by moderator';
             updates.banDate = now;
+            updates.banType = ipBan ? 'ip-ban' : 'banned';
             if (ipBan) {
-                updates.bannedIPs = updates.bannedIPs || [];
-                // In a real implementation, we'd get the user's IP from the session
-                console.log('[MODERATION STATUS] IP ban requested (would need IP tracking)');
+                // Store the IP for blocking future registrations
+                const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+                updates.bannedIP = userIP;
+                console.log('[MODERATION STATUS] IP ban requested:', { userIP });
             }
         }
 
