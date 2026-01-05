@@ -204,6 +204,32 @@ const AnimalSchema = new mongoose.Schema({
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
+    // Breeding History (Historical Data)
+    breedingRole: { type: String, enum: ['sire', 'dam', 'both', null], default: null },
+    lastMatingDate: { type: Date, default: null },
+    successfulMatings: { type: Number, default: null },
+    lastPregnancyDate: { type: Date, default: null },
+    offspringCount: { type: Number, default: null },
+    
+    // Stud/Fertility fields (sire role)
+    isStudAnimal: { type: Boolean, default: false },
+    availableForBreeding: { type: Boolean, default: false },
+    studFeeCurrency: { type: String, default: 'USD' },
+    studFeeAmount: { type: Number, default: null },
+    fertilityStatus: { type: String, default: 'Unknown' },
+    fertilityNotes: { type: String, default: null },
+    
+    // Dam/Fertility fields (dam role)
+    isDamAnimal: { type: Boolean, default: false },
+    damFertilityStatus: { type: String, default: 'Unknown' },
+    damFertilityNotes: { type: String, default: null },
+    
+    // Sale fields
+    isForSale: { type: Boolean, default: false },
+    salePriceCurrency: { type: String, default: 'USD' },
+    salePriceAmount: { type: Number, default: null },
+    isInfertile: { type: Boolean, default: false },
+    
     // Tab 7: Health & Veterinary Fields
     vaccinations: { type: String, default: null },
     dewormingRecords: { type: String, default: null },
