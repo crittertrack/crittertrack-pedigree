@@ -208,6 +208,19 @@ app.get('/diagnostic/env', (req, res) => {
     }
 });
 
+// Client IP endpoint - for maintenance mode bypass
+app.get('/api/client-ip', (req, res) => {
+    // Get IP from various possible headers (for proxied requests)
+    const ip = (
+        req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+        req.headers['x-real-ip'] ||
+        req.connection.remoteAddress ||
+        req.socket.remoteAddress ||
+        req.ip
+    );
+    res.json({ ip, clientIp: ip });
+});
+
 // Authentication Routes (register and login)
 app.use('/api/auth', authRoutes); 
 
