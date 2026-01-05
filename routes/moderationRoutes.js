@@ -122,6 +122,7 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
         if (status === 'active') {
             updates.suspensionReason = null;
             updates.suspensionDate = null;
+            updates.suspensionExpiry = null;
             updates.banReason = null;
             updates.banDate = null;
         }
