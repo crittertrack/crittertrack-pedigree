@@ -33,6 +33,50 @@ router.get('/users', async (req, res) => {
     }
 });
 
+// GET /api/admin/users/moderation-overview - Get all users with moderation history
+router.get('/users/moderation-overview', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
+
+        // Get all users with relevant fields
+        const users = await User.find({})
+            .select('id_public email personalName breederName accountStatus role warningCount warnings suspensionReason suspensionDate suspensionExpiry banReason banDate banType bannedIP moderatedBy creationDate')
+            .lean();
+
+        // Get moderation history for each user from audit logs
+        const usersWithHistory = await Promise.all(users.map(async (user) => {
+            // Get audit logs for this user
+            const auditLogs = await AuditLog.find({
+                targetId: user._id
+            })
+            .select('action reason timestamp moderatorEmail details')
+            .sort({ timestamp: -1 })
+            .limit(10)
+            .lean();
+
+            // Get reports involving this user
+            const profileReports = await ProfileReport.find({
+                $or: [
+                    { reportedUserId: user._id },
+                    { reportedBy: user._id }
+                ]
+            }).select('reason status createdAt').lean();
+
+            return {
+                ...user,
+                moderationHistory: auditLogs,
+                reportCount: profileReports.length,
+                recentReports: profileReports.slice(0, 5)
+            };
+        }));
+
+        res.json({ users: usersWithHistory });
+    } catch (error) {
+        console.error('Error fetching moderation overview:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // PATCH /api/admin/users/:userId/status - Suspend/activate user
 router.patch('/users/:userId/status', async (req, res) => {
     try {

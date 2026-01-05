@@ -14,6 +14,7 @@ const {
     sendPasswordResetEmail 
 } = require('../utils/emailService');
 const { ProfanityError } = require('../utils/profanityFilter');
+const { createAuditLog } = require('../utils/auditLogger');
 
 // --- Authentication Route Controllers (NO AUTH REQUIRED) ---
 
@@ -193,6 +194,26 @@ router.post('/login', async (req, res) => {
 
         // Call the service function to log in and return the token
         const { token, userProfile } = await loginUser(email, password);
+
+        // Log admin/moderator logins
+        if (userProfile.role === 'admin' || userProfile.role === 'moderator') {
+            const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+            await createAuditLog({
+                moderatorId: userProfile._id,
+                moderatorEmail: userProfile.email,
+                action: userProfile.role === 'admin' ? 'admin_login' : 'moderator_login',
+                targetType: 'system',
+                targetId: null,
+                targetName: null,
+                details: { 
+                    role: userProfile.role,
+                    ip: userIP,
+                    userAgent: req.headers['user-agent']
+                },
+                reason: null,
+                ipAddress: userIP
+            });
+        }
 
         res.status(200).json({
             message: 'Login successful!',
