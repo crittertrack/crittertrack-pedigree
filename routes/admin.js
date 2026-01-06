@@ -357,14 +357,139 @@ router.get('/users/:userId/moderation-history', async (req, res) => {
 // 2. ANIMAL & PEDIGREE MANAGEMENT
 // ============================================
 
-// GET /api/admin/animals - List all animals
+// GET /api/admin/animals - List animals with pagination, search, and filters
 router.get('/animals', async (req, res) => {
     try {
-        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
 
-        const animals = await Animal.find({}).lean();
-        res.json(animals);
+        const { 
+            page = 1, 
+            limit = 50, 
+            search = '', 
+            species = '',
+            isPublic = '',
+            hasReports = '',
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
+
+        // Build query
+        const query = {};
+        
+        if (search) {
+            query.$or = [
+                { id_public: { $regex: search, $options: 'i' } },
+                { name: { $regex: search, $options: 'i' } },
+                { prefix: { $regex: search, $options: 'i' } },
+                { suffix: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        if (species) {
+            query.species = species;
+        }
+        
+        if (isPublic === 'true') {
+            query.showOnPublicProfile = true;
+        } else if (isPublic === 'false') {
+            query.showOnPublicProfile = { $ne: true };
+        }
+
+        // Get animals with pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+
+        const [animals, total] = await Promise.all([
+            Animal.find(query)
+                .select('id_public name prefix suffix species gender status ownerId ownerId_public originalOwnerId showOnPublicProfile imageUrl createdAt soldStatus breederId_public')
+                .populate('ownerId', 'email personalName id_public')
+                .populate('originalOwnerId', 'email personalName id_public')
+                .sort(sort)
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean(),
+            Animal.countDocuments(query)
+        ]);
+
+        // Get report counts for these animals
+        const animalIds = animals.map(a => a._id);
+        const reportCounts = await AnimalReport.aggregate([
+            { $match: { reportedAnimalId: { $in: animalIds }, status: 'pending' } },
+            { $group: { _id: '$reportedAnimalId', count: { $sum: 1 } } }
+        ]);
+        const reportCountMap = {};
+        reportCounts.forEach(r => { reportCountMap[r._id.toString()] = r.count; });
+
+        // Filter by hasReports if specified
+        let filteredAnimals = animals;
+        if (hasReports === 'true') {
+            filteredAnimals = animals.filter(a => reportCountMap[a._id.toString()] > 0);
+        } else if (hasReports === 'false') {
+            filteredAnimals = animals.filter(a => !reportCountMap[a._id.toString()]);
+        }
+
+        // Add report count to each animal
+        const animalsWithReports = filteredAnimals.map(a => ({
+            ...a,
+            pendingReports: reportCountMap[a._id.toString()] || 0
+        }));
+
+        // Get unique species for filter dropdown
+        const speciesList = await Animal.distinct('species');
+
+        res.json({
+            animals: animalsWithReports,
+            total: hasReports ? filteredAnimals.length : total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil((hasReports ? filteredAnimals.length : total) / parseInt(limit)),
+            speciesList
+        });
     } catch (error) {
+        console.error('Admin animals list error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/animals/:animalId - Get single animal details for editing
+router.get('/animals/:animalId', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { animalId } = req.params;
+
+        // Try by ObjectId first, then by public ID
+        let animal = null;
+        const mongoose = require('mongoose');
+        
+        if (mongoose.Types.ObjectId.isValid(animalId)) {
+            animal = await Animal.findById(animalId)
+                .populate('ownerId', 'email personalName id_public')
+                .populate('originalOwnerId', 'email personalName id_public')
+                .lean();
+        }
+        
+        if (!animal) {
+            animal = await Animal.findOne({ id_public: animalId })
+                .populate('ownerId', 'email personalName id_public')
+                .populate('originalOwnerId', 'email personalName id_public')
+                .lean();
+        }
+
+        if (!animal) {
+            return res.status(404).json({ error: 'Animal not found' });
+        }
+
+        // Get reports for this animal
+        const reports = await AnimalReport.find({ reportedAnimalId: animal._id })
+            .populate('reporterId', 'email personalName id_public')
+            .populate('reviewedBy', 'email personalName')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.json({ animal, reports });
+    } catch (error) {
+        console.error('Admin animal detail error:', error);
         res.status(500).json({ error: error.message });
     }
 });
