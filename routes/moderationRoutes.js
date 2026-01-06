@@ -9,7 +9,8 @@ const {
     MessageReport,
     Animal,
     PublicProfile,
-    PublicAnimal
+    PublicAnimal,
+    Notification
 } = require('../database/models');
 
 const requireModerator = checkRole(['moderator', 'admin']);
@@ -723,6 +724,60 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
             },
             reason: reason || 'Content moderation edit'
         });
+
+        // Create notification for the user about the content edit
+        try {
+            // Determine user to notify
+            let notifyUserId = null;
+            let notifyUserIdPublic = null;
+            
+            if (contentType === 'profile') {
+                notifyUserId = updated._id;
+                notifyUserIdPublic = updated.id_public;
+            } else if (contentType === 'animal' && updated.ownerId) {
+                // For animals, notify the owner
+                const owner = await User.findById(updated.ownerId).select('_id id_public');
+                if (owner) {
+                    notifyUserId = owner._id;
+                    notifyUserIdPublic = owner.id_public;
+                }
+            }
+
+            if (notifyUserId) {
+                // Build a human-readable list of what was changed
+                const changedFields = Object.entries(fieldEdits).map(([field, value]) => {
+                    const fieldLabel = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    if (value === '' || value === null) {
+                        return `${fieldLabel} was removed`;
+                    }
+                    return `${fieldLabel} was edited`;
+                }).join(', ');
+
+                const notificationMessage = contentType === 'profile' 
+                    ? `A moderator has edited your profile. Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
+                    : `A moderator has edited your animal "${updated.name}". Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`;
+
+                await Notification.create({
+                    userId: notifyUserId,
+                    userId_public: notifyUserIdPublic,
+                    type: 'content_edited',
+                    message: notificationMessage,
+                    metadata: {
+                        contentType,
+                        contentId: updated._id || contentId,
+                        contentIdPublic: updated.id_public,
+                        fieldsEdited: Object.keys(fieldEdits),
+                        reason: reason || 'Content policy violation'
+                    },
+                    status: 'approved', // Not a request, just informational
+                    read: false
+                });
+                console.log('[MODERATION EDIT] Notification sent to user:', notifyUserIdPublic);
+            }
+        } catch (notifError) {
+            // Don't fail the edit if notification fails
+            console.error('[MODERATION EDIT] Failed to send notification:', notifError);
+        }
 
         res.json({
             message: 'Content updated successfully',
