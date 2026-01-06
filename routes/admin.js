@@ -626,14 +626,69 @@ router.get('/audit-logs', async (req, res) => {
     }
 });
 
+// ============================================
+// BACKUP MANAGEMENT ROUTES
+// ============================================
+
+// Backup metadata storage (in-memory for now, could be persisted to DB)
+const backupMetadataPath = path.join(__dirname, '..', 'backups', 'metadata.json');
+
+// Helper: Get backup metadata
+const getBackupMetadata = () => {
+    try {
+        if (fs.existsSync(backupMetadataPath)) {
+            return JSON.parse(fs.readFileSync(backupMetadataPath, 'utf-8'));
+        }
+    } catch (err) {
+        console.error('Error reading backup metadata:', err);
+    }
+    return { backups: [], lastAutoBackup: null };
+};
+
+// Helper: Save backup metadata
+const saveBackupMetadata = (metadata) => {
+    try {
+        const dir = path.dirname(backupMetadataPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.writeFileSync(backupMetadataPath, JSON.stringify(metadata, null, 2));
+    } catch (err) {
+        console.error('Error saving backup metadata:', err);
+    }
+};
+
+// Helper: Get collection counts
+const getCollectionStats = async () => {
+    const stats = {
+        users: await User.countDocuments(),
+        animals: await Animal.countDocuments(),
+        publicProfiles: await PublicProfile.countDocuments(),
+        publicAnimals: await PublicAnimal.countDocuments(),
+        auditLogs: await AuditLog.countDocuments(),
+        profileReports: await ProfileReport.countDocuments(),
+        animalReports: await AnimalReport.countDocuments(),
+        messageReports: await MessageReport.countDocuments(),
+        modChats: await ModChat.countDocuments()
+    };
+    return stats;
+};
+
 // GET /api/admin/backups - List available backups
 router.get('/backups', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
-        // TODO: Implement backup list from storage service
-        res.json([]);
+        const metadata = getBackupMetadata();
+        const currentStats = await getCollectionStats();
+        
+        res.json({
+            backups: metadata.backups || [],
+            lastAutoBackup: metadata.lastAutoBackup,
+            currentStats
+        });
     } catch (error) {
+        console.error('Error fetching backups:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -643,21 +698,251 @@ router.post('/trigger-backup', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
-        // TODO: Implement backup trigger
-        res.json({ message: 'Backup started', timestamp: new Date() });
+        const { description, backupType = 'manual' } = req.body;
+        const timestamp = new Date();
+        const backupId = `backup-${timestamp.toISOString().replace(/:/g, '-').split('.')[0]}`;
+        const backupDir = path.join(__dirname, '..', 'backups', backupId);
+
+        // Create backup directory
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+        }
+
+        // Get collection stats before backup
+        const stats = await getCollectionStats();
+
+        // Export collections to JSON (essential data only for quick backups)
+        const collections = {
+            users: await User.find({}).lean(),
+            animals: await Animal.find({}).lean(),
+            publicProfiles: await PublicProfile.find({}).lean(),
+            publicAnimals: await PublicAnimal.find({}).lean()
+        };
+
+        let totalSize = 0;
+        for (const [name, data] of Object.entries(collections)) {
+            const filePath = path.join(backupDir, `${name}.json`);
+            const jsonData = JSON.stringify(data, null, 2);
+            fs.writeFileSync(filePath, jsonData);
+            totalSize += Buffer.byteLength(jsonData, 'utf8');
+        }
+
+        // Create backup info file
+        const backupInfo = {
+            id: backupId,
+            createdAt: timestamp,
+            createdBy: req.user?.email || 'system',
+            description: description || `${backupType} backup`,
+            type: backupType,
+            stats,
+            collections: Object.keys(collections),
+            totalSizeBytes: totalSize
+        };
+
+        fs.writeFileSync(
+            path.join(backupDir, 'backup-info.json'),
+            JSON.stringify(backupInfo, null, 2)
+        );
+
+        // Update metadata
+        const metadata = getBackupMetadata();
+        metadata.backups.unshift({
+            id: backupId,
+            createdAt: timestamp,
+            createdBy: req.user?.email || 'system',
+            description: backupInfo.description,
+            type: backupType,
+            stats,
+            totalSizeBytes: totalSize,
+            status: 'completed'
+        });
+
+        // Keep only last 20 backups in metadata
+        if (metadata.backups.length > 20) {
+            metadata.backups = metadata.backups.slice(0, 20);
+        }
+
+        if (backupType === 'auto') {
+            metadata.lastAutoBackup = timestamp;
+        }
+
+        saveBackupMetadata(metadata);
+
+        // Log the action
+        await createAuditLog({
+            action: 'backup_created',
+            performedBy: req.user?._id,
+            details: { backupId, type: backupType, stats }
+        });
+
+        res.json({
+            success: true,
+            message: 'Backup created successfully',
+            backup: metadata.backups[0]
+        });
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/backups/:backupId - Get backup details
+router.get('/backups/:backupId', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { backupId } = req.params;
+        const backupDir = path.join(__dirname, '..', 'backups', backupId);
+        const infoPath = path.join(backupDir, 'backup-info.json');
+
+        if (!fs.existsSync(infoPath)) {
+            return res.status(404).json({ error: 'Backup not found' });
+        }
+
+        const backupInfo = JSON.parse(fs.readFileSync(infoPath, 'utf-8'));
+        res.json(backupInfo);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// POST /api/admin/restore-backup/:backupId - Restore from backup
+// GET /api/admin/backups/:backupId/download - Download backup as ZIP
+router.get('/backups/:backupId/download', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { backupId } = req.params;
+        const backupDir = path.join(__dirname, '..', 'backups', backupId);
+
+        if (!fs.existsSync(backupDir)) {
+            return res.status(404).json({ error: 'Backup not found' });
+        }
+
+        // For simplicity, send backup-info.json with stats
+        // In production, you'd want to create a ZIP archive
+        const files = fs.readdirSync(backupDir);
+        const backup = {};
+
+        for (const file of files) {
+            if (file.endsWith('.json')) {
+                backup[file.replace('.json', '')] = JSON.parse(
+                    fs.readFileSync(path.join(backupDir, file), 'utf-8')
+                );
+            }
+        }
+
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${backupId}.json"`);
+        res.json(backup);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/admin/backups/:backupId - Delete a backup
+router.delete('/backups/:backupId', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { backupId } = req.params;
+        const backupDir = path.join(__dirname, '..', 'backups', backupId);
+
+        if (!fs.existsSync(backupDir)) {
+            return res.status(404).json({ error: 'Backup not found' });
+        }
+
+        // Delete backup directory
+        fs.rmSync(backupDir, { recursive: true, force: true });
+
+        // Update metadata
+        const metadata = getBackupMetadata();
+        metadata.backups = metadata.backups.filter(b => b.id !== backupId);
+        saveBackupMetadata(metadata);
+
+        // Log the action
+        await createAuditLog({
+            action: 'backup_deleted',
+            performedBy: req.user?._id,
+            details: { backupId }
+        });
+
+        res.json({ success: true, message: 'Backup deleted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/admin/restore-backup/:backupId - Restore from backup (DANGEROUS)
 router.post('/restore-backup/:backupId', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
-        // TODO: Implement backup restore
-        res.json({ message: 'Restore started', backupId: req.params.backupId });
+        const { backupId } = req.params;
+        const { collections = [], confirmRestore } = req.body;
+
+        if (!confirmRestore) {
+            return res.status(400).json({ 
+                error: 'Restore requires confirmation',
+                message: 'Set confirmRestore: true to proceed. This will overwrite existing data!'
+            });
+        }
+
+        const backupDir = path.join(__dirname, '..', 'backups', backupId);
+
+        if (!fs.existsSync(backupDir)) {
+            return res.status(404).json({ error: 'Backup not found' });
+        }
+
+        // Create a backup before restoring
+        const preRestoreBackupId = `pre-restore-${Date.now()}`;
+        
+        const restored = [];
+        const errors = [];
+
+        // Restore specified collections (or all if none specified)
+        const collectionMap = {
+            users: User,
+            animals: Animal,
+            publicProfiles: PublicProfile,
+            publicAnimals: PublicAnimal
+        };
+
+        for (const [name, Model] of Object.entries(collectionMap)) {
+            if (collections.length > 0 && !collections.includes(name)) continue;
+
+            const filePath = path.join(backupDir, `${name}.json`);
+            if (!fs.existsSync(filePath)) continue;
+
+            try {
+                const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                
+                // Clear existing data and insert backup data
+                await Model.deleteMany({});
+                if (data.length > 0) {
+                    await Model.insertMany(data, { ordered: false });
+                }
+                
+                restored.push({ collection: name, count: data.length });
+            } catch (err) {
+                errors.push({ collection: name, error: err.message });
+            }
+        }
+
+        // Log the action
+        await createAuditLog({
+            action: 'backup_restored',
+            performedBy: req.user?._id,
+            details: { backupId, restored, errors }
+        });
+
+        res.json({
+            success: true,
+            message: 'Restore completed',
+            restored,
+            errors: errors.length > 0 ? errors : undefined
+        });
     } catch (error) {
+        console.error('Error restoring backup:', error);
         res.status(500).json({ error: error.message });
     }
 });
