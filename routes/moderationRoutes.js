@@ -415,7 +415,8 @@ const reportModelMap = {
         model: MessageReport,
         populate: [
             { path: 'reporterId', select: 'personalName breederName email id_public' },
-            { path: 'reportedUserId', select: 'personalName breederName email id_public' }
+            { path: 'reportedUserId', select: 'personalName breederName email id_public' },
+            { path: 'messageId', select: 'message senderId receiverId createdAt' }
         ]
     }
 };

@@ -611,7 +611,14 @@ const Message = mongoose.model('Message', MessageSchema);
 const MessageReportSchema = new mongoose.Schema({
     reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     reportedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null }, // For single message reports
+    conversationMessages: [{ // For conversation reports - stores messages from last 24 hours
+        messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },
+        senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        message: { type: String },
+        createdAt: { type: Date }
+    }],
+    reportType: { type: String, enum: ['message', 'conversation'], default: 'message' },
     reason: { type: String, required: true },
     status: { 
         type: String, 

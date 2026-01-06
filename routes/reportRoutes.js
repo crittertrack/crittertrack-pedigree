@@ -114,18 +114,57 @@ router.post('/animal', protect, async (req, res) => {
     }
 });
 
-// POST /api/reports/message - Report a message
+// POST /api/reports/message - Report a message or conversation
 router.post('/message', protect, async (req, res) => {
     try {
         const reporterId = req.user.id;
-        const { messageId, reason } = req.body;
+        const { messageId, reportedUserId, conversationUserId, reason, recentMessages } = req.body;
         const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
 
-        if (!messageId || !trimmedReason) {
-            return res.status(400).json({ error: 'messageId and reason are required' });
+        console.log('[REPORT MESSAGE] Received report:', { reporterId, messageId, reportedUserId, conversationUserId, reason: trimmedReason, recentMessagesCount: recentMessages?.length });
+
+        if (!trimmedReason) {
+            return res.status(400).json({ error: 'reason is required' });
         }
 
         const cleanReason = sanitizeText(trimmedReason);
+
+        // Conversation report (with recentMessages array)
+        if (recentMessages && Array.isArray(recentMessages) && recentMessages.length > 0) {
+            // Find the reported user
+            let targetUserId = reportedUserId || conversationUserId;
+            let targetUser = null;
+            
+            if (targetUserId && isObjectId(targetUserId)) {
+                targetUser = await User.findById(targetUserId);
+            }
+            
+            if (!targetUser) {
+                return res.status(404).json({ error: 'Reported user not found' });
+            }
+
+            const report = new MessageReport({
+                reporterId,
+                reportedUserId: targetUser._id,
+                reportType: 'conversation',
+                conversationMessages: recentMessages.map(msg => ({
+                    messageId: msg.messageId,
+                    senderId: msg.senderId,
+                    message: msg.message,
+                    createdAt: msg.createdAt
+                })),
+                reason: cleanReason
+            });
+
+            await report.save();
+            console.log('[REPORT MESSAGE] Conversation report saved:', { reportId: report._id, messagesCount: recentMessages.length });
+            return res.status(201).json({ message: 'Conversation report submitted successfully' });
+        }
+
+        // Single message report
+        if (!messageId) {
+            return res.status(400).json({ error: 'messageId or recentMessages is required' });
+        }
 
         const message = await Message.findById(messageId);
         if (!message) {
@@ -138,20 +177,22 @@ router.post('/message', protect, async (req, res) => {
         }
 
         // The user being reported is the other person in the conversation
-        const reportedUserId = message.senderId.toString() === reporterId ? message.receiverId : message.senderId;
+        const finalReportedUserId = reportedUserId || (message.senderId.toString() === reporterId ? message.receiverId : message.senderId);
 
         const report = new MessageReport({
             reporterId,
-            reportedUserId,
+            reportedUserId: finalReportedUserId,
             messageId,
+            reportType: 'message',
             reason: cleanReason
         });
 
         await report.save();
+        console.log('[REPORT MESSAGE] Single message report saved:', { reportId: report._id, messageId });
 
         res.status(201).json({ message: 'Message report submitted successfully' });
     } catch (error) {
-        console.error('Error reporting message:', error);
+        console.error('[REPORT MESSAGE] Error reporting message:', error);
         res.status(500).json({ error: 'Failed to submit message report' });
     }
 });
