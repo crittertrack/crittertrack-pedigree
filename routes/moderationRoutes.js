@@ -401,7 +401,7 @@ const reportModelMap = {
         model: ProfileReport,
         populate: [
             { path: 'reporterId', select: 'personalName breederName email id_public' },
-            { path: 'reportedUserId', select: 'personalName breederName email id_public' }
+            { path: 'reportedUserId', select: 'personalName breederName email id_public profileImage bio websiteUrl showPersonalName showBreederName' }
         ]
     },
     animal: {
@@ -413,7 +413,7 @@ const reportModelMap = {
                 select: 'name id_public ownerId species gender variety images dateOfBirth status',
                 populate: {
                     path: 'ownerId',
-                    select: 'personalName breederName email id_public'
+                    select: 'personalName breederName email id_public profileImage'
                 }
             }
         ]
@@ -422,7 +422,7 @@ const reportModelMap = {
         model: MessageReport,
         populate: [
             { path: 'reporterId', select: 'personalName breederName email id_public' },
-            { path: 'reportedUserId', select: 'personalName breederName email id_public' },
+            { path: 'reportedUserId', select: 'personalName breederName email id_public profileImage' },
             { path: 'messageId', select: 'message senderId receiverId createdAt' }
         ]
     }
