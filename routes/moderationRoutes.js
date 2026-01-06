@@ -69,7 +69,7 @@ router.get('/users', async (req, res) => {
         const { status, search, limit = 25, skip = 0 } = req.query;
         const query = {};
 
-        if (status && ['active', 'suspended', 'banned'].includes(status)) {
+        if (status && ['normal', 'suspended', 'banned'].includes(status)) {
             query.accountStatus = status;
         }
 
@@ -109,7 +109,7 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
     try {
         const { status, reason, durationDays, ipBan } = req.body;
         let userId = req.params.userId;
-        const allowedStatuses = ['active', 'suspended', 'banned'];
+        const allowedStatuses = ['normal', 'suspended', 'banned'];
 
         console.log('[MODERATION STATUS] Updating user status:', { userId, status, reason, durationDays, ipBan });
 
@@ -120,7 +120,7 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
         const updates = { accountStatus: status };
         const now = new Date();
 
-        if (status === 'active') {
+        if (status === 'normal') {
             updates.suspensionReason = null;
             updates.suspensionDate = null;
             updates.suspensionExpiry = null;
@@ -193,7 +193,7 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
         });
 
         // Check if this is lifting a suspension (changing from suspended to active)
-        const wasLiftingSuspension = status === 'active' && updates.suspensionReason === null;
+        const wasLiftingSuspension = status === 'normal' && updates.suspensionReason === null;
 
         res.json({
             message: `User status updated to ${status}.`,
@@ -231,7 +231,7 @@ router.get('/users/:userId/info', requireModerator, async (req, res) => {
             breederName: user.breederName,
             warningCount: user.warningCount || 0,
             warnings: user.warnings || [],
-            accountStatus: user.accountStatus || 'active',
+            accountStatus: user.accountStatus || 'normal',
             suspensionReason: user.suspensionReason,
             suspensionDate: user.suspensionDate,
             banReason: user.banReason,
@@ -282,7 +282,7 @@ router.post('/users/:userId/warn', async (req, res) => {
         user.warningCount = user.warnings.filter(w => !w.isLifted).length;
 
         // Auto-suspend at 3 active warnings
-        if (user.warningCount >= 3 && user.accountStatus === 'active') {
+        if (user.warningCount >= 3 && user.accountStatus === 'normal') {
             user.accountStatus = 'suspended';
             user.suspensionReason = 'Automatically suspended after 3 warnings.';
             user.suspensionDate = new Date();

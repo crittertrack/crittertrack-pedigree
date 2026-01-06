@@ -569,7 +569,7 @@ router.get('/status', protect, async (req, res) => {
         }
 
         res.status(200).json({
-            accountStatus: user.accountStatus || 'active',
+            accountStatus: user.accountStatus || 'normal',
             email: user.email,
             id_public: user.id_public,
             suspensionReason: user.suspensionReason,

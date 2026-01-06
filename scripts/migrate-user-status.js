@@ -1,5 +1,5 @@
 /**
- * Migration script to set accountStatus to 'active' for users where it's null
+ * Migration script to set accountStatus to 'normal' for users where it's null
  * Run with: node scripts/migrate-user-status.js
  */
 
@@ -12,8 +12,8 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const UserSchema = new mongoose.Schema({
     accountStatus: { 
         type: String, 
-        enum: ['active', 'suspended', 'banned'], 
-        default: 'active'
+        enum: ['normal', 'suspended', 'banned'], 
+        default: 'normal'
     }
 }, { strict: false });
 
@@ -40,7 +40,7 @@ async function migrateUserStatus() {
             return;
         }
 
-        // Update all users with null/missing accountStatus to 'active'
+        // Update all users with null/missing accountStatus to 'normal'
         const result = await User.updateMany(
             { 
                 $or: [
@@ -49,7 +49,7 @@ async function migrateUserStatus() {
                 ]
             },
             { 
-                $set: { accountStatus: 'active' } 
+                $set: { accountStatus: 'normal' } 
             }
         );
 

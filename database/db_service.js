@@ -272,7 +272,7 @@ const loginUser = async (email, password) => {
                 suspensionExpiry: user.suspensionExpiry,
                 suspensionReason: user.suspensionReason
             });
-            user.accountStatus = 'active';
+            user.accountStatus = 'normal';
             user.suspensionReason = null;
             user.suspensionDate = null;
             user.suspensionExpiry = null;
@@ -353,7 +353,7 @@ const getUserProfileById = async (appUserId_backend) => {
         creationDate: user.creationDate,
         warningCount: user.warningCount || 0,
         warnings: user.warnings || [],
-        accountStatus: user.accountStatus || 'active',
+        accountStatus: user.accountStatus || 'normal',
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
         ownedLitters: user.ownedLitters, // Array of internal litter IDs
     };

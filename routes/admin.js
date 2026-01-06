@@ -82,9 +82,9 @@ router.patch('/users/:userId/status', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
-        const { status, reason } = req.body; // 'active', 'suspended', 'banned'
+        const { status, reason } = req.body; // 'normal', 'suspended', 'banned'
         
-        if (!['active', 'suspended', 'banned'].includes(status)) {
+        if (!['normal', 'suspended', 'banned'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
 
@@ -160,7 +160,7 @@ router.post('/users/:userId/unlock', async (req, res) => {
 
         const user = await User.findByIdAndUpdate(req.params.userId, { 
             loginAttempts: 0,
-            status: 'active'
+            status: 'normal'
         }, { new: true });
         res.json(user);
     } catch (error) {
