@@ -629,20 +629,28 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
         const isObjectId = mongoose.Types.ObjectId.isValid(contentId);
 
         if (contentType === 'profile') {
+            // Process field edits - convert empty strings to null for clearing fields
+            const processedEdits = { ...fieldEdits };
+            for (const key of Object.keys(processedEdits)) {
+                if (processedEdits[key] === '' || processedEdits[key] === undefined) {
+                    processedEdits[key] = null;
+                }
+            }
+
             // Try to find by ObjectId first, then by public ID
             let user = null;
             
             if (isObjectId) {
                 user = await User.findByIdAndUpdate(
                     contentId,
-                    fieldEdits,
+                    processedEdits,
                     { new: true, runValidators: true }
                 );
             } else {
                 // Try by public ID
                 user = await User.findOneAndUpdate(
                     { id_public: contentId },
-                    fieldEdits,
+                    processedEdits,
                     { new: true, runValidators: true }
                 );
             }
@@ -655,13 +663,13 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
             // Also update public profile if exists
             await PublicProfile.findOneAndUpdate(
                 { userId_backend: user._id },
-                fieldEdits,
+                processedEdits,
                 { runValidators: true }
             );
 
             updated = user;
             targetName = `${user.email || user.personalName} (${user.id_public || 'No ID'})`;
-            console.log('[MODERATION EDIT] Updated profile:', targetName);
+            console.log('[MODERATION EDIT] Updated profile:', targetName, 'with edits:', processedEdits);
         } 
         else if (contentType === 'animal') {
             // Try to find by ObjectId first, then by public ID
