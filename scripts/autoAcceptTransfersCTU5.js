@@ -119,7 +119,7 @@ async function autoAcceptTransfers() {
           if (animal) {
             // Update animal based on transfer type
             if (!transfer.offerViewOnly) {
-              // Full ownership transfer - mark as purchased
+              // Full ownership transfer - mark as purchased (on CTU5's end)
               await Animal.findByIdAndUpdate(
                 animal._id,
                 { 
@@ -129,6 +129,39 @@ async function autoAcceptTransfers() {
                 },
                 { new: true }
               );
+
+              // ALSO mark as SOLD on the originating owner's end (CTU2)
+              // Find if there's a copy owned by the sender
+              const senderAnimal = await Animal.findOne({
+                id_public: transfer.animalId_public,
+                ownerId: transfer.fromUserId
+              });
+              if (senderAnimal) {
+                await Animal.findByIdAndUpdate(
+                  senderAnimal._id,
+                  { 
+                    soldStatus: 'sold',
+                    transferStatus: 'accepted'
+                  },
+                  { new: true }
+                );
+
+                // Update sender's public animal record
+                const senderPublicAnimal = await PublicAnimal.findOne({ 
+                  animalId_public: transfer.animalId_public,
+                  ownerId: transfer.fromUserId
+                });
+                if (senderPublicAnimal) {
+                  await PublicAnimal.findByIdAndUpdate(
+                    senderPublicAnimal._id,
+                    { 
+                      soldStatus: 'sold',
+                      transferStatus: 'accepted'
+                    },
+                    { new: true }
+                  );
+                }
+              }
 
               // Add CTU2 to view-only users if they were the sender and not already in view-only
               if (transfer.fromUserId.toString() === ctu2._id.toString()) {
@@ -161,8 +194,10 @@ async function autoAcceptTransfers() {
                 // Create public animal record if it doesn't exist
                 await PublicAnimal.create({
                   animalId_public: transfer.animalId_public,
+                  id_public: transfer.animalId_public,
                   animalId_backend: animal._id,
                   ownerId: ctu5._id,
+                  ownerId_public: ctu5.id_public,
                   name: animal.name,
                   species: animal.species,
                   gender: animal.gender,
