@@ -758,6 +758,85 @@ const ModChatSchema = new mongoose.Schema({
 const ModChat = mongoose.model('ModChat', ModChatSchema);
 
 
+// --- 21. SPECIES CONFIG SCHEMA (field replacements per species) ---
+const SpeciesConfigSchema = new mongoose.Schema({
+    speciesName: { type: String, required: true, unique: true, index: true }, // e.g., 'Mouse', 'Rat'
+    // Field label replacements for this species
+    fieldReplacements: {
+        type: Map,
+        of: String,
+        default: new Map()
+        // Example: { "Coat Color": "Fur Pattern", "Eye Color": "Eye Type" }
+    },
+    // Custom fields specific to this species
+    customFields: [{
+        name: { type: String, required: true },
+        type: { type: String, enum: ['text', 'select', 'number', 'boolean'], default: 'text' },
+        options: [{ type: String }], // For select type fields
+        required: { type: Boolean, default: false },
+        order: { type: Number, default: 0 }
+    }],
+    // Hidden fields for this species
+    hiddenFields: [{ type: String }],
+    // Notes for admins
+    adminNotes: { type: String, default: null },
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+    modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+}, { timestamps: true });
+const SpeciesConfig = mongoose.model('SpeciesConfig', SpeciesConfigSchema);
+
+
+// --- 22. GENETICS DATA SCHEMA (calculator data per species) ---
+const GeneticsDataSchema = new mongoose.Schema({
+    speciesName: { type: String, required: true, index: true }, // e.g., 'Mouse', 'Rat'
+    isPublished: { type: Boolean, default: false, index: true }, // Draft vs Published
+    version: { type: Number, default: 1 },
+    // Gene loci for this species
+    genes: [{
+        symbol: { type: String, required: true }, // e.g., 'A', 'B', 'C'
+        name: { type: String, required: true }, // e.g., 'Agouti', 'Brown', 'Albino'
+        description: { type: String, default: null },
+        order: { type: Number, default: 0 },
+        // Allele combinations for this gene
+        alleles: [{
+            notation: { type: String, required: true }, // e.g., 'A/A', 'A/a', 'a/a'
+            phenotype: { type: String, default: null }, // e.g., 'Agouti', 'Carrier', 'Non-agouti'
+            isLethal: { type: Boolean, default: false }, // e.g., Ay/Ay
+            dominance: { type: String, enum: ['dominant', 'recessive', 'codominant', 'incomplete'], default: 'recessive' },
+            order: { type: Number, default: 0 }
+        }]
+    }],
+    // Phenotype calculation rules (for complex interactions)
+    phenotypeRules: [{
+        name: { type: String, required: true }, // e.g., 'Black'
+        conditions: { type: mongoose.Schema.Types.Mixed }, // JSON conditions
+        priority: { type: Number, default: 0 }
+    }],
+    // Marking genes (separate category)
+    markingGenes: [{
+        symbol: { type: String, required: true },
+        name: { type: String, required: true },
+        alleles: [{
+            notation: { type: String, required: true },
+            phenotype: { type: String, default: null },
+            order: { type: Number, default: 0 }
+        }]
+    }],
+    // Admin notes and metadata
+    adminNotes: { type: String, default: null },
+    lastEditedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    publishedAt: { type: Date, default: null },
+    publishedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+// Compound index for species + published status
+GeneticsDataSchema.index({ speciesName: 1, isPublished: 1 });
+const GeneticsData = mongoose.model('GeneticsData', GeneticsDataSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     Counter,
@@ -776,6 +855,8 @@ module.exports = {
     AuditLog,
     SystemSettings,
     Species,
+    SpeciesConfig,
+    GeneticsData,
     Transaction,
     AnimalTransfer,
     ModChat

@@ -116,6 +116,10 @@ app.use('/uploads', express.static(uploadsDir));
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', authMiddleware, adminRoutes);
 
+// Species admin routes (species management, configs, genetics builder)
+const speciesAdminRoutes = require('./routes/speciesAdminRoutes');
+app.use('/api/admin', authMiddleware, speciesAdminRoutes);
+
 // Multer instance for optional multipart handling on profile route
 // Only accept PNG and JPEG/JPG files server-side
 const imageFileFilter = (req, file, cb) => {
