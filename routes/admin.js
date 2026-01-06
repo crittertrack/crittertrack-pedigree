@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { LoginAuditLog } = require('../database/2faModels');
-const { Animal, PublicProfile, PublicAnimal, User, ProfileReport, AnimalReport, MessageReport, AuditLog } = require('../database/models');
+const { Animal, PublicProfile, PublicAnimal, User, ProfileReport, AnimalReport, MessageReport, AuditLog, ModChat } = require('../database/models');
 const { createAuditLog, getAuditLogs } = require('../utils/auditLogger');
 
 // Helper: Check if user is admin
@@ -1725,7 +1725,6 @@ router.get('/mod-chat', async (req, res) => {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
 
         const { limit = 50, before } = req.query;
-        const { ModChat } = require('../database/models');
 
         const query = { isDeleted: false };
         if (before) {
@@ -1763,8 +1762,6 @@ router.post('/mod-chat', async (req, res) => {
             return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
         }
 
-        const { ModChat } = require('../database/models');
-
         const newMessage = await ModChat.create({
             senderId: req.user.id,
             message: message.trim()
@@ -1790,7 +1787,6 @@ router.delete('/mod-chat/:messageId', async (req, res) => {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
 
         const { messageId } = req.params;
-        const { ModChat } = require('../database/models');
 
         const message = await ModChat.findById(messageId);
         if (!message) {
