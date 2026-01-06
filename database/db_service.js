@@ -283,7 +283,22 @@ const loginUser = async (email, password) => {
                 ? Math.ceil((new Date(user.suspensionExpiry) - new Date()) / 1000) 
                 : null;
             const expiryTimestamp = user.suspensionExpiry ? new Date(user.suspensionExpiry).getTime() : null;
-            throw new Error(`Account suspended: ${user.suspensionReason || 'Your account has been suspended.'} ${expiryTime ? `Expires in ${Math.ceil(expiryTime / 3600)} hour(s).` : ''} ${expiryTimestamp ? `ExpiryTimestamp: ${expiryTimestamp}` : ''}`);
+            
+            // Format expiry time as hours and minutes
+            let expiryTimeStr = '';
+            if (expiryTime) {
+                const hours = Math.floor(expiryTime / 3600);
+                const minutes = Math.floor((expiryTime % 3600) / 60);
+                if (hours > 0 && minutes > 0) {
+                    expiryTimeStr = `Expires in ${hours} hour(s) ${minutes} minute(s).`;
+                } else if (hours > 0) {
+                    expiryTimeStr = `Expires in ${hours} hour(s).`;
+                } else if (minutes > 0) {
+                    expiryTimeStr = `Expires in ${minutes} minute(s).`;
+                }
+            }
+            
+            throw new Error(`Account suspended: ${user.suspensionReason || 'Your account has been suspended.'} ${expiryTimeStr} ${expiryTimestamp ? `ExpiryTimestamp: ${expiryTimestamp}` : ''}`);
         }
     }
 
