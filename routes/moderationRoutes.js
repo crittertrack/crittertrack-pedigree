@@ -411,7 +411,7 @@ const reportModelMap = {
             { path: 'reporterId', select: 'personalName breederName email id_public' },
             { 
                 path: 'reportedAnimalId', 
-                select: 'name id_public ownerId species gender variety images dateOfBirth status',
+                select: 'name id_public ownerId species gender imageUrl prefix suffix breederyId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
                 populate: {
                     path: 'ownerId',
                     select: 'personalName breederName email id_public profileImage'
