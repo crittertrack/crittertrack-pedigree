@@ -408,7 +408,14 @@ const reportModelMap = {
         model: AnimalReport,
         populate: [
             { path: 'reporterId', select: 'personalName breederName email id_public' },
-            { path: 'reportedAnimalId', select: 'name id_public ownerId species gender' }
+            { 
+                path: 'reportedAnimalId', 
+                select: 'name id_public ownerId species gender variety images dateOfBirth status',
+                populate: {
+                    path: 'ownerId',
+                    select: 'personalName breederName email id_public'
+                }
+            }
         ]
     },
     message: {
