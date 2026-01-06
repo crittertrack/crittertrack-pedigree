@@ -119,22 +119,71 @@ async function autoAcceptTransfers() {
           if (animal) {
             // Update animal based on transfer type
             if (!transfer.offerViewOnly) {
-              // Full ownership transfer - mark as purchased (on CTU5's end)
-              await Animal.findByIdAndUpdate(
+              // Full ownership transfer - TRANSFER OWNERSHIP TO CTU5
+              const updatedAnimal = await Animal.findByIdAndUpdate(
                 animal._id,
                 { 
+                  ownerId: ctu5._id,  // TRANSFER OWNERSHIP
                   soldStatus: 'purchased',
-                  // Mark transfer was accepted (for icons/status display)
                   transferStatus: 'accepted'
                 },
                 { new: true }
               );
 
-              // ALSO mark as SOLD on the originating owner's end (CTU2)
-              // Find if there's a copy owned by the sender
+              // Add CTU2 to view-only users if they were the sender and not already in view-only
+              if (transfer.fromUserId.toString() === ctu2._id.toString()) {
+                const viewOnlyUsers = updatedAnimal.viewOnlyForUsers || [];
+                const ctu2Already = viewOnlyUsers.some(uid => uid.toString() === ctu2._id.toString());
+                
+                if (!ctu2Already) {
+                  await Animal.findByIdAndUpdate(
+                    updatedAnimal._id,
+                    { 
+                      $push: { viewOnlyForUsers: ctu2._id }
+                    },
+                    { new: true }
+                  );
+                }
+              }
+
+              // Create/update PUBLIC ANIMAL RECORD for CTU5
+              const publicAnimal = await PublicAnimal.findOne({ animalId_public: transfer.animalId_public });
+              if (publicAnimal) {
+                await PublicAnimal.findByIdAndUpdate(
+                  publicAnimal._id,
+                  { 
+                    ownerId: ctu5._id,
+                    ownerId_public: ctu5.id_public,
+                    soldStatus: 'purchased',
+                    transferStatus: 'accepted'
+                  },
+                  { new: true }
+                );
+              } else {
+                // Create new public animal record for CTU5
+                await PublicAnimal.create({
+                  animalId_public: transfer.animalId_public,
+                  id_public: transfer.animalId_public,
+                  animalId_backend: animal._id,
+                  ownerId: ctu5._id,
+                  ownerId_public: ctu5.id_public,
+                  name: animal.name,
+                  species: animal.species,
+                  gender: animal.gender,
+                  birthDate: animal.birthDate,
+                  imageUrl: animal.imageUrl || animal.photoUrl,
+                  photoUrl: animal.photoUrl || animal.imageUrl,
+                  soldStatus: 'purchased',
+                  transferStatus: 'accepted',
+                  sectionPrivacy: animal.sectionPrivacy || {}
+                });
+              }
+
+              // MARK SENDER'S COPY AS SOLD (if they have a separate copy - duplicated animal)
               const senderAnimal = await Animal.findOne({
                 id_public: transfer.animalId_public,
-                ownerId: transfer.fromUserId
+                ownerId: transfer.fromUserId,
+                _id: { $ne: animal._id }
               });
               if (senderAnimal) {
                 await Animal.findByIdAndUpdate(
