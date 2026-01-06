@@ -230,7 +230,14 @@ router.post('/login', async (req, res) => {
         }
         // 403 Forbidden for suspended or banned accounts
         if (error.message.includes('Account suspended') || error.message.includes('Account banned')) {
-            return res.status(403).json({ message: error.message });
+            // Extract expiry timestamp if present for accurate client-side timer
+            const timestampMatch = error.message.match(/ExpiryTimestamp:\s*(\d+)/);
+            const expiryTimestamp = timestampMatch ? parseInt(timestampMatch[1]) : null;
+            
+            return res.status(403).json({ 
+                message: error.message,
+                expiryTimestamp: expiryTimestamp
+            });
         }
         res.status(500).json({ message: 'Internal server error during login.' });
     }
