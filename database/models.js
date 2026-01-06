@@ -676,6 +676,8 @@ const AuditLogSchema = new mongoose.Schema({
     action: { type: String, required: true }, // e.g., 'suspend_user', 'delete_animal_image'
     targetType: { type: String, required: true }, // e.g., 'User', 'Animal', 'Message'
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    targetUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    targetAnimalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Animal', default: null, index: true },
     targetName: { type: String, default: null },
     details: { type: mongoose.Schema.Types.Mixed, default: {} }, // e.g., { reason: 'Inappropriate content' }
     reason: { type: String, default: null },

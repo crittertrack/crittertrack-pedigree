@@ -27,12 +27,18 @@ async function createAuditLog({
     userAgent = null
 }) {
     try {
+        // Set specific target fields based on targetType for proper population
+        const targetUserId = targetType?.toLowerCase() === 'user' ? targetId : null;
+        const targetAnimalId = targetType?.toLowerCase() === 'animal' ? targetId : null;
+        
         const auditEntry = new AuditLog({
             moderatorId,
             moderatorEmail,
             action,
             targetType,
             targetId,
+            targetUserId,
+            targetAnimalId,
             targetName,
             details,
             reason,
