@@ -15,6 +15,8 @@ const {
 } = require('../utils/emailService');
 const { ProfanityError } = require('../utils/profanityFilter');
 const { createAuditLog } = require('../utils/auditLogger');
+const { protect } = require('../middleware/authMiddleware');
+const { User } = require('../database/models');
 
 // --- Authentication Route Controllers (NO AUTH REQUIRED) ---
 
@@ -535,6 +537,32 @@ router.post('/verify-moderation-2fa', (req, res, next) => {
             res.status(500).json({ error: 'Failed to verify 2FA code' });
         }
     });
+});
+
+// GET /api/auth/status
+// Protected endpoint: Check user's current account status
+// Used to detect if user has been suspended or banned while session is active
+router.get('/status', protect, async (req, res) => {
+    try {
+        // User is already attached to req.user by protect middleware
+        // Re-fetch to ensure we have the latest status
+        const user = await User.findById(req.user._id).select('accountStatus email suspensionReason banReason id_public');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        res.status(200).json({
+            accountStatus: user.accountStatus || 'active',
+            email: user.email,
+            id_public: user.id_public,
+            suspensionReason: user.suspensionReason,
+            banReason: user.banReason
+        });
+    } catch (error) {
+        console.error('Error checking user status:', error);
+        res.status(500).json({ message: 'Failed to check user status.' });
+    }
 });
 
 module.exports = router;
