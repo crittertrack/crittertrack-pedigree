@@ -1715,4 +1715,101 @@ router.post('/maintenance/toggle', async (req, res) => {
     }
 });
 
+// =============================================
+// MOD CHAT ENDPOINTS
+// =============================================
+
+// GET /api/admin/mod-chat - Get mod chat messages
+router.get('/mod-chat', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { limit = 50, before } = req.query;
+        const { ModChat } = require('../database/models');
+
+        const query = { isDeleted: false };
+        if (before) {
+            query.createdAt = { $lt: new Date(before) };
+        }
+
+        const messages = await ModChat.find(query)
+            .populate('senderId', 'email personalName role id_public')
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .lean();
+
+        // Return in chronological order (oldest first)
+        res.json({
+            messages: messages.reverse(),
+            hasMore: messages.length === parseInt(limit)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/admin/mod-chat - Send a mod chat message
+router.post('/mod-chat', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { message } = req.body;
+
+        if (!message || message.trim().length === 0) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        if (message.length > 2000) {
+            return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
+        }
+
+        const { ModChat } = require('../database/models');
+
+        const newMessage = await ModChat.create({
+            senderId: req.user.id,
+            message: message.trim()
+        });
+
+        // Populate sender info for response
+        const populatedMessage = await ModChat.findById(newMessage._id)
+            .populate('senderId', 'email personalName role id_public')
+            .lean();
+
+        res.json({
+            success: true,
+            message: populatedMessage
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/admin/mod-chat/:messageId - Delete a mod chat message (own messages only, or admin can delete any)
+router.delete('/mod-chat/:messageId', async (req, res) => {
+    try {
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
+
+        const { messageId } = req.params;
+        const { ModChat } = require('../database/models');
+
+        const message = await ModChat.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: 'Message not found' });
+        }
+
+        // Only the sender or an admin can delete
+        if (message.senderId.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'You can only delete your own messages' });
+        }
+
+        message.isDeleted = true;
+        message.deletedAt = new Date();
+        await message.save();
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

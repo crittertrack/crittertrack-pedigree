@@ -745,6 +745,19 @@ const AnimalTransferSchema = new mongoose.Schema({
 const AnimalTransfer = mongoose.model('AnimalTransfer', AnimalTransferSchema);
 
 
+// --- 18. MOD CHAT SCHEMA ---
+const ModChatSchema = new mongoose.Schema({
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    message: { type: String, required: true, maxlength: 2000 },
+    isEdited: { type: Boolean, default: false },
+    editedAt: { type: Date, default: null },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
+    createdAt: { type: Date, default: Date.now, index: true }
+}, { timestamps: true });
+const ModChat = mongoose.model('ModChat', ModChatSchema);
+
+
 // --- EXPORTS ---
 module.exports = {
     Counter,
@@ -764,5 +777,6 @@ module.exports = {
     SystemSettings,
     Species,
     Transaction,
-    AnimalTransfer
+    AnimalTransfer,
+    ModChat
 };
