@@ -26,7 +26,7 @@ router.get('/users', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
-        const users = await User.find({}, 'email username personalName role last_login_ip loginAttempts status adminPassword').lean();
+        const users = await User.find({}, 'email username personalName role last_login_ip loginAttempts accountStatus adminPassword').lean();
         res.json(users);
     } catch (error) {
         res.status(500).json({ error: error.message });
