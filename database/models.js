@@ -78,9 +78,12 @@ const UserSchema = new mongoose.Schema({
     },
     suspensionReason: { type: String, default: null },
     suspensionDate: { type: Date, default: null },
+    suspensionExpiry: { type: Date, default: null }, // When the suspension expires
     suspensionLiftedDate: { type: Date, default: null }, // Track when suspension was lifted
     banReason: { type: String, default: null },
     banDate: { type: Date, default: null },
+    banType: { type: String, enum: ['banned', 'ip-ban'], default: null },
+    bannedIP: { type: String, default: null },
     moderatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 });
 const User = mongoose.model('User', UserSchema);
