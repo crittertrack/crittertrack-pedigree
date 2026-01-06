@@ -769,7 +769,7 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
                         fieldsEdited: Object.keys(fieldEdits),
                         reason: reason || 'Content policy violation'
                     },
-                    status: 'approved', // Not a request, just informational
+                    status: 'pending', // Pending until user acknowledges
                     read: false
                 });
                 console.log('[MODERATION EDIT] Notification sent to user:', notifyUserIdPublic);
