@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
 const { User } = require('../database/models');
 const { TwoFactorCode, LoginAuditLog } = require('../database/2faModels');
+const { createAuditLog } = require('../utils/auditLogger');
 
 // Initialize Resend email service (same as registration)
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -319,6 +320,30 @@ router.post('/verify-2fa', async (req, res) => {
         twoFARecord.used = true;
         twoFARecord.last_attempt_at = new Date();
         await twoFARecord.save();
+
+        // Get user info for audit log
+        const user = await User.findById(userId).select('email role');
+        const userIP = getClientIP(req);
+
+        // Log admin panel access to audit log
+        if (user) {
+            await createAuditLog({
+                moderatorId: userId,
+                moderatorEmail: user.email,
+                action: user.role === 'admin' ? 'admin_panel_access' : 'moderator_panel_access',
+                targetType: 'system',
+                targetId: null,
+                targetName: 'Moderation Panel',
+                details: {
+                    role: user.role,
+                    ip: userIP,
+                    userAgent: req.headers['user-agent'],
+                    method: '2FA'
+                },
+                reason: null,
+                ipAddress: userIP
+            });
+        }
 
         // Generate session token (extended expiry for admin session)
         const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret';
