@@ -123,6 +123,7 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
             updates.suspensionReason = null;
             updates.suspensionDate = null;
             updates.suspensionExpiry = null;
+            updates.suspensionLiftedDate = now; // Set when suspension is lifted
             updates.banReason = null;
             updates.banDate = null;
             updates.banType = null;
@@ -181,9 +182,13 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
             reason: reason || null
         });
 
+        // Check if this is lifting a suspension (changing from suspended to active)
+        const wasLiftingSuspension = status === 'active' && updates.suspensionReason === null;
+
         res.json({
             message: `User status updated to ${status}.`,
-            user
+            user,
+            suspensionLifted: wasLiftingSuspension
         });
     } catch (error) {
         console.error('[MODERATION STATUS] Failed to update user status:', error);

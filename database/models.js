@@ -78,6 +78,7 @@ const UserSchema = new mongoose.Schema({
     },
     suspensionReason: { type: String, default: null },
     suspensionDate: { type: Date, default: null },
+    suspensionLiftedDate: { type: Date, default: null }, // Track when suspension was lifted
     banReason: { type: String, default: null },
     banDate: { type: Date, default: null },
     moderatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

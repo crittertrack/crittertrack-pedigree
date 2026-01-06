@@ -553,10 +553,19 @@ router.get('/status', protect, async (req, res) => {
     try {
         // User is already attached to req.user by protect middleware
         // Re-fetch to ensure we have the latest status
-        const user = await User.findById(req.user._id).select('accountStatus email suspensionReason banReason id_public');
+        const user = await User.findById(req.user._id).select('accountStatus email suspensionReason banReason id_public suspensionLiftedDate');
         
         if (!user) {
             return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Check if suspension was lifted within the last 24 hours
+        let suspensionLifted = false;
+        if (user.suspensionLiftedDate) {
+            const now = new Date();
+            const timeSinceLift = now.getTime() - user.suspensionLiftedDate.getTime();
+            const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+            suspensionLifted = timeSinceLift < TWENTY_FOUR_HOURS;
         }
 
         res.status(200).json({
@@ -564,7 +573,8 @@ router.get('/status', protect, async (req, res) => {
             email: user.email,
             id_public: user.id_public,
             suspensionReason: user.suspensionReason,
-            banReason: user.banReason
+            banReason: user.banReason,
+            suspensionLifted: suspensionLifted
         });
     } catch (error) {
         console.error('Error checking user status:', error);
