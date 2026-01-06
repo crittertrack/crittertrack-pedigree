@@ -3,6 +3,7 @@ const router = express.Router();
 const { ProfileReport, AnimalReport, MessageReport, User, Animal, Message } = require('../database/models');
 const { protect } = require('../middleware/authMiddleware');
 const { sanitizeText } = require('../utils/profanityFilter');
+const { createAuditLog } = require('../utils/auditLogger');
 const mongoose = require('mongoose');
 
 const normalizePublicId = (value = '', prefix) => {
@@ -20,7 +21,7 @@ const isObjectId = (candidate) => mongoose.Types.ObjectId.isValid(candidate);
 router.post('/profile', protect, async (req, res) => {
     try {
         const reporterId = req.user.id;
-        const { reportedUserId, reportedUserPublicId, reason } = req.body;
+        const { reportedUserId, reportedUserPublicId, reason, isModeratorReport } = req.body;
         const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
 
         console.log('[REPORT PROFILE] Received profile report:', { reporterId, reportedUserId, reportedUserPublicId, reason: trimmedReason });
@@ -56,6 +57,22 @@ router.post('/profile', protect, async (req, res) => {
 
         await report.save();
 
+        // Create audit log if this is a moderator report from mod tools
+        if (isModeratorReport && ['admin', 'moderator'].includes(req.user.role)) {
+            await createAuditLog({
+                moderatorId: reporterId,
+                moderatorEmail: req.user.email,
+                action: 'report_created',
+                targetType: 'user',
+                targetId: targetUser._id,
+                targetUserId: targetUser._id,
+                targetName: targetUser.personalName || targetUser.breederName || targetUser.email,
+                reason: cleanReason,
+                details: { reportType: 'profile', reportId: report._id.toString() },
+                ipAddress: req.ip || req.headers['x-forwarded-for']
+            });
+        }
+
         console.log('[REPORT PROFILE] Report saved successfully:', { reportId: report._id, reporterId, reportedUserId: targetUser._id });
 
         res.status(201).json({ message: 'Profile report submitted successfully' });
@@ -69,7 +86,7 @@ router.post('/profile', protect, async (req, res) => {
 router.post('/animal', protect, async (req, res) => {
     try {
         const reporterId = req.user.id;
-        const { reportedAnimalId, reportedAnimalPublicId, reason } = req.body;
+        const { reportedAnimalId, reportedAnimalPublicId, reason, isModeratorReport } = req.body;
         const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
 
         console.log('[REPORT ANIMAL] Received animal report:', { reporterId, reportedAnimalId, reportedAnimalPublicId, reason: trimmedReason });
@@ -105,6 +122,22 @@ router.post('/animal', protect, async (req, res) => {
 
         await report.save();
 
+        // Create audit log if this is a moderator report from mod tools
+        if (isModeratorReport && ['admin', 'moderator'].includes(req.user.role)) {
+            await createAuditLog({
+                moderatorId: reporterId,
+                moderatorEmail: req.user.email,
+                action: 'report_created',
+                targetType: 'animal',
+                targetId: targetAnimal._id,
+                targetAnimalId: targetAnimal._id,
+                targetName: targetAnimal.name || targetAnimal.id_public,
+                reason: cleanReason,
+                details: { reportType: 'animal', reportId: report._id.toString() },
+                ipAddress: req.ip || req.headers['x-forwarded-for']
+            });
+        }
+
         console.log('[REPORT ANIMAL] Report saved successfully:', { reportId: report._id, reporterId, reportedAnimalId: targetAnimal._id });
 
         res.status(201).json({ message: 'Animal report submitted successfully' });
@@ -118,7 +151,7 @@ router.post('/animal', protect, async (req, res) => {
 router.post('/message', protect, async (req, res) => {
     try {
         const reporterId = req.user.id;
-        const { messageId, reportedUserId, conversationUserId, reason, recentMessages } = req.body;
+        const { messageId, reportedUserId, conversationUserId, reason, recentMessages, isModeratorReport } = req.body;
         const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
 
         console.log('[REPORT MESSAGE] Received report:', { reporterId, messageId, reportedUserId, conversationUserId, reason: trimmedReason, recentMessagesCount: recentMessages?.length });
@@ -157,6 +190,23 @@ router.post('/message', protect, async (req, res) => {
             });
 
             await report.save();
+
+            // Create audit log if this is a moderator report from mod tools
+            if (isModeratorReport && ['admin', 'moderator'].includes(req.user.role)) {
+                await createAuditLog({
+                    moderatorId: reporterId,
+                    moderatorEmail: req.user.email,
+                    action: 'report_created',
+                    targetType: 'user',
+                    targetId: targetUser._id,
+                    targetUserId: targetUser._id,
+                    targetName: targetUser.personalName || targetUser.breederName || targetUser.email,
+                    reason: cleanReason,
+                    details: { reportType: 'conversation', reportId: report._id.toString() },
+                    ipAddress: req.ip || req.headers['x-forwarded-for']
+                });
+            }
+
             console.log('[REPORT MESSAGE] Conversation report saved:', { reportId: report._id, messagesCount: recentMessages.length });
             return res.status(201).json({ message: 'Conversation report submitted successfully' });
         }
