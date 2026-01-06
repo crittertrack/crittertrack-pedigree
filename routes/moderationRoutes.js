@@ -136,7 +136,16 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
             updates.banReason = null;
             updates.banDate = null;
             if (durationDays) {
-                updates.suspensionExpiry = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+                const expiryDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+                updates.suspensionExpiry = expiryDate;
+                console.log('[MODERATION STATUS] Suspension calculation:', {
+                    durationDays,
+                    now: now.toISOString(),
+                    suspensionExpiry: expiryDate.toISOString(),
+                    expiryTimestamp: expiryDate.getTime()
+                });
+            } else {
+                console.log('[MODERATION STATUS] WARNING: No durationDays provided, suspension has no expiry!');
             }
         }
 
