@@ -195,7 +195,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Call the service function to log in and return the token
-        const { token, userProfile } = await loginUser(email, password);
+        const { token, userProfile, userId } = await loginUser(email, password);
 
         // Log admin/moderator logins
         console.log(`[AUTH] Login successful for ${userProfile.email}, role: ${userProfile.role}`);
@@ -204,7 +204,7 @@ router.post('/login', async (req, res) => {
             const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
             try {
                 await createAuditLog({
-                    moderatorId: userProfile._id,
+                    moderatorId: userId,
                     moderatorEmail: userProfile.email,
                     action: userProfile.role === 'admin' ? 'admin_panel_access' : 'moderator_panel_access',
                     targetType: 'system',
