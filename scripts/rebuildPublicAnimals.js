@@ -36,9 +36,10 @@ async function rebuildPublicAnimals() {
                     continue;
                 }
 
-                const ownerPrivacySettings = owner.privacySettings || {};
-                const showRemarksPublic = ownerPrivacySettings.showRemarksPublic || false;
-                const showGeneticCodePublic = ownerPrivacySettings.showGeneticCodePublic || false;
+                // Use animal's sectionPrivacy settings (per-animal privacy control)
+                const sectionPrivacy = animal.sectionPrivacy || {};
+                const showRemarks = sectionPrivacy.remarks !== false; // Default to true if not set
+                const showGeneticCode = sectionPrivacy.geneticCode !== false; // Default to true if not set
 
                 // Build complete public updates
                 const publicUpdates = {
@@ -68,8 +69,8 @@ async function rebuildPublicAnimals() {
                     photoUrl: animal.photoUrl || null,
                     sireId_public: animal.sireId_public || null,
                     damId_public: animal.damId_public || null,
-                    remarks: showRemarksPublic ? (animal.remarks || '') : '',
-                    geneticCode: showGeneticCodePublic ? (animal.geneticCode || null) : null,
+                    remarks: showRemarks ? (animal.remarks || '') : '',
+                    geneticCode: showGeneticCode ? (animal.geneticCode || null) : null,
                     isDisplay: animal.isDisplay || false,
                     sectionPrivacy: animal.sectionPrivacy || {},
                     microchipNumber: animal.microchipNumber || null,

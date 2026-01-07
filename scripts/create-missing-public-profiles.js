@@ -33,8 +33,6 @@ async function createMissingPublicProfiles() {
                     showPersonalName: user.showPersonalName !== undefined ? user.showPersonalName : true,
                     breederName: user.breederName,
                     showBreederName: user.showBreederName,
-                    showGeneticCodePublic: user.showGeneticCodePublic || false,
-                    showRemarksPublic: user.showRemarksPublic || false,
                     profileImage: user.profileImage,
                     createdAt: user.creationDate || new Date(),
                     email: user.email,

@@ -25,8 +25,6 @@ const UserSchema = new mongoose.Schema({
     bio: { type: String, default: null, trim: true },
     showBio: { type: Boolean, default: true },
     showEmailPublic: { type: Boolean, default: false },
-    showGeneticCodePublic: { type: Boolean, default: false },
-    showRemarksPublic: { type: Boolean, default: false },
     creationDate: { type: Date, default: Date.now },
     // Email verification
     emailVerified: { type: Boolean, default: false },
@@ -97,8 +95,6 @@ const PublicProfileSchema = new mongoose.Schema({
     showPersonalName: { type: Boolean, default: false },
     breederName: { type: String, default: null, trim: true },
     showBreederName: { type: Boolean, default: false },
-    showGeneticCodePublic: { type: Boolean, default: false },
-    showRemarksPublic: { type: Boolean, default: false },
     profileImage: { type: String, default: null },
     createdAt: { type: Date, default: null }, // Member since date
     email: { type: String, default: null },

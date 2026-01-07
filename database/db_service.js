@@ -205,8 +205,6 @@ const registerUser = async (userData) => {
         showPersonalName: user.showPersonalName !== undefined ? user.showPersonalName : true,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
-        showGeneticCodePublic: user.showGeneticCodePublic || false,
-        showRemarksPublic: user.showRemarksPublic || false,
         profileImage: user.profileImage,
         createdAt: user.creationDate || new Date(), // Set member since date
         email: user.email,
@@ -234,8 +232,6 @@ const registerUser = async (userData) => {
         websiteURL: user.websiteURL,
         showWebsiteURL: user.showWebsiteURL,
         showEmailPublic: user.showEmailPublic,
-        showGeneticCodePublic: user.showGeneticCodePublic,
-        showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         allowMessages: user.allowMessages,
@@ -342,8 +338,6 @@ const getUserProfileById = async (appUserId_backend) => {
         websiteURL: user.websiteURL,
         showWebsiteURL: user.showWebsiteURL,
         showEmailPublic: user.showEmailPublic,
-        showGeneticCodePublic: user.showGeneticCodePublic,
-        showRemarksPublic: user.showRemarksPublic,
         allowMessages: user.allowMessages !== undefined ? user.allowMessages : true,
         emailNotificationPreference: user.emailNotificationPreference || 'none',
         country: user.country,
@@ -419,16 +413,6 @@ const updateUserProfile = async (appUserId_backend, updates) => {
             showEmailPublic: updates.showEmailPublic,
             email: user.email // Also sync the email field
         });
-    }
-    if (updates.showGeneticCodePublic !== undefined) {
-        user.showGeneticCodePublic = updates.showGeneticCodePublic;
-        // Update public profile showGeneticCodePublic simultaneously - use id_public to match correct record
-        await PublicProfile.updateOne({ id_public: user.id_public }, { showGeneticCodePublic: updates.showGeneticCodePublic });
-    }
-    if (updates.showRemarksPublic !== undefined) {
-        user.showRemarksPublic = updates.showRemarksPublic;
-        // Update public profile showRemarksPublic simultaneously - use id_public to match correct record
-        await PublicProfile.updateOne({ id_public: user.id_public }, { showRemarksPublic: updates.showRemarksPublic });
     }
     if (updates.allowMessages !== undefined) {
         const parsedAllowMessages = (value) => {
@@ -841,10 +825,10 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
     // If the animal is public, update or create the corresponding PublicAnimal record
     if (updatedAnimal.showOnPublicProfile || updatedAnimal.isDisplay) {
-        // Fetch owner's privacy settings
-        const owner = await User.findById(appUserId_backend);
-        const showGeneticCodePublic = owner?.showGeneticCodePublic ?? false;
-        const showRemarksPublic = owner?.showRemarksPublic ?? false;
+        // Use animal's sectionPrivacy settings (per-animal privacy control)
+        const sectionPrivacy = updatedAnimal.sectionPrivacy || {};
+        const showGeneticCode = sectionPrivacy.geneticCode !== false; // Default to true if not set
+        const showRemarks = sectionPrivacy.remarks !== false; // Default to true if not set
 
         // Prepare public updates
         const publicUpdates = {
@@ -873,9 +857,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             isOwned: updatedAnimal.isOwned || false,
             isPregnant: updatedAnimal.isPregnant || false,
             isNursing: updatedAnimal.isNursing || false,
-            // Include remarks/genetic code based on owner's privacy settings
-            remarks: showRemarksPublic ? (updatedAnimal.remarks || '') : '',
-            geneticCode: showGeneticCodePublic ? (updatedAnimal.geneticCode || null) : null,
+            // Include remarks/genetic code based on animal's sectionPrivacy settings
+            remarks: showRemarks ? (updatedAnimal.remarks || '') : '',
+            geneticCode: showGeneticCode ? (updatedAnimal.geneticCode || null) : null,
             // Sync section privacy and display settings to public record
             isDisplay: updatedAnimal.isDisplay || false,
             sectionPrivacy: updatedAnimal.sectionPrivacy || {},
@@ -1552,8 +1536,6 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
         showPersonalName: user.showPersonalName !== undefined ? user.showPersonalName : true,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
-        showGeneticCodePublic: user.showGeneticCodePublic || false,
-        showRemarksPublic: user.showRemarksPublic || false,
         profileImage: user.profileImage,
         createdAt: user.creationDate || new Date(),
     });
@@ -1574,8 +1556,6 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
         websiteURL: user.websiteURL,
         showWebsiteURL: user.showWebsiteURL,
         showEmailPublic: user.showEmailPublic,
-        showGeneticCodePublic: user.showGeneticCodePublic,
-        showRemarksPublic: user.showRemarksPublic,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
     };

@@ -23,10 +23,10 @@ async function syncPublicAnimals() {
 
         for (const animal of publicAnimals) {
             try {
-                // Get owner to check privacy settings
-                const owner = await User.findById(animal.ownerId);
-                const showGeneticCodePublic = owner?.showGeneticCodePublic ?? false;
-                const showRemarksPublic = owner?.showRemarksPublic ?? false;
+                // Use animal's sectionPrivacy settings (per-animal privacy control)
+                const sectionPrivacy = animal.sectionPrivacy || {};
+                const showGeneticCode = sectionPrivacy.geneticCode !== false; // Default to true if not set
+                const showRemarks = sectionPrivacy.remarks !== false; // Default to true if not set
 
                 // Prepare public record
                 const publicData = {
@@ -49,8 +49,8 @@ async function syncPublicAnimals() {
                     isOwned: animal.isOwned ?? true,
                     isPregnant: animal.isPregnant || false,
                     isNursing: animal.isNursing || false,
-                    remarks: showRemarksPublic ? (animal.remarks || '') : '',
-                    geneticCode: showGeneticCodePublic ? (animal.geneticCode || null) : null,
+                    remarks: showRemarks ? (animal.remarks || '') : '',
+                    geneticCode: showGeneticCode ? (animal.geneticCode || null) : null,
                 };
 
                 // Upsert to PublicAnimal collection

@@ -39,8 +39,6 @@ async function syncPublicProfile() {
         personalName: user.personalName,
         breederName: user.breederName,
         showBreederName: user.showBreederName,
-        showGeneticCodePublic: user.showGeneticCodePublic,
-        showRemarksPublic: user.showRemarksPublic
       });
       
       console.log('✓ Created new PublicProfile');
