@@ -195,34 +195,10 @@ router.post('/login', async (req, res) => {
         }
 
         // Call the service function to log in and return the token
-        const { token, userProfile, userId } = await loginUser(email, password);
+        const { token, userProfile } = await loginUser(email, password);
 
         // Log admin/moderator logins
         console.log(`[AUTH] Login successful for ${userProfile.email}, role: ${userProfile.role}`);
-        if (userProfile.role === 'admin' || userProfile.role === 'moderator') {
-            console.log(`[AUTH] Logging moderator/admin panel access for ${userProfile.email}`);
-            const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
-            try {
-                await createAuditLog({
-                    moderatorId: userId,
-                    moderatorEmail: userProfile.email,
-                    action: userProfile.role === 'admin' ? 'admin_panel_access' : 'moderator_panel_access',
-                    targetType: 'system',
-                    targetId: null,
-                    targetName: null,
-                    details: { 
-                        role: userProfile.role,
-                        ip: userIP,
-                        userAgent: req.headers['user-agent']
-                    },
-                    reason: null,
-                    ipAddress: userIP
-                });
-                console.log(`[AUTH] Audit log created successfully for ${userProfile.email}`);
-            } catch (auditError) {
-                console.error(`[AUTH] Failed to create audit log for ${userProfile.email}:`, auditError);
-            }
-        }
 
         res.status(200).json({
             message: 'Login successful!',
@@ -362,6 +338,30 @@ router.post('/verify-moderation-password', (req, res, next) => {
 
             if (!isPasswordValid) {
                 return res.status(401).json({ error: 'Invalid password' });
+            }
+
+            // Log moderator panel access to audit log
+            console.log(`[AUTH] Moderator panel access for ${user.email}`);
+            const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+            try {
+                await createAuditLog({
+                    moderatorId: user._id,
+                    moderatorEmail: user.email,
+                    action: user.role === 'admin' ? 'admin_panel_access' : 'moderator_panel_access',
+                    targetType: 'system',
+                    targetId: null,
+                    targetName: null,
+                    details: { 
+                        role: user.role,
+                        ip: userIP,
+                        userAgent: req.headers['user-agent']
+                    },
+                    reason: null,
+                    ipAddress: userIP
+                });
+                console.log(`[AUTH] Audit log created for panel access: ${user.email}`);
+            } catch (auditError) {
+                console.error(`[AUTH] Failed to create audit log for panel access:`, auditError);
             }
 
             // Check if user has 2FA enabled

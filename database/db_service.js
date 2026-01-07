@@ -312,7 +312,7 @@ const loginUser = async (email, password) => {
     // 5. Return the token and a safe version of the user profile
     const userProfile = await getUserProfileById(user.id);
 
-    return { token, userProfile, userId: user.id };
+    return { token, userProfile };
 };
 
 /**
