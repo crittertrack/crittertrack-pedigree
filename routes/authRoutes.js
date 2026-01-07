@@ -203,7 +203,7 @@ router.post('/login', async (req, res) => {
             await createAuditLog({
                 moderatorId: userProfile._id,
                 moderatorEmail: userProfile.email,
-                action: userProfile.role === 'admin' ? 'admin_login' : 'moderator_login',
+                action: userProfile.role === 'admin' ? 'admin_panel_access' : 'moderator_panel_access',
                 targetType: 'system',
                 targetId: null,
                 targetName: null,
