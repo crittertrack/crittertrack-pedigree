@@ -96,19 +96,25 @@ async function getAuditLogs(filters = {}, options = {}) {
     }
 
     const logs = await AuditLog.find(query)
-        .populate('moderatorId', 'email personalName id_public breederName')
+        .populate('moderatorId', 'email personalName breederName id_public')
         .populate('targetUserId', 'email personalName breederName id_public')
         .populate('targetAnimalId', 'name id_public')
-        .select('+createdAt')
         .sort(sort)
         .limit(parseInt(limit))
         .skip(parseInt(skip))
-        .lean();
+        .lean()
+        .exec();
+    
+    // Ensure createdAt is included in response
+    const logsWithTimestamp = logs.map(log => ({
+        ...log,
+        createdAt: log.createdAt || log._id.getTimestamp ? log._id.getTimestamp() : new Date()
+    }));
 
     const total = await AuditLog.countDocuments(query);
 
     return {
-        logs,
+        logs: logsWithTimestamp,
         total,
         limit: parseInt(limit),
         skip: parseInt(skip)
