@@ -96,7 +96,10 @@ async function getAuditLogs(filters = {}, options = {}) {
     }
 
     const logs = await AuditLog.find(query)
-        .populate('moderatorId', 'email personalName id_public')
+        .populate('moderatorId', 'email personalName id_public breederName')
+        .populate('targetUserId', 'email personalName breederName id_public')
+        .populate('targetAnimalId', 'name id_public')
+        .select('+createdAt')
         .sort(sort)
         .limit(parseInt(limit))
         .skip(parseInt(skip))
