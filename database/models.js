@@ -670,8 +670,8 @@ const AuditLogSchema = new mongoose.Schema({
     moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     moderatorEmail: { type: String, default: null },
     action: { type: String, required: true }, // e.g., 'suspend_user', 'delete_animal_image'
-    targetType: { type: String, required: true }, // e.g., 'User', 'Animal', 'Message'
-    targetId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    targetType: { type: String, required: true }, // e.g., 'User', 'Animal', 'Message', 'system'
+    targetId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true }, // Can be null for system actions
     targetUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     targetAnimalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Animal', default: null, index: true },
     targetName: { type: String, default: null },
