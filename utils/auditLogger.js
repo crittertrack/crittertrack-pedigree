@@ -27,6 +27,8 @@ async function createAuditLog({
     userAgent = null
 }) {
     try {
+        console.log(`[AUDIT LOG] Creating audit log: action=${action}, moderator=${moderatorEmail}, targetType=${targetType}`);
+        
         // Set specific target fields based on targetType for proper population
         const targetUserId = targetType?.toLowerCase() === 'user' ? targetId : null;
         const targetAnimalId = targetType?.toLowerCase() === 'animal' ? targetId : null;
@@ -46,12 +48,14 @@ async function createAuditLog({
             userAgent
         });
 
-        await auditEntry.save();
-        console.log(`[AUDIT] ${action} by ${moderatorEmail} on ${targetType}:${targetId}`);
+        console.log(`[AUDIT LOG] Audit entry created, saving to database...`);
+        const savedEntry = await auditEntry.save();
+        console.log(`[AUDIT LOG] ✅ Successfully saved audit log: ${action} by ${moderatorEmail}`);
         
-        return auditEntry;
+        return savedEntry;
     } catch (error) {
-        console.error('Failed to create audit log:', error);
+        console.error(`[AUDIT LOG] ❌ FAILED to create audit log:`, error.message);
+        console.error(`[AUDIT LOG] Error stack:`, error.stack);
         // Don't throw - we don't want audit logging failures to break operations
         return null;
     }
