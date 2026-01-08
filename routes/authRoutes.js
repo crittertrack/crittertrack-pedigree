@@ -406,37 +406,37 @@ router.post('/request-moderation-2fa-code', async (req, res, next) => {
         const { User } = require('../database/models');
         const user = await User.findById(userId);
 
-            if (!user) {
-                return res.status(401).json({ error: 'User not found' });
-            }
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
 
-            // If user doesn't have 2FA enabled, return error
-            if (!user.two_factor_enabled) {
-                return res.status(400).json({ error: '2FA not enabled for this account' });
-            }
+        // If user doesn't have 2FA enabled, return error
+        if (!user.two_factor_enabled) {
+            return res.status(400).json({ error: '2FA not enabled for this account' });
+        }
 
-            // Generate a 6-digit random code
-            const code = Math.floor(100000 + Math.random() * 900000).toString();
-            const crypto = require('crypto');
-            const salt = crypto.randomBytes(16).toString('hex');
-            const codeHash = crypto.createHash('sha256').update(code + salt).digest('hex');
+        // Generate a 6-digit random code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const crypto = require('crypto');
+        const salt = crypto.randomBytes(16).toString('hex');
+        const codeHash = crypto.createHash('sha256').update(code + salt).digest('hex');
 
-            // Save to TwoFactorCode collection
-            const { TwoFactorCode } = require('../database/2faModels');
-            const twoFACode = new TwoFactorCode({
-                user_id: userId,
-                username: user.personalName,
-                email: user.email,
-                code_hash: codeHash,
-                salt: salt,
-                expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 minute expiry
-                created_ip: req.ip || 'unknown'
-            });
-            await twoFACode.save();
+        // Save to TwoFactorCode collection
+        const { TwoFactorCode } = require('../database/2faModels');
+        const twoFACode = new TwoFactorCode({
+            user_id: userId,
+            username: user.personalName,
+            email: user.email,
+            code_hash: codeHash,
+            salt: salt,
+            expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 minute expiry
+            created_ip: req.ip || 'unknown'
+        });
+        await twoFACode.save();
 
-            // Send code via email
-            const { sendEmail } = require('../utils/emailService');
-            const emailBody = `
+        // Send code via email
+        const { sendEmail } = require('../utils/emailService');
+        const emailBody = `
 Your CritterTrack Moderation Mode Authentication Code is:
 
 ${code}
@@ -444,27 +444,23 @@ ${code}
 This code will expire in 10 minutes. Do not share this code with anyone.
 
 If you did not request this code, please ignore this email.
-            `.trim();
+        `.trim();
 
-            try {
-                await sendEmail(user.email, 'CritterTrack Moderation 2FA Code', emailBody);
-                console.log(`✓ 2FA code sent to ${user.email}`);
-            } catch (emailError) {
-                console.error('Failed to send 2FA email:', emailError);
-                // Still return success - code is saved in DB even if email fails
-            }
-
-            res.status(200).json({
-                success: true,
-                message: '2FA code sent to your email'
-            });
-        } catch (error) {
-            console.error('Error requesting 2FA code:', error);
-            res.status(500).json({ error: 'Failed to send 2FA code' });
+        try {
+            await sendEmail(user.email, 'CritterTrack Moderation 2FA Code', emailBody);
+            console.log(`✓ 2FA code sent to ${user.email}`);
+        } catch (emailError) {
+            console.error('Failed to send 2FA email:', emailError);
+            // Still return success - code is saved in DB even if email fails
         }
-    } catch (jwtError) {
-        console.error('Error in 2FA request:', jwtError);
-        return res.status(401).json({ error: 'Invalid or expired token' });
+
+        res.status(200).json({
+            success: true,
+            message: '2FA code sent to your email'
+        });
+    } catch (error) {
+        console.error('Error requesting 2FA code:', error);
+        res.status(500).json({ error: error.message || 'Failed to send 2FA code' });
     }
 });
 
