@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { checkRole } = require('../middleware/authMiddleware');
+const { validateModerationInput } = require('../middleware/validationMiddleware');
 const { createAuditLog, getAuditLogs } = require('../utils/auditLogger');
 const {
     User,
@@ -106,7 +107,7 @@ router.get('/users', async (req, res) => {
 });
 
 // POST /api/moderation/users/:userId/status - moderator and admin status changes
-router.post('/users/:userId/status', requireModerator, async (req, res) => {
+router.post('/users/:userId/status', requireModerator, validateModerationInput, async (req, res) => {
     try {
         const { status, reason, durationDays, ipBan } = req.body;
         let userId = req.params.userId;
@@ -256,7 +257,7 @@ router.get('/users/:userId/info', requireModerator, async (req, res) => {
 });
 
 // POST /api/moderation/users/:userId/warn - add individual warning record
-router.post('/users/:userId/warn', async (req, res) => {
+router.post('/users/:userId/warn', requireModerator, validateModerationInput, async (req, res) => {
     try {
         const { reason, category } = req.body;
         let userId = req.params.userId;
@@ -330,7 +331,7 @@ router.post('/users/:userId/warn', async (req, res) => {
 });
 
 // POST /api/moderation/users/:userId/lift-warning - mark specific warning as lifted
-router.post('/users/:userId/lift-warning', async (req, res) => {
+router.post('/users/:userId/lift-warning', requireModerator, validateModerationInput, async (req, res) => {
     try {
         const { reason, warningIndex } = req.body;
         let userId = req.params.userId;
@@ -487,7 +488,7 @@ router.get('/reports', async (req, res) => {
 });
 
 // POST /api/moderation/reports/:type/:reportId/status - update report status/notes
-router.post('/reports/:type/:reportId/status', async (req, res) => {
+router.post('/reports/:type/:reportId/status', requireModerator, validateModerationInput, async (req, res) => {
     try {
         const { type, reportId } = req.params;
         const { status, adminNotes } = req.body;
@@ -625,7 +626,7 @@ router.delete('/animals/:animalId/image', async (req, res) => {
 });
 
 // PATCH /api/moderation/content/:contentType/:contentId/edit - Edit/redact content fields
-router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
+router.patch('/content/:contentType/:contentId/edit', requireModerator, validateModerationInput, async (req, res) => {
     try {
         const { contentType, contentId } = req.params;
         const { fieldEdits, reason } = req.body;
@@ -837,7 +838,7 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
 });
 
 // POST /api/moderation/broadcast - Send system-wide broadcast message (Admin only)
-router.post('/broadcast', requireAdmin, async (req, res) => {
+router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res) => {
     try {
         const { title, message, type, scheduledFor } = req.body;
 
