@@ -64,11 +64,8 @@ router.post('/', async (req, res) => {
 // Get all bug reports (admin only)
 router.get('/admin', async (req, res) => {
     try {
-        const userId = req.user.id || req.user.userId;
-        const { User } = require('../database/models');
-        const user = await User.findById(userId).select('role');
-
-        if (!user || !['admin', 'moderator'].includes(user.role)) {
+        // req.user is already populated by authMiddleware
+        if (!req.user || !['admin', 'moderator'].includes(req.user.role)) {
             return res.status(403).json({ error: 'Admin or moderator access required' });
         }
 
@@ -86,11 +83,8 @@ router.get('/admin', async (req, res) => {
 // Update bug report status (admin only)
 router.patch('/:id/status', async (req, res) => {
     try {
-        const userId = req.user.userId;
-        const { User } = require('../database/models');
-        const user = await User.findById(userId);
-
-        if (!user || user.email !== 'crittertrackowner@gmail.com') {
+        // req.user is already populated by authMiddleware
+        if (!req.user || req.user.email !== 'crittertrackowner@gmail.com') {
             return res.status(403).json({ error: 'Admin access required' });
         }
 
@@ -125,7 +119,7 @@ router.patch('/:id/status', async (req, res) => {
 // Get user's own bug reports
 router.get('/my-reports', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user._id;
 
         const reports = await BugReport.find({ userId })
             .sort({ createdAt: -1 })
