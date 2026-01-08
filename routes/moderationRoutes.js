@@ -10,7 +10,8 @@ const {
     Animal,
     PublicProfile,
     PublicAnimal,
-    Notification
+    Notification,
+    AuditLog
 } = require('../database/models');
 
 const requireModerator = checkRole(['moderator', 'admin']);
@@ -821,6 +822,112 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Failed to fetch audit logs:', error);
         res.status(500).json({ message: 'Unable to fetch audit logs.' });
+    }
+});
+
+// POST /api/moderation/broadcast - Send system-wide broadcast message (Admin only)
+router.post('/broadcast', requireAdmin, async (req, res) => {
+    try {
+        const { title, message, type, scheduledFor } = req.body;
+
+        // Validate input
+        if (!title || !message) {
+            return res.status(400).json({ error: 'Title and message are required' });
+        }
+
+        const validTypes = ['info', 'warning', 'alert', 'announcement'];
+        if (type && !validTypes.includes(type)) {
+            return res.status(400).json({ error: `Invalid type. Must be one of: ${validTypes.join(', ')}` });
+        }
+
+        // Validate scheduled time if provided
+        let sendAt = new Date();
+        if (scheduledFor) {
+            sendAt = new Date(scheduledFor);
+            if (sendAt < new Date()) {
+                return res.status(400).json({ error: 'Scheduled time must be in the future' });
+            }
+        }
+
+        // Get all users
+        const allUsers = await User.find({}).select('_id email accountStatus').lean();
+        
+        // Filter out banned/suspended users unless it's an alert for them
+        const activeUsers = allUsers.filter(u => u.accountStatus === 'normal');
+
+        // Create notifications for each user
+        const notificationDocs = activeUsers.map(user => ({
+            userId: user._id,
+            type: 'broadcast',
+            title: title,
+            message: message,
+            broadcastType: type || 'info',
+            isRead: false,
+            createdAt: sendAt,
+            sendAt: sendAt,
+            isPending: sendAt > new Date() // Mark as pending if scheduled
+        }));
+
+        // Bulk insert notifications
+        await Notification.insertMany(notificationDocs);
+
+        // Log broadcast action
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'broadcast_sent',
+            targetType: 'system',
+            targetId: null,
+            details: {
+                title: title,
+                recipientCount: activeUsers.length,
+                type: type || 'info',
+                scheduled: sendAt > new Date(),
+                scheduledFor: sendAt.toISOString()
+            },
+            reason: `Broadcast: ${title}`,
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.get('user-agent')
+        });
+
+        console.log(`[BROADCAST] Admin ${req.user.email} sent broadcast to ${activeUsers.length} users`);
+
+        res.status(200).json({
+            success: true,
+            message: scheduledFor ? `Broadcast scheduled for ${new Date(scheduledFor).toLocaleString()}` : 'Broadcast sent to all users',
+            recipientCount: activeUsers.length,
+            scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null
+        });
+    } catch (error) {
+        console.error('Failed to send broadcast:', error);
+        res.status(500).json({ error: 'Failed to send broadcast message' });
+    }
+});
+
+// GET /api/moderation/broadcasts - Get broadcast history (Admin only)
+router.get('/broadcasts', requireAdmin, async (req, res) => {
+    try {
+        const { limit = 50, skip = 0 } = req.query;
+
+        // Query audit logs for broadcasts
+        const broadcasts = await AuditLog.find({ action: 'broadcast_sent' })
+            .populate('moderatorId', 'email personalName id_public')
+            .sort('-createdAt')
+            .limit(parseInt(limit))
+            .skip(parseInt(skip))
+            .lean();
+
+        const total = await AuditLog.countDocuments({ action: 'broadcast_sent' });
+
+        res.json({
+            broadcasts,
+            total,
+            limit: parseInt(limit),
+            skip: parseInt(skip)
+        });
+    } catch (error) {
+        console.error('Failed to fetch broadcasts:', error);
+        res.status(500).json({ error: 'Failed to fetch broadcast history' });
     }
 });
 
