@@ -17,6 +17,10 @@ const requireModerator = checkRole(['moderator', 'admin']);
 const requireAdmin = checkRole(['admin']);
 
 // All moderation routes require moderator-level access at minimum
+router.use((req, res, next) => {
+    console.log(`[MODERATION ROUTE] ${req.method} ${req.path}, user: ${req.user?.email}, role: ${req.user?.role}`);
+    next();
+});
 router.use(requireModerator);
 
 // Utility: capture common audit log metadata
