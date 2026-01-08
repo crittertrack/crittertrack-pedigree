@@ -245,7 +245,7 @@ const registerUser = async (userData) => {
 /**
  * Logs in a user.
  */
-const loginUser = async (email, password) => {
+const loginUser = async (email, password, req) => {
     // 1. Find user by email, explicitly requesting the password field
     const user = await User.findOne({ email }).select('+password');
 
@@ -268,9 +268,11 @@ const loginUser = async (email, password) => {
     }
 
     // Capture user's IP for future IP ban enforcement
-    if (!user.lastLoginIP && (req?.ip || req?.connection?.remoteAddress)) {
-        const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
-        user.lastLoginIP = userIP;
+    if (!user.lastLoginIP && req) {
+        const userIP = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress;
+        if (userIP) {
+            user.lastLoginIP = userIP;
+        }
     }
 
     if (user.accountStatus === 'suspended') {

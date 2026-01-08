@@ -195,7 +195,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Call the service function to log in and return the token
-        const { token, userProfile } = await loginUser(email, password);
+        const { token, userProfile } = await loginUser(email, password, req);
 
         // Log admin/moderator logins
         console.log(`[AUTH] Login successful for ${userProfile.email}, role: ${userProfile.role}`);
