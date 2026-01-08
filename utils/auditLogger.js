@@ -105,11 +105,15 @@ async function getAuditLogs(filters = {}, options = {}) {
         .lean()
         .exec();
     
+    console.log(`[AUDIT LOG] Raw logs returned from DB (${logs.length} total):`, logs.map(l => ({ _id: l._id, createdAt: l.createdAt, action: l.action })));
+    
     // Ensure createdAt is included in response
     const logsWithTimestamp = logs.map(log => ({
         ...log,
-        createdAt: log.createdAt || log._id.getTimestamp ? log._id.getTimestamp() : new Date()
+        createdAt: log.createdAt || (log._id && log._id.getTimestamp ? log._id.getTimestamp() : new Date())
     }));
+    
+    console.log(`[AUDIT LOG] Logs with timestamp ensured (first):`, logsWithTimestamp[0]);
 
     const total = await AuditLog.countDocuments(query);
 
