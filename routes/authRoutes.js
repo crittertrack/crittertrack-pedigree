@@ -381,28 +381,30 @@ router.post('/verify-moderation-password', (req, res, next) => {
 
 // POST /api/auth/request-moderation-2fa-code
 // Request a 2FA code be sent to user's email
-router.post('/request-moderation-2fa-code', (req, res, next) => {
+router.post('/request-moderation-2fa-code', async (req, res, next) => {
     // Inline auth middleware for this route
     const token = req.headers['authorization']?.split(' ')[1];
     if (!token) {
         return res.status(401).json({ error: 'No authorization token provided' });
     }
 
-    const jwt = require('jsonwebtoken');
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-        if (err) {
-            return res.status(401).json({ error: 'Invalid or expired token' });
-        }
+    try {
+        const jwt = require('jsonwebtoken');
+        const decoded = await new Promise((resolve, reject) => {
+            jwt.verify(token, process.env.JWT_SECRET, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
 
         const userId = decoded?.user?.id;
         if (!userId) {
             return res.status(401).json({ error: 'Invalid token payload' });
         }
 
-        try {
-            // Get user from database
-            const { User } = require('../database/models');
-            const user = await User.findById(userId);
+        // Get user from database
+        const { User } = require('../database/models');
+        const user = await User.findById(userId);
 
             if (!user) {
                 return res.status(401).json({ error: 'User not found' });
@@ -460,24 +462,30 @@ If you did not request this code, please ignore this email.
             console.error('Error requesting 2FA code:', error);
             res.status(500).json({ error: 'Failed to send 2FA code' });
         }
-    });
+    } catch (jwtError) {
+        console.error('Error in 2FA request:', jwtError);
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
 });
 
 // POST /api/auth/verify-moderation-2fa
 // Verify 2FA code for moderation mode
 // REQUIRES: JWT token in Authorization header
-router.post('/verify-moderation-2fa', (req, res, next) => {
+router.post('/verify-moderation-2fa', async (req, res, next) => {
     // Inline auth middleware for this route
     const token = req.headers['authorization']?.split(' ')[1];
     if (!token) {
         return res.status(401).json({ error: 'No authorization token provided' });
     }
 
-    const jwt = require('jsonwebtoken');
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-        if (err) {
-            return res.status(401).json({ error: 'Invalid or expired token' });
-        }
+    try {
+        const jwt = require('jsonwebtoken');
+        const decoded = await new Promise((resolve, reject) => {
+            jwt.verify(token, process.env.JWT_SECRET, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
 
         // JWT payload structure: { user: { id: ... } }
         const userId = decoded?.user?.id;
@@ -485,16 +493,15 @@ router.post('/verify-moderation-2fa', (req, res, next) => {
             return res.status(401).json({ error: 'Invalid token payload' });
         }
 
-        try {
-            const { code } = req.body;
+        const { code } = req.body;
 
-            if (!code) {
-                return res.status(400).json({ error: '2FA code is required' });
-            }
+        if (!code) {
+            return res.status(400).json({ error: '2FA code is required' });
+        }
 
-            // Get user from database
-            const { User } = require('../database/models');
-            const user = await User.findById(userId);
+        // Get user from database
+        const { User } = require('../database/models');
+        const user = await User.findById(userId);
 
             if (!user) {
                 return res.status(401).json({ error: 'User not found' });
@@ -546,11 +553,10 @@ router.post('/verify-moderation-2fa', (req, res, next) => {
                 success: true,
                 message: '2FA verified successfully - moderation mode activated'
             });
-        } catch (error) {
-            console.error('Error verifying 2FA code:', error);
-            res.status(500).json({ error: 'Failed to verify 2FA code' });
-        }
-    });
+    } catch (error) {
+        console.error('Error verifying 2FA code:', error);
+        res.status(500).json({ error: 'Failed to verify 2FA code' });
+    }
 });
 
 // GET /api/auth/status
