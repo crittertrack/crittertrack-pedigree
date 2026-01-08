@@ -22,7 +22,13 @@ router.get('/', async (req, res) => {
 router.get('/unread-count', async (req, res) => {
     try {
         const userId = req.user.id;
-        const count = await Notification.countDocuments({ userId, read: false, status: 'pending' });
+        // Exclude broadcast/announcement types from the count - they show separately
+        const count = await Notification.countDocuments({ 
+            userId, 
+            read: false, 
+            status: 'pending',
+            type: { $nin: ['broadcast', 'announcement'] }
+        });
         
         return res.status(200).json({ count });
     } catch (error) {
