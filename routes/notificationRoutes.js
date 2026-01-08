@@ -6,7 +6,17 @@ const { Notification, User, Animal } = require('../database/models');
 router.get('/', async (req, res) => {
     try {
         const userId = req.user.id;
-        const notifications = await Notification.find({ userId })
+        const now = new Date();
+        
+        // Filter out scheduled broadcasts that haven't reached their send time yet
+        const notifications = await Notification.find({ 
+            userId,
+            $or: [
+                { isPending: { $ne: true } },  // Not pending
+                { sendAt: { $lte: now } },      // Or send time has passed
+                { type: { $nin: ['broadcast', 'announcement'] } }  // Or not a broadcast type
+            ]
+        })
             .sort({ createdAt: -1 })
             .limit(50)
             .lean();
