@@ -1909,13 +1909,19 @@ router.post('/message-user', async (req, res) => {
         const { userId, message } = req.body;
 
         if (!userId || !message) {
-            return res.status(400).json({ error: 'User ID and message required' });
+            return res.status(400).json({ error: 'User CTUID and message required' });
         }
 
-        const { Notification } = require('../database/models');
+        const { Notification, User } = require('../database/models');
+        
+        // Look up user by CTUID (id_public)
+        const targetUser = await User.findOne({ id_public: userId.toUpperCase() });
+        if (!targetUser) {
+            return res.status(404).json({ error: `User not found with CTUID: ${userId}` });
+        }
         
         await Notification.create({
-            userId,
+            userId: targetUser._id,
             type: 'moderator_message',
             message,
             isRead: false,
@@ -1928,9 +1934,9 @@ router.post('/message-user', async (req, res) => {
             moderatorEmail: req.user.email,
             action: 'message_sent',
             targetType: 'user',
-            targetId: userId,
-            targetName: 'Direct Message',
-            details: { messageLength: message.length },
+            targetId: targetUser._id,
+            targetName: targetUser.id_public,
+            details: { messageLength: message.length, targetCTUID: targetUser.id_public },
             reason: 'Moderator message to user',
             ipAddress: req.ip || req.connection.remoteAddress
         });
