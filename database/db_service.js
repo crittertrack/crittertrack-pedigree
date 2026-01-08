@@ -259,6 +259,20 @@ const loginUser = async (email, password) => {
         throw new Error(`Account banned: ${user.banReason || 'Your account has been permanently banned.'}${banTypeLabel}`);
     }
 
+    // Check IP ban if applicable
+    if (user.banType === 'ip-ban' && user.bannedIP && user.bannedIP !== 'pending-capture-on-next-login') {
+        const currentIP = req?.ip || req?.connection?.remoteAddress || 'unknown';
+        if (user.bannedIP === currentIP) {
+            throw new Error(`Login blocked: This IP address has been banned from accessing your account.`);
+        }
+    }
+
+    // Capture user's IP for future IP ban enforcement
+    if (!user.lastLoginIP && (req?.ip || req?.connection?.remoteAddress)) {
+        const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+        user.lastLoginIP = userIP;
+    }
+
     if (user.accountStatus === 'suspended') {
         // Check if suspension has expired
         if (user.suspensionExpiry && new Date() > new Date(user.suspensionExpiry)) {
@@ -273,6 +287,23 @@ const loginUser = async (email, password) => {
             user.suspensionDate = null;
             user.suspensionExpiry = null;
             await user.save();
+            
+            // Log suspension auto-lift to audit
+            const { createAuditLog } = require('../utils/auditLogger');
+            await createAuditLog({
+                moderatorId: null,
+                moderatorEmail: 'system',
+                action: 'suspension_lifted',
+                targetType: 'user',
+                targetId: user._id,
+                details: { 
+                    reason: 'Automatic lift - suspension expiry time reached',
+                    previousReason: user.suspensionReason || null
+                },
+                reason: 'Automatic suspension expiry',
+                ipAddress: null,
+                userAgent: null
+            });
         } else {
             // Still suspended
             const expiryTime = user.suspensionExpiry 

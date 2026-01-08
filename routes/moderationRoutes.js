@@ -156,10 +156,21 @@ router.post('/users/:userId/status', requireModerator, async (req, res) => {
             updates.banDate = now;
             updates.banType = ipBan ? 'ip-ban' : 'banned';
             if (ipBan) {
-                // Store the IP for blocking future registrations
-                const userIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
-                updates.bannedIP = userIP;
-                console.log('[MODERATION STATUS] IP ban requested:', { userIP });
+                // Get the target user's actual IP for IP banning
+                // First, try to get from lastLoginIP if available, otherwise use a placeholder
+                // The actual IP should be captured from their login history
+                const targetUser = await User.findById(userId) || await User.findOne({ id_public: userId });
+                let targetIP = targetUser?.lastLoginIP;
+                
+                if (!targetIP) {
+                    // If we don't have their last login IP, log warning and don't set IP ban
+                    console.warn('[MODERATION STATUS] WARNING: No last login IP found for user. IP ban will not be enforceable until they log in next time.');
+                    // We'll capture their IP on next login attempt
+                    targetIP = 'pending-capture-on-next-login';
+                }
+                
+                updates.bannedIP = targetIP;
+                console.log('[MODERATION STATUS] IP ban requested:', { targetIP, targetUser: targetUser?.email });
             }
         }
 

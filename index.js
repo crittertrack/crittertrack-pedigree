@@ -494,6 +494,75 @@ app.use((err, req, res, next) => {
 
 // --- Server Start ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+// --- Scheduled Jobs ---
+// Broadcast Cron Job: Send scheduled broadcasts every minute
+const broadcastCronJob = async () => {
+    try {
+        const { Notification } = require('./database/models');
+        
+        // Find all pending notifications that are ready to send
+        const now = new Date();
+        const pendingNotifications = await Notification.find({
+            isPending: true,
+            sendAt: { $lte: now },
+            type: 'broadcast'
+        });
+
+        if (pendingNotifications.length > 0) {
+            console.log(`[BROADCAST CRON] Found ${pendingNotifications.length} broadcasts to send`);
+
+            for (const notification of pendingNotifications) {
+                try {
+                    // Send email via Resend (if user has email notifications enabled)
+                    const user = await require('./database/models').User.findById(notification.userId);
+                    
+                    if (user && user.emailNotificationPreference !== 'none') {
+                        const { sendEmail } = require('./utils/emailService') || {};
+                        if (sendEmail) {
+                            await sendEmail(user.email, notification.title, notification.message);
+                            console.log(`[BROADCAST CRON] Email sent to ${user.email}`);
+                        }
+                    }
+
+                    // Mark as sent
+                    notification.isPending = false;
+                    notification.sentAt = new Date();
+                    await notification.save();
+
+                    // Log to audit
+                    const { createAuditLog } = require('./utils/auditLogger');
+                    await createAuditLog({
+                        moderatorId: null,
+                        moderatorEmail: 'system',
+                        action: 'broadcast_sent',
+                        targetType: 'system',
+                        targetId: null,
+                        details: {
+                            title: notification.title,
+                            recipientId: notification.userId,
+                            scheduled: true,
+                            scheduledFor: notification.sendAt.toISOString()
+                        },
+                        reason: `Scheduled broadcast: ${notification.title}`,
+                        ipAddress: null,
+                        userAgent: null
+                    });
+                } catch (error) {
+                    console.error(`[BROADCAST CRON] Error sending broadcast to ${notification.userId}:`, error);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('[BROADCAST CRON] Error in cron job:', error);
+    }
+};
+
+// Run broadcast cron every minute
+setInterval(broadcastCronJob, 60000);
+
+// Also run once on startup after a short delay
+setTimeout(broadcastCronJob, 5000);
