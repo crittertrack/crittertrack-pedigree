@@ -792,6 +792,7 @@ router.patch('/content/:contentType/:contentId/edit', async (req, res) => {
 // GET /api/moderation/audit-logs - admins only
 router.get('/audit-logs', requireAdmin, async (req, res) => {
     try {
+        console.log('[MODERATION] Fetching audit logs...');
         const {
             moderatorId,
             action,
@@ -817,6 +818,7 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
             sort: '-createdAt'
         });
 
+        console.log('[MODERATION] Audit logs fetched:', { total: auditData.total, returned: auditData.logs.length });
         res.json(auditData);
     } catch (error) {
         console.error('Failed to fetch audit logs:', error);
