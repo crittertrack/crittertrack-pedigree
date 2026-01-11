@@ -29,6 +29,40 @@ const buildAuditMetadata = (req) => ({
     userAgent: req.get('user-agent') || null
 });
 
+// Helper: build proper target info from a report for audit logs
+// Returns targetName with CTCID/user ID and targetAnimalId for animal reports
+const buildReportTargetInfo = (type, report) => {
+    if (type === 'animal' && report.reportedAnimalId) {
+        const animal = report.reportedAnimalId;
+        const animalName = animal.name || 'Unknown Animal';
+        const animalId = animal.id_public || animal._id;
+        return {
+            targetName: `Animal report: ${animalName} (${animalId})`,
+            targetAnimalId: animal._id || null
+        };
+    }
+    if (type === 'profile' && report.reportedUserId) {
+        const user = report.reportedUserId;
+        const userName = user.breederName || user.personalName || user.email || 'Unknown User';
+        const userId = user.id_public || user._id;
+        return {
+            targetName: `Profile report: ${userName} (${userId})`,
+            targetUserId: user._id || null
+        };
+    }
+    if (type === 'message') {
+        const reporterName = report.reporterId?.breederName || report.reporterId?.personalName || 'Unknown';
+        return {
+            targetName: `Message report from ${reporterName}`,
+            targetUserId: report.reportedUserId?._id || null
+        };
+    }
+    // Fallback for unpopulated reports
+    return {
+        targetName: `${type} report ${report._id}`
+    };
+};
+
 // GET /api/moderation/me - return moderator context & permissions
 router.get('/me', (req, res) => {
     res.json({
@@ -636,13 +670,17 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
         report.reviewedBy = req.user.id;
         report.reviewedAt = new Date();
         await report.save();
+        
+        // Populate for audit log target info
+        await report.populate(config.populate);
+        const targetInfo = buildReportTargetInfo(type, report);
 
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: 'report_status_updated',
             targetType: `${type}_report`,
             targetId: report._id,
-            targetName: `${type} report ${report._id}`,
+            ...targetInfo,
             details: { status: report.status }
         });
 
@@ -721,13 +759,14 @@ router.post('/reports/:type/:reportId/assign', requireModerator, async (req, res
 
         // Populate for response
         await report.populate(config.populate);
+        const targetInfo = buildReportTargetInfo(type, report);
 
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: moderatorId ? 'report_assigned' : 'report_unassigned',
             targetType: `${type}_report`,
             targetId: report._id,
-            targetName: `${type} report ${report._id}`,
+            ...targetInfo,
             details: {
                 assignedTo: assignedModerator ? {
                     id: assignedModerator._id,
@@ -801,13 +840,14 @@ router.post('/reports/:type/:reportId/claim', requireModerator, async (req, res)
 
         await report.save();
         await report.populate(config.populate);
+        const targetInfo = buildReportTargetInfo(type, report);
 
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: 'report_claimed',
             targetType: `${type}_report`,
             targetId: report._id,
-            targetName: `${type} report ${report._id}`,
+            ...targetInfo,
             details: { newStatus: report.status }
         });
 
@@ -887,12 +927,16 @@ router.post('/reports/:type/:reportId/notes', requireModerator, async (req, res)
         // Get the saved note with its _id
         const savedNote = report.discussionNotes[report.discussionNotes.length - 1];
 
+        // Populate for audit log target info
+        await report.populate(config.populate);
+        const targetInfo = buildReportTargetInfo(type, report);
+
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: 'report_note_added',
             targetType: `${type}_report`,
             targetId: report._id,
-            targetName: `${type} report ${report._id}`,
+            ...targetInfo,
             details: { noteId: savedNote._id }
         });
 
@@ -947,12 +991,16 @@ router.patch('/reports/:type/:reportId/notes/:noteId', requireModerator, async (
         note.editedAt = new Date();
         await report.save();
 
+        // Populate for audit log target info
+        await report.populate(config.populate);
+        const targetInfo = buildReportTargetInfo(type, report);
+
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: 'report_note_edited',
             targetType: `${type}_report`,
             targetId: report._id,
-            targetName: `${type} report ${report._id}`,
+            ...targetInfo,
             details: { noteId: note._id }
         });
 
@@ -997,12 +1045,16 @@ router.delete('/reports/:type/:reportId/notes/:noteId', requireModerator, async 
         report.discussionNotes.pull(noteId);
         await report.save();
 
+        // Populate for audit log target info
+        await report.populate(config.populate);
+        const targetInfo = buildReportTargetInfo(type, report);
+
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: 'report_note_deleted',
             targetType: `${type}_report`,
             targetId: report._id,
-            targetName: `${type} report ${report._id}`,
+            ...targetInfo,
             details: { noteId: noteId }
         });
 

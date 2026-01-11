@@ -16,6 +16,8 @@ const { AuditLog } = require('../database/models');
  * @param {Boolean} params.success - Whether the action succeeded (default: true)
  * @param {String} params.errorMessage - Error message if action failed
  * @param {String} params.errorCode - Error code/type for categorization
+ * @param {String} params.targetAnimalId - Optional explicit animal ID for report-type actions
+ * @param {String} params.targetUserId - Optional explicit user ID for report-type actions
  */
 async function createAuditLog({
     moderatorId,
@@ -30,15 +32,17 @@ async function createAuditLog({
     userAgent = null,
     success = true,
     errorMessage = null,
-    errorCode = null
+    errorCode = null,
+    targetAnimalId: explicitAnimalId = null,
+    targetUserId: explicitUserId = null
 }) {
     try {
         const logLevel = success ? 'INFO' : 'ERROR';
         console.log(`[AUDIT LOG] [${logLevel}] Creating audit log: action=${action}, moderator=${moderatorEmail}, targetType=${targetType}, success=${success}`);
         
-        // Set specific target fields based on targetType for proper population
-        const targetUserId = targetType?.toLowerCase() === 'user' ? targetId : null;
-        const targetAnimalId = targetType?.toLowerCase() === 'animal' ? targetId : null;
+        // Set specific target fields - use explicit IDs if provided, otherwise detect from targetType
+        const targetUserId = explicitUserId || (targetType?.toLowerCase() === 'user' ? targetId : null);
+        const targetAnimalId = explicitAnimalId || (targetType?.toLowerCase() === 'animal' ? targetId : null);
         
         // Include error info in details if action failed
         const enhancedDetails = {
