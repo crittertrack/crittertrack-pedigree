@@ -475,4 +475,158 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
     }
 });
 
+// --- Marketplace: Animals for sale or stud (public endpoint) ---
+// GET /api/public/marketplace
+// Query params: type (sale|stud|all), species, gender, country, minPrice, maxPrice, currency, search, page, limit
+router.get('/marketplace', async (req, res) => {
+    try {
+        const query = req.query || {};
+        const type = query.type || 'all'; // 'sale', 'stud', or 'all'
+        const page = Math.max(1, parseInt(query.page, 10) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(query.limit, 10) || 20));
+        const skip = (page - 1) * limit;
+
+        // Build the base filter - only public animals that are for sale or available for breeding
+        const filter = {};
+        
+        if (type === 'sale') {
+            filter.isForSale = true;
+        } else if (type === 'stud') {
+            filter.availableForBreeding = true;
+        } else {
+            // 'all' - either for sale OR available for breeding
+            filter.$or = [
+                { isForSale: true },
+                { availableForBreeding: true }
+            ];
+        }
+
+        // Species filter
+        if (query.species) {
+            filter.species = { $regex: query.species, $options: 'i' };
+        }
+
+        // Gender filter
+        if (query.gender) {
+            filter.gender = query.gender;
+        }
+
+        // Search by name or ID
+        if (query.search) {
+            const searchFilter = [
+                { name: { $regex: query.search, $options: 'i' } },
+                { id_public: { $regex: query.search, $options: 'i' } }
+            ];
+            if (filter.$or) {
+                // Already have $or, need to use $and
+                filter.$and = [
+                    { $or: filter.$or },
+                    { $or: searchFilter }
+                ];
+                delete filter.$or;
+            } else {
+                filter.$or = searchFilter;
+            }
+        }
+
+        // Price range filters (for sale animals)
+        if (query.minPrice || query.maxPrice) {
+            const priceFilter = {};
+            if (query.minPrice) priceFilter.$gte = parseFloat(query.minPrice);
+            if (query.maxPrice) priceFilter.$lte = parseFloat(query.maxPrice);
+            
+            // Only apply to sale price if filtering for sale, or both if filtering all
+            if (type === 'sale') {
+                filter.salePriceAmount = priceFilter;
+            } else if (type === 'stud') {
+                filter.studFeeAmount = priceFilter;
+            }
+            // For 'all', skip price filter as it's complex to combine
+        }
+
+        // Currency filter
+        if (query.currency) {
+            if (type === 'sale') {
+                filter.salePriceCurrency = query.currency;
+            } else if (type === 'stud') {
+                filter.studFeeCurrency = query.currency;
+            }
+        }
+
+        // Use PublicAnimal collection (only contains public animals)
+        const Model = (typeof PublicAnimal !== 'undefined' && PublicAnimal) ? PublicAnimal : Animal;
+
+        // Get total count for pagination
+        const total = await Model.countDocuments(filter);
+
+        // Get animals with owner info
+        const animals = await Model.find(filter)
+            .sort({ updatedAt: -1 }) // Most recently updated first
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        // Fetch owner info for each animal
+        const ownerIds = [...new Set(animals.map(a => a.ownerId?.toString()).filter(Boolean))];
+        const owners = await User.find({ _id: { $in: ownerIds } })
+            .select('id_public personalName breederName showBreederName country profileImage')
+            .lean();
+        
+        const ownerMap = {};
+        owners.forEach(o => {
+            ownerMap[o._id.toString()] = {
+                id_public: o.id_public,
+                displayName: o.showBreederName && o.breederName ? o.breederName : o.personalName,
+                country: o.country || null,
+                profileImage: o.profileImage || null
+            };
+        });
+
+        // Enrich animals with owner display info
+        const enrichedAnimals = animals.map(animal => ({
+            ...animal,
+            ownerInfo: animal.ownerId ? ownerMap[animal.ownerId.toString()] : null,
+            listingType: animal.isForSale && animal.availableForBreeding ? 'both' 
+                        : animal.isForSale ? 'sale' 
+                        : 'stud'
+        }));
+
+        res.status(200).json({
+            animals: enrichedAnimals,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching marketplace animals:', error);
+        res.status(500).json({ message: 'Internal server error while fetching marketplace.' });
+    }
+});
+
+// --- Get available species for marketplace filter (public endpoint) ---
+router.get('/marketplace/species', async (req, res) => {
+    try {
+        const Model = (typeof PublicAnimal !== 'undefined' && PublicAnimal) ? PublicAnimal : Animal;
+        
+        // Get distinct species from animals that are for sale or available for breeding
+        const species = await Model.distinct('species', {
+            $or: [
+                { isForSale: true },
+                { availableForBreeding: true }
+            ]
+        });
+
+        // Filter out null/empty and sort alphabetically
+        const filtered = species.filter(s => s && s.trim()).sort();
+        
+        res.status(200).json(filtered);
+    } catch (error) {
+        console.error('Error fetching marketplace species:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
 module.exports = router;
