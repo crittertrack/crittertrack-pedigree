@@ -82,13 +82,10 @@ router.get('/admin', async (req, res) => {
             return res.status(403).json({ message: 'Access denied. Admin or moderator access required.' });
         }
 
-        const feedback = await GeneticsFeedback.findAll({
-            order: [['createdAt', 'DESC']],
-            include: [{
-                model: require('../database/models').User,
-                attributes: ['id', 'username', 'email']
-            }]
-        });
+        const feedback = await GeneticsFeedback.find({})
+            .sort({ createdAt: -1 })
+            .populate('userId', 'personalName breederName email id_public')
+            .lean();
 
         return res.status(200).json(feedback);
 
@@ -121,7 +118,7 @@ router.patch('/:id/status', async (req, res) => {
             });
         }
 
-        const feedback = await GeneticsFeedback.findByPk(id);
+        const feedback = await GeneticsFeedback.findById(id);
         if (!feedback) {
             return res.status(404).json({ message: 'Feedback not found' });
         }
