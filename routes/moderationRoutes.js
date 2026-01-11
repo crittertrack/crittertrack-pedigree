@@ -502,22 +502,81 @@ const reportModelMap = {
     }
 };
 
-// GET /api/moderation/reports - list reports by type
+// GET /api/moderation/reports - list reports by type (or all types)
 router.get('/reports', async (req, res) => {
     try {
-        const { type = 'profile', status, limit = 25, skip = 0 } = req.query;
-        const config = reportModelMap[type];
+        const { type, status, limit = 25, skip = 0 } = req.query;
 
         console.log('[MODERATION REPORTS] Fetching reports with params:', { type, status, limit, skip });
-
-        if (!config) {
-            console.log('[MODERATION REPORTS] Invalid report type:', type);
-            return res.status(400).json({ message: 'Invalid report type.' });
-        }
 
         const filter = {};
         if (status) {
             filter.status = status;
+        }
+
+        // If type is not specified or 'all', fetch from all report types
+        if (!type || type === 'all') {
+            console.log('[MODERATION REPORTS] Fetching all report types with filter:', filter);
+
+            // Fetch from all three report models
+            const [profileReports, animalReports, messageReports] = await Promise.all([
+                ProfileReport.find(filter)
+                    .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'reportedUserId', select: 'personalName breederName email id_public profileImage bio websiteUrl showPersonalName showBreederName' })
+                    .populate({ path: 'assignedTo', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'assignedBy', select: 'personalName breederName email id_public' })
+                    .lean(),
+                AnimalReport.find(filter)
+                    .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
+                    .populate({ 
+                        path: 'reportedAnimalId', 
+                        select: 'name id_public ownerId species gender imageUrl prefix suffix breederyId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
+                        populate: {
+                            path: 'ownerId',
+                            select: 'personalName breederName email id_public profileImage'
+                        }
+                    })
+                    .populate({ path: 'assignedTo', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'assignedBy', select: 'personalName breederName email id_public' })
+                    .lean(),
+                MessageReport.find(filter)
+                    .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'reportedUserId', select: 'personalName breederName email id_public profileImage' })
+                    .populate({ path: 'messageId', select: 'message senderId receiverId createdAt' })
+                    .populate({ path: 'assignedTo', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'assignedBy', select: 'personalName breederName email id_public' })
+                    .lean()
+            ]);
+
+            // Add type marker to each report for frontend identification
+            const markedProfileReports = profileReports.map(r => ({ ...r, _reportType: 'profile' }));
+            const markedAnimalReports = animalReports.map(r => ({ ...r, _reportType: 'animal' }));
+            const markedMessageReports = messageReports.map(r => ({ ...r, _reportType: 'message' }));
+
+            // Combine and sort by createdAt descending
+            const allReports = [...markedProfileReports, ...markedAnimalReports, ...markedMessageReports]
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            // Apply pagination
+            const paginatedReports = allReports.slice(parseInt(skip, 10), parseInt(skip, 10) + parseInt(limit, 10));
+            const total = allReports.length;
+
+            console.log(`[MODERATION REPORTS] Found ${total} total reports (profile: ${profileReports.length}, animal: ${animalReports.length}, message: ${messageReports.length})`);
+
+            return res.json({
+                reports: paginatedReports,
+                total,
+                limit: parseInt(limit, 10),
+                skip: parseInt(skip, 10)
+            });
+        }
+
+        // Single type query (existing behavior)
+        const config = reportModelMap[type];
+
+        if (!config) {
+            console.log('[MODERATION REPORTS] Invalid report type:', type);
+            return res.status(400).json({ message: 'Invalid report type.' });
         }
 
         console.log('[MODERATION REPORTS] Using filter:', filter);
