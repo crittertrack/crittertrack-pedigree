@@ -38,10 +38,14 @@ router.get('/users/moderation-overview', async (req, res) => {
     try {
         if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
-        // Get all users with relevant fields
+        // Get all users with relevant fields including login info
         const users = await User.find({})
-            .select('id_public email personalName breederName accountStatus role warningCount warnings suspensionReason suspensionDate suspensionExpiry banReason banDate banType bannedIP moderatedBy creationDate')
+            .select('id_public email personalName breederName accountStatus role warningCount warnings suspensionReason suspensionDate suspensionExpiry banReason banDate banType bannedIP moderatedBy creationDate last_login last_login_ip')
             .lean();
+
+        // Get Animal and Message models for counts
+        const Animal = require('../database/models').Animal;
+        const Message = require('../database/models').Message;
 
         // Get moderation history for each user from audit logs
         const usersWithHistory = await Promise.all(users.map(async (user) => {
@@ -60,13 +64,23 @@ router.get('/users/moderation-overview', async (req, res) => {
                     { reportedUserId: user._id },
                     { reportedBy: user._id }
                 ]
-            }).select('reason status createdAt').lean();
+            }).select('reason status createdAt category').lean();
+
+            // Get user metrics (counts)
+            const [animalCount, messageCount] = await Promise.all([
+                Animal.countDocuments({ ownerId: user._id }),
+                Message.countDocuments({ senderId: user._id })
+            ]);
 
             return {
                 ...user,
                 moderationHistory: auditLogs,
                 reportCount: profileReports.length,
-                recentReports: profileReports.slice(0, 5)
+                recentReports: profileReports.slice(0, 5),
+                metrics: {
+                    animalCount,
+                    messageCount
+                }
             };
         }));
 
