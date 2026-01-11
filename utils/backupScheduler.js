@@ -1,32 +1,65 @@
 const cron = require('node-cron');
-const path = require('path');
-const fs = require('fs');
+const { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { User, Animal, PublicProfile, PublicAnimal } = require('../database/models');
 const { createAuditLog } = require('./auditLogger');
 
-// Backup metadata helpers
-const backupMetadataPath = path.join(__dirname, '..', 'backups', 'metadata.json');
+// R2 Configuration
+const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+const accountId = process.env.R2_ACCOUNT_ID;
+const bucket = process.env.R2_BUCKET;
+const endpoint = accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined;
 
-const getBackupMetadata = () => {
-    try {
-        if (fs.existsSync(backupMetadataPath)) {
-            return JSON.parse(fs.readFileSync(backupMetadataPath, 'utf-8'));
-        }
-    } catch (err) {
-        console.error('[BackupScheduler] Error reading backup metadata:', err);
+const s3Client = new S3Client({
+    region: process.env.R2_REGION || 'auto',
+    endpoint: endpoint,
+    credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+    forcePathStyle: false,
+});
+
+const isR2Configured = () => !!(accessKeyId && secretAccessKey && bucket);
+
+// Backup metadata stored in R2
+const METADATA_KEY = 'backups/metadata.json';
+
+const getBackupMetadata = async () => {
+    if (!isR2Configured()) {
+        console.warn('[BackupScheduler] R2 not configured, using in-memory metadata');
+        return { backups: [], lastAutoBackup: null, scheduledTime: '0 3 * * *' };
     }
-    return { backups: [], lastAutoBackup: null, scheduledTime: '0 3 * * *' };
+
+    try {
+        const command = new GetObjectCommand({ Bucket: bucket, Key: METADATA_KEY });
+        const response = await s3Client.send(command);
+        const bodyString = await response.Body.transformToString();
+        return JSON.parse(bodyString);
+    } catch (err) {
+        if (err.name === 'NoSuchKey' || err.Code === 'NoSuchKey') {
+            console.log('[BackupScheduler] No metadata found, creating new');
+            return { backups: [], lastAutoBackup: null, scheduledTime: '0 3 * * *' };
+        }
+        console.error('[BackupScheduler] Error reading backup metadata from R2:', err);
+        return { backups: [], lastAutoBackup: null, scheduledTime: '0 3 * * *' };
+    }
 };
 
-const saveBackupMetadata = (metadata) => {
+const saveBackupMetadata = async (metadata) => {
+    if (!isR2Configured()) {
+        console.warn('[BackupScheduler] R2 not configured, cannot save metadata');
+        return;
+    }
+
     try {
-        const dir = path.dirname(backupMetadataPath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-        }
-        fs.writeFileSync(backupMetadataPath, JSON.stringify(metadata, null, 2));
+        const command = new PutObjectCommand({
+            Bucket: bucket,
+            Key: METADATA_KEY,
+            Body: JSON.stringify(metadata, null, 2),
+            ContentType: 'application/json'
+        });
+        await s3Client.send(command);
+        console.log('[BackupScheduler] Metadata saved to R2');
     } catch (err) {
-        console.error('[BackupScheduler] Error saving backup metadata:', err);
+        console.error('[BackupScheduler] Error saving backup metadata to R2:', err);
     }
 };
 
@@ -40,20 +73,20 @@ const getCollectionStats = async () => {
     return stats;
 };
 
-// Create automated backup
+// Create automated backup - saves to R2 cloud storage
 const createAutomatedBackup = async () => {
+    if (!isR2Configured()) {
+        console.error('[BackupScheduler] ❌ R2 not configured - cannot create backup');
+        return { success: false, error: 'R2 storage not configured' };
+    }
+
     const timestamp = new Date();
     const backupId = `auto-backup-${timestamp.toISOString().replace(/:/g, '-').split('.')[0]}`;
-    const backupDir = path.join(__dirname, '..', 'backups', backupId);
+    const backupPrefix = `backups/${backupId}`;
 
-    console.log(`[BackupScheduler] Starting automated backup: ${backupId}`);
+    console.log(`[BackupScheduler] Starting automated backup to R2: ${backupId}`);
 
     try {
-        // Create backup directory
-        if (!fs.existsSync(backupDir)) {
-            fs.mkdirSync(backupDir, { recursive: true });
-        }
-
         // Get collection stats before backup
         const stats = await getCollectionStats();
 
@@ -66,11 +99,21 @@ const createAutomatedBackup = async () => {
         };
 
         let totalSize = 0;
+        
+        // Upload each collection to R2
         for (const [name, data] of Object.entries(collections)) {
-            const filePath = path.join(backupDir, `${name}.json`);
             const jsonData = JSON.stringify(data, null, 2);
-            fs.writeFileSync(filePath, jsonData);
+            const key = `${backupPrefix}/${name}.json`;
+            
+            const command = new PutObjectCommand({
+                Bucket: bucket,
+                Key: key,
+                Body: jsonData,
+                ContentType: 'application/json'
+            });
+            await s3Client.send(command);
             totalSize += Buffer.byteLength(jsonData, 'utf8');
+            console.log(`[BackupScheduler] Uploaded ${name}.json (${data.length} records)`);
         }
 
         // Create backup info file
@@ -82,16 +125,21 @@ const createAutomatedBackup = async () => {
             type: 'auto',
             stats,
             collections: Object.keys(collections),
-            totalSizeBytes: totalSize
+            totalSizeBytes: totalSize,
+            storageLocation: 'r2'
         };
 
-        fs.writeFileSync(
-            path.join(backupDir, 'backup-info.json'),
-            JSON.stringify(backupInfo, null, 2)
-        );
+        // Upload backup info to R2
+        const infoCommand = new PutObjectCommand({
+            Bucket: bucket,
+            Key: `${backupPrefix}/backup-info.json`,
+            Body: JSON.stringify(backupInfo, null, 2),
+            ContentType: 'application/json'
+        });
+        await s3Client.send(infoCommand);
 
         // Update metadata
-        const metadata = getBackupMetadata();
+        const metadata = await getBackupMetadata();
         metadata.backups.unshift({
             id: backupId,
             createdAt: timestamp,
@@ -100,36 +148,33 @@ const createAutomatedBackup = async () => {
             type: 'auto',
             stats,
             totalSizeBytes: totalSize,
-            status: 'completed'
+            status: 'completed',
+            storageLocation: 'r2'
         });
 
-        // Keep only last 30 backups (auto backups can accumulate)
+        // Keep only last 30 backups
         if (metadata.backups.length > 30) {
-            // Remove old backups from disk too
             const oldBackups = metadata.backups.slice(30);
             for (const oldBackup of oldBackups) {
-                const oldDir = path.join(__dirname, '..', 'backups', oldBackup.id);
-                if (fs.existsSync(oldDir)) {
-                    try {
-                        fs.rmSync(oldDir, { recursive: true, force: true });
-                        console.log(`[BackupScheduler] Removed old backup: ${oldBackup.id}`);
-                    } catch (err) {
-                        console.error(`[BackupScheduler] Failed to remove old backup ${oldBackup.id}:`, err);
-                    }
+                try {
+                    await deleteBackupFromR2(oldBackup.id);
+                    console.log(`[BackupScheduler] Removed old backup: ${oldBackup.id}`);
+                } catch (err) {
+                    console.error(`[BackupScheduler] Failed to remove old backup ${oldBackup.id}:`, err);
                 }
             }
             metadata.backups = metadata.backups.slice(0, 30);
         }
 
         metadata.lastAutoBackup = timestamp;
-        saveBackupMetadata(metadata);
+        await saveBackupMetadata(metadata);
 
         // Log the action
         try {
             await createAuditLog({
                 action: 'auto_backup_created',
                 performedBy: null,
-                details: { backupId, stats, totalSizeBytes: totalSize }
+                details: { backupId, stats, totalSizeBytes: totalSize, storage: 'r2' }
             });
         } catch (auditErr) {
             console.error('[BackupScheduler] Failed to create audit log:', auditErr);
@@ -157,21 +202,52 @@ const createAutomatedBackup = async () => {
     }
 };
 
+// Delete a backup from R2
+const deleteBackupFromR2 = async (backupId) => {
+    if (!isR2Configured()) return;
+
+    const prefix = `backups/${backupId}/`;
+    
+    // List all objects with this prefix
+    const listCommand = new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix
+    });
+    
+    const listResponse = await s3Client.send(listCommand);
+    
+    if (listResponse.Contents && listResponse.Contents.length > 0) {
+        for (const obj of listResponse.Contents) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: bucket,
+                Key: obj.Key
+            });
+            await s3Client.send(deleteCommand);
+        }
+    }
+};
+
 // Scheduled task reference
 let scheduledTask = null;
+let cachedSchedule = '0 3 * * *'; // Cache schedule in memory
 
 // Initialize the backup scheduler
-const initBackupScheduler = () => {
-    const metadata = getBackupMetadata();
-    const cronExpression = metadata.scheduledTime || '0 3 * * *'; // Default: 3:00 AM daily
-
-    // Validate cron expression
-    if (!cron.validate(cronExpression)) {
-        console.error(`[BackupScheduler] Invalid cron expression: ${cronExpression}, using default`);
-        return startScheduler('0 3 * * *');
+const initBackupScheduler = async () => {
+    if (!isR2Configured()) {
+        console.warn('[BackupScheduler] ⚠️ R2 not configured - backups will NOT be saved');
+        console.warn('[BackupScheduler] Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET env vars');
     }
 
-    return startScheduler(cronExpression);
+    const metadata = await getBackupMetadata();
+    cachedSchedule = metadata.scheduledTime || '0 3 * * *';
+
+    // Validate cron expression
+    if (!cron.validate(cachedSchedule)) {
+        console.error(`[BackupScheduler] Invalid cron expression: ${cachedSchedule}, using default`);
+        cachedSchedule = '0 3 * * *';
+    }
+
+    return startScheduler(cachedSchedule);
 };
 
 const startScheduler = (cronExpression) => {
@@ -191,20 +267,21 @@ const startScheduler = (cronExpression) => {
     });
 
     console.log(`[BackupScheduler] ✅ Backup scheduler initialized with schedule: ${cronExpression} (UTC)`);
-    console.log(`[BackupScheduler] Next backup will run at 3:00 AM UTC daily`);
+    console.log(`[BackupScheduler] R2 configured: ${isR2Configured() ? 'YES ✅' : 'NO ❌'}`);
 
     return scheduledTask;
 };
 
 // Update the backup schedule
-const updateBackupSchedule = (newCronExpression) => {
+const updateBackupSchedule = async (newCronExpression) => {
     if (!cron.validate(newCronExpression)) {
         throw new Error(`Invalid cron expression: ${newCronExpression}`);
     }
 
-    const metadata = getBackupMetadata();
+    const metadata = await getBackupMetadata();
     metadata.scheduledTime = newCronExpression;
-    saveBackupMetadata(metadata);
+    await saveBackupMetadata(metadata);
+    cachedSchedule = newCronExpression;
 
     startScheduler(newCronExpression);
     console.log(`[BackupScheduler] Schedule updated to: ${newCronExpression}`);
@@ -213,13 +290,15 @@ const updateBackupSchedule = (newCronExpression) => {
 };
 
 // Get current schedule info
-const getScheduleInfo = () => {
-    const metadata = getBackupMetadata();
+const getScheduleInfo = async () => {
+    const metadata = await getBackupMetadata();
     return {
         schedule: metadata.scheduledTime || '0 3 * * *',
         lastAutoBackup: metadata.lastAutoBackup,
         isRunning: scheduledTask !== null,
-        timezone: 'UTC'
+        timezone: 'UTC',
+        r2Configured: isR2Configured(),
+        backupCount: metadata.backups?.length || 0
     };
 };
 
@@ -233,5 +312,6 @@ module.exports = {
     updateBackupSchedule,
     getScheduleInfo,
     triggerManualBackup,
-    createAutomatedBackup
+    createAutomatedBackup,
+    isR2Configured
 };

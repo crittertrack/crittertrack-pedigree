@@ -644,31 +644,67 @@ router.get('/audit-logs', async (req, res) => {
 // BACKUP MANAGEMENT ROUTES
 // ============================================
 
-// Backup metadata storage (in-memory for now, could be persisted to DB)
-const backupMetadataPath = path.join(__dirname, '..', 'backups', 'metadata.json');
-
-// Helper: Get backup metadata
-const getBackupMetadata = () => {
-    try {
-        if (fs.existsSync(backupMetadataPath)) {
-            return JSON.parse(fs.readFileSync(backupMetadataPath, 'utf-8'));
-        }
-    } catch (err) {
-        console.error('Error reading backup metadata:', err);
-    }
-    return { backups: [], lastAutoBackup: null };
+// R2 configuration for backups
+const getR2Client = () => {
+    const { S3Client } = require('@aws-sdk/client-s3');
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+    const accountId = process.env.R2_ACCOUNT_ID;
+    const endpoint = accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined;
+    
+    return new S3Client({
+        region: process.env.R2_REGION || 'auto',
+        endpoint: endpoint,
+        credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+        forcePathStyle: false,
+    });
 };
 
-// Helper: Save backup metadata
-const saveBackupMetadata = (metadata) => {
+const R2_BUCKET = process.env.R2_BUCKET;
+const BACKUP_METADATA_KEY = 'backups/metadata.json';
+
+// Helper: Get backup metadata from R2
+const getBackupMetadata = async () => {
+    if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+        console.warn('R2 not configured for backups');
+        return { backups: [], lastAutoBackup: null };
+    }
+    
     try {
-        const dir = path.dirname(backupMetadataPath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-        }
-        fs.writeFileSync(backupMetadataPath, JSON.stringify(metadata, null, 2));
+        const { GetObjectCommand } = require('@aws-sdk/client-s3');
+        const s3Client = getR2Client();
+        const command = new GetObjectCommand({ Bucket: R2_BUCKET, Key: BACKUP_METADATA_KEY });
+        const response = await s3Client.send(command);
+        const bodyString = await response.Body.transformToString();
+        return JSON.parse(bodyString);
     } catch (err) {
-        console.error('Error saving backup metadata:', err);
+        if (err.name === 'NoSuchKey' || err.Code === 'NoSuchKey') {
+            return { backups: [], lastAutoBackup: null };
+        }
+        console.error('Error reading backup metadata from R2:', err);
+        return { backups: [], lastAutoBackup: null };
+    }
+};
+
+// Helper: Save backup metadata to R2
+const saveBackupMetadata = async (metadata) => {
+    if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+        console.warn('R2 not configured for backups');
+        return;
+    }
+    
+    try {
+        const { PutObjectCommand } = require('@aws-sdk/client-s3');
+        const s3Client = getR2Client();
+        const command = new PutObjectCommand({
+            Bucket: R2_BUCKET,
+            Key: BACKUP_METADATA_KEY,
+            Body: JSON.stringify(metadata, null, 2),
+            ContentType: 'application/json'
+        });
+        await s3Client.send(command);
+    } catch (err) {
+        console.error('Error saving backup metadata to R2:', err);
     }
 };
 
@@ -688,19 +724,19 @@ const getCollectionStats = async () => {
     return stats;
 };
 
-// GET /api/admin/backups - List available backups
+// GET /api/admin/backups - List available backups (from R2)
 router.get('/backups', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
-        const metadata = getBackupMetadata();
+        const metadata = await getBackupMetadata();
         const currentStats = await getCollectionStats();
         
         // Get schedule info
         let scheduleInfo = { schedule: '0 3 * * *', timezone: 'UTC' };
         try {
             const { getScheduleInfo } = require('../utils/backupScheduler');
-            scheduleInfo = getScheduleInfo();
+            scheduleInfo = await getScheduleInfo();
         } catch (err) {
             console.error('Error getting schedule info:', err);
         }
@@ -723,7 +759,7 @@ router.get('/backup-schedule', async (req, res) => {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
         const { getScheduleInfo } = require('../utils/backupScheduler');
-        const scheduleInfo = getScheduleInfo();
+        const scheduleInfo = await getScheduleInfo();
         
         res.json(scheduleInfo);
     } catch (error) {
@@ -744,7 +780,7 @@ router.put('/backup-schedule', async (req, res) => {
         }
 
         const { updateBackupSchedule, getScheduleInfo } = require('../utils/backupScheduler');
-        updateBackupSchedule(schedule);
+        await updateBackupSchedule(schedule);
         
         // Log the change
         await createAuditLog({
@@ -756,7 +792,7 @@ router.put('/backup-schedule', async (req, res) => {
         res.json({ 
             success: true, 
             message: 'Backup schedule updated',
-            schedule: getScheduleInfo()
+            schedule: await getScheduleInfo()
         });
     } catch (error) {
         console.error('Error updating backup schedule:', error);
@@ -764,25 +800,45 @@ router.put('/backup-schedule', async (req, res) => {
     }
 });
 
-// POST /api/admin/trigger-backup - Trigger manual backup
+// POST /api/admin/trigger-backup - Trigger manual backup (uses R2 cloud storage)
 router.post('/trigger-backup', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
         const { description, backupType = 'manual' } = req.body;
+        
+        // Use the backup scheduler's R2 integration
+        const { isR2Configured } = require('../utils/backupScheduler');
+        const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+        
+        if (!isR2Configured()) {
+            return res.status(500).json({ 
+                error: 'R2 storage not configured',
+                message: 'Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET environment variables'
+            });
+        }
+        
+        const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+        const accountId = process.env.R2_ACCOUNT_ID;
+        const bucket = process.env.R2_BUCKET;
+        const endpoint = accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined;
+        
+        const s3Client = new S3Client({
+            region: process.env.R2_REGION || 'auto',
+            endpoint: endpoint,
+            credentials: { accessKeyId, secretAccessKey },
+            forcePathStyle: false,
+        });
+
         const timestamp = new Date();
         const backupId = `backup-${timestamp.toISOString().replace(/:/g, '-').split('.')[0]}`;
-        const backupDir = path.join(__dirname, '..', 'backups', backupId);
-
-        // Create backup directory
-        if (!fs.existsSync(backupDir)) {
-            fs.mkdirSync(backupDir, { recursive: true });
-        }
+        const backupPrefix = `backups/${backupId}`;
 
         // Get collection stats before backup
         const stats = await getCollectionStats();
 
-        // Export collections to JSON (essential data only for quick backups)
+        // Export collections to JSON
         const collections = {
             users: await User.find({}).lean(),
             animals: await Animal.find({}).lean(),
@@ -791,10 +847,19 @@ router.post('/trigger-backup', async (req, res) => {
         };
 
         let totalSize = 0;
+        
+        // Upload each collection to R2
         for (const [name, data] of Object.entries(collections)) {
-            const filePath = path.join(backupDir, `${name}.json`);
             const jsonData = JSON.stringify(data, null, 2);
-            fs.writeFileSync(filePath, jsonData);
+            const key = `${backupPrefix}/${name}.json`;
+            
+            const command = new PutObjectCommand({
+                Bucket: bucket,
+                Key: key,
+                Body: jsonData,
+                ContentType: 'application/json'
+            });
+            await s3Client.send(command);
             totalSize += Buffer.byteLength(jsonData, 'utf8');
         }
 
@@ -807,16 +872,30 @@ router.post('/trigger-backup', async (req, res) => {
             type: backupType,
             stats,
             collections: Object.keys(collections),
-            totalSizeBytes: totalSize
+            totalSizeBytes: totalSize,
+            storageLocation: 'r2'
         };
 
-        fs.writeFileSync(
-            path.join(backupDir, 'backup-info.json'),
-            JSON.stringify(backupInfo, null, 2)
-        );
+        // Upload backup info to R2
+        const infoCommand = new PutObjectCommand({
+            Bucket: bucket,
+            Key: `${backupPrefix}/backup-info.json`,
+            Body: JSON.stringify(backupInfo, null, 2),
+            ContentType: 'application/json'
+        });
+        await s3Client.send(infoCommand);
 
-        // Update metadata
-        const metadata = getBackupMetadata();
+        // Update metadata in R2
+        let metadata = { backups: [], lastAutoBackup: null };
+        try {
+            const getCmd = new GetObjectCommand({ Bucket: bucket, Key: 'backups/metadata.json' });
+            const response = await s3Client.send(getCmd);
+            const bodyString = await response.Body.transformToString();
+            metadata = JSON.parse(bodyString);
+        } catch (err) {
+            // Metadata doesn't exist yet, use default
+        }
+        
         metadata.backups.unshift({
             id: backupId,
             createdAt: timestamp,
@@ -825,30 +904,34 @@ router.post('/trigger-backup', async (req, res) => {
             type: backupType,
             stats,
             totalSizeBytes: totalSize,
-            status: 'completed'
+            status: 'completed',
+            storageLocation: 'r2'
         });
 
-        // Keep only last 20 backups in metadata
-        if (metadata.backups.length > 20) {
-            metadata.backups = metadata.backups.slice(0, 20);
+        // Keep only last 30 backups in metadata
+        if (metadata.backups.length > 30) {
+            metadata.backups = metadata.backups.slice(0, 30);
         }
 
-        if (backupType === 'auto') {
-            metadata.lastAutoBackup = timestamp;
-        }
-
-        saveBackupMetadata(metadata);
+        // Save updated metadata
+        const metaCmd = new PutObjectCommand({
+            Bucket: bucket,
+            Key: 'backups/metadata.json',
+            Body: JSON.stringify(metadata, null, 2),
+            ContentType: 'application/json'
+        });
+        await s3Client.send(metaCmd);
 
         // Log the action
         await createAuditLog({
             action: 'backup_created',
             performedBy: req.user?._id,
-            details: { backupId, type: backupType, stats }
+            details: { backupId, type: backupType, stats, storage: 'r2' }
         });
 
         res.json({
             success: true,
-            message: 'Backup created successfully',
+            message: 'Backup created successfully in R2 cloud storage',
             backup: metadata.backups[0]
         });
     } catch (error) {
@@ -857,48 +940,77 @@ router.post('/trigger-backup', async (req, res) => {
     }
 });
 
-// GET /api/admin/backups/:backupId - Get backup details
+// GET /api/admin/backups/:backupId - Get backup details from R2
 router.get('/backups/:backupId', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
         const { backupId } = req.params;
-        const backupDir = path.join(__dirname, '..', 'backups', backupId);
-        const infoPath = path.join(backupDir, 'backup-info.json');
-
-        if (!fs.existsSync(infoPath)) {
-            return res.status(404).json({ error: 'Backup not found' });
+        
+        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+            return res.status(500).json({ error: 'R2 storage not configured' });
         }
-
-        const backupInfo = JSON.parse(fs.readFileSync(infoPath, 'utf-8'));
-        res.json(backupInfo);
+        
+        const { GetObjectCommand } = require('@aws-sdk/client-s3');
+        const s3Client = getR2Client();
+        
+        try {
+            const command = new GetObjectCommand({
+                Bucket: R2_BUCKET,
+                Key: `backups/${backupId}/backup-info.json`
+            });
+            const response = await s3Client.send(command);
+            const bodyString = await response.Body.transformToString();
+            const backupInfo = JSON.parse(bodyString);
+            res.json(backupInfo);
+        } catch (err) {
+            if (err.name === 'NoSuchKey' || err.Code === 'NoSuchKey') {
+                return res.status(404).json({ error: 'Backup not found' });
+            }
+            throw err;
+        }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// GET /api/admin/backups/:backupId/download - Download backup as ZIP
+// GET /api/admin/backups/:backupId/download - Download backup from R2
 router.get('/backups/:backupId/download', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
         const { backupId } = req.params;
-        const backupDir = path.join(__dirname, '..', 'backups', backupId);
-
-        if (!fs.existsSync(backupDir)) {
+        
+        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+            return res.status(500).json({ error: 'R2 storage not configured' });
+        }
+        
+        const { GetObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+        const s3Client = getR2Client();
+        
+        // List all files in this backup
+        const listCommand = new ListObjectsV2Command({
+            Bucket: R2_BUCKET,
+            Prefix: `backups/${backupId}/`
+        });
+        const listResponse = await s3Client.send(listCommand);
+        
+        if (!listResponse.Contents || listResponse.Contents.length === 0) {
             return res.status(404).json({ error: 'Backup not found' });
         }
-
-        // For simplicity, send backup-info.json with stats
-        // In production, you'd want to create a ZIP archive
-        const files = fs.readdirSync(backupDir);
+        
         const backup = {};
-
-        for (const file of files) {
-            if (file.endsWith('.json')) {
-                backup[file.replace('.json', '')] = JSON.parse(
-                    fs.readFileSync(path.join(backupDir, file), 'utf-8')
-                );
+        
+        for (const obj of listResponse.Contents) {
+            if (obj.Key.endsWith('.json')) {
+                const getCommand = new GetObjectCommand({
+                    Bucket: R2_BUCKET,
+                    Key: obj.Key
+                });
+                const response = await s3Client.send(getCommand);
+                const bodyString = await response.Body.transformToString();
+                const fileName = obj.Key.split('/').pop().replace('.json', '');
+                backup[fileName] = JSON.parse(bodyString);
             }
         }
 
@@ -910,25 +1022,44 @@ router.get('/backups/:backupId/download', async (req, res) => {
     }
 });
 
-// DELETE /api/admin/backups/:backupId - Delete a backup
+// DELETE /api/admin/backups/:backupId - Delete a backup from R2
 router.delete('/backups/:backupId', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
 
         const { backupId } = req.params;
-        const backupDir = path.join(__dirname, '..', 'backups', backupId);
-
-        if (!fs.existsSync(backupDir)) {
+        
+        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+            return res.status(500).json({ error: 'R2 storage not configured' });
+        }
+        
+        const { ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+        const s3Client = getR2Client();
+        
+        // List all files in this backup
+        const listCommand = new ListObjectsV2Command({
+            Bucket: R2_BUCKET,
+            Prefix: `backups/${backupId}/`
+        });
+        const listResponse = await s3Client.send(listCommand);
+        
+        if (!listResponse.Contents || listResponse.Contents.length === 0) {
             return res.status(404).json({ error: 'Backup not found' });
         }
-
-        // Delete backup directory
-        fs.rmSync(backupDir, { recursive: true, force: true });
+        
+        // Delete all files in the backup
+        for (const obj of listResponse.Contents) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: R2_BUCKET,
+                Key: obj.Key
+            });
+            await s3Client.send(deleteCommand);
+        }
 
         // Update metadata
-        const metadata = getBackupMetadata();
+        const metadata = await getBackupMetadata();
         metadata.backups = metadata.backups.filter(b => b.id !== backupId);
-        saveBackupMetadata(metadata);
+        await saveBackupMetadata(metadata);
 
         // Log the action
         await createAuditLog({
@@ -937,13 +1068,13 @@ router.delete('/backups/:backupId', async (req, res) => {
             details: { backupId }
         });
 
-        res.json({ success: true, message: 'Backup deleted' });
+        res.json({ success: true, message: 'Backup deleted from R2 storage' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// POST /api/admin/restore-backup/:backupId - Restore from backup (DANGEROUS)
+// POST /api/admin/restore-backup/:backupId - Restore from backup (DANGEROUS) - reads from R2
 router.post('/restore-backup/:backupId', async (req, res) => {
     try {
         if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
@@ -958,15 +1089,24 @@ router.post('/restore-backup/:backupId', async (req, res) => {
             });
         }
 
-        const backupDir = path.join(__dirname, '..', 'backups', backupId);
-
-        if (!fs.existsSync(backupDir)) {
+        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+            return res.status(500).json({ error: 'R2 storage not configured' });
+        }
+        
+        const { GetObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+        const s3Client = getR2Client();
+        
+        // List all files in this backup
+        const listCommand = new ListObjectsV2Command({
+            Bucket: R2_BUCKET,
+            Prefix: `backups/${backupId}/`
+        });
+        const listResponse = await s3Client.send(listCommand);
+        
+        if (!listResponse.Contents || listResponse.Contents.length === 0) {
             return res.status(404).json({ error: 'Backup not found' });
         }
 
-        // Create a backup before restoring
-        const preRestoreBackupId = `pre-restore-${Date.now()}`;
-        
         const restored = [];
         const errors = [];
 
@@ -981,11 +1121,20 @@ router.post('/restore-backup/:backupId', async (req, res) => {
         for (const [name, Model] of Object.entries(collectionMap)) {
             if (collections.length > 0 && !collections.includes(name)) continue;
 
-            const filePath = path.join(backupDir, `${name}.json`);
-            if (!fs.existsSync(filePath)) continue;
+            const key = `backups/${backupId}/${name}.json`;
+            
+            // Check if this collection exists in the backup
+            const exists = listResponse.Contents.some(obj => obj.Key === key);
+            if (!exists) continue;
 
             try {
-                const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                const getCommand = new GetObjectCommand({
+                    Bucket: R2_BUCKET,
+                    Key: key
+                });
+                const response = await s3Client.send(getCommand);
+                const bodyString = await response.Body.transformToString();
+                const data = JSON.parse(bodyString);
                 
                 // Clear existing data and insert backup data
                 await Model.deleteMany({});
@@ -1008,7 +1157,7 @@ router.post('/restore-backup/:backupId', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Restore completed',
+            message: 'Restore completed from R2 backup',
             restored,
             errors: errors.length > 0 ? errors : undefined
         });
