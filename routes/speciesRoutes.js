@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Species } = require('../database/models');
+const { Species, SpeciesConfig } = require('../database/models');
 
 /**
  * GET /api/species
@@ -82,6 +82,62 @@ router.post('/', async (req, res) => {
 router.get('/categories', (req, res) => {
     const categories = ['Rodent', 'Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'];
     res.json(categories);
+});
+
+/**
+ * GET /api/species/config/:speciesName
+ * Get public config for a species (fieldReplacements and hiddenFields only)
+ * This is a public endpoint for the frontend to use for dynamic labels
+ */
+router.get('/config/:speciesName', async (req, res) => {
+    try {
+        const { speciesName } = req.params;
+        
+        const config = await SpeciesConfig.findOne({ speciesName, isActive: true });
+        
+        if (!config) {
+            // Return empty config - frontend will use default labels
+            return res.json({
+                speciesName,
+                fieldReplacements: {},
+                hiddenFields: []
+            });
+        }
+        
+        // Only return public-safe fields
+        res.json({
+            speciesName: config.speciesName,
+            fieldReplacements: config.fieldReplacements || {},
+            hiddenFields: config.hiddenFields || []
+        });
+    } catch (error) {
+        console.error('Error fetching species config:', error);
+        res.status(500).json({ message: 'Failed to fetch species config' });
+    }
+});
+
+/**
+ * GET /api/species/configs
+ * Get all species configs in one call (for caching on frontend)
+ */
+router.get('/configs', async (req, res) => {
+    try {
+        const configs = await SpeciesConfig.find({ isActive: true });
+        
+        // Convert to a map keyed by speciesName
+        const configMap = {};
+        configs.forEach(config => {
+            configMap[config.speciesName] = {
+                fieldReplacements: config.fieldReplacements || {},
+                hiddenFields: config.hiddenFields || []
+            };
+        });
+        
+        res.json(configMap);
+    } catch (error) {
+        console.error('Error fetching species configs:', error);
+        res.status(500).json({ message: 'Failed to fetch species configs' });
+    }
 });
 
 /**
