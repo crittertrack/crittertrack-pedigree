@@ -566,15 +566,15 @@ router.get('/marketplace', async (req, res) => {
             .limit(limit)
             .lean();
 
-        // Fetch owner info for each animal
-        const ownerIds = [...new Set(animals.map(a => a.ownerId?.toString()).filter(Boolean))];
-        const owners = await User.find({ _id: { $in: ownerIds } })
+        // Fetch owner info for each animal - use ownerId_public to look up owners
+        const ownerPublicIds = [...new Set(animals.map(a => a.ownerId_public).filter(Boolean))];
+        const owners = await User.find({ id_public: { $in: ownerPublicIds } })
             .select('id_public personalName breederName showBreederName country profileImage')
             .lean();
         
         const ownerMap = {};
         owners.forEach(o => {
-            ownerMap[o._id.toString()] = {
+            ownerMap[o.id_public] = {
                 id_public: o.id_public,
                 displayName: o.showBreederName && o.breederName ? o.breederName : o.personalName,
                 country: o.country || null,
@@ -585,7 +585,7 @@ router.get('/marketplace', async (req, res) => {
         // Enrich animals with owner display info
         const enrichedAnimals = animals.map(animal => ({
             ...animal,
-            ownerInfo: animal.ownerId ? ownerMap[animal.ownerId.toString()] : null,
+            ownerInfo: animal.ownerId_public ? ownerMap[animal.ownerId_public] : null,
             listingType: animal.isForSale && animal.availableForBreeding ? 'both' 
                         : animal.isForSale ? 'sale' 
                         : 'stud'
