@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { checkRole } = require('../middleware/authMiddleware');
 const { validateModerationInput } = require('../middleware/validationMiddleware');
-const { createAuditLog, getAuditLogs } = require('../utils/auditLogger');
+const { createAuditLog, getAuditLogs, logFailedAction, categorizeError } = require('../utils/auditLogger');
 const {
     User,
     ProfileReport,
@@ -215,7 +215,25 @@ router.post('/users/:userId/status', requireModerator, validateModerationInput, 
         });
     } catch (error) {
         console.error('[MODERATION STATUS] Failed to update user status:', error);
-        res.status(500).json({ message: 'Unable to update user status.' });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'user_status_update',
+            targetType: 'user',
+            targetId: req.params.userId,
+            details: { attemptedStatus: req.body.status, durationDays: req.body.durationDays },
+            reason: req.body.reason,
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -326,7 +344,25 @@ router.post('/users/:userId/warn', requireModerator, validateModerationInput, as
         });
     } catch (error) {
         console.error('[MODERATION WARN] Failed to warn user:', error);
-        res.status(500).json({ message: 'Unable to record warning.' });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'user_warn',
+            targetType: 'user',
+            targetId: req.params.userId,
+            details: { category: req.body.category },
+            reason: req.body.reason,
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -405,7 +441,25 @@ router.post('/users/:userId/lift-warning', requireModerator, validateModerationI
         });
     } catch (error) {
         console.error('[MODERATION LIFT_WARNING] Failed to lift warning:', error);
-        res.status(500).json({ message: 'Unable to lift warning.' });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'warning_lift',
+            targetType: 'user',
+            targetId: req.params.userId,
+            details: { warningIndex: req.body.warningIndex },
+            reason: req.body.reason,
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -415,7 +469,9 @@ const reportModelMap = {
         model: ProfileReport,
         populate: [
             { path: 'reporterId', select: 'personalName breederName email id_public' },
-            { path: 'reportedUserId', select: 'personalName breederName email id_public profileImage bio websiteUrl showPersonalName showBreederName' }
+            { path: 'reportedUserId', select: 'personalName breederName email id_public profileImage bio websiteUrl showPersonalName showBreederName' },
+            { path: 'assignedTo', select: 'personalName breederName email id_public' },
+            { path: 'assignedBy', select: 'personalName breederName email id_public' }
         ]
     },
     animal: {
@@ -429,7 +485,9 @@ const reportModelMap = {
                     path: 'ownerId',
                     select: 'personalName breederName email id_public profileImage'
                 }
-            }
+            },
+            { path: 'assignedTo', select: 'personalName breederName email id_public' },
+            { path: 'assignedBy', select: 'personalName breederName email id_public' }
         ]
     },
     message: {
@@ -437,7 +495,9 @@ const reportModelMap = {
         populate: [
             { path: 'reporterId', select: 'personalName breederName email id_public' },
             { path: 'reportedUserId', select: 'personalName breederName email id_public profileImage' },
-            { path: 'messageId', select: 'message senderId receiverId createdAt' }
+            { path: 'messageId', select: 'message senderId receiverId createdAt' },
+            { path: 'assignedTo', select: 'personalName breederName email id_public' },
+            { path: 'assignedBy', select: 'personalName breederName email id_public' }
         ]
     }
 };
@@ -498,7 +558,7 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
             return res.status(400).json({ message: 'Invalid report type.' });
         }
 
-        const allowedStatuses = ['pending', 'reviewed', 'resolved', 'dismissed'];
+        const allowedStatuses = ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'];
         if (status && !allowedStatuses.includes(status)) {
             return res.status(400).json({ message: 'Invalid report status.' });
         }
@@ -533,7 +593,256 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
         });
     } catch (error) {
         console.error('Failed to update report:', error);
-        res.status(500).json({ message: 'Unable to update report.' });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'report_status_update',
+            targetType: `${req.params.type}_report`,
+            targetId: req.params.reportId,
+            details: { attemptedStatus: req.body.status },
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// POST /api/moderation/reports/:type/:reportId/assign - Assign report to a moderator
+router.post('/reports/:type/:reportId/assign', requireModerator, async (req, res) => {
+    try {
+        const { type, reportId } = req.params;
+        const { moderatorId } = req.body; // null to unassign
+        const config = reportModelMap[type];
+
+        if (!config) {
+            return res.status(400).json({ message: 'Invalid report type.' });
+        }
+
+        const report = await config.model.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found.' });
+        }
+
+        // If moderatorId provided, verify the user exists and is a moderator
+        let assignedModerator = null;
+        if (moderatorId) {
+            assignedModerator = await User.findById(moderatorId);
+            if (!assignedModerator) {
+                return res.status(404).json({ message: 'Moderator not found.' });
+            }
+            if (!['moderator', 'admin'].includes(assignedModerator.role)) {
+                return res.status(400).json({ message: 'User is not a moderator.' });
+            }
+        }
+
+        const previousAssignment = report.assignedTo;
+        
+        // Update assignment
+        report.assignedTo = moderatorId || null;
+        report.assignedBy = moderatorId ? req.user.id : null;
+        report.assignedAt = moderatorId ? new Date() : null;
+        
+        // Auto-set status to in_progress when assigned (if currently pending)
+        if (moderatorId && report.status === 'pending') {
+            report.status = 'in_progress';
+        }
+        // Reset to pending if unassigned and was in_progress
+        if (!moderatorId && report.status === 'in_progress') {
+            report.status = 'pending';
+        }
+
+        await report.save();
+
+        // Populate for response
+        await report.populate(config.populate);
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: moderatorId ? 'report_assigned' : 'report_unassigned',
+            targetType: `${type}_report`,
+            targetId: report._id,
+            targetName: `${type} report ${report._id}`,
+            details: {
+                assignedTo: assignedModerator ? {
+                    id: assignedModerator._id,
+                    name: assignedModerator.breederName || assignedModerator.personalName || assignedModerator.email
+                } : null,
+                previousAssignment: previousAssignment || null,
+                newStatus: report.status
+            }
+        });
+
+        res.json({
+            message: moderatorId ? 'Report assigned successfully.' : 'Report unassigned.',
+            report
+        });
+    } catch (error) {
+        console.error('Failed to assign report:', error);
+        
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'report_assignment',
+            targetType: `${req.params.type}_report`,
+            targetId: req.params.reportId,
+            details: { attemptedAssignment: req.body.moderatorId },
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// POST /api/moderation/reports/:type/:reportId/claim - Moderator claims a report for themselves
+router.post('/reports/:type/:reportId/claim', requireModerator, async (req, res) => {
+    try {
+        const { type, reportId } = req.params;
+        const config = reportModelMap[type];
+
+        if (!config) {
+            return res.status(400).json({ message: 'Invalid report type.' });
+        }
+
+        const report = await config.model.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found.' });
+        }
+
+        // Check if already assigned to someone else
+        if (report.assignedTo && report.assignedTo.toString() !== req.user.id) {
+            const assignee = await User.findById(report.assignedTo).select('personalName breederName email');
+            return res.status(409).json({ 
+                message: 'Report is already assigned to another moderator.',
+                assignedTo: assignee ? {
+                    name: assignee.breederName || assignee.personalName || assignee.email
+                } : null
+            });
+        }
+
+        // Claim the report
+        report.assignedTo = req.user.id;
+        report.assignedBy = req.user.id;
+        report.assignedAt = new Date();
+        
+        if (report.status === 'pending') {
+            report.status = 'in_progress';
+        }
+
+        await report.save();
+        await report.populate(config.populate);
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'report_claimed',
+            targetType: `${type}_report`,
+            targetId: report._id,
+            targetName: `${type} report ${report._id}`,
+            details: { newStatus: report.status }
+        });
+
+        res.json({
+            message: 'Report claimed successfully.',
+            report
+        });
+    } catch (error) {
+        console.error('Failed to claim report:', error);
+        
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'report_claim',
+            targetType: `${req.params.type}_report`,
+            targetId: req.params.reportId,
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// GET /api/moderation/moderators/workload - Get moderator workload stats
+router.get('/moderators/workload', requireModerator, async (req, res) => {
+    try {
+        // Get all moderators
+        const moderators = await User.find({ 
+            role: { $in: ['moderator', 'admin'] } 
+        }).select('personalName breederName email role id_public');
+
+        // Get assignment counts per moderator
+        const workloadStats = await Promise.all(moderators.map(async (mod) => {
+            const [profileCount, animalCount, messageCount] = await Promise.all([
+                ProfileReport.countDocuments({ assignedTo: mod._id, status: { $in: ['pending', 'in_progress'] } }),
+                AnimalReport.countDocuments({ assignedTo: mod._id, status: { $in: ['pending', 'in_progress'] } }),
+                MessageReport.countDocuments({ assignedTo: mod._id, status: { $in: ['pending', 'in_progress'] } })
+            ]);
+
+            return {
+                moderator: {
+                    _id: mod._id,
+                    id_public: mod.id_public,
+                    name: mod.breederName || mod.personalName || mod.email,
+                    email: mod.email,
+                    role: mod.role
+                },
+                assignedReports: {
+                    profile: profileCount,
+                    animal: animalCount,
+                    message: messageCount,
+                    total: profileCount + animalCount + messageCount
+                }
+            };
+        }));
+
+        // Also get unassigned report counts
+        const [unassignedProfile, unassignedAnimal, unassignedMessage] = await Promise.all([
+            ProfileReport.countDocuments({ assignedTo: null, status: 'pending' }),
+            AnimalReport.countDocuments({ assignedTo: null, status: 'pending' }),
+            MessageReport.countDocuments({ assignedTo: null, status: 'pending' })
+        ]);
+
+        res.json({
+            moderators: workloadStats,
+            unassigned: {
+                profile: unassignedProfile,
+                animal: unassignedAnimal,
+                message: unassignedMessage,
+                total: unassignedProfile + unassignedAnimal + unassignedMessage
+            }
+        });
+    } catch (error) {
+        console.error('Failed to fetch moderator workload:', error);
+        
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'get_moderator_workload',
+            targetType: 'system',
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -572,7 +881,24 @@ router.delete('/users/:userId/image', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to remove profile image:', error);
-        res.status(500).json({ message: 'Unable to remove profile image' });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'profile_image_remove',
+            targetType: 'user',
+            targetId: req.params.userId,
+            reason: req.body.reason,
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -621,7 +947,24 @@ router.delete('/animals/:animalId/image', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to remove animal image:', error);
-        res.status(500).json({ message: 'Unable to remove animal image' });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'animal_image_remove',
+            targetType: 'animal',
+            targetId: req.params.animalId,
+            reason: req.body.reason,
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -798,7 +1141,25 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
         });
     } catch (error) {
         console.error('[MODERATION EDIT] Failed to edit content:', error);
-        res.status(500).json({ message: 'Unable to edit content', error: error.message });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'content_edit',
+            targetType: req.params.contentType,
+            targetId: req.params.contentId,
+            details: { fieldsAttempted: Object.keys(req.body.fieldEdits || {}) },
+            reason: req.body.reason,
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            message: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
@@ -813,7 +1174,12 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
             startDate,
             endDate,
             limit = 50,
-            skip = 0
+            skip = 0,
+            page = 1,
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
+            failedOnly,
+            search
         } = req.query;
 
         const filters = {};
@@ -823,11 +1189,19 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
         if (targetId) filters.targetId = targetId;
         if (startDate) filters.startDate = startDate;
         if (endDate) filters.endDate = endDate;
+        if (failedOnly === 'true') filters.failedOnly = true;
+        if (search) filters.search = search;
+
+        // Calculate skip from page if page is provided
+        const calculatedSkip = page > 1 ? (page - 1) * Number(limit) : Number(skip);
+
+        // Build sort string (prefix with - for descending)
+        const sortString = sortOrder === 'asc' ? sortBy : `-${sortBy}`;
 
         const auditData = await getAuditLogs(filters, {
             limit: Number(limit) || 50,
-            skip: Number(skip) || 0,
-            sort: '-createdAt'
+            skip: calculatedSkip,
+            sort: sortString
         });
 
         res.json(auditData);
@@ -912,7 +1286,23 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
         });
     } catch (error) {
         console.error('Failed to send broadcast:', error);
-        res.status(500).json({ error: 'Failed to send broadcast message' });
+        
+        // Log the failed action
+        await logFailedAction({
+            ...buildAuditMetadata(req),
+            attemptedAction: 'broadcast_send',
+            targetType: 'system',
+            details: { title: req.body.title, type: req.body.type },
+            error
+        });
+        
+        const { code, userMessage, isRetryable } = categorizeError(error);
+        res.status(500).json({ 
+            error: userMessage,
+            errorCode: code,
+            isRetryable,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 

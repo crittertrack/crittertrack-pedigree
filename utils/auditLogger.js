@@ -13,6 +13,9 @@ const { AuditLog } = require('../database/models');
  * @param {String} params.reason - Reason provided for the action
  * @param {String} params.ipAddress - IP address of the moderator
  * @param {String} params.userAgent - User agent of the moderator
+ * @param {Boolean} params.success - Whether the action succeeded (default: true)
+ * @param {String} params.errorMessage - Error message if action failed
+ * @param {String} params.errorCode - Error code/type for categorization
  */
 async function createAuditLog({
     moderatorId,
@@ -24,25 +27,39 @@ async function createAuditLog({
     details = {},
     reason = null,
     ipAddress = null,
-    userAgent = null
+    userAgent = null,
+    success = true,
+    errorMessage = null,
+    errorCode = null
 }) {
     try {
-        console.log(`[AUDIT LOG] Creating audit log: action=${action}, moderator=${moderatorEmail}, targetType=${targetType}`);
+        const logLevel = success ? 'INFO' : 'ERROR';
+        console.log(`[AUDIT LOG] [${logLevel}] Creating audit log: action=${action}, moderator=${moderatorEmail}, targetType=${targetType}, success=${success}`);
         
         // Set specific target fields based on targetType for proper population
         const targetUserId = targetType?.toLowerCase() === 'user' ? targetId : null;
         const targetAnimalId = targetType?.toLowerCase() === 'animal' ? targetId : null;
         
+        // Include error info in details if action failed
+        const enhancedDetails = {
+            ...details,
+            ...(success === false && {
+                failed: true,
+                errorMessage: errorMessage || 'Unknown error',
+                errorCode: errorCode || 'UNKNOWN_ERROR'
+            })
+        };
+        
         const auditEntry = new AuditLog({
             moderatorId,
             moderatorEmail,
-            action,
+            action: success ? action : `${action}_failed`,
             targetType,
             targetId,
             targetUserId,
             targetAnimalId,
             targetName,
-            details,
+            details: enhancedDetails,
             reason,
             ipAddress,
             userAgent
@@ -50,7 +67,7 @@ async function createAuditLog({
 
         console.log(`[AUDIT LOG] Audit entry created, saving to database...`);
         const savedEntry = await auditEntry.save();
-        console.log(`[AUDIT LOG] ✅ Successfully saved audit log: ${action} by ${moderatorEmail}`);
+        console.log(`[AUDIT LOG] ✅ Successfully saved audit log: ${action}${success ? '' : '_failed'} by ${moderatorEmail}`);
         
         return savedEntry;
     } catch (error) {
@@ -59,6 +76,119 @@ async function createAuditLog({
         // Don't throw - we don't want audit logging failures to break operations
         return null;
     }
+}
+
+/**
+ * Logs a failed moderation action - convenience wrapper for createAuditLog
+ * @param {Object} params - Same as createAuditLog plus error details
+ * @param {Error|String} params.error - The error object or message
+ * @param {String} params.attemptedAction - What was being attempted
+ */
+async function logFailedAction({
+    moderatorId,
+    moderatorEmail,
+    attemptedAction,
+    targetType,
+    targetId = null,
+    targetName = null,
+    details = {},
+    reason = null,
+    ipAddress = null,
+    userAgent = null,
+    error
+}) {
+    // Extract error info
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode = error instanceof Error ? (error.code || error.name || 'ERROR') : 'UNKNOWN_ERROR';
+    const errorStack = error instanceof Error ? error.stack : null;
+    
+    console.error(`[AUDIT LOG] ❌ Failed action: ${attemptedAction}`, {
+        moderatorEmail,
+        targetType,
+        targetId,
+        errorMessage,
+        errorCode
+    });
+    
+    return createAuditLog({
+        moderatorId,
+        moderatorEmail,
+        action: attemptedAction,
+        targetType,
+        targetId,
+        targetName,
+        details: {
+            ...details,
+            errorStack: errorStack ? errorStack.split('\n').slice(0, 5).join('\n') : null
+        },
+        reason,
+        ipAddress,
+        userAgent,
+        success: false,
+        errorMessage,
+        errorCode
+    });
+}
+
+/**
+ * Categorizes errors for better reporting
+ * @param {Error} error - The error to categorize
+ * @returns {Object} - { code, userMessage, isRetryable }
+ */
+function categorizeError(error) {
+    const message = error?.message?.toLowerCase() || '';
+    
+    // Database errors
+    if (message.includes('mongo') || message.includes('connection') || error?.name === 'MongoError') {
+        return {
+            code: 'DATABASE_ERROR',
+            userMessage: 'Database temporarily unavailable. Please try again.',
+            isRetryable: true
+        };
+    }
+    
+    // Validation errors
+    if (message.includes('validation') || error?.name === 'ValidationError') {
+        return {
+            code: 'VALIDATION_ERROR',
+            userMessage: 'Invalid input data. Please check your inputs.',
+            isRetryable: false
+        };
+    }
+    
+    // Not found errors
+    if (message.includes('not found') || message.includes('does not exist')) {
+        return {
+            code: 'NOT_FOUND',
+            userMessage: 'The requested resource was not found.',
+            isRetryable: false
+        };
+    }
+    
+    // Permission errors
+    if (message.includes('permission') || message.includes('unauthorized') || message.includes('forbidden')) {
+        return {
+            code: 'PERMISSION_DENIED',
+            userMessage: 'You do not have permission to perform this action.',
+            isRetryable: false
+        };
+    }
+    
+    // Network/timeout errors
+    if (message.includes('timeout') || message.includes('econnrefused') || message.includes('network')) {
+        return {
+            code: 'NETWORK_ERROR',
+            userMessage: 'Network error. Please check your connection and try again.',
+            isRetryable: true
+        };
+    }
+    
+    // Default
+    return {
+        code: 'INTERNAL_ERROR',
+        userMessage: 'An unexpected error occurred. Please try again later.',
+        isRetryable: true
+    };
 }
 
 /**
@@ -73,7 +203,9 @@ async function getAuditLogs(filters = {}, options = {}) {
         targetType,
         targetId,
         startDate,
-        endDate
+        endDate,
+        failedOnly,
+        search
     } = filters;
 
     const {
@@ -89,10 +221,30 @@ async function getAuditLogs(filters = {}, options = {}) {
     if (targetType) query.targetType = targetType;
     if (targetId) query.targetId = targetId;
     
+    // Filter for failed actions only
+    if (failedOnly) {
+        query.action = { $regex: /_failed$/, $options: 'i' };
+    }
+    
+    // Search in reason, targetName, action, or moderatorEmail
+    if (search) {
+        query.$or = [
+            { reason: { $regex: search, $options: 'i' } },
+            { targetName: { $regex: search, $options: 'i' } },
+            { action: { $regex: search, $options: 'i' } },
+            { moderatorEmail: { $regex: search, $options: 'i' } }
+        ];
+    }
+    
     if (startDate || endDate) {
         query.createdAt = {};
         if (startDate) query.createdAt.$gte = new Date(startDate);
-        if (endDate) query.createdAt.$lte = new Date(endDate);
+        if (endDate) {
+            // Set end date to end of day
+            const endOfDay = new Date(endDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.createdAt.$lte = endOfDay;
+        }
     }
 
     const logs = await AuditLog.find(query)
@@ -123,5 +275,7 @@ async function getAuditLogs(filters = {}, options = {}) {
 
 module.exports = {
     createAuditLog,
-    getAuditLogs
+    getAuditLogs,
+    logFailedAction,
+    categorizeError
 };

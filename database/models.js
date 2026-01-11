@@ -625,10 +625,14 @@ const MessageReportSchema = new mongoose.Schema({
     reason: { type: String, required: true },
     status: { 
         type: String, 
-        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
+        enum: ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'], 
         default: 'pending',
         index: true 
     },
+    // Assignment fields
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    assignedAt: { type: Date, default: null },
     adminNotes: { type: String, default: null },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: { type: Date, default: null },
@@ -643,10 +647,14 @@ const ProfileReportSchema = new mongoose.Schema({
     reason: { type: String, required: true },
     status: { 
         type: String, 
-        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
+        enum: ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'], 
         default: 'pending',
         index: true 
     },
+    // Assignment fields
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    assignedAt: { type: Date, default: null },
     adminNotes: { type: String, default: null },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: { type: Date, default: null },
@@ -661,10 +669,14 @@ const AnimalReportSchema = new mongoose.Schema({
     reason: { type: String, required: true },
     status: { 
         type: String, 
-        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
+        enum: ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'], 
         default: 'pending',
         index: true 
     },
+    // Assignment fields
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    assignedAt: { type: Date, default: null },
     adminNotes: { type: String, default: null },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: { type: Date, default: null },
