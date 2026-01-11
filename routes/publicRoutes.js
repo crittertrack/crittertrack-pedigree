@@ -123,12 +123,15 @@ router.get('/profiles/search', async (req, res) => {
     }
 });
 
-// GET /api/public/users/newest - Get newest registered users
+// GET /api/public/users/newest - Get newest registered users (within last 30 days)
 router.get('/users/newest', async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit || '10', 10), 50);
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         
-        const newestUsers = await PublicProfile.find({})
+        const newestUsers = await PublicProfile.find({
+            createdAt: { $gte: thirtyDaysAgo }
+        })
             .sort({ createdAt: -1 })
             .limit(limit)
             .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus')
