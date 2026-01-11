@@ -1634,7 +1634,7 @@ router.get('/analytics/overview', requireModerator, async (req, res) => {
             newReportsInRange,
             resolvedReportsInRange
         ] = await Promise.all([
-            User.countDocuments({ createdAt: { $gte: startDate } }),
+            User.countDocuments({ creationDate: { $gte: startDate } }),
             Promise.all([
                 ProfileReport.countDocuments({ createdAt: { $gte: startDate } }),
                 AnimalReport.countDocuments({ createdAt: { $gte: startDate } }),
