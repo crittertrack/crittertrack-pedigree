@@ -183,12 +183,27 @@ const AnimalSchema = new mongoose.Schema({
     // Tab 3: Physical Profile Fields
     coatPattern: { type: String, default: null },
     lifeStage: { type: String, default: null },
+    // Physical measurements (Dog/Cat specific)
+    heightAtWithers: { type: String, default: null },
+    bodyLength: { type: String, default: null },
+    chestGirth: { type: String, default: null },
+    adultWeight: { type: String, default: null },
+    bodyConditionScore: { type: String, default: null }, // 1-9 canine / 1-5 feline
     
     // Tab 4: Identification Fields
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
     breed: { type: String, default: null },
-    strain: { type: String, default: null },
+    strain: { type: String, default: null }, // "Bloodline" for dogs/cats
+    // Dog/Cat specific identification
+    licenseNumber: { type: String, default: null },
+    licenseJurisdiction: { type: String, default: null },
+    rabiesTagNumber: { type: String, default: null },
+    tattooId: { type: String, default: null },
+    akcRegistrationNumber: { type: String, default: null },
+    fciRegistrationNumber: { type: String, default: null },
+    cfaRegistrationNumber: { type: String, default: null },
+    workingRegistryIds: { type: String, default: null }, // herding, hunting, service
     
     // Tab 5: Lineage & Origin Fields
     origin: { type: String, default: 'Captive-bred' },
@@ -223,6 +238,15 @@ const AnimalSchema = new mongoose.Schema({
     isDamAnimal: { type: Boolean, default: false },
     damFertilityStatus: { type: String, default: 'Unknown' },
     damFertilityNotes: { type: String, default: null },
+    // Dog/Cat specific reproduction fields
+    estrusCycleLength: { type: Number, default: null }, // days
+    gestationLength: { type: Number, default: null }, // days
+    artificialInseminationUsed: { type: Boolean, default: null },
+    whelpingDate: { type: Date, default: null }, // Dog delivery
+    queeningDate: { type: Date, default: null }, // Cat delivery
+    deliveryMethod: { type: String, default: null }, // Natural, C-section
+    reproductiveComplications: { type: String, default: null },
+    reproductiveClearances: { type: String, default: null },
     
     // Sale fields
     isForSale: { type: Boolean, default: false },
@@ -241,6 +265,16 @@ const AnimalSchema = new mongoose.Schema({
     labResults: { type: String, default: null },
     vetVisits: { type: String, default: null },
     primaryVet: { type: String, default: null },
+    // Dog/Cat specific health fields
+    spayNeuterDate: { type: Date, default: null },
+    parasitePreventionSchedule: { type: String, default: null },
+    heartwormStatus: { type: String, default: null },
+    hipElbowScores: { type: String, default: null },
+    geneticTestResults: { type: String, default: null },
+    eyeClearance: { type: String, default: null },
+    cardiacClearance: { type: String, default: null },
+    dentalRecords: { type: String, default: null },
+    chronicConditions: { type: String, default: null },
     
     // Tab 8: Nutrition & Husbandry Fields
     dietType: { type: String, default: null },
@@ -253,18 +287,47 @@ const AnimalSchema = new mongoose.Schema({
     lighting: { type: String, default: null },
     noise: { type: String, default: null },
     enrichment: { type: String, default: null },
+    // Dog/Cat specific husbandry
+    exerciseRequirements: { type: String, default: null },
+    dailyExerciseMinutes: { type: Number, default: null },
+    groomingNeeds: { type: String, default: null },
+    sheddingLevel: { type: String, default: null },
+    crateTrained: { type: Boolean, default: null },
+    litterTrained: { type: Boolean, default: null },
+    leashTrained: { type: Boolean, default: null },
     
     // Tab 9: Behavior & Welfare Fields
     temperament: { type: String, default: null },
     handlingTolerance: { type: String, default: null },
     socialStructure: { type: String, default: null },
     activityCycle: { type: String, default: null },
+    // Dog/Cat specific training & behavior
+    trainingLevel: { type: String, default: null },
+    trainingDisciplines: { type: String, default: null },
+    certifications: { type: String, default: null },
+    workingRole: { type: String, default: null },
+    behavioralIssues: { type: String, default: null },
+    biteHistory: { type: String, default: null },
+    reactivityNotes: { type: String, default: null },
+    
+    // Tab 10: Show Tab (Universal for all species)
+    showTitles: { type: String, default: null },
+    showRatings: { type: String, default: null },
+    judgeComments: { type: String, default: null },
+    workingTitles: { type: String, default: null },
+    performanceScores: { type: String, default: null },
     
     // Tab 11: End of Life & Legal Fields
     causeOfDeath: { type: String, default: null },
     necropsyResults: { type: String, default: null },
     insurance: { type: String, default: null },
     legalStatus: { type: String, default: null },
+    endOfLifeCareNotes: { type: String, default: null }, // Dog/Cat specific
+    // Legal & Ownership extensions (Dog/Cat specific)
+    coOwnership: { type: String, default: null },
+    transferHistory: { type: String, default: null },
+    breedingRestrictions: { type: String, default: null },
+    exportRestrictions: { type: String, default: null },
     
     // Growth tracking
     growthRecords: [{ 
@@ -321,7 +384,8 @@ const AnimalSchema = new mongoose.Schema({
         endOfLife: { type: Boolean, default: true },
         legalAdministrative: { type: Boolean, default: true },
         breedingHistory: { type: Boolean, default: true },
-        currentOwner: { type: Boolean, default: true }
+        currentOwner: { type: Boolean, default: true },
+        showTab: { type: Boolean, default: true } // Show titles, ratings, performance
     },
 
 }, { timestamps: true });
