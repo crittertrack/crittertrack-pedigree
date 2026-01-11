@@ -1572,4 +1572,571 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
     }
 });
 
+// ============================================
+// ANALYTICS ENDPOINTS
+// ============================================
+
+// GET /api/moderation/analytics/overview - Get overall analytics data
+router.get('/analytics/overview', requireModerator, async (req, res) => {
+    try {
+        const { range = '30d' } = req.query;
+        
+        // Calculate date range
+        let startDate;
+        const now = new Date();
+        switch (range) {
+            case '7d':
+                startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case '90d':
+                startDate = new Date(now - 90 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                startDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        }
+
+        // Get total counts
+        const [
+            totalUsers,
+            totalAnimals,
+            totalReportsProfile,
+            totalReportsAnimal,
+            totalReportsMessage,
+            pendingReports,
+            activeWarnings,
+            suspendedUsers,
+            bannedUsers
+        ] = await Promise.all([
+            User.countDocuments({}),
+            Animal.countDocuments({}),
+            ProfileReport.countDocuments({}),
+            AnimalReport.countDocuments({}),
+            MessageReport.countDocuments({}),
+            Promise.all([
+                ProfileReport.countDocuments({ status: 'pending' }),
+                AnimalReport.countDocuments({ status: 'pending' }),
+                MessageReport.countDocuments({ status: 'pending' })
+            ]).then(counts => counts.reduce((a, b) => a + b, 0)),
+            User.countDocuments({ warningCount: { $gt: 0 }, accountStatus: 'normal' }),
+            User.countDocuments({ accountStatus: 'suspended' }),
+            User.countDocuments({ accountStatus: 'banned' })
+        ]);
+
+        // Get counts in date range
+        const [
+            newUsersInRange,
+            newReportsInRange,
+            resolvedReportsInRange
+        ] = await Promise.all([
+            User.countDocuments({ createdAt: { $gte: startDate } }),
+            Promise.all([
+                ProfileReport.countDocuments({ createdAt: { $gte: startDate } }),
+                AnimalReport.countDocuments({ createdAt: { $gte: startDate } }),
+                MessageReport.countDocuments({ createdAt: { $gte: startDate } })
+            ]).then(counts => counts.reduce((a, b) => a + b, 0)),
+            Promise.all([
+                ProfileReport.countDocuments({ status: { $in: ['resolved', 'dismissed'] }, reviewedAt: { $gte: startDate } }),
+                AnimalReport.countDocuments({ status: { $in: ['resolved', 'dismissed'] }, reviewedAt: { $gte: startDate } }),
+                MessageReport.countDocuments({ status: { $in: ['resolved', 'dismissed'] }, reviewedAt: { $gte: startDate } })
+            ]).then(counts => counts.reduce((a, b) => a + b, 0))
+        ]);
+
+        res.json({
+            overview: {
+                totalUsers,
+                totalAnimals,
+                totalReports: totalReportsProfile + totalReportsAnimal + totalReportsMessage,
+                pendingReports,
+                activeWarnings,
+                suspendedUsers,
+                bannedUsers
+            },
+            dateRange: {
+                start: startDate,
+                end: now,
+                range
+            },
+            rangeStats: {
+                newUsers: newUsersInRange,
+                newReports: newReportsInRange,
+                resolvedReports: resolvedReportsInRange
+            }
+        });
+    } catch (error) {
+        console.error('Failed to fetch analytics overview:', error);
+        res.status(500).json({ error: 'Failed to fetch analytics data' });
+    }
+});
+
+// GET /api/moderation/analytics/moderation-actions - Get warnings/suspensions/bans over time
+router.get('/analytics/moderation-actions', requireModerator, async (req, res) => {
+    try {
+        const { range = '30d' } = req.query;
+        
+        // Calculate date range and grouping
+        let startDate, groupBy;
+        const now = new Date();
+        switch (range) {
+            case '7d':
+                startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                groupBy = 'day';
+                break;
+            case '30d':
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                groupBy = 'day';
+                break;
+            case '90d':
+                startDate = new Date(now - 90 * 24 * 60 * 60 * 1000);
+                groupBy = 'week';
+                break;
+            case '1y':
+                startDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
+                groupBy = 'month';
+                break;
+            default:
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                groupBy = 'day';
+        }
+
+        // Get audit logs for moderation actions
+        const auditLogs = await AuditLog.find({
+            action: { $in: ['issue_warning', 'suspend_user', 'ban_user', 'lift_warning', 'unsuspend_user'] },
+            createdAt: { $gte: startDate }
+        }).select('action createdAt').lean();
+
+        // Group by date
+        const actionsByDate = {};
+        auditLogs.forEach(log => {
+            let dateKey;
+            const date = new Date(log.createdAt);
+            
+            if (groupBy === 'day') {
+                dateKey = date.toISOString().split('T')[0];
+            } else if (groupBy === 'week') {
+                // Get start of week (Monday)
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                d.setDate(diff);
+                dateKey = d.toISOString().split('T')[0];
+            } else {
+                // month
+                dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            }
+
+            if (!actionsByDate[dateKey]) {
+                actionsByDate[dateKey] = { warnings: 0, suspensions: 0, bans: 0, lifts: 0 };
+            }
+
+            if (log.action === 'issue_warning') actionsByDate[dateKey].warnings++;
+            else if (log.action === 'suspend_user') actionsByDate[dateKey].suspensions++;
+            else if (log.action === 'ban_user') actionsByDate[dateKey].bans++;
+            else if (log.action === 'lift_warning' || log.action === 'unsuspend_user') actionsByDate[dateKey].lifts++;
+        });
+
+        // Convert to array sorted by date
+        const chartData = Object.entries(actionsByDate)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, data]) => ({
+                date,
+                ...data
+            }));
+
+        // Fill in missing dates
+        const filledData = [];
+        let currentDate = new Date(startDate);
+        while (currentDate <= now) {
+            let dateKey;
+            if (groupBy === 'day') {
+                dateKey = currentDate.toISOString().split('T')[0];
+                currentDate.setDate(currentDate.getDate() + 1);
+            } else if (groupBy === 'week') {
+                const d = new Date(currentDate);
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                d.setDate(diff);
+                dateKey = d.toISOString().split('T')[0];
+                currentDate.setDate(currentDate.getDate() + 7);
+            } else {
+                dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+
+            const existing = actionsByDate[dateKey];
+            if (!filledData.find(d => d.date === dateKey)) {
+                filledData.push({
+                    date: dateKey,
+                    warnings: existing?.warnings || 0,
+                    suspensions: existing?.suspensions || 0,
+                    bans: existing?.bans || 0,
+                    lifts: existing?.lifts || 0
+                });
+            }
+        }
+
+        // Get totals
+        const totals = {
+            warnings: auditLogs.filter(l => l.action === 'issue_warning').length,
+            suspensions: auditLogs.filter(l => l.action === 'suspend_user').length,
+            bans: auditLogs.filter(l => l.action === 'ban_user').length,
+            lifts: auditLogs.filter(l => l.action === 'lift_warning' || l.action === 'unsuspend_user').length
+        };
+
+        res.json({
+            chartData: filledData.sort((a, b) => a.date.localeCompare(b.date)),
+            totals,
+            groupBy,
+            range
+        });
+    } catch (error) {
+        console.error('Failed to fetch moderation actions analytics:', error);
+        res.status(500).json({ error: 'Failed to fetch moderation actions data' });
+    }
+});
+
+// GET /api/moderation/analytics/reports-breakdown - Get reports by category
+router.get('/analytics/reports-breakdown', requireModerator, async (req, res) => {
+    try {
+        const { range = '30d' } = req.query;
+        
+        // Calculate date range
+        let startDate;
+        const now = new Date();
+        switch (range) {
+            case '7d':
+                startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case '90d':
+                startDate = new Date(now - 90 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                startDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        }
+
+        // Get report counts by type
+        const [profileReports, animalReports, messageReports] = await Promise.all([
+            ProfileReport.find({ createdAt: { $gte: startDate } }).select('status createdAt reason').lean(),
+            AnimalReport.find({ createdAt: { $gte: startDate } }).select('status createdAt reason').lean(),
+            MessageReport.find({ createdAt: { $gte: startDate } }).select('status createdAt reason reportType').lean()
+        ]);
+
+        // By type
+        const byType = [
+            { name: 'Profile Reports', value: profileReports.length, color: '#8884d8' },
+            { name: 'Animal Reports', value: animalReports.length, color: '#82ca9d' },
+            { name: 'Message Reports', value: messageReports.length, color: '#ffc658' }
+        ];
+
+        // By status
+        const allReports = [...profileReports, ...animalReports, ...messageReports];
+        const statusCounts = {};
+        allReports.forEach(r => {
+            statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+        });
+        const byStatus = Object.entries(statusCounts).map(([status, count]) => ({
+            name: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+            value: count
+        }));
+
+        // Common report reasons (parse from reason text)
+        const reasonKeywords = {
+            'spam': 0, 'harassment': 0, 'inappropriate': 0, 'scam': 0, 'fraud': 0,
+            'abuse': 0, 'fake': 0, 'stolen': 0, 'offensive': 0, 'other': 0
+        };
+        allReports.forEach(r => {
+            const reasonLower = (r.reason || '').toLowerCase();
+            let matched = false;
+            for (const keyword of Object.keys(reasonKeywords)) {
+                if (keyword !== 'other' && reasonLower.includes(keyword)) {
+                    reasonKeywords[keyword]++;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) reasonKeywords.other++;
+        });
+        const byReason = Object.entries(reasonKeywords)
+            .filter(([_, count]) => count > 0)
+            .map(([reason, count]) => ({
+                name: reason.charAt(0).toUpperCase() + reason.slice(1),
+                value: count
+            }));
+
+        res.json({
+            byType,
+            byStatus,
+            byReason,
+            total: allReports.length,
+            range
+        });
+    } catch (error) {
+        console.error('Failed to fetch reports breakdown:', error);
+        res.status(500).json({ error: 'Failed to fetch reports breakdown data' });
+    }
+});
+
+// GET /api/moderation/analytics/moderator-activity - Get moderator activity stats
+router.get('/analytics/moderator-activity', requireModerator, async (req, res) => {
+    try {
+        const { range = '30d' } = req.query;
+        
+        // Calculate date range
+        let startDate;
+        const now = new Date();
+        switch (range) {
+            case '7d':
+                startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case '90d':
+                startDate = new Date(now - 90 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                startDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        }
+
+        // Get all moderators
+        const moderators = await User.find({ 
+            role: { $in: ['moderator', 'admin'] } 
+        }).select('personalName breederName email role id_public').lean();
+
+        // Get audit logs per moderator
+        const moderatorIds = moderators.map(m => m._id);
+        const auditLogs = await AuditLog.find({
+            moderatorId: { $in: moderatorIds },
+            createdAt: { $gte: startDate }
+        }).select('moderatorId action createdAt').lean();
+
+        // Group by moderator
+        const activityByModerator = moderators.map(mod => {
+            const modLogs = auditLogs.filter(log => log.moderatorId.toString() === mod._id.toString());
+            
+            // Count action types
+            const actions = {
+                warnings: modLogs.filter(l => l.action === 'issue_warning').length,
+                suspensions: modLogs.filter(l => l.action === 'suspend_user').length,
+                bans: modLogs.filter(l => l.action === 'ban_user').length,
+                resolvedReports: modLogs.filter(l => l.action.includes('resolve') || l.action.includes('dismiss')).length,
+                imageRemovals: modLogs.filter(l => l.action.includes('image')).length,
+                total: modLogs.length
+            };
+
+            return {
+                moderator: {
+                    id: mod._id,
+                    id_public: mod.id_public,
+                    name: mod.breederName || mod.personalName || mod.email,
+                    role: mod.role
+                },
+                actions,
+                lastActive: modLogs.length > 0 ? 
+                    modLogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0].createdAt : null
+            };
+        });
+
+        // Sort by total activity
+        activityByModerator.sort((a, b) => b.actions.total - a.actions.total);
+
+        res.json({
+            moderators: activityByModerator,
+            range
+        });
+    } catch (error) {
+        console.error('Failed to fetch moderator activity:', error);
+        res.status(500).json({ error: 'Failed to fetch moderator activity data' });
+    }
+});
+
+// GET /api/moderation/analytics/activity-heatmap - Get activity by hour/day for peak times
+router.get('/analytics/activity-heatmap', requireModerator, async (req, res) => {
+    try {
+        const { range = '30d' } = req.query;
+        
+        // Calculate date range
+        let startDate;
+        const now = new Date();
+        switch (range) {
+            case '7d':
+                startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case '90d':
+                startDate = new Date(now - 90 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                startDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        }
+
+        // Get all reports in range
+        const [profileReports, animalReports, messageReports] = await Promise.all([
+            ProfileReport.find({ createdAt: { $gte: startDate } }).select('createdAt').lean(),
+            AnimalReport.find({ createdAt: { $gte: startDate } }).select('createdAt').lean(),
+            MessageReport.find({ createdAt: { $gte: startDate } }).select('createdAt').lean()
+        ]);
+
+        const allReports = [...profileReports, ...animalReports, ...messageReports];
+
+        // Create heatmap data (7 days x 24 hours)
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const heatmapData = [];
+        
+        for (let day = 0; day < 7; day++) {
+            for (let hour = 0; hour < 24; hour++) {
+                heatmapData.push({
+                    day: days[day],
+                    dayIndex: day,
+                    hour,
+                    count: 0
+                });
+            }
+        }
+
+        // Count reports by day/hour
+        allReports.forEach(report => {
+            const date = new Date(report.createdAt);
+            const day = date.getUTCDay();
+            const hour = date.getUTCHours();
+            const index = day * 24 + hour;
+            if (heatmapData[index]) {
+                heatmapData[index].count++;
+            }
+        });
+
+        // Find peak times
+        const sortedByCount = [...heatmapData].sort((a, b) => b.count - a.count);
+        const peakTimes = sortedByCount.slice(0, 5).map(d => ({
+            day: d.day,
+            hour: `${d.hour}:00`,
+            count: d.count
+        }));
+
+        // Activity by day of week
+        const byDayOfWeek = days.map((day, idx) => {
+            const dayData = heatmapData.filter(h => h.dayIndex === idx);
+            return {
+                name: day,
+                count: dayData.reduce((sum, d) => sum + d.count, 0)
+            };
+        });
+
+        // Activity by hour
+        const byHour = Array.from({ length: 24 }, (_, hour) => {
+            const hourData = heatmapData.filter(h => h.hour === hour);
+            return {
+                hour: `${hour}:00`,
+                count: hourData.reduce((sum, d) => sum + d.count, 0)
+            };
+        });
+
+        res.json({
+            heatmap: heatmapData,
+            peakTimes,
+            byDayOfWeek,
+            byHour,
+            range
+        });
+    } catch (error) {
+        console.error('Failed to fetch activity heatmap:', error);
+        res.status(500).json({ error: 'Failed to fetch activity heatmap data' });
+    }
+});
+
+// GET /api/moderation/analytics/resolution-time - Get average report resolution times
+router.get('/analytics/resolution-time', requireModerator, async (req, res) => {
+    try {
+        const { range = '30d' } = req.query;
+        
+        // Calculate date range
+        let startDate;
+        const now = new Date();
+        switch (range) {
+            case '7d':
+                startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case '90d':
+                startDate = new Date(now - 90 * 24 * 60 * 60 * 1000);
+                break;
+            case '1y':
+                startDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        }
+
+        // Get resolved reports with timestamps
+        const [profileReports, animalReports, messageReports] = await Promise.all([
+            ProfileReport.find({ 
+                status: { $in: ['resolved', 'dismissed'] },
+                reviewedAt: { $gte: startDate }
+            }).select('createdAt reviewedAt').lean(),
+            AnimalReport.find({ 
+                status: { $in: ['resolved', 'dismissed'] },
+                reviewedAt: { $gte: startDate }
+            }).select('createdAt reviewedAt').lean(),
+            MessageReport.find({ 
+                status: { $in: ['resolved', 'dismissed'] },
+                reviewedAt: { $gte: startDate }
+            }).select('createdAt reviewedAt').lean()
+        ]);
+
+        // Calculate resolution times (in hours)
+        const calculateStats = (reports) => {
+            if (reports.length === 0) return { avg: 0, min: 0, max: 0, count: 0 };
+            
+            const times = reports
+                .filter(r => r.createdAt && r.reviewedAt)
+                .map(r => (new Date(r.reviewedAt) - new Date(r.createdAt)) / (1000 * 60 * 60)); // hours
+            
+            if (times.length === 0) return { avg: 0, min: 0, max: 0, count: 0 };
+            
+            return {
+                avg: Math.round((times.reduce((a, b) => a + b, 0) / times.length) * 10) / 10,
+                min: Math.round(Math.min(...times) * 10) / 10,
+                max: Math.round(Math.max(...times) * 10) / 10,
+                count: times.length
+            };
+        };
+
+        const stats = {
+            profile: calculateStats(profileReports),
+            animal: calculateStats(animalReports),
+            message: calculateStats(messageReports),
+            overall: calculateStats([...profileReports, ...animalReports, ...messageReports])
+        };
+
+        res.json({
+            resolutionTimes: stats,
+            range
+        });
+    } catch (error) {
+        console.error('Failed to fetch resolution time analytics:', error);
+        res.status(500).json({ error: 'Failed to fetch resolution time data' });
+    }
+});
+
 module.exports = router;
