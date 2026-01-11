@@ -777,6 +777,186 @@ router.post('/reports/:type/:reportId/claim', requireModerator, async (req, res)
     }
 });
 
+// ============================================
+// DISCUSSION NOTES ENDPOINTS
+// ============================================
+
+// POST /api/moderation/reports/:type/:reportId/notes - Add a discussion note
+router.post('/reports/:type/:reportId/notes', requireModerator, async (req, res) => {
+    try {
+        const { type, reportId } = req.params;
+        const { text } = req.body;
+        const config = reportModelMap[type];
+
+        if (!config) {
+            return res.status(400).json({ message: 'Invalid report type.' });
+        }
+
+        if (!text || text.trim().length === 0) {
+            return res.status(400).json({ message: 'Note text is required.' });
+        }
+
+        if (text.length > 2000) {
+            return res.status(400).json({ message: 'Note text must be 2000 characters or less.' });
+        }
+
+        const report = await config.model.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found.' });
+        }
+
+        // Get author info
+        const author = await User.findById(req.user.id).select('personalName breederName email');
+        const authorName = author.breederName || author.personalName || author.email;
+
+        // Initialize discussionNotes if not exists
+        if (!report.discussionNotes) {
+            report.discussionNotes = [];
+        }
+
+        // Add the new note
+        const newNote = {
+            text: text.trim(),
+            authorId: req.user.id,
+            authorName: authorName,
+            createdAt: new Date(),
+            editedAt: null
+        };
+        report.discussionNotes.push(newNote);
+        await report.save();
+
+        // Get the saved note with its _id
+        const savedNote = report.discussionNotes[report.discussionNotes.length - 1];
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'report_note_added',
+            targetType: `${type}_report`,
+            targetId: report._id,
+            targetName: `${type} report ${report._id}`,
+            details: { noteId: savedNote._id }
+        });
+
+        res.json({
+            message: 'Note added successfully.',
+            note: savedNote,
+            discussionNotes: report.discussionNotes
+        });
+    } catch (error) {
+        console.error('Failed to add note:', error);
+        res.status(500).json({ message: 'Failed to add note.' });
+    }
+});
+
+// PATCH /api/moderation/reports/:type/:reportId/notes/:noteId - Edit own note
+router.patch('/reports/:type/:reportId/notes/:noteId', requireModerator, async (req, res) => {
+    try {
+        const { type, reportId, noteId } = req.params;
+        const { text } = req.body;
+        const config = reportModelMap[type];
+
+        if (!config) {
+            return res.status(400).json({ message: 'Invalid report type.' });
+        }
+
+        if (!text || text.trim().length === 0) {
+            return res.status(400).json({ message: 'Note text is required.' });
+        }
+
+        if (text.length > 2000) {
+            return res.status(400).json({ message: 'Note text must be 2000 characters or less.' });
+        }
+
+        const report = await config.model.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found.' });
+        }
+
+        // Find the note
+        const note = report.discussionNotes?.id(noteId);
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found.' });
+        }
+
+        // Check ownership (only author or admin can edit)
+        if (note.authorId.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'You can only edit your own notes.' });
+        }
+
+        // Update the note
+        note.text = text.trim();
+        note.editedAt = new Date();
+        await report.save();
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'report_note_edited',
+            targetType: `${type}_report`,
+            targetId: report._id,
+            targetName: `${type} report ${report._id}`,
+            details: { noteId: note._id }
+        });
+
+        res.json({
+            message: 'Note updated successfully.',
+            note: note,
+            discussionNotes: report.discussionNotes
+        });
+    } catch (error) {
+        console.error('Failed to edit note:', error);
+        res.status(500).json({ message: 'Failed to edit note.' });
+    }
+});
+
+// DELETE /api/moderation/reports/:type/:reportId/notes/:noteId - Delete own note
+router.delete('/reports/:type/:reportId/notes/:noteId', requireModerator, async (req, res) => {
+    try {
+        const { type, reportId, noteId } = req.params;
+        const config = reportModelMap[type];
+
+        if (!config) {
+            return res.status(400).json({ message: 'Invalid report type.' });
+        }
+
+        const report = await config.model.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found.' });
+        }
+
+        // Find the note
+        const note = report.discussionNotes?.id(noteId);
+        if (!note) {
+            return res.status(404).json({ message: 'Note not found.' });
+        }
+
+        // Check ownership (only author or admin can delete)
+        if (note.authorId.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'You can only delete your own notes.' });
+        }
+
+        // Remove the note
+        report.discussionNotes.pull(noteId);
+        await report.save();
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'report_note_deleted',
+            targetType: `${type}_report`,
+            targetId: report._id,
+            targetName: `${type} report ${report._id}`,
+            details: { noteId: noteId }
+        });
+
+        res.json({
+            message: 'Note deleted successfully.',
+            discussionNotes: report.discussionNotes
+        });
+    } catch (error) {
+        console.error('Failed to delete note:', error);
+        res.status(500).json({ message: 'Failed to delete note.' });
+    }
+});
+
 // GET /api/moderation/moderators/workload - Get moderator workload stats
 router.get('/moderators/workload', requireModerator, async (req, res) => {
     try {

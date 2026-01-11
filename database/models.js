@@ -633,7 +633,14 @@ const MessageReportSchema = new mongoose.Schema({
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     assignedAt: { type: Date, default: null },
-    adminNotes: { type: String, default: null },
+    adminNotes: { type: String, default: null }, // Legacy single note field
+    discussionNotes: [{
+        text: { type: String, required: true },
+        authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        authorName: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+        editedAt: { type: Date, default: null }
+    }],
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: { type: Date, default: null },
 }, { timestamps: true });
@@ -655,7 +662,14 @@ const ProfileReportSchema = new mongoose.Schema({
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     assignedAt: { type: Date, default: null },
-    adminNotes: { type: String, default: null },
+    adminNotes: { type: String, default: null }, // Legacy single note field
+    discussionNotes: [{
+        text: { type: String, required: true },
+        authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        authorName: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+        editedAt: { type: Date, default: null }
+    }],
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: { type: Date, default: null },
 }, { timestamps: true });
@@ -677,7 +691,14 @@ const AnimalReportSchema = new mongoose.Schema({
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     assignedAt: { type: Date, default: null },
-    adminNotes: { type: String, default: null },
+    adminNotes: { type: String, default: null }, // Legacy single note field
+    discussionNotes: [{
+        text: { type: String, required: true },
+        authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        authorName: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+        editedAt: { type: Date, default: null }
+    }],
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     reviewedAt: { type: Date, default: null },
 }, { timestamps: true });
