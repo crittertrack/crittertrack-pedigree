@@ -15,6 +15,7 @@ const {
 } = require('../utils/emailService');
 const { ProfanityError } = require('../utils/profanityFilter');
 const { createAuditLog } = require('../utils/auditLogger');
+const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 const { protect } = require('../middleware/authMiddleware');
 const { User } = require('../database/models');
 
@@ -199,6 +200,16 @@ router.post('/login', async (req, res) => {
 
         // Log admin/moderator logins
         console.log(`[AUTH] Login successful for ${userProfile.email}, role: ${userProfile.role}`);
+
+        // Log user activity
+        logUserActivity({
+            userId: userProfile._id || userProfile.id,
+            id_public: userProfile.id_public,
+            action: USER_ACTIONS.LOGIN,
+            details: { role: userProfile.role },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
 
         res.status(200).json({
             message: 'Login successful!',

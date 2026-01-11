@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
+const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 // This router requires authMiddleware to be applied in index.js
 
 // --- Litter Route Controllers (PROTECTED) ---
@@ -19,6 +20,18 @@ router.post('/', async (req, res) => {
         }
 
         const newLitter = await addLitter(appUserId_backend, litterData);
+
+        // Log user activity
+        logUserActivity({
+            userId: appUserId_backend,
+            id_public: req.user.id_public,
+            action: USER_ACTIONS.LITTER_CREATE,
+            targetType: 'litter',
+            targetId: newLitter._id,
+            details: { birthDate: litterData.birthDate, numberBorn: litterData.numberBorn },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
 
         res.status(201).json({
             message: 'Litter registered successfully!',
@@ -57,6 +70,18 @@ router.put('/:id_backend', async (req, res) => {
 
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
 
+        // Log user activity
+        logUserActivity({
+            userId: appUserId_backend,
+            id_public: req.user.id_public,
+            action: USER_ACTIONS.LITTER_UPDATE,
+            targetType: 'litter',
+            targetId: litterId_backend,
+            details: { fieldsUpdated: Object.keys(updates) },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
+
         res.status(200).json({
             message: 'Litter updated successfully!',
             litter: updatedLitter
@@ -87,6 +112,17 @@ router.delete('/:id_backend', async (req, res) => {
         }
 
         await Litter.deleteOne({ _id: litterId_backend });
+
+        // Log user activity
+        logUserActivity({
+            userId: appUserId_backend,
+            id_public: req.user.id_public,
+            action: USER_ACTIONS.LITTER_DELETE,
+            targetType: 'litter',
+            targetId: litterId_backend,
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
 
         res.status(200).json({ message: 'Litter deleted successfully!' });
     } catch (error) {

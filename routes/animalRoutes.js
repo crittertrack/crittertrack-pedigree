@@ -6,6 +6,7 @@ const { Notification, User, PublicProfile, PublicAnimal } = require('../database
 const fs = require('fs');
 const { calculateInbreedingCoefficient, calculatePairingInbreeding } = require('../utils/inbreeding');
 const { ProfanityError } = require('../utils/profanityFilter');
+const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 // simple disk storage for images (adjust for S3 in production)
 const uploadDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -393,6 +394,19 @@ router.post('/', upload.single('file'), async (req, res) => {
         // Sync to publicanimals collection
         const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
         await syncAnimalToPublic(newAnimal);
+
+        // Log user activity
+        logUserActivity({
+            userId: appUserId_backend,
+            id_public: req.user.id_public,
+            action: USER_ACTIONS.ANIMAL_CREATE,
+            targetType: 'animal',
+            targetId: newAnimal._id,
+            targetId_public: newAnimal.id_public,
+            details: { name: newAnimal.name, species: newAnimal.species },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
 
         res.status(201).json({
             message: 'Animal registered successfully!',
@@ -802,6 +816,19 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
         await syncAnimalToPublic(updatedAnimal);
 
+        // Log user activity
+        logUserActivity({
+            userId: appUserId_backend,
+            id_public: req.user.id_public,
+            action: USER_ACTIONS.ANIMAL_UPDATE,
+            targetType: 'animal',
+            targetId: updatedAnimal._id,
+            targetId_public: updatedAnimal.id_public,
+            details: { name: updatedAnimal.name, fieldsUpdated: Object.keys(updates) },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
+
         res.status(200).json({
             message: 'Animal updated successfully!',
             animal: updatedAnimal
@@ -863,6 +890,18 @@ router.delete('/:id_backend', async (req, res) => {
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
 
         const result = await deleteAnimal(appUserId_backend, animalId_backend);
+
+        // Log user activity
+        logUserActivity({
+            userId: appUserId_backend,
+            id_public: req.user.id_public,
+            action: USER_ACTIONS.ANIMAL_DELETE,
+            targetType: 'animal',
+            targetId: animalId_backend,
+            details: { reverted: result?.reverted || false },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
 
         res.status(200).json({ 
             message: result?.message || 'Animal deleted successfully.',

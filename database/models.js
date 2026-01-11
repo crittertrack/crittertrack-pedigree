@@ -702,7 +702,28 @@ const AuditLogSchema = new mongoose.Schema({
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
 
 
-// --- 14. SPECIES SCHEMA ---
+// --- 14. USER ACTIVITY LOG SCHEMA (separate from mod audit logs) ---
+const UserActivityLogSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    id_public: { type: String, index: true }, // User's public ID for quick lookup
+    action: { type: String, required: true, index: true }, // e.g., 'login', 'animal_create', 'profile_update'
+    targetType: { type: String, default: null }, // e.g., 'animal', 'profile', 'litter'
+    targetId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
+    targetId_public: { type: String, default: null }, // Public ID of target (animal, etc.)
+    details: { type: mongoose.Schema.Types.Mixed, default: {} }, // Action-specific details
+    previousValue: { type: mongoose.Schema.Types.Mixed, default: null }, // For edit actions
+    newValue: { type: mongoose.Schema.Types.Mixed, default: null }, // For edit actions
+    ipAddress: { type: String, default: null },
+    userAgent: { type: String, default: null },
+    success: { type: Boolean, default: true }
+}, { timestamps: true });
+// Index for efficient queries by user and time
+UserActivityLogSchema.index({ userId: 1, createdAt: -1 });
+UserActivityLogSchema.index({ action: 1, createdAt: -1 });
+const UserActivityLog = mongoose.model('UserActivityLog', UserActivityLogSchema);
+
+
+// --- 15. SPECIES SCHEMA ---
 const SpeciesSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true, index: true, trim: true },
     latinName: { type: String, default: null, trim: true },
@@ -868,6 +889,7 @@ module.exports = {
     ProfileReport,
     AnimalReport,
     AuditLog,
+    UserActivityLog,
     SystemSettings,
     Species,
     SpeciesConfig,
