@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
-const { PublicAnimal, Animal, PublicProfile } = require('../database/models');
+const { PublicAnimal, Animal, PublicProfile, User } = require('../database/models');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
 
@@ -147,25 +147,26 @@ router.get('/users/newest', async (req, res) => {
     }
 });
 
-// GET /api/public/users/active - Get users who were active recently
+// GET /api/public/users/active - Get users who were active recently (logged in)
 router.get('/users/active', async (req, res) => {
     try {
         const minutes = Math.min(parseInt(req.query.minutes || '15', 10), 60);
         const timeThreshold = new Date(Date.now() - minutes * 60 * 1000);
         
-        // Find users who have animals updated within the time threshold
-        const recentAnimals = await Animal.find({
-            updatedAt: { $gte: timeThreshold }
+        // Find users who have logged in within the time threshold
+        const recentlyLoggedIn = await User.find({
+            last_login: { $gte: timeThreshold },
+            accountStatus: { $ne: 'banned' }
         })
-        .select('ownerId_public')
+        .select('id_public')
         .lean();
         
-        // Get unique owner IDs
-        const uniqueOwnerIds = [...new Set(recentAnimals.map(a => a.ownerId_public))];
+        // Get unique user IDs
+        const userIds = recentlyLoggedIn.map(u => u.id_public).filter(Boolean);
         
-        // Fetch public profiles for these users, excluding banned users
+        // Fetch public profiles for these users
         const activeUsers = await PublicProfile.find({
-            id_public: { $in: uniqueOwnerIds },
+            id_public: { $in: userIds },
             accountStatus: { $ne: 'banned' }
         })
         .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus')
