@@ -644,28 +644,41 @@ router.get('/audit-logs', async (req, res) => {
 // BACKUP MANAGEMENT ROUTES
 // ============================================
 
-// R2 configuration for backups
+// R2 configuration for backups - supports both naming conventions
+const getR2Credentials = () => ({
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+    accountId: process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID,
+    bucket: process.env.R2_BUCKET || process.env.R2_BUCKET_NAME
+});
+
+const isR2Configured = () => {
+    const creds = getR2Credentials();
+    return !!(creds.accessKeyId && creds.secretAccessKey && creds.bucket);
+};
+
 const getR2Client = () => {
     const { S3Client } = require('@aws-sdk/client-s3');
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-    const accountId = process.env.R2_ACCOUNT_ID;
-    const endpoint = accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined;
+    const creds = getR2Credentials();
+    const endpoint = creds.accountId ? `https://${creds.accountId}.r2.cloudflarestorage.com` : undefined;
     
     return new S3Client({
         region: process.env.R2_REGION || 'auto',
         endpoint: endpoint,
-        credentials: accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
+        credentials: creds.accessKeyId && creds.secretAccessKey ? { 
+            accessKeyId: creds.accessKeyId, 
+            secretAccessKey: creds.secretAccessKey 
+        } : undefined,
         forcePathStyle: false,
     });
 };
 
-const R2_BUCKET = process.env.R2_BUCKET;
+const getR2Bucket = () => getR2Credentials().bucket;
 const BACKUP_METADATA_KEY = 'backups/metadata.json';
 
 // Helper: Get backup metadata from R2
 const getBackupMetadata = async () => {
-    if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+    if (!isR2Configured()) {
         console.warn('R2 not configured for backups');
         return { backups: [], lastAutoBackup: null };
     }
@@ -673,7 +686,7 @@ const getBackupMetadata = async () => {
     try {
         const { GetObjectCommand } = require('@aws-sdk/client-s3');
         const s3Client = getR2Client();
-        const command = new GetObjectCommand({ Bucket: R2_BUCKET, Key: BACKUP_METADATA_KEY });
+        const command = new GetObjectCommand({ Bucket: getR2Bucket(), Key: BACKUP_METADATA_KEY });
         const response = await s3Client.send(command);
         const bodyString = await response.Body.transformToString();
         return JSON.parse(bodyString);
@@ -688,7 +701,7 @@ const getBackupMetadata = async () => {
 
 // Helper: Save backup metadata to R2
 const saveBackupMetadata = async (metadata) => {
-    if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+    if (!isR2Configured()) {
         console.warn('R2 not configured for backups');
         return;
     }
@@ -697,7 +710,7 @@ const saveBackupMetadata = async (metadata) => {
         const { PutObjectCommand } = require('@aws-sdk/client-s3');
         const s3Client = getR2Client();
         const command = new PutObjectCommand({
-            Bucket: R2_BUCKET,
+            Bucket: getR2Bucket(),
             Key: BACKUP_METADATA_KEY,
             Body: JSON.stringify(metadata, null, 2),
             ContentType: 'application/json'
@@ -807,29 +820,18 @@ router.post('/trigger-backup', async (req, res) => {
 
         const { description, backupType = 'manual' } = req.body;
         
-        // Use the backup scheduler's R2 integration
-        const { isR2Configured } = require('../utils/backupScheduler');
-        const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
-        
+        // Check R2 configuration using local helper
         if (!isR2Configured()) {
             return res.status(500).json({ 
                 error: 'R2 storage not configured',
-                message: 'Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET environment variables'
+                message: 'Set CLOUDFLARE_R2_ACCESS_KEY_ID, CLOUDFLARE_R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME environment variables'
             });
         }
         
-        const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-        const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-        const accountId = process.env.R2_ACCOUNT_ID;
-        const bucket = process.env.R2_BUCKET;
-        const endpoint = accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined;
-        
-        const s3Client = new S3Client({
-            region: process.env.R2_REGION || 'auto',
-            endpoint: endpoint,
-            credentials: { accessKeyId, secretAccessKey },
-            forcePathStyle: false,
-        });
+        const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+        const creds = getR2Credentials();
+        const s3Client = getR2Client();
+        const bucket = creds.bucket;
 
         const timestamp = new Date();
         const backupId = `backup-${timestamp.toISOString().replace(/:/g, '-').split('.')[0]}`;
@@ -947,7 +949,7 @@ router.get('/backups/:backupId', async (req, res) => {
 
         const { backupId } = req.params;
         
-        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+        if (!isR2Configured()) {
             return res.status(500).json({ error: 'R2 storage not configured' });
         }
         
@@ -956,7 +958,7 @@ router.get('/backups/:backupId', async (req, res) => {
         
         try {
             const command = new GetObjectCommand({
-                Bucket: R2_BUCKET,
+                Bucket: getR2Bucket(),
                 Key: `backups/${backupId}/backup-info.json`
             });
             const response = await s3Client.send(command);
@@ -981,7 +983,7 @@ router.get('/backups/:backupId/download', async (req, res) => {
 
         const { backupId } = req.params;
         
-        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+        if (!isR2Configured()) {
             return res.status(500).json({ error: 'R2 storage not configured' });
         }
         
@@ -990,7 +992,7 @@ router.get('/backups/:backupId/download', async (req, res) => {
         
         // List all files in this backup
         const listCommand = new ListObjectsV2Command({
-            Bucket: R2_BUCKET,
+            Bucket: getR2Bucket(),
             Prefix: `backups/${backupId}/`
         });
         const listResponse = await s3Client.send(listCommand);
@@ -1004,7 +1006,7 @@ router.get('/backups/:backupId/download', async (req, res) => {
         for (const obj of listResponse.Contents) {
             if (obj.Key.endsWith('.json')) {
                 const getCommand = new GetObjectCommand({
-                    Bucket: R2_BUCKET,
+                    Bucket: getR2Bucket(),
                     Key: obj.Key
                 });
                 const response = await s3Client.send(getCommand);
@@ -1029,7 +1031,7 @@ router.delete('/backups/:backupId', async (req, res) => {
 
         const { backupId } = req.params;
         
-        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+        if (!isR2Configured()) {
             return res.status(500).json({ error: 'R2 storage not configured' });
         }
         
@@ -1038,7 +1040,7 @@ router.delete('/backups/:backupId', async (req, res) => {
         
         // List all files in this backup
         const listCommand = new ListObjectsV2Command({
-            Bucket: R2_BUCKET,
+            Bucket: getR2Bucket(),
             Prefix: `backups/${backupId}/`
         });
         const listResponse = await s3Client.send(listCommand);
@@ -1050,7 +1052,7 @@ router.delete('/backups/:backupId', async (req, res) => {
         // Delete all files in the backup
         for (const obj of listResponse.Contents) {
             const deleteCommand = new DeleteObjectCommand({
-                Bucket: R2_BUCKET,
+                Bucket: getR2Bucket(),
                 Key: obj.Key
             });
             await s3Client.send(deleteCommand);
@@ -1089,7 +1091,7 @@ router.post('/restore-backup/:backupId', async (req, res) => {
             });
         }
 
-        if (!R2_BUCKET || !process.env.R2_ACCESS_KEY_ID) {
+        if (!isR2Configured()) {
             return res.status(500).json({ error: 'R2 storage not configured' });
         }
         
@@ -1098,7 +1100,7 @@ router.post('/restore-backup/:backupId', async (req, res) => {
         
         // List all files in this backup
         const listCommand = new ListObjectsV2Command({
-            Bucket: R2_BUCKET,
+            Bucket: getR2Bucket(),
             Prefix: `backups/${backupId}/`
         });
         const listResponse = await s3Client.send(listCommand);
@@ -1129,7 +1131,7 @@ router.post('/restore-backup/:backupId', async (req, res) => {
 
             try {
                 const getCommand = new GetObjectCommand({
-                    Bucket: R2_BUCKET,
+                    Bucket: getR2Bucket(),
                     Key: key
                 });
                 const response = await s3Client.send(getCommand);

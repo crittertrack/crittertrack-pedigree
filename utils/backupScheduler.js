@@ -3,11 +3,11 @@ const { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, Dele
 const { User, Animal, PublicProfile, PublicAnimal } = require('../database/models');
 const { createAuditLog } = require('./auditLogger');
 
-// R2 Configuration
-const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-const accountId = process.env.R2_ACCOUNT_ID;
-const bucket = process.env.R2_BUCKET;
+// R2 Configuration - supports both naming conventions
+const accessKeyId = process.env.R2_ACCESS_KEY_ID || process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+const accountId = process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID;
+const bucket = process.env.R2_BUCKET || process.env.R2_BUCKET_NAME;
 const endpoint = accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined;
 
 const s3Client = new S3Client({
