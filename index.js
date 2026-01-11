@@ -189,6 +189,17 @@ if (!MONGODB_URI) {
 }
 connectDB(MONGODB_URI);
 
+// --- Initialize Backup Scheduler ---
+const { initBackupScheduler } = require('./utils/backupScheduler');
+// Start the scheduler after a short delay to ensure DB is connected
+setTimeout(() => {
+    try {
+        initBackupScheduler();
+    } catch (err) {
+        console.error('[Server] Failed to initialize backup scheduler:', err);
+    }
+}, 5000);
+
 
 // --- UNPROTECTED Routes ---
 

@@ -696,13 +696,70 @@ router.get('/backups', async (req, res) => {
         const metadata = getBackupMetadata();
         const currentStats = await getCollectionStats();
         
+        // Get schedule info
+        let scheduleInfo = { schedule: '0 3 * * *', timezone: 'UTC' };
+        try {
+            const { getScheduleInfo } = require('../utils/backupScheduler');
+            scheduleInfo = getScheduleInfo();
+        } catch (err) {
+            console.error('Error getting schedule info:', err);
+        }
+        
         res.json({
             backups: metadata.backups || [],
             lastAutoBackup: metadata.lastAutoBackup,
-            currentStats
+            currentStats,
+            schedule: scheduleInfo
         });
     } catch (error) {
         console.error('Error fetching backups:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/admin/backup-schedule - Get backup schedule info
+router.get('/backup-schedule', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { getScheduleInfo } = require('../utils/backupScheduler');
+        const scheduleInfo = getScheduleInfo();
+        
+        res.json(scheduleInfo);
+    } catch (error) {
+        console.error('Error getting backup schedule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PUT /api/admin/backup-schedule - Update backup schedule
+router.put('/backup-schedule', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { schedule } = req.body;
+        
+        if (!schedule) {
+            return res.status(400).json({ error: 'Schedule is required' });
+        }
+
+        const { updateBackupSchedule, getScheduleInfo } = require('../utils/backupScheduler');
+        updateBackupSchedule(schedule);
+        
+        // Log the change
+        await createAuditLog({
+            action: 'backup_schedule_updated',
+            performedBy: req.user?._id,
+            details: { newSchedule: schedule }
+        });
+        
+        res.json({ 
+            success: true, 
+            message: 'Backup schedule updated',
+            schedule: getScheduleInfo()
+        });
+    } catch (error) {
+        console.error('Error updating backup schedule:', error);
         res.status(500).json({ error: error.message });
     }
 });
