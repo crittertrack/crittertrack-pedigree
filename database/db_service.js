@@ -338,6 +338,14 @@ const loginUser = async (email, password, req) => {
         throw new Error('Invalid credentials: Password mismatch.');
     }
 
+    // Update last login timestamp and IP
+    const userIP = req?.ip || req?.connection?.remoteAddress || req?.socket?.remoteAddress || null;
+    user.last_login = new Date();
+    if (userIP) {
+        user.last_login_ip = userIP;
+    }
+    await user.save();
+
     // 4. Generate JWT Token
     const payload = { user: { id: user.id } }; // Use user.id (internal _id)
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_LIFETIME });
