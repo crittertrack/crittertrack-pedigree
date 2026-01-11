@@ -2185,9 +2185,16 @@ router.get('/system-settings/all', async (req, res) => {
         const settings = await SystemSettings.find({}).lean();
 
         // Convert array to object for easier frontend use
+        // Map some keys for frontend compatibility
+        const keyMapping = {
+            'maintenance_mode_enabled': 'maintenance_mode',
+            'maintenance_mode_message': 'maintenance_message'
+        };
+        
         const settingsObj = {};
         settings.forEach(setting => {
-            settingsObj[setting.key] = {
+            const key = keyMapping[setting.key] || setting.key;
+            settingsObj[key] = {
                 value: setting.value,
                 type: setting.type,
                 category: setting.category,
