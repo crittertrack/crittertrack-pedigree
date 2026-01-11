@@ -1576,6 +1576,11 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
 // ANALYTICS ENDPOINTS
 // ============================================
 
+// GET /api/moderation/analytics/health - Health check for analytics endpoints
+router.get('/analytics/health', requireModerator, (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
+});
+
 // GET /api/moderation/analytics/overview - Get overall analytics data
 router.get('/analytics/overview', requireModerator, async (req, res) => {
     try {
