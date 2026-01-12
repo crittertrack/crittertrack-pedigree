@@ -369,6 +369,7 @@ const getUserProfileById = async (appUserId_backend) => {
 
     // Return a clean, non-sensitive object
     return {
+        _id: user._id, // Include internal ID for activity logging
         id_public: user.id_public,
         email: user.email,
         role: user.role,
