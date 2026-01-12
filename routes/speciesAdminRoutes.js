@@ -144,6 +144,7 @@ router.patch('/species/:id', requireAdmin, async (req, res) => {
 router.delete('/species/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        const { replacementSpecies } = req.query; // Optional: species name to migrate animals to
         
         const species = await Species.findById(id);
         if (!species) {
@@ -152,10 +153,28 @@ router.delete('/species/:id', requireAdmin, async (req, res) => {
         
         // Check if any animals use this species
         const animalCount = await Animal.countDocuments({ species: species.name });
+        
+        // If replacement species is provided, migrate animals
         if (animalCount > 0) {
-            return res.status(400).json({ 
-                error: `Cannot delete: ${animalCount} animals are using this species` 
-            });
+            if (!replacementSpecies) {
+                return res.status(400).json({ 
+                    error: `Cannot delete: ${animalCount} animals are using this species`,
+                    animalCount,
+                    requiresReplacement: true
+                });
+            }
+            
+            // Verify replacement species exists
+            const replacementExists = await Species.findOne({ name: replacementSpecies });
+            if (!replacementExists) {
+                return res.status(400).json({ error: 'Replacement species not found' });
+            }
+            
+            // Migrate all animals to the replacement species
+            await Animal.updateMany(
+                { species: species.name },
+                { $set: { species: replacementSpecies } }
+            );
         }
         
         // Delete associated config and genetics data
@@ -163,7 +182,11 @@ router.delete('/species/:id', requireAdmin, async (req, res) => {
         await GeneticsData.deleteMany({ speciesName: species.name });
         
         await Species.findByIdAndDelete(id);
-        res.json({ message: 'Species deleted successfully' });
+        res.json({ 
+            message: 'Species deleted successfully',
+            animalsMigrated: animalCount,
+            migratedTo: replacementSpecies || null
+        });
     } catch (error) {
         console.error('Error deleting species:', error);
         res.status(500).json({ error: 'Failed to delete species' });
