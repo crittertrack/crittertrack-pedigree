@@ -29,13 +29,13 @@ router.post('/transactions', async (req, res) => {
         console.log('[Budget] User ID:', userId);
         console.log('[Budget] Request body:', JSON.stringify(req.body, null, 2));
         
-        const { type, animalId, animalName, price, date, buyer, seller, notes, buyerUserId, sellerUserId } = req.body;
+        const { type, animalId, animalName, price, date, buyer, seller, notes, buyerUserId, sellerUserId, category, description } = req.body;
         
         console.log('[Budget] Extracted values:', { type, animalId, animalName, buyerUserId, sellerUserId });
         
         // Validation
-        if (!type || !['sale', 'purchase'].includes(type)) {
-            return res.status(400).json({ message: 'Invalid transaction type. Must be "sale" or "purchase".' });
+        if (!type || !['sale', 'purchase', 'expense', 'income'].includes(type)) {
+            return res.status(400).json({ message: 'Invalid transaction type. Must be "sale", "purchase", "expense", or "income".' });
         }
         
         if (price === undefined || price === null || price === '' || isNaN(price) || parseFloat(price) < 0) {
@@ -57,6 +57,8 @@ router.post('/transactions', async (req, res) => {
             seller: type === 'purchase' ? (seller || null) : null,
             buyerUserId: buyerUserId || null,
             sellerUserId: sellerUserId || null,
+            category: (type === 'expense' || type === 'income') ? (category || null) : null,
+            description: (type === 'expense' || type === 'income') ? (description || null) : null,
             notes: notes || null
         });
         
@@ -269,7 +271,7 @@ router.put('/transactions/:id', async (req, res) => {
     try {
         const userId = req.user.id;
         const transactionId = req.params.id;
-        const { type, animalId, animalName, price, date, buyer, seller, notes } = req.body;
+        const { type, animalId, animalName, price, date, buyer, seller, notes, category, description } = req.body;
         
         // Find the transaction and verify ownership
         const transaction = await Transaction.findOne({ _id: transactionId, userId });
@@ -279,8 +281,8 @@ router.put('/transactions/:id', async (req, res) => {
         }
         
         // Validation
-        if (type && !['sale', 'purchase'].includes(type)) {
-            return res.status(400).json({ message: 'Invalid transaction type. Must be "sale" or "purchase".' });
+        if (type && !['sale', 'purchase', 'expense', 'income'].includes(type)) {
+            return res.status(400).json({ message: 'Invalid transaction type. Must be "sale", "purchase", "expense", or "income".' });
         }
         
         if (price !== undefined && (isNaN(price) || parseFloat(price) < 0)) {
@@ -295,6 +297,8 @@ router.put('/transactions/:id', async (req, res) => {
         if (date) transaction.date = new Date(date);
         if (buyer !== undefined) transaction.buyer = transaction.type === 'sale' ? (buyer || null) : null;
         if (seller !== undefined) transaction.seller = transaction.type === 'purchase' ? (seller || null) : null;
+        if (category !== undefined) transaction.category = (transaction.type === 'expense' || transaction.type === 'income') ? (category || null) : null;
+        if (description !== undefined) transaction.description = (transaction.type === 'expense' || transaction.type === 'income') ? (description || null) : null;
         if (notes !== undefined) transaction.notes = notes || null;
         
         await transaction.save();

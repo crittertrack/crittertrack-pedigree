@@ -836,7 +836,7 @@ const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
 // --- 16. TRANSACTION SCHEMA (for budget tracking) ---
 const TransactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    type: { type: String, enum: ['sale', 'purchase'], required: true, index: true },
+    type: { type: String, enum: ['sale', 'purchase', 'expense', 'income'], required: true, index: true },
     animalId: { type: String, default: null }, // id_public of the animal
     animalName: { type: String, default: null },
     price: { type: Number, required: true, default: 0 },
@@ -845,6 +845,8 @@ const TransactionSchema = new mongoose.Schema({
     seller: { type: String, default: null },
     buyerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     sellerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    category: { type: String, default: null }, // For expenses/income: food, equipment, other, etc.
+    description: { type: String, default: null }, // For expenses/income
     notes: { type: String, default: null },
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
