@@ -5,7 +5,13 @@ const { Species } = require('../database/models');
 // GET /api/species - Get all species
 router.get('/', async (req, res) => {
     try {
-        const species = await Species.find({});
+        const species = await Species.find({}).sort({ isDefault: -1, name: 1 });
+        // Add cache control headers to prevent stale data
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
         res.json(species);
     } catch (error) {
         console.error('Error fetching species:', error);
