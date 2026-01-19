@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Species, SpeciesConfig, GeneticsData, Animal, User } = require('../database/models');
+const { Species, SpeciesConfig, GeneticsData, Animal, User, PublicProfile } = require('../database/models');
 
 // Middleware to check admin/moderator access
 const requireAdmin = async (req, res, next) => {
@@ -44,6 +44,19 @@ router.get('/species', requireAdmin, async (req, res) => {
         const configMap = {};
         configs.forEach(c => { configMap[c.speciesName] = c; });
         
+        // Get user information for custom species
+        const userIds = species.filter(s => s.userId).map(s => s.userId);
+        const publicProfiles = await PublicProfile.find({ userId_backend: { $in: userIds } });
+        const userMap = {};
+        publicProfiles.forEach(p => { 
+            userMap[p.userId_backend.toString()] = {
+                id_public: p.id_public,
+                personalName: p.personalName,
+                breederName: p.breederName,
+                showBreederName: p.showBreederName
+            };
+        });
+        
         const result = species.map(s => ({
             _id: s._id,
             name: s.name,
@@ -51,6 +64,7 @@ router.get('/species', requireAdmin, async (req, res) => {
             category: s.category,
             isDefault: s.isDefault,
             userId: s.userId,
+            createdBy: s.userId ? userMap[s.userId.toString()] : null,
             createdAt: s.createdAt,
             animalCount: countMap[s.name] || 0,
             hasConfig: !!configMap[s.name],
