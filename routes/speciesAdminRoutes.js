@@ -365,7 +365,7 @@ router.post('/genetics', requireAdmin, async (req, res) => {
 router.put('/genetics/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { genes, markingGenes, phenotypeRules, adminNotes } = req.body;
+        const { genes, markingGenes, coatGenes, phenotypeRules, adminNotes } = req.body;
         
         const geneticsData = await GeneticsData.findById(id);
         if (!geneticsData) {
@@ -378,6 +378,7 @@ router.put('/genetics/:id', requireAdmin, async (req, res) => {
         
         if (genes !== undefined) geneticsData.genes = genes;
         if (markingGenes !== undefined) geneticsData.markingGenes = markingGenes;
+        if (coatGenes !== undefined) geneticsData.coatGenes = coatGenes;
         if (phenotypeRules !== undefined) geneticsData.phenotypeRules = phenotypeRules;
         if (adminNotes !== undefined) geneticsData.adminNotes = adminNotes;
         geneticsData.lastEditedBy = req.user.userId;
@@ -497,7 +498,7 @@ router.delete('/genetics/:id', requireAdmin, async (req, res) => {
 router.post('/genetics/:id/genes', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { symbol, name, description, alleles, isMarking } = req.body;
+        const { symbol, name, description, alleles, geneType } = req.body;
         
         if (!symbol || !name) {
             return res.status(400).json({ error: 'Symbol and name are required' });
@@ -517,13 +518,18 @@ router.post('/genetics/:id/genes', requireAdmin, async (req, res) => {
             name: name.trim(),
             description: description || null,
             alleles: alleles || [],
-            order: isMarking 
+            order: geneType === 'marking' 
                 ? geneticsData.markingGenes.length 
-                : geneticsData.genes.length
+                : geneType === 'coat'
+                    ? geneticsData.coatGenes.length
+                    : geneticsData.genes.length
         };
         
-        if (isMarking) {
+        if (geneType === 'marking') {
             geneticsData.markingGenes.push(newGene);
+        } else if (geneType === 'coat') {
+            if (!geneticsData.coatGenes) geneticsData.coatGenes = [];
+            geneticsData.coatGenes.push(newGene);
         } else {
             geneticsData.genes.push(newGene);
         }
@@ -579,7 +585,7 @@ router.put('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) => {
 router.delete('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) => {
     try {
         const { id, geneIndex } = req.params;
-        const { isMarking } = req.query;
+        const { isMarking, isCoat } = req.query;
         
         const geneticsData = await GeneticsData.findById(id);
         if (!geneticsData) {
@@ -590,7 +596,9 @@ router.delete('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) =
             return res.status(400).json({ error: 'Cannot edit published data' });
         }
         
-        const geneArray = isMarking === 'true' ? geneticsData.markingGenes : geneticsData.genes;
+        const geneArray = isCoat === 'true' 
+            ? geneticsData.coatGenes 
+            : (isMarking === 'true' ? geneticsData.markingGenes : geneticsData.genes);
         const index = parseInt(geneIndex);
         
         if (index < 0 || index >= geneArray.length) {
