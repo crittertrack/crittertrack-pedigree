@@ -365,7 +365,7 @@ router.post('/genetics', requireAdmin, async (req, res) => {
 router.put('/genetics/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { genes, markingGenes, coatGenes, phenotypeRules, adminNotes } = req.body;
+        const { genes, markingGenes, coatGenes, otherGenes, phenotypeRules, adminNotes } = req.body;
         
         const geneticsData = await GeneticsData.findById(id);
         if (!geneticsData) {
@@ -379,6 +379,7 @@ router.put('/genetics/:id', requireAdmin, async (req, res) => {
         if (genes !== undefined) geneticsData.genes = genes;
         if (markingGenes !== undefined) geneticsData.markingGenes = markingGenes;
         if (coatGenes !== undefined) geneticsData.coatGenes = coatGenes;
+        if (otherGenes !== undefined) geneticsData.otherGenes = otherGenes;
         if (phenotypeRules !== undefined) geneticsData.phenotypeRules = phenotypeRules;
         if (adminNotes !== undefined) geneticsData.adminNotes = adminNotes;
         geneticsData.lastEditedBy = req.user.userId;
@@ -522,7 +523,9 @@ router.post('/genetics/:id/genes', requireAdmin, async (req, res) => {
                 ? geneticsData.markingGenes.length 
                 : geneType === 'coat'
                     ? geneticsData.coatGenes.length
-                    : geneticsData.genes.length
+                    : geneType === 'other'
+                        ? (geneticsData.otherGenes || []).length
+                        : geneticsData.genes.length
         };
         
         if (geneType === 'marking') {
@@ -530,6 +533,9 @@ router.post('/genetics/:id/genes', requireAdmin, async (req, res) => {
         } else if (geneType === 'coat') {
             if (!geneticsData.coatGenes) geneticsData.coatGenes = [];
             geneticsData.coatGenes.push(newGene);
+        } else if (geneType === 'other') {
+            if (!geneticsData.otherGenes) geneticsData.otherGenes = [];
+            geneticsData.otherGenes.push(newGene);
         } else {
             geneticsData.genes.push(newGene);
         }
@@ -585,7 +591,7 @@ router.put('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) => {
 router.delete('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) => {
     try {
         const { id, geneIndex } = req.params;
-        const { isMarking, isCoat } = req.query;
+        const { isMarking, isCoat, isOther } = req.query;
         
         const geneticsData = await GeneticsData.findById(id);
         if (!geneticsData) {
@@ -596,9 +602,11 @@ router.delete('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) =
             return res.status(400).json({ error: 'Cannot edit published data' });
         }
         
-        const geneArray = isCoat === 'true' 
-            ? geneticsData.coatGenes 
-            : (isMarking === 'true' ? geneticsData.markingGenes : geneticsData.genes);
+        const geneArray = isOther === 'true'
+            ? geneticsData.otherGenes
+            : (isCoat === 'true' 
+                ? geneticsData.coatGenes 
+                : (isMarking === 'true' ? geneticsData.markingGenes : geneticsData.genes));
         const index = parseInt(geneIndex);
         
         if (index < 0 || index >= geneArray.length) {

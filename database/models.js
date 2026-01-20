@@ -957,6 +957,16 @@ const GeneticsDataSchema = new mongoose.Schema({
             order: { type: Number, default: 0 }
         }]
     }],
+    // Other genes (ear type, tail type, etc.)
+    otherGenes: [{
+        symbol: { type: String, required: true },
+        name: { type: String, required: true },
+        alleles: [{
+            notation: { type: String, required: true },
+            phenotype: { type: String, default: null },
+            order: { type: Number, default: 0 }
+        }]
+    }],
     // Admin notes and metadata
     adminNotes: { type: String, default: null },
     lastEditedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

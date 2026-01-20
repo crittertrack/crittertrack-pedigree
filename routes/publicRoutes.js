@@ -703,6 +703,16 @@ router.get('/genetics/:speciesName', async (req, res) => {
             });
         }
 
+        // Process other genes
+        if (geneticsData.otherGenes && Array.isArray(geneticsData.otherGenes)) {
+            geneticsData.otherGenes.forEach(gene => {
+                geneLoci[gene.symbol] = {
+                    name: gene.name,
+                    combinations: gene.alleles || []
+                };
+            });
+        }
+
         res.status(200).json({
             speciesName: geneticsData.speciesName,
             version: geneticsData.version,
