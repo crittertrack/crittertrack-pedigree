@@ -918,16 +918,25 @@ const GeneticsDataSchema = new mongoose.Schema({
     version: { type: Number, default: 1 },
     // Gene loci for this species
     genes: [{
-        symbol: { type: String, required: true }, // e.g., 'A', 'B', 'C'
-        name: { type: String, required: true }, // e.g., 'Agouti', 'Brown', 'Albino'
+        symbol: { type: String, required: true }, // e.g., 'A', 'B', 'C' - the locus symbol
+        name: { type: String, required: true }, // e.g., 'Agouti', 'Brown', 'Albino' - the locus name
         description: { type: String, default: null },
         order: { type: Number, default: 0 },
-        // Allele combinations for this gene
+        // Individual alleles for this locus
         alleles: [{
+            symbol: { type: String, required: true }, // e.g., 'A', 'a', 'at', 'ay'
+            name: { type: String, default: null }, // e.g., 'Agouti', 'Non-agouti', 'Tan-belly' (optional)
+            phenotype: { type: String, default: null }, // What this allele contributes (optional)
+            carrier: { type: String, default: null }, // What this allele carries (optional)
+            dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
+            order: { type: Number, default: 0 }
+        }],
+        // Gene combinations (pairs of alleles)
+        combinations: [{
             notation: { type: String, required: true }, // e.g., 'A/A', 'A/a', 'a/a'
-            phenotype: { type: String, default: null }, // e.g., 'Agouti', 'Carrier', 'Non-agouti'
+            phenotype: { type: String, default: null }, // e.g., 'Agouti', 'Black'
+            carrier: { type: String, default: null }, // e.g., 'Black' - what this carries (for heterozygous)
             isLethal: { type: Boolean, default: false }, // e.g., Ay/Ay
-            dominance: { type: String, enum: ['dominant', 'recessive', 'codominant', 'incomplete'], default: 'recessive' },
             order: { type: Number, default: 0 }
         }]
     }],
@@ -942,8 +951,17 @@ const GeneticsDataSchema = new mongoose.Schema({
         symbol: { type: String, required: true },
         name: { type: String, required: true },
         alleles: [{
+            symbol: { type: String, required: true },
+            name: { type: String, default: null },
+            phenotype: { type: String, default: null },
+            carrier: { type: String, default: null },
+            dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
+            order: { type: Number, default: 0 }
+        }],
+        combinations: [{
             notation: { type: String, required: true },
             phenotype: { type: String, default: null },
+            carrier: { type: String, default: null },
             order: { type: Number, default: 0 }
         }]
     }],
@@ -952,8 +970,17 @@ const GeneticsDataSchema = new mongoose.Schema({
         symbol: { type: String, required: true },
         name: { type: String, required: true },
         alleles: [{
+            symbol: { type: String, required: true },
+            name: { type: String, default: null },
+            phenotype: { type: String, default: null },
+            carrier: { type: String, default: null },
+            dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
+            order: { type: Number, default: 0 }
+        }],
+        combinations: [{
             notation: { type: String, required: true },
             phenotype: { type: String, default: null },
+            carrier: { type: String, default: null },
             order: { type: Number, default: 0 }
         }]
     }],
@@ -962,8 +989,17 @@ const GeneticsDataSchema = new mongoose.Schema({
         symbol: { type: String, required: true },
         name: { type: String, required: true },
         alleles: [{
+            symbol: { type: String, required: true },
+            name: { type: String, default: null },
+            phenotype: { type: String, default: null },
+            carrier: { type: String, default: null },
+            dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
+            order: { type: Number, default: 0 }
+        }],
+        combinations: [{
             notation: { type: String, required: true },
             phenotype: { type: String, default: null },
+            carrier: { type: String, default: null },
             order: { type: Number, default: 0 }
         }]
     }],
