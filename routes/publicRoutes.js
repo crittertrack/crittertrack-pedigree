@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
-const { PublicAnimal, Animal, PublicProfile, User } = require('../database/models');
+const { PublicAnimal, Animal, PublicProfile, User, GeneticsData } = require('../database/models');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
 
@@ -625,6 +625,92 @@ router.get('/marketplace/species', async (req, res) => {
         res.status(200).json(filtered);
     } catch (error) {
         console.error('Error fetching marketplace species:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// ============================================
+// GENETICS CALCULATOR PUBLIC ROUTES
+// ============================================
+
+// GET /api/public/genetics/available - Get list of species with published genetics
+router.get('/genetics/available', async (req, res) => {
+    try {
+        // Find all published genetics data
+        const publishedGenetics = await GeneticsData.find({ 
+            isPublished: true 
+        }).select('speciesName').sort({ speciesName: 1 });
+
+        // Extract unique species names
+        const speciesNames = [...new Set(publishedGenetics.map(g => g.speciesName))];
+
+        res.status(200).json(speciesNames);
+    } catch (error) {
+        console.error('Error fetching available genetics species:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// GET /api/public/genetics/:speciesName - Get published genetics data for a species
+router.get('/genetics/:speciesName', async (req, res) => {
+    try {
+        const { speciesName } = req.params;
+
+        if (!speciesName) {
+            return res.status(400).json({ message: 'Species name is required.' });
+        }
+
+        // Find the most recent published genetics data for this species
+        const geneticsData = await GeneticsData.findOne({
+            speciesName: speciesName,
+            isPublished: true
+        }).sort({ version: -1, updatedAt: -1 });
+
+        if (!geneticsData) {
+            return res.status(404).json({ message: `No published genetics data found for species: ${speciesName}` });
+        }
+
+        // Transform the database format to the calculator format
+        const geneLoci = {};
+
+        // Process color/pattern genes
+        if (geneticsData.genes && Array.isArray(geneticsData.genes)) {
+            geneticsData.genes.forEach(gene => {
+                geneLoci[gene.symbol] = {
+                    name: gene.name,
+                    combinations: gene.alleles || []
+                };
+            });
+        }
+
+        // Process marking genes
+        if (geneticsData.markingGenes && Array.isArray(geneticsData.markingGenes)) {
+            geneticsData.markingGenes.forEach(gene => {
+                geneLoci[gene.symbol] = {
+                    name: gene.name,
+                    combinations: gene.alleles || []
+                };
+            });
+        }
+
+        // Process coat/texture genes
+        if (geneticsData.coatGenes && Array.isArray(geneticsData.coatGenes)) {
+            geneticsData.coatGenes.forEach(gene => {
+                geneLoci[gene.symbol] = {
+                    name: gene.name,
+                    combinations: gene.alleles || []
+                };
+            });
+        }
+
+        res.status(200).json({
+            speciesName: geneticsData.speciesName,
+            version: geneticsData.version,
+            geneLoci: geneLoci,
+            phenotypeRules: geneticsData.phenotypeRules || null
+        });
+    } catch (error) {
+        console.error('Error fetching genetics data:', error);
         res.status(500).json({ message: 'Internal server error.' });
     }
 });
