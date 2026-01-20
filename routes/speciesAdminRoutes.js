@@ -732,6 +732,65 @@ router.delete('/genetics/:id/loci/:locusIndex/alleles/:alleleIndex', requireAdmi
     }
 });
 
+// PUT /api/admin/genetics/:id/loci/:locusIndex/alleles/:alleleIndex - Edit an allele
+router.put('/genetics/:id/loci/:locusIndex/alleles/:alleleIndex', requireAdmin, async (req, res) => {
+    try {
+        const { id, locusIndex, alleleIndex } = req.params;
+        const { symbol, name, phenotype, carrier, dominance, geneType } = req.body;
+        
+        if (!symbol) {
+            return res.status(400).json({ error: 'Allele symbol is required' });
+        }
+        
+        const geneticsData = await GeneticsData.findById(id);
+        if (!geneticsData) {
+            return res.status(404).json({ error: 'Genetics data not found' });
+        }
+        
+        if (geneticsData.isPublished) {
+            return res.status(400).json({ error: 'Cannot edit published data' });
+        }
+        
+        const geneArray = geneType === 'marking' 
+            ? geneticsData.markingGenes
+            : geneType === 'coat'
+                ? geneticsData.coatGenes
+                : geneType === 'other'
+                    ? geneticsData.otherGenes
+                    : geneticsData.genes;
+        
+        const locusIdx = parseInt(locusIndex);
+        const alleleIdx = parseInt(alleleIndex);
+        
+        if (locusIdx < 0 || locusIdx >= geneArray.length) {
+            return res.status(404).json({ error: 'Locus not found' });
+        }
+        
+        const locus = geneArray[locusIdx];
+        if (!locus.alleles || alleleIdx < 0 || alleleIdx >= locus.alleles.length) {
+            return res.status(404).json({ error: 'Allele not found' });
+        }
+        
+        // Update allele
+        locus.alleles[alleleIdx] = {
+            ...locus.alleles[alleleIdx],
+            symbol: symbol.trim(),
+            name: name ? name.trim() : null,
+            phenotype: phenotype ? phenotype.trim() : null,
+            carrier: carrier ? carrier.trim() : null,
+            dominance: dominance || 'recessive'
+        };
+        
+        geneticsData.lastEditedBy = req.user.userId;
+        await geneticsData.save();
+        
+        res.json(geneticsData);
+    } catch (error) {
+        console.error('Error updating allele:', error);
+        res.status(500).json({ error: 'Failed to update allele' });
+    }
+});
+
 // ============================================
 // COMBINATION OPERATIONS
 // ============================================
@@ -835,6 +894,64 @@ router.delete('/genetics/:id/loci/:locusIndex/combinations/:combinationIndex', r
     } catch (error) {
         console.error('Error removing combination:', error);
         res.status(500).json({ error: 'Failed to remove combination' });
+    }
+});
+
+// PUT /api/admin/genetics/:id/loci/:locusIndex/combinations/:combinationIndex - Edit a combination
+router.put('/genetics/:id/loci/:locusIndex/combinations/:combinationIndex', requireAdmin, async (req, res) => {
+    try {
+        const { id, locusIndex, combinationIndex } = req.params;
+        const { notation, phenotype, carrier, isLethal, geneType } = req.body;
+        
+        if (!notation) {
+            return res.status(400).json({ error: 'Combination notation is required' });
+        }
+        
+        const geneticsData = await GeneticsData.findById(id);
+        if (!geneticsData) {
+            return res.status(404).json({ error: 'Genetics data not found' });
+        }
+        
+        if (geneticsData.isPublished) {
+            return res.status(400).json({ error: 'Cannot edit published data' });
+        }
+        
+        const geneArray = geneType === 'marking' 
+            ? geneticsData.markingGenes
+            : geneType === 'coat'
+                ? geneticsData.coatGenes
+                : geneType === 'other'
+                    ? geneticsData.otherGenes
+                    : geneticsData.genes;
+        
+        const locusIdx = parseInt(locusIndex);
+        const combIdx = parseInt(combinationIndex);
+        
+        if (locusIdx < 0 || locusIdx >= geneArray.length) {
+            return res.status(404).json({ error: 'Locus not found' });
+        }
+        
+        const locus = geneArray[locusIdx];
+        if (!locus.combinations || combIdx < 0 || combIdx >= locus.combinations.length) {
+            return res.status(404).json({ error: 'Combination not found' });
+        }
+        
+        // Update combination
+        locus.combinations[combIdx] = {
+            ...locus.combinations[combIdx],
+            notation: notation.trim(),
+            phenotype: phenotype ? phenotype.trim() : null,
+            carrier: carrier ? carrier.trim() : null,
+            isLethal: isLethal || false
+        };
+        
+        geneticsData.lastEditedBy = req.user.userId;
+        await geneticsData.save();
+        
+        res.json(geneticsData);
+    } catch (error) {
+        console.error('Error updating combination:', error);
+        res.status(500).json({ error: 'Failed to update combination' });
     }
 });
 
