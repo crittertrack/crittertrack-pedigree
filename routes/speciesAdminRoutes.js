@@ -791,6 +791,65 @@ router.put('/genetics/:id/loci/:locusIndex/alleles/:alleleIndex', requireAdmin, 
     }
 });
 
+// PUT /api/admin/genetics/:id/loci/:locusIndex/alleles/reorder - Reorder alleles within a locus
+router.put('/genetics/:id/loci/:locusIndex/alleles/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { id, locusIndex } = req.params;
+        const { fromIndex, toIndex, geneType } = req.body;
+        
+        const geneticsData = await GeneticsData.findById(id);
+        if (!geneticsData) {
+            return res.status(404).json({ error: 'Genetics data not found' });
+        }
+        
+        if (geneticsData.isPublished) {
+            return res.status(400).json({ error: 'Cannot edit published data' });
+        }
+        
+        const geneArray = geneType === 'marking' 
+            ? geneticsData.markingGenes
+            : geneType === 'coat'
+                ? geneticsData.coatGenes
+                : geneType === 'other'
+                    ? geneticsData.otherGenes
+                    : geneticsData.genes;
+        
+        const locusIdx = parseInt(locusIndex);
+        const fromIdx = parseInt(fromIndex);
+        const toIdx = parseInt(toIndex);
+        
+        if (locusIdx < 0 || locusIdx >= geneArray.length) {
+            return res.status(404).json({ error: 'Locus not found' });
+        }
+        
+        const locus = geneArray[locusIdx];
+        if (!locus.alleles || fromIdx < 0 || fromIdx >= locus.alleles.length || 
+            toIdx < 0 || toIdx >= locus.alleles.length) {
+            return res.status(400).json({ error: 'Invalid allele indices' });
+        }
+        
+        // Reorder the alleles array
+        const allelesCopy = [...locus.alleles];
+        const [movedAllele] = allelesCopy.splice(fromIdx, 1);
+        allelesCopy.splice(toIdx, 0, movedAllele);
+        
+        // Update the order field for each allele
+        allelesCopy.forEach((allele, index) => {
+            allele.order = index;
+        });
+        
+        locus.alleles = allelesCopy;
+        
+        geneticsData.lastEditedBy = req.user.userId;
+        await geneticsData.save();
+        
+        res.json(geneticsData);
+    } catch (error) {
+        console.error('Error reordering alleles:', error);
+        res.status(500).json({ error: 'Failed to reorder alleles' });
+    }
+});
+
 // ============================================
 // COMBINATION OPERATIONS
 // ============================================

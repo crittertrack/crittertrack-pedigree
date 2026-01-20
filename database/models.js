@@ -927,7 +927,6 @@ const GeneticsDataSchema = new mongoose.Schema({
             symbol: { type: String, required: true }, // e.g., 'A', 'a', 'at', 'ay'
             name: { type: String, default: null }, // e.g., 'Agouti', 'Non-agouti', 'Tan-belly' (optional)
             phenotype: { type: String, default: null }, // What this allele contributes (optional)
-            carrier: { type: String, default: null }, // What this allele carries (optional)
             dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
             order: { type: Number, default: 0 }
         }],
@@ -954,7 +953,6 @@ const GeneticsDataSchema = new mongoose.Schema({
             symbol: { type: String, required: true },
             name: { type: String, default: null },
             phenotype: { type: String, default: null },
-            carrier: { type: String, default: null },
             dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
             order: { type: Number, default: 0 }
         }],
@@ -973,7 +971,6 @@ const GeneticsDataSchema = new mongoose.Schema({
             symbol: { type: String, required: true },
             name: { type: String, default: null },
             phenotype: { type: String, default: null },
-            carrier: { type: String, default: null },
             dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
             order: { type: Number, default: 0 }
         }],
@@ -992,7 +989,6 @@ const GeneticsDataSchema = new mongoose.Schema({
             symbol: { type: String, required: true },
             name: { type: String, default: null },
             phenotype: { type: String, default: null },
-            carrier: { type: String, default: null },
             dominance: { type: String, enum: ['dominant', 'recessive', 'codominant'], default: 'recessive' },
             order: { type: Number, default: 0 }
         }],
