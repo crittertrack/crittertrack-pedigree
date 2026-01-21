@@ -712,6 +712,9 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             updates.showOnPublicProfile = updates.isDisplay;
         }
 
+        // Get original animal data to compare for changes before sending notifications
+        const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend }).select('breederId_public sireId_public damId_public').lean();
+        
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
         // Notifications are created AFTER the save, but the links remain active.
         // Links are only removed if the breeder/parent owner explicitly rejects via notification.
@@ -730,9 +733,10 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             console.log(`[UPDATE][Notification Check] Animal was transferred, original owner: CT${originalOwnerPublicId}`);
         }
         
-        // Check if breeder was set and it's not the current user
-        if (updatedAnimal.breederId_public && updatedAnimal.breederId_public !== currentUserPublicId) {
-            console.log(`[UPDATE] Checking breeder notification: breederId_public=${updatedAnimal.breederId_public}, currentUserPublicId=${currentUserPublicId}`);
+        // Check if breeder was actually changed (only send notification if it's a new breeder)
+        const breederChanged = originalAnimal?.breederId_public !== updatedAnimal.breederId_public;
+        if (breederChanged && updatedAnimal.breederId_public && updatedAnimal.breederId_public !== currentUserPublicId) {
+            console.log(`[UPDATE] Breeder changed from ${originalAnimal?.breederId_public || 'null'} to ${updatedAnimal.breederId_public}`);
             // Check if this user owns an animal with that ID (local ownership check)
             const localCheck = await Animal.findOne({ id_public: updatedAnimal.breederId_public, ownerId: appUserId_backend });
             console.log(`[UPDATE] Local check for breeder animal: ${localCheck ? 'found' : 'not found'}`);
@@ -756,8 +760,10 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             }
         }
         
-        // Check if sire was set and it's not owned by current user
-        if (updatedAnimal.sireId_public) {
+        // Check if sire (father) was actually changed (only send notification if it's a new sire)
+        const sireChanged = originalAnimal?.sireId_public !== updatedAnimal.sireId_public;
+        if (sireChanged && updatedAnimal.sireId_public) {
+            console.log(`[UPDATE] Sire changed from ${originalAnimal?.sireId_public || 'null'} to ${updatedAnimal.sireId_public}`);
             const localSire = await Animal.findOne({ id_public: updatedAnimal.sireId_public, ownerId: appUserId_backend });
             if (!localSire) {
                 // It's someone else's animal - create notification
@@ -784,8 +790,10 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             }
         }
         
-        // Check if dam was set and it's not owned by current user
-        if (updatedAnimal.damId_public) {
+        // Check if dam (mother) was actually changed (only send notification if it's a new dam)
+        const damChanged = originalAnimal?.damId_public !== updatedAnimal.damId_public;
+        if (damChanged && updatedAnimal.damId_public) {
+            console.log(`[UPDATE] Dam changed from ${originalAnimal?.damId_public || 'null'} to ${updatedAnimal.damId_public}`);
             const localDam = await Animal.findOne({ id_public: updatedAnimal.damId_public, ownerId: appUserId_backend });
             if (!localDam) {
                 // It's someone else's animal - create notification
