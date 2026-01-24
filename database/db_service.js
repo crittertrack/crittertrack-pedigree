@@ -63,6 +63,7 @@ const ANIMAL_TEXT_FIELDS = {
     gender: 'animal gender',
     breederyId: 'registry identifier',
     breederId_public: 'breeder id',
+    manualBreederName: 'manual breeder name',
     status: 'animal status',
     color: 'animal color',
     coat: 'animal coat',

@@ -146,6 +146,7 @@ const AnimalSchema = new mongoose.Schema({
     
     // Breeder and owner info
     breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder (user)
+    manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
     ownerName: { type: String, default: null }, // Custom owner name (only for local view)
     
     // Ownership and breeding status
@@ -415,6 +416,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     
     // Breeder info (public)
     breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder
+    manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
     
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
