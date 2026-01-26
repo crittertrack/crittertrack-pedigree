@@ -1208,7 +1208,7 @@ router.get('/dashboard-stats', async (req, res) => {
         // Get active users (logged in within last 30 days)
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const activeUsers = await User.countDocuments({
-            lastLogin: { $gte: thirtyDaysAgo }
+            last_login: { $gte: thirtyDaysAgo }
         });
         
         // Get total animals
