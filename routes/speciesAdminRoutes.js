@@ -550,6 +550,63 @@ router.post('/genetics/:id/genes', requireAdmin, async (req, res) => {
     }
 });
 
+// PUT /api/admin/genetics/:id/genes/reorder - Reorder genes within a category (MUST come before :geneIndex route)
+router.put('/genetics/:id/genes/reorder', requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { fromIndex, toIndex, geneType } = req.body;
+        
+        const geneticsData = await GeneticsData.findById(id);
+        if (!geneticsData) {
+            return res.status(404).json({ error: 'Genetics data not found' });
+        }
+        
+        if (geneticsData.isPublished) {
+            return res.status(400).json({ error: 'Cannot edit published data' });
+        }
+        
+        const geneArray = geneType === 'marking' 
+            ? geneticsData.markingGenes
+            : geneType === 'coat'
+                ? geneticsData.coatGenes
+                : geneType === 'other'
+                    ? geneticsData.otherGenes
+                    : geneticsData.genes;
+        
+        const fromIdx = parseInt(fromIndex);
+        const toIdx = parseInt(toIndex);
+        
+        if (fromIdx < 0 || fromIdx >= geneArray.length || 
+            toIdx < 0 || toIdx >= geneArray.length) {
+            return res.status(400).json({ error: 'Invalid gene indices' });
+        }
+        
+        // Reorder the genes array
+        const genesCopy = [...geneArray];
+        const [movedGene] = genesCopy.splice(fromIdx, 1);
+        genesCopy.splice(toIdx, 0, movedGene);
+        
+        // Update the array based on geneType
+        if (geneType === 'marking') {
+            geneticsData.markingGenes = genesCopy;
+        } else if (geneType === 'coat') {
+            geneticsData.coatGenes = genesCopy;
+        } else if (geneType === 'other') {
+            geneticsData.otherGenes = genesCopy;
+        } else {
+            geneticsData.genes = genesCopy;
+        }
+        
+        geneticsData.lastEditedBy = req.user.userId;
+        await geneticsData.save();
+        
+        res.json(geneticsData);
+    } catch (error) {
+        console.error('Error reordering genes:', error);
+        res.status(500).json({ error: 'Failed to reorder genes' });
+    }
+});
+
 // PUT /api/admin/genetics/:id/genes/:geneIndex - Update a gene
 router.put('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) => {
     try {
@@ -729,63 +786,6 @@ router.delete('/genetics/:id/loci/:locusIndex/alleles/:alleleIndex', requireAdmi
     } catch (error) {
         console.error('Error removing allele:', error);
         res.status(500).json({ error: 'Failed to remove allele' });
-    }
-});
-
-// PUT /api/admin/genetics/:id/genes/reorder - Reorder genes within a category
-router.put('/genetics/:id/genes/reorder', requireAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { fromIndex, toIndex, geneType } = req.body;
-        
-        const geneticsData = await GeneticsData.findById(id);
-        if (!geneticsData) {
-            return res.status(404).json({ error: 'Genetics data not found' });
-        }
-        
-        if (geneticsData.isPublished) {
-            return res.status(400).json({ error: 'Cannot edit published data' });
-        }
-        
-        const geneArray = geneType === 'marking' 
-            ? geneticsData.markingGenes
-            : geneType === 'coat'
-                ? geneticsData.coatGenes
-                : geneType === 'other'
-                    ? geneticsData.otherGenes
-                    : geneticsData.genes;
-        
-        const fromIdx = parseInt(fromIndex);
-        const toIdx = parseInt(toIndex);
-        
-        if (fromIdx < 0 || fromIdx >= geneArray.length || 
-            toIdx < 0 || toIdx >= geneArray.length) {
-            return res.status(400).json({ error: 'Invalid gene indices' });
-        }
-        
-        // Reorder the genes array
-        const genesCopy = [...geneArray];
-        const [movedGene] = genesCopy.splice(fromIdx, 1);
-        genesCopy.splice(toIdx, 0, movedGene);
-        
-        // Update the array based on geneType
-        if (geneType === 'marking') {
-            geneticsData.markingGenes = genesCopy;
-        } else if (geneType === 'coat') {
-            geneticsData.coatGenes = genesCopy;
-        } else if (geneType === 'other') {
-            geneticsData.otherGenes = genesCopy;
-        } else {
-            geneticsData.genes = genesCopy;
-        }
-        
-        geneticsData.lastEditedBy = req.user.userId;
-        await geneticsData.save();
-        
-        res.json(geneticsData);
-    } catch (error) {
-        console.error('Error reordering genes:', error);
-        res.status(500).json({ error: 'Failed to reorder genes' });
     }
 });
 
