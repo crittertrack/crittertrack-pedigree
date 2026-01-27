@@ -962,6 +962,7 @@ const GeneticsDataSchema = new mongoose.Schema({
             notation: { type: String, required: true },
             phenotype: { type: String, default: null },
             carrier: { type: String, default: null },
+            isLethal: { type: Boolean, default: false },
             order: { type: Number, default: 0 }
         }]
     }],
@@ -980,6 +981,7 @@ const GeneticsDataSchema = new mongoose.Schema({
             notation: { type: String, required: true },
             phenotype: { type: String, default: null },
             carrier: { type: String, default: null },
+            isLethal: { type: Boolean, default: false },
             order: { type: Number, default: 0 }
         }]
     }],
@@ -998,6 +1000,7 @@ const GeneticsDataSchema = new mongoose.Schema({
             notation: { type: String, required: true },
             phenotype: { type: String, default: null },
             carrier: { type: String, default: null },
+            isLethal: { type: Boolean, default: false },
             order: { type: Number, default: 0 }
         }]
     }],
