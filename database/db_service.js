@@ -63,6 +63,7 @@ const ANIMAL_TEXT_FIELDS = {
     gender: 'animal gender',
     breederyId: 'registry identifier',
     breederId_public: 'breeder id',
+    manualBreederName: 'manual breeder name',
     status: 'animal status',
     color: 'animal color',
     coat: 'animal coat',
@@ -1492,7 +1493,9 @@ const requestEmailVerification = async (email, personalName, breederName, showBr
         existingUser.verificationCodeExpires = verificationCodeExpires;
         await existingUser.save();
     } else {
-        // Create new unverified user (no id_public yet)
+        // Create new unverified user with temporary id_public to prevent E11000 duplicate key error
+        // The id_public will be properly assigned during email verification
+        const temporaryId = `TEMP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const user = new User({
             email,
             password: hashedPassword,
@@ -1501,7 +1504,8 @@ const requestEmailVerification = async (email, personalName, breederName, showBr
             showBreederName: showBreederName || false,
             emailVerified: false,
             verificationCode,
-            verificationCodeExpires
+            verificationCodeExpires,
+            id_public: temporaryId
         });
         await user.save();
     }
@@ -1568,7 +1572,18 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
     user.id_public = id_public;
     user.verificationCode = undefined;
     user.verificationCodeExpires = undefined;
-    await user.save();
+    try {
+        await user.save();
+    } catch (error) {
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.id_public) {
+            // Race condition: another request got this id_public, retry with new sequence
+            const retryId = await getNextSequence('userId');
+            user.id_public = retryId;
+            await user.save();
+        } else {
+            throw error;
+        }
+    }
 
     // Create PublicProfile
     const publicProfile = new PublicProfile({

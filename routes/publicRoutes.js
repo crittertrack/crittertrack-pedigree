@@ -179,6 +179,17 @@ router.get('/users/active', async (req, res) => {
     }
 });
 
+// GET /api/public/users/count - Get total count of registered and verified users
+router.get('/users/count', async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments({ emailVerified: true });
+        res.status(200).json({ totalUsers });
+    } catch (error) {
+        console.error('Error fetching user count:', error);
+        res.status(500).json({ message: 'Internal server error while fetching user count.' });
+    }
+});
+
 // TEMPORARY MIGRATION ENDPOINT - Remove after running once
 router.get('/migrate-profiles-temp', async (req, res) => {
     try {
