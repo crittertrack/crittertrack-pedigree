@@ -963,6 +963,9 @@ router.post('/genetics/:id/loci/:locusIndex/combinations', requireAdmin, async (
         
         locus.combinations.push(newCombination);
         
+        // Mark the combination array as modified so Mongoose detects the change
+        locus.markModified('combinations');
+        
         geneticsData.lastEditedBy = req.user.userId;
         await geneticsData.save();
         
@@ -1067,6 +1070,9 @@ router.put('/genetics/:id/loci/:locusIndex/combinations/:combinationIndex', requ
             carrier: carrier ? carrier.trim() : null,
             isLethal: isLethal === true
         };
+        
+        // Mark the combination array as modified so Mongoose detects the change
+        locus.markModified('combinations');
         
         geneticsData.lastEditedBy = req.user.userId;
         await geneticsData.save();
