@@ -556,8 +556,11 @@ router.put('/genetics/:id/genes/reorder', requireAdmin, async (req, res) => {
         const { id } = req.params;
         const { fromIndex, toIndex, geneType } = req.body;
         
+        console.log('genes/reorder endpoint hit:', { id, fromIndex, toIndex, geneType });
+        
         const geneticsData = await GeneticsData.findById(id);
         if (!geneticsData) {
+            console.log('Genetics data not found for id:', id);
             return res.status(404).json({ error: 'Genetics data not found' });
         }
         
