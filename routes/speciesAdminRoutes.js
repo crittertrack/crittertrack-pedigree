@@ -957,7 +957,7 @@ router.post('/genetics/:id/loci/:locusIndex/combinations', requireAdmin, async (
             notation: notation.trim(),
             phenotype: phenotype ? phenotype.trim() : null,
             carrier: carrier ? carrier.trim() : null,
-            isLethal: isLethal || false,
+            isLethal: isLethal === true,
             order: locus.combinations.length
         };
         
@@ -1065,7 +1065,7 @@ router.put('/genetics/:id/loci/:locusIndex/combinations/:combinationIndex', requ
             notation: notation.trim(),
             phenotype: phenotype ? phenotype.trim() : null,
             carrier: carrier ? carrier.trim() : null,
-            isLethal: isLethal || false
+            isLethal: isLethal === true
         };
         
         geneticsData.lastEditedBy = req.user.userId;
