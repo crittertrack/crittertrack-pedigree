@@ -586,8 +586,10 @@ router.put('/genetics/:id/genes/reorder', requireAdmin, async (req, res) => {
         
         // Reorder the genes array
         const genesCopy = [...geneArray];
+        console.log('Before reorder:', genesCopy.map((g, i) => `${i}: ${g.symbol}`));
         const [movedGene] = genesCopy.splice(fromIdx, 1);
         genesCopy.splice(toIdx, 0, movedGene);
+        console.log('After reorder:', genesCopy.map((g, i) => `${i}: ${g.symbol}`));
         
         // Update the array based on geneType
         if (geneType === 'marking') {
