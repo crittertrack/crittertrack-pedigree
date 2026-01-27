@@ -1029,6 +1029,8 @@ router.put('/genetics/:id/loci/:locusIndex/combinations/:combinationIndex', requ
         const { id, locusIndex, combinationIndex } = req.params;
         const { notation, phenotype, carrier, isLethal, geneType } = req.body;
         
+        console.log('[PUT Combination] Route hit:', { id, locusIndex, combinationIndex, notation, isLethal, geneType });
+        
         if (!notation) {
             return res.status(400).json({ error: 'Combination notation is required' });
         }
