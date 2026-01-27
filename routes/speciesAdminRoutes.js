@@ -602,6 +602,8 @@ router.put('/genetics/:id/genes/reorder', requireAdmin, async (req, res) => {
             geneticsData.genes = genesCopy;
         }
         
+        console.log('After assignment, genes[0-3]:', geneticsData.genes?.slice(0, 4).map(g => g.symbol));
+        
         geneticsData.lastEditedBy = req.user.userId;
         await geneticsData.save();
         
