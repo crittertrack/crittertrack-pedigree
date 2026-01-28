@@ -13,6 +13,12 @@ function normalizeObject(obj) {
     if (Array.isArray(obj)) {
         return obj.map(item => normalizeObject(item));
     }
+    
+    // Handle empty objects - convert to null
+    if (Object.keys(obj).length === 0) {
+        return null;
+    }
+    
     const normalized = {};
     for (const [key, value] of Object.entries(obj)) {
         if (value === null || value === undefined) {
@@ -20,7 +26,9 @@ function normalizeObject(obj) {
         } else if (value === '') {
             normalized[key] = null;
         } else if (typeof value === 'object') {
-            normalized[key] = normalizeObject(value);
+            // Recursively normalize, but convert empty objects to null
+            const normalizedValue = normalizeObject(value);
+            normalized[key] = normalizedValue;
         } else {
             normalized[key] = value;
         }
@@ -49,17 +57,22 @@ async function consolidateEmptyFields() {
         console.log('\n🔄 Processing Animals...');
         let animals = await Animal.find({});
         for (let animal of animals) {
-            let normalized = normalizeObject(animal.toObject());
-            let changed = JSON.stringify(animal.toObject()) !== JSON.stringify(normalized);
-            if (changed) {
-                await Animal.updateOne(
-                    { _id: animal._id },
-                    { $set: normalized }
-                );
-                stats.animals++;
-                if (stats.animals % 100 === 0) {
-                    console.log(`  ✓ Updated ${stats.animals} animals...`);
+            try {
+                let normalized = normalizeObject(animal.toObject());
+                let changed = JSON.stringify(animal.toObject()) !== JSON.stringify(normalized);
+                if (changed) {
+                    await Animal.updateOne(
+                        { _id: animal._id },
+                        { $set: normalized }
+                    );
+                    stats.animals++;
+                    if (stats.animals % 100 === 0) {
+                        console.log(`  ✓ Updated ${stats.animals} animals...`);
+                    }
                 }
+            } catch (err) {
+                console.error(`  ⚠️ Error updating animal ${animal._id}:`, err.message);
+                // Continue to next document
             }
         }
         console.log(`✓ Animals: ${stats.animals} documents updated`);
@@ -68,17 +81,22 @@ async function consolidateEmptyFields() {
         console.log('\n🔄 Processing GeneticsData...');
         let geneticsDataList = await GeneticsData.find({});
         for (let geneticsData of geneticsDataList) {
-            let normalized = normalizeObject(geneticsData.toObject());
-            let changed = JSON.stringify(geneticsData.toObject()) !== JSON.stringify(normalized);
-            if (changed) {
-                await GeneticsData.updateOne(
-                    { _id: geneticsData._id },
-                    { $set: normalized }
-                );
-                stats.genetics++;
-                if (stats.genetics % 10 === 0) {
-                    console.log(`  ✓ Updated ${stats.genetics} genetics documents...`);
+            try {
+                let normalized = normalizeObject(geneticsData.toObject());
+                let changed = JSON.stringify(geneticsData.toObject()) !== JSON.stringify(normalized);
+                if (changed) {
+                    await GeneticsData.updateOne(
+                        { _id: geneticsData._id },
+                        { $set: normalized }
+                    );
+                    stats.genetics++;
+                    if (stats.genetics % 10 === 0) {
+                        console.log(`  ✓ Updated ${stats.genetics} genetics documents...`);
+                    }
                 }
+            } catch (err) {
+                console.error(`  ⚠️ Error updating genetics ${geneticsData._id}:`, err.message);
+                // Continue to next document
             }
         }
         console.log(`✓ GeneticsData: ${stats.genetics} documents updated`);
@@ -87,14 +105,18 @@ async function consolidateEmptyFields() {
         console.log('\n🔄 Processing Species...');
         let species = await Species.find({});
         for (let s of species) {
-            let normalized = normalizeObject(s.toObject());
-            let changed = JSON.stringify(s.toObject()) !== JSON.stringify(normalized);
-            if (changed) {
-                await Species.updateOne(
-                    { _id: s._id },
-                    { $set: normalized }
-                );
-                stats.species++;
+            try {
+                let normalized = normalizeObject(s.toObject());
+                let changed = JSON.stringify(s.toObject()) !== JSON.stringify(normalized);
+                if (changed) {
+                    await Species.updateOne(
+                        { _id: s._id },
+                        { $set: normalized }
+                    );
+                    stats.species++;
+                }
+            } catch (err) {
+                console.error(`  ⚠️ Error updating species ${s._id}:`, err.message);
             }
         }
         console.log(`✓ Species: ${stats.species} documents updated`);
@@ -103,14 +125,18 @@ async function consolidateEmptyFields() {
         console.log('\n🔄 Processing SpeciesConfig...');
         let speciesConfigs = await SpeciesConfig.find({});
         for (let config of speciesConfigs) {
-            let normalized = normalizeObject(config.toObject());
-            let changed = JSON.stringify(config.toObject()) !== JSON.stringify(normalized);
-            if (changed) {
-                await SpeciesConfig.updateOne(
-                    { _id: config._id },
-                    { $set: normalized }
-                );
-                stats.speciesConfig++;
+            try {
+                let normalized = normalizeObject(config.toObject());
+                let changed = JSON.stringify(config.toObject()) !== JSON.stringify(normalized);
+                if (changed) {
+                    await SpeciesConfig.updateOne(
+                        { _id: config._id },
+                        { $set: normalized }
+                    );
+                    stats.speciesConfig++;
+                }
+            } catch (err) {
+                console.error(`  ⚠️ Error updating species config ${config._id}:`, err.message);
             }
         }
         console.log(`✓ SpeciesConfig: ${stats.speciesConfig} documents updated`);
@@ -119,14 +145,18 @@ async function consolidateEmptyFields() {
         console.log('\n🔄 Processing Users...');
         let users = await User.find({});
         for (let user of users) {
-            let normalized = normalizeObject(user.toObject());
-            let changed = JSON.stringify(user.toObject()) !== JSON.stringify(normalized);
-            if (changed) {
-                await User.updateOne(
-                    { _id: user._id },
-                    { $set: normalized }
-                );
-                stats.users++;
+            try {
+                let normalized = normalizeObject(user.toObject());
+                let changed = JSON.stringify(user.toObject()) !== JSON.stringify(normalized);
+                if (changed) {
+                    await User.updateOne(
+                        { _id: user._id },
+                        { $set: normalized }
+                    );
+                    stats.users++;
+                }
+            } catch (err) {
+                console.error(`  ⚠️ Error updating user ${user._id}:`, err.message);
             }
         }
         console.log(`✓ Users: ${stats.users} documents updated`);
