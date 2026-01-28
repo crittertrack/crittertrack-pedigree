@@ -1,34 +1,5 @@
 const mongoose = require('mongoose');
 
-// ============================================
-// MIDDLEWARE: Normalize empty values to null
-// ============================================
-// This middleware automatically converts empty strings and undefined values to null
-// Runs on save() for all schemas
-function normalizeEmptyValues(doc) {
-    function normalize(obj) {
-        if (obj === null || obj === undefined) return null;
-        if (typeof obj !== 'object') {
-            if (obj === '' || obj === undefined) return null;
-            return obj;
-        }
-        if (Array.isArray(obj)) {
-            return obj.map(item => normalize(item));
-        }
-        for (const key in obj) {
-            if (obj[key] === null || obj[key] === undefined) {
-                obj[key] = null;
-            } else if (obj[key] === '') {
-                obj[key] = null;
-            } else if (typeof obj[key] === 'object') {
-                normalize(obj[key]);
-            }
-        }
-        return obj;
-    }
-    normalize(doc);
-}
-
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
 const CounterSchema = new mongoose.Schema({
@@ -113,13 +84,6 @@ const UserSchema = new mongoose.Schema({
     bannedIP: { type: String, default: null },
     moderatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 });
-
-// Add pre-save middleware to normalize empty values
-UserSchema.pre('save', function(next) {
-    normalizeEmptyValues(this);
-    next();
-});
-
 const User = mongoose.model('User', UserSchema);
 
 
@@ -426,13 +390,6 @@ const AnimalSchema = new mongoose.Schema({
     },
 
 }, { timestamps: true });
-
-// Add pre-save middleware to normalize empty values
-AnimalSchema.pre('save', function(next) {
-    normalizeEmptyValues(this);
-    next();
-});
-
 const Animal = mongoose.model('Animal', AnimalSchema);
 
 
@@ -621,13 +578,6 @@ const LitterSchema = new mongoose.Schema({
     notes: { type: String, default: '' },
     
 }, { timestamps: true });
-
-// Add pre-save middleware to normalize empty values
-LitterSchema.pre('save', function(next) {
-    normalizeEmptyValues(this);
-    next();
-});
-
 const Litter = mongoose.model('Litter', LitterSchema);
 
 
@@ -869,13 +819,6 @@ const SpeciesSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // User who added custom species
     createdAt: { type: Date, default: Date.now, index: true }
 });
-
-// Add pre-save middleware to normalize empty values
-SpeciesSchema.pre('save', function(next) {
-    normalizeEmptyValues(this);
-    next();
-});
-
 const Species = mongoose.model('Species', SpeciesSchema);
 
 
@@ -967,13 +910,6 @@ const SpeciesConfigSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now },
     modifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
 }, { timestamps: true });
-
-// Add pre-save middleware to normalize empty values
-SpeciesConfigSchema.pre('save', function(next) {
-    normalizeEmptyValues(this);
-    next();
-});
-
 const SpeciesConfig = mongoose.model('SpeciesConfig', SpeciesConfigSchema);
 
 
@@ -1078,13 +1014,6 @@ const GeneticsDataSchema = new mongoose.Schema({
 }, { timestamps: true });
 // Compound index for species + published status
 GeneticsDataSchema.index({ speciesName: 1, isPublished: 1 });
-
-// Add pre-save middleware to normalize empty values
-GeneticsDataSchema.pre('save', function(next) {
-    normalizeEmptyValues(this);
-    next();
-});
-
 const GeneticsData = mongoose.model('GeneticsData', GeneticsDataSchema);
 
 
