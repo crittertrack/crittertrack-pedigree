@@ -498,7 +498,9 @@ router.get('/marketplace', async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Build the base filter - only public animals that are for sale or available for breeding
-        const filter = {};
+        const filter = {
+            isDisplay: true // Must have public profile enabled
+        };
         
         if (type === 'sale') {
             filter.isForSale = true;
@@ -564,8 +566,8 @@ router.get('/marketplace', async (req, res) => {
             }
         }
 
-        // Use PublicAnimal collection (only contains public animals)
-        const Model = (typeof PublicAnimal !== 'undefined' && PublicAnimal) ? PublicAnimal : Animal;
+        // Use Animal collection to search across ALL users' animals
+        const Model = Animal;
 
         // Get total count for pagination
         const total = await Model.countDocuments(filter);
