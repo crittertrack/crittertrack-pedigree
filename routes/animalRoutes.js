@@ -1435,4 +1435,59 @@ router.post('/family-tree-batch', async (req, res) => {
     }
 });
 
+// POST /api/animals/family-tree-expand
+// Given a list of animal IDs, return ALL related animals (parents, children, siblings, etc.)
+router.post('/family-tree-expand', async (req, res) => {
+    try {
+        const { Animal } = require('../database/models');
+        const { ids } = req.body;
+        
+        if (!ids || !Array.isArray(ids)) {
+            return res.status(400).json({ message: 'ids array is required' });
+        }
+        
+        const relatedAnimals = new Set();
+        
+        // Find all animals where sireId_public or damId_public is in our list (children & siblings)
+        const childrenAndSiblings = await Animal.find({
+            $or: [
+                { sireId_public: { $in: ids } },
+                { damId_public: { $in: ids } }
+            ]
+        })
+        .select('id_public name prefix suffix species sex dateOfBirth sireId_public damId_public images isOwned ownerId')
+        .lean();
+        
+        childrenAndSiblings.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
+        
+        // Find all parent IDs from the given animals
+        const baseAnimals = await Animal.find({ id_public: { $in: ids } })
+            .select('sireId_public damId_public')
+            .lean();
+        
+        const parentIds = new Set();
+        baseAnimals.forEach(animal => {
+            if (animal.sireId_public) parentIds.add(animal.sireId_public);
+            if (animal.damId_public) parentIds.add(animal.damId_public);
+        });
+        
+        // Fetch all parents
+        if (parentIds.size > 0) {
+            const parents = await Animal.find({ id_public: { $in: Array.from(parentIds) } })
+                .select('id_public name prefix suffix species sex dateOfBirth sireId_public damId_public images isOwned ownerId')
+                .lean();
+            
+            parents.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
+        }
+        
+        // Convert back to objects and remove duplicates
+        const result = Array.from(relatedAnimals).map(str => JSON.parse(str));
+        
+        res.json(result);
+    } catch (error) {
+        console.error('Error expanding family tree:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = router;
