@@ -1455,7 +1455,7 @@ router.post('/family-tree-expand', async (req, res) => {
                 { damId_public: { $in: ids } }
             ]
         })
-        .select('id_public name prefix suffix species sex dateOfBirth sireId_public damId_public images isOwned ownerId')
+        .select('id_public name prefix suffix species sex dateOfBirth color coat sireId_public damId_public images isOwned ownerId')
         .lean();
         
         childrenAndSiblings.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
@@ -1474,7 +1474,7 @@ router.post('/family-tree-expand', async (req, res) => {
         // Fetch all parents
         if (parentIds.size > 0) {
             const parents = await Animal.find({ id_public: { $in: Array.from(parentIds) } })
-                .select('id_public name prefix suffix species sex dateOfBirth sireId_public damId_public images isOwned ownerId')
+                .select('id_public name prefix suffix species sex dateOfBirth color coat sireId_public damId_public images isOwned ownerId')
                 .lean();
             
             parents.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
