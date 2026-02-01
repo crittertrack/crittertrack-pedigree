@@ -1412,4 +1412,27 @@ router.get('/:id_public/relationships', async (req, res) => {
     }
 });
 
+// POST /api/animals/family-tree-batch
+// Fetch multiple animals by their public IDs for family tree (authenticated endpoint)
+router.post('/family-tree-batch', async (req, res) => {
+    try {
+        const { Animal } = require('../database/models');
+        const { ids } = req.body;
+        
+        if (!ids || !Array.isArray(ids)) {
+            return res.status(400).json({ message: 'ids array is required' });
+        }
+        
+        // Fetch all animals with the given IDs from the main Animal collection
+        const animals = await Animal.find({ id_public: { $in: ids } })
+            .select('id_public name prefix suffix species sex dateOfBirth sireId_public damId_public images isOwned ownerId')
+            .lean();
+        
+        res.json(animals);
+    } catch (error) {
+        console.error('Error fetching family tree animals:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = router;
