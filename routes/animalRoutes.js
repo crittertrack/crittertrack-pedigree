@@ -1201,4 +1201,215 @@ router.post('/bulk-publish', async (req, res) => {
     }
 });
 
+/**
+ * GET /animals/:id_public/relationships
+ * 
+ * Get comprehensive family relationships for an animal including:
+ * - Parents
+ * - Siblings (same dam or sire)
+ * - Grandparents
+ * - Great-grandparents
+ * - Aunts/Uncles (siblings of parents)
+ * - Nephews/Nieces (children of siblings)
+ * - Cousins (children of aunts/uncles)
+ * - Children (offspring)
+ */
+router.get('/:id_public/relationships', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const appUserId_backend = req.user && req.user.id;
+        
+        // Find the animal
+        const animal = await Animal.findOne({ id_public }).lean();
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found' });
+        }
+        
+        // Helper function to fetch animal by public ID with selective fields
+        const fetchAnimal = async (animalId_public) => {
+            if (!animalId_public) return null;
+            const a = await Animal.findOne({ id_public: animalId_public })
+                .select('id_public name species sex dateOfBirth geneticCode images sireId_public damId_public ownerId')
+                .lean();
+            return a;
+        };
+        
+        // Helper function to check if user has access to view an animal
+        const hasViewAccess = (animal) => {
+            if (!animal) return false;
+            // User owns the animal
+            if (animal.ownerId.toString() === appUserId_backend) return true;
+            // Animal is public
+            if (animal.showOnPublicProfile) return true;
+            // User has view-only access
+            if (animal.viewOnlyForUsers && animal.viewOnlyForUsers.some(id => id.toString() === appUserId_backend)) return true;
+            return false;
+        };
+        
+        const relationships = {
+            parents: [],
+            siblings: [],
+            grandparents: [],
+            greatGrandparents: [],
+            auntsUncles: [],
+            nephewsNieces: [],
+            cousins: [],
+            children: []
+        };
+        
+        // 1. PARENTS
+        const sire = await fetchAnimal(animal.sireId_public);
+        const dam = await fetchAnimal(animal.damId_public);
+        
+        if (sire) relationships.parents.push(sire);
+        if (dam) relationships.parents.push(dam);
+        
+        // 2. SIBLINGS (same sire or dam)
+        const siblingQuery = {
+            $and: [
+                { id_public: { $ne: id_public } }, // Not the same animal
+                {
+                    $or: [
+                        { sireId_public: animal.sireId_public, sireId_public: { $ne: null } },
+                        { damId_public: animal.damId_public, damId_public: { $ne: null } }
+                    ]
+                }
+            ]
+        };
+        
+        const siblings = await Animal.find(siblingQuery)
+            .select('id_public name species sex dateOfBirth geneticCode images sireId_public damId_public ownerId showOnPublicProfile viewOnlyForUsers')
+            .lean();
+        
+        relationships.siblings = siblings.filter(hasViewAccess);
+        
+        // 3. GRANDPARENTS
+        if (sire) {
+            const siresSire = await fetchAnimal(sire.sireId_public);
+            const siresDam = await fetchAnimal(sire.damId_public);
+            if (siresSire) relationships.grandparents.push(siresSire);
+            if (siresDam) relationships.grandparents.push(siresDam);
+        }
+        if (dam) {
+            const damsSire = await fetchAnimal(dam.sireId_public);
+            const damsDam = await fetchAnimal(dam.damId_public);
+            if (damsSire) relationships.grandparents.push(damsSire);
+            if (damsDam) relationships.grandparents.push(damsDam);
+        }
+        
+        // 4. GREAT-GRANDPARENTS
+        for (const grandparent of relationships.grandparents) {
+            const ggSire = await fetchAnimal(grandparent.sireId_public);
+            const ggDam = await fetchAnimal(grandparent.damId_public);
+            if (ggSire && !relationships.greatGrandparents.some(a => a.id_public === ggSire.id_public)) {
+                relationships.greatGrandparents.push(ggSire);
+            }
+            if (ggDam && !relationships.greatGrandparents.some(a => a.id_public === ggDam.id_public)) {
+                relationships.greatGrandparents.push(ggDam);
+            }
+        }
+        
+        // 5. AUNTS/UNCLES (siblings of parents)
+        const parentIds = [animal.sireId_public, animal.damId_public].filter(Boolean);
+        for (const parentId of parentIds) {
+            const parent = await fetchAnimal(parentId);
+            if (!parent) continue;
+            
+            const auntsUnclesQuery = {
+                $and: [
+                    { id_public: { $ne: parentId } }, // Not the parent itself
+                    {
+                        $or: [
+                            { sireId_public: parent.sireId_public, sireId_public: { $ne: null } },
+                            { damId_public: parent.damId_public, damId_public: { $ne: null } }
+                        ]
+                    }
+                ]
+            };
+            
+            const auntsUncles = await Animal.find(auntsUnclesQuery)
+                .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+                .lean();
+            
+            auntsUncles.filter(hasViewAccess).forEach(au => {
+                if (!relationships.auntsUncles.some(a => a.id_public === au.id_public)) {
+                    relationships.auntsUncles.push(au);
+                }
+            });
+        }
+        
+        // 6. CHILDREN (offspring where this animal is sire or dam)
+        const childrenQuery = {
+            $or: [
+                { sireId_public: id_public },
+                { damId_public: id_public }
+            ]
+        };
+        
+        const children = await Animal.find(childrenQuery)
+            .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+            .lean();
+        
+        relationships.children = children.filter(hasViewAccess);
+        
+        // 7. NEPHEWS/NIECES (children of siblings)
+        for (const sibling of relationships.siblings) {
+            const niblings = await Animal.find({
+                $or: [
+                    { sireId_public: sibling.id_public },
+                    { damId_public: sibling.id_public }
+                ]
+            })
+            .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+            .lean();
+            
+            niblings.filter(hasViewAccess).forEach(n => {
+                if (!relationships.nephewsNieces.some(a => a.id_public === n.id_public)) {
+                    relationships.nephewsNieces.push(n);
+                }
+            });
+        }
+        
+        // 8. COUSINS (children of aunts/uncles)
+        for (const auntUncle of relationships.auntsUncles) {
+            const cousins = await Animal.find({
+                $or: [
+                    { sireId_public: auntUncle.id_public },
+                    { damId_public: auntUncle.id_public }
+                ]
+            })
+            .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+            .lean();
+            
+            cousins.filter(hasViewAccess).forEach(c => {
+                if (!relationships.cousins.some(a => a.id_public === c.id_public)) {
+                    relationships.cousins.push(c);
+                }
+            });
+        }
+        
+        // Remove sensitive fields from all relationships
+        const sanitizeAnimal = (a) => {
+            if (!a) return null;
+            const { ownerId, showOnPublicProfile, viewOnlyForUsers, ...rest } = a;
+            return rest;
+        };
+        
+        res.status(200).json({
+            parents: relationships.parents.map(sanitizeAnimal),
+            siblings: relationships.siblings.map(sanitizeAnimal),
+            grandparents: relationships.grandparents.map(sanitizeAnimal),
+            greatGrandparents: relationships.greatGrandparents.map(sanitizeAnimal),
+            auntsUncles: relationships.auntsUncles.map(sanitizeAnimal),
+            nephewsNieces: relationships.nephewsNieces.map(sanitizeAnimal),
+            cousins: relationships.cousins.map(sanitizeAnimal),
+            children: relationships.children.map(sanitizeAnimal)
+        });
+        
+    } catch (error) {
+        console.error('Error fetching animal relationships:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 module.exports = router;
