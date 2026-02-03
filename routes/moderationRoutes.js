@@ -70,6 +70,13 @@ router.post('/poll/vote', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'You have already voted on this poll' });
         }
 
+        // Validate option indices
+        for (const optionIndex of selectedOptions) {
+            if (optionIndex < 0 || optionIndex >= anyPollNotification.pollOptions.length) {
+                return res.status(400).json({ error: 'Invalid option selected' });
+            }
+        }
+
         // Update all notification copies of this poll with new vote counts
         const allPollNotifications = await Notification.find({
             broadcastType: 'poll',
@@ -83,21 +90,21 @@ router.post('/poll/vote', requireAuth, async (req, res) => {
                 notification.voters = [];
             }
 
-            // Update vote counts for selected options
-            selectedOptions.forEach(option => {
-                const optionObj = notification.pollOptions.find(opt => opt.option === option);
-                if (optionObj) {
-                    if (!optionObj.voters) {
-                        optionObj.voters = [];
+            // Update vote counts for selected options (selectedOptions contains indices)
+            selectedOptions.forEach(optionIndex => {
+                if (notification.pollOptions[optionIndex]) {
+                    if (!notification.pollOptions[optionIndex].voters) {
+                        notification.pollOptions[optionIndex].voters = [];
                     }
-                    optionObj.voters.push(req.user.id);
-                    optionObj.votes = (optionObj.votes || 0) + 1;
+                    notification.pollOptions[optionIndex].voters.push(req.user.id);
+                    notification.pollOptions[optionIndex].votes = (notification.pollOptions[optionIndex].votes || 0) + 1;
                 }
             });
 
             // Mark this user's vote in their specific notification
             if (notification.userId.toString() === req.user.id.toString()) {
                 notification.userVote = selectedOptions;
+                notification.isRead = true;
             }
 
             await notification.save();
