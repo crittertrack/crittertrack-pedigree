@@ -19,7 +19,6 @@ const {
 const requireModerator = checkRole(['moderator', 'admin']);
 const requireAdmin = checkRole(['admin']);
 const requireAuth = protect;
-const requireAuth = protect;
 
 // All moderation routes require moderator-level access at minimum
 router.use(requireModerator);
