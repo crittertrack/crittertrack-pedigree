@@ -20,7 +20,107 @@ const requireModerator = checkRole(['moderator', 'admin']);
 const requireAdmin = checkRole(['admin']);
 const requireAuth = protect;
 
-// All moderation routes require moderator-level access at minimum
+// ============================================================
+// PUBLIC/USER ROUTES (before requireModerator middleware)
+// ============================================================
+
+// Poll voting - any authenticated user can vote
+router.post('/poll/vote', requireAuth, async (req, res) => {
+    try {
+        const { notificationId, selectedOptions } = req.body;
+
+        if (!notificationId || !selectedOptions) {
+            return res.status(400).json({ error: 'Notification ID and selected options are required' });
+        }
+
+        // Find any instance of this poll to get poll details
+        const anyPollNotification = await Notification.findOne({
+            _id: notificationId,
+            broadcastType: 'poll'
+        });
+
+        if (!anyPollNotification) {
+            return res.status(404).json({ error: 'Poll not found' });
+        }
+
+        // Find the user's specific notification copy
+        const userNotification = await Notification.findOne({
+            userId: req.user.id,
+            broadcastType: 'poll',
+            pollQuestion: anyPollNotification.pollQuestion,
+            createdAt: anyPollNotification.createdAt
+        });
+
+        if (!userNotification) {
+            return res.status(404).json({ error: 'Poll notification not found for this user' });
+        }
+
+        // Check if poll has ended
+        if (anyPollNotification.pollEndTime && new Date() > new Date(anyPollNotification.pollEndTime)) {
+            return res.status(400).json({ error: 'This poll has ended' });
+        }
+
+        // Validate selected options
+        if (!Array.isArray(selectedOptions) || selectedOptions.length === 0) {
+            return res.status(400).json({ error: 'Please select at least one option' });
+        }
+
+        // Check if user has already voted (use userVote field instead of voters array)
+        if (userNotification.userVote && userNotification.userVote.length > 0) {
+            return res.status(400).json({ error: 'You have already voted on this poll' });
+        }
+
+        // Update all notification copies of this poll with new vote counts
+        const allPollNotifications = await Notification.find({
+            broadcastType: 'poll',
+            pollQuestion: anyPollNotification.pollQuestion,
+            createdAt: anyPollNotification.createdAt
+        });
+
+        for (const notification of allPollNotifications) {
+            // Initialize voters array if it doesn't exist
+            if (!notification.voters) {
+                notification.voters = [];
+            }
+
+            // Update vote counts for selected options
+            selectedOptions.forEach(option => {
+                const optionObj = notification.pollOptions.find(opt => opt.option === option);
+                if (optionObj) {
+                    if (!optionObj.voters) {
+                        optionObj.voters = [];
+                    }
+                    optionObj.voters.push(req.user.id);
+                    optionObj.votes = (optionObj.votes || 0) + 1;
+                }
+            });
+
+            // Mark this user's vote in their specific notification
+            if (notification.userId.toString() === req.user.id.toString()) {
+                notification.userVote = selectedOptions;
+            }
+
+            await notification.save();
+        }
+
+        // Return updated poll results
+        const updatedNotification = await Notification.findById(userNotification._id);
+        res.json({
+            message: 'Vote recorded successfully',
+            userVote: updatedNotification.userVote,
+            pollResults: updatedNotification.pollOptions
+        });
+    } catch (error) {
+        console.error('Error voting on poll:', error);
+        res.status(500).json({ error: 'Failed to vote on poll' });
+    }
+});
+
+// ============================================================
+// MODERATION ROUTES (require moderator role)
+// ============================================================
+
+// All moderation routes below require moderator-level access at minimum
 router.use(requireModerator);
 
 // Utility: capture common audit log metadata
@@ -1674,104 +1774,6 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Failed to fetch broadcasts:', error);
         res.status(500).json({ error: 'Failed to fetch broadcast history' });
-    }
-});
-
-// POST /api/moderation/poll/vote - Vote on a broadcast poll (Authenticated users)
-router.post('/poll/vote', requireAuth, async (req, res) => {
-    try {
-        const { notificationId, selectedOptions } = req.body;
-        const userId = req.user.id;
-
-        if (!notificationId || !selectedOptions) {
-            return res.status(400).json({ error: 'Notification ID and selected options are required' });
-        }
-
-        // Find the poll notification (polls are broadcast to all users, so don't filter by userId)
-        const notification = await Notification.findOne({
-            _id: notificationId,
-            broadcastType: 'poll'
-        });
-
-        if (!notification) {
-            return res.status(404).json({ error: 'Poll not found or not accessible' });
-        }
-
-        // Get the user's specific copy of this poll notification
-        const userNotification = await Notification.findOne({
-            userId: userId,
-            pollQuestion: notification.pollQuestion,
-            broadcastType: 'poll',
-            createdAt: notification.createdAt
-        });
-
-        if (!userNotification) {
-            return res.status(404).json({ error: 'Your copy of the poll not found' });
-        }
-
-        // Check if poll has ended
-        if (userNotification.pollEndsAt && new Date() > userNotification.pollEndsAt) {
-            return res.status(400).json({ error: 'Poll has ended' });
-        }
-
-        // Validate selected options
-        const optionsArray = Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions];
-        
-        if (!userNotification.allowMultipleChoices && optionsArray.length > 1) {
-            return res.status(400).json({ error: 'Multiple choices not allowed for this poll' });
-        }
-
-        // Check if user has already voted (check their specific notification)
-        if (userNotification.userVote && userNotification.userVote.length > 0) {
-            return res.status(400).json({ error: 'You have already voted on this poll' });
-        }
-
-        // Process the vote
-        for (const optionIndex of optionsArray) {
-            if (optionIndex < 0 || optionIndex >= userNotification.pollOptions.length) {
-                return res.status(400).json({ error: 'Invalid option selected' });
-            }
-        }
-        
-        // Find all notifications for this poll (same poll sent to all users)
-        const allPollNotifications = await Notification.find({
-            pollQuestion: notification.pollQuestion,
-            broadcastType: 'poll',
-            createdAt: notification.createdAt
-        });
-
-        // Update vote counts in all copies
-        for (const pollNotification of allPollNotifications) {
-            for (const optionIndex of optionsArray) {
-                pollNotification.pollOptions[optionIndex].votes += 1;
-                if (!pollNotification.pollOptions[optionIndex].voters) {
-                    pollNotification.pollOptions[optionIndex].voters = [];
-                }
-                if (!pollNotification.pollOptions[optionIndex].voters.includes(userId)) {
-                    pollNotification.pollOptions[optionIndex].voters.push(userId);
-                }
-            }
-            
-            // Mark user's vote in their specific notification
-            if (pollNotification.userId.toString() === userId.toString()) {
-                pollNotification.userVote = optionsArray;
-                pollNotification.isRead = true;
-            }
-            
-            await pollNotification.save();
-        }
-
-        console.log(`[POLL] User ${req.user.email} voted on poll: ${notification.pollQuestion}`);
-
-        res.status(200).json({
-            success: true,
-            message: 'Vote recorded successfully',
-            userVote: optionsArray,
-            pollResults: userNotification.pollOptions
-        });
-    } catch (error) {
-        console.error('Failed to record poll vote:', error);
-        res.status(500).json({ error: 'Failed to record vote' });
     }
 });
 
