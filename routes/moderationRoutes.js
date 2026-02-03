@@ -1697,42 +1697,41 @@ router.post('/poll/vote', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Poll not found or not accessible' });
         }
 
+        // Get the user's specific copy of this poll notification
+        const userNotification = await Notification.findOne({
+            userId: userId,
+            pollQuestion: notification.pollQuestion,
+            broadcastType: 'poll',
+            createdAt: notification.createdAt
+        });
+
+        if (!userNotification) {
+            return res.status(404).json({ error: 'Your copy of the poll not found' });
+        }
+
         // Check if poll has ended
-        if (notification.pollEndsAt && new Date() > notification.pollEndsAt) {
+        if (userNotification.pollEndsAt && new Date() > userNotification.pollEndsAt) {
             return res.status(400).json({ error: 'Poll has ended' });
         }
 
         // Validate selected options
         const optionsArray = Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions];
         
-        if (!notification.allowMultipleChoices && optionsArray.length > 1) {
+        if (!userNotification.allowMultipleChoices && optionsArray.length > 1) {
             return res.status(400).json({ error: 'Multiple choices not allowed for this poll' });
         }
 
-        // Check if user has already voted
-        const hasVoted = notification.pollOptions.some(option => 
-            option.voters.some(voter => voter.toString() === userId.toString())
-        );
-
-        if (hasVoted) {
+        // Check if user has already voted (check their specific notification)
+        if (userNotification.userVote && userNotification.userVote.length > 0) {
             return res.status(400).json({ error: 'You have already voted on this poll' });
         }
 
         // Process the vote
-        const updateOperations = [];
         for (const optionIndex of optionsArray) {
-            if (optionIndex < 0 || optionIndex >= notification.pollOptions.length) {
+            if (optionIndex < 0 || optionIndex >= userNotification.pollOptions.length) {
                 return res.status(400).json({ error: 'Invalid option selected' });
             }
-
-            updateOperations.push({
-                [`pollOptions.${optionIndex}.votes`]: { $inc: 1 },
-                [`pollOptions.${optionIndex}.voters`]: { $push: new mongoose.Types.ObjectId(userId) }
-            });
         }
-
-        // Update all user's copies of this poll notification
-        const pollId = notification._id.toString();
         
         // Find all notifications for this poll (same poll sent to all users)
         const allPollNotifications = await Notification.find({
@@ -1745,22 +1744,22 @@ router.post('/poll/vote', requireAuth, async (req, res) => {
         for (const pollNotification of allPollNotifications) {
             for (const optionIndex of optionsArray) {
                 pollNotification.pollOptions[optionIndex].votes += 1;
+                if (!pollNotification.pollOptions[optionIndex].voters) {
+                    pollNotification.pollOptions[optionIndex].voters = [];
+                }
                 if (!pollNotification.pollOptions[optionIndex].voters.includes(userId)) {
                     pollNotification.pollOptions[optionIndex].voters.push(userId);
                 }
             }
+            
+            // Mark user's vote in their specific notification
+            if (pollNotification.userId.toString() === userId.toString()) {
+                pollNotification.userVote = optionsArray;
+                pollNotification.isRead = true;
+            }
+            
             await pollNotification.save();
         }
-
-        // Mark user's vote in their notification
-        const userNotification = await Notification.findOneAndUpdate(
-            { _id: notificationId, userId: userId },
-            { 
-                userVote: optionsArray,
-                isRead: true 
-            },
-            { new: true }
-        );
 
         console.log(`[POLL] User ${req.user.email} voted on poll: ${notification.pollQuestion}`);
 
