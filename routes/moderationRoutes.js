@@ -1687,10 +1687,9 @@ router.post('/poll/vote', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Notification ID and selected options are required' });
         }
 
-        // Find the poll notification
+        // Find the poll notification (polls are broadcast to all users, so don't filter by userId)
         const notification = await Notification.findOne({
             _id: notificationId,
-            userId: userId,
             broadcastType: 'poll'
         });
 
@@ -1774,6 +1773,48 @@ router.post('/poll/vote', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Failed to record poll vote:', error);
         res.status(500).json({ error: 'Failed to record vote' });
+    }
+});
+
+// GET /api/moderation/polls - Get all polls (Admin/Moderator only)
+router.get('/polls', requireModerator, async (req, res) => {
+    try {
+        // Find all unique poll broadcasts (limit to one copy per poll)
+        // We'll get the first notification of each poll (by createdAt and pollQuestion)
+        const polls = await Notification.aggregate([
+            {
+                $match: {
+                    broadcastType: 'poll',
+                    pollQuestion: { $exists: true }
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $group: {
+                    _id: {
+                        question: '$pollQuestion',
+                        createdAt: '$createdAt'
+                    },
+                    doc: { $first: '$$ROOT' }
+                }
+            },
+            {
+                $replaceRoot: { newRoot: '$doc' }
+            },
+            {
+                $limit: 50
+            }
+        ]);
+
+        res.json({
+            success: true,
+            polls: polls
+        });
+    } catch (error) {
+        console.error('Failed to fetch polls:', error);
+        res.status(500).json({ error: 'Failed to fetch polls' });
     }
 });
 
