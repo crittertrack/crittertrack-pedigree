@@ -19,6 +19,7 @@ const {
 const requireModerator = checkRole(['moderator', 'admin']);
 const requireAdmin = checkRole(['admin']);
 const requireAuth = protect;
+const requireAuth = protect;
 
 // All moderation routes require moderator-level access at minimum
 router.use(requireModerator);
@@ -1554,10 +1555,18 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
         }
 
         // Get all users
-        const allUsers = await User.find({}).select('_id email accountStatus').lean();
+        const allUsers = await User.find({}).select('_id email accountStatus id_public').lean();
         
         // Filter out banned/suspended users unless it's an alert for them
-        const activeUsers = allUsers.filter(u => u.accountStatus === 'normal');
+        let activeUsers = allUsers.filter(u => u.accountStatus === 'normal');
+        
+        // TEMPORARY: Only send broadcasts to CTU2 for testing
+        activeUsers = activeUsers.filter(u => u.id_public === 'CTU2');
+        
+        console.log(`[BROADCAST-TEST] Filtered to CTU2 only. Found ${activeUsers.length} matching users`);
+        if (activeUsers.length === 0) {
+            console.log('[BROADCAST-TEST] No CTU2 user found - broadcast will not be sent');
+        }
 
         // Prepare poll options if this is a poll
         let pollOptionsFormatted = null;
