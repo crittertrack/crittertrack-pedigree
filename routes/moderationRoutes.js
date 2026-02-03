@@ -1665,14 +1665,6 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
         
         // Filter out banned/suspended users unless it's an alert for them
         let activeUsers = allUsers.filter(u => u.accountStatus === 'normal');
-        
-        // TEMPORARY: Only send broadcasts to CTU2 for testing
-        activeUsers = activeUsers.filter(u => u.id_public === 'CTU2');
-        
-        console.log(`[BROADCAST-TEST] Filtered to CTU2 only. Found ${activeUsers.length} matching users`);
-        if (activeUsers.length === 0) {
-            console.log('[BROADCAST-TEST] No CTU2 user found - broadcast will not be sent');
-        }
 
         // Prepare poll options if this is a poll
         let pollOptionsFormatted = null;
