@@ -606,10 +606,22 @@ const NotificationSchema = new mongoose.Schema({
     
     // Broadcast-specific fields
     title: { type: String, default: null },
-    broadcastType: { type: String, enum: ['info', 'warning', 'alert', 'announcement', null], default: null },
+    broadcastType: { type: String, enum: ['info', 'warning', 'alert', 'announcement', 'poll', null], default: null },
     sendAt: { type: Date, default: null },
     isPending: { type: Boolean, default: false },
     sentAt: { type: Date, default: null },
+    
+    // Poll-specific fields
+    pollQuestion: { type: String, default: null },
+    pollOptions: [{
+        text: { type: String, required: true },
+        votes: { type: Number, default: 0 },
+        voters: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+    }],
+    pollEndsAt: { type: Date, default: null },
+    allowMultipleChoices: { type: Boolean, default: false },
+    isAnonymous: { type: Boolean, default: false },
+    userVote: { type: mongoose.Schema.Types.Mixed, default: null }, // For user-specific vote tracking
     
     // Metadata
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} },

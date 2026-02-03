@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { checkRole } = require('../middleware/authMiddleware');
+const mongoose = require('mongoose');
+const { checkRole, protect } = require('../middleware/authMiddleware');
 const { validateModerationInput } = require('../middleware/validationMiddleware');
 const { createAuditLog, getAuditLogs, logFailedAction, categorizeError } = require('../utils/auditLogger');
 const {
@@ -17,6 +18,7 @@ const {
 
 const requireModerator = checkRole(['moderator', 'admin']);
 const requireAdmin = checkRole(['admin']);
+const requireAuth = protect;
 
 // All moderation routes require moderator-level access at minimum
 router.use(requireModerator);
@@ -1505,16 +1507,41 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
 // POST /api/moderation/broadcast - Send system-wide broadcast message (Admin only)
 router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res) => {
     try {
-        const { title, message, type, scheduledFor } = req.body;
+        const { title, message, type, scheduledFor, pollQuestion, pollOptions, pollEndsAt, allowMultipleChoices, isAnonymous } = req.body;
 
         // Validate input
-        if (!title || !message) {
-            return res.status(400).json({ error: 'Title and message are required' });
+        if (!title) {
+            return res.status(400).json({ error: 'Title is required' });
         }
 
-        const validTypes = ['info', 'warning', 'alert', 'announcement'];
+        const validTypes = ['info', 'warning', 'alert', 'announcement', 'poll'];
         if (type && !validTypes.includes(type)) {
             return res.status(400).json({ error: `Invalid type. Must be one of: ${validTypes.join(', ')}` });
+        }
+
+        // Validate poll-specific fields
+        if (type === 'poll') {
+            if (!pollQuestion) {
+                return res.status(400).json({ error: 'Poll question is required for poll broadcasts' });
+            }
+            if (!pollOptions || !Array.isArray(pollOptions) || pollOptions.length < 2) {
+                return res.status(400).json({ error: 'Poll must have at least 2 options' });
+            }
+            if (pollOptions.length > 10) {
+                return res.status(400).json({ error: 'Poll cannot have more than 10 options' });
+            }
+            // Validate poll end time
+            if (pollEndsAt) {
+                const pollEnd = new Date(pollEndsAt);
+                if (pollEnd <= new Date()) {
+                    return res.status(400).json({ error: 'Poll end time must be in the future' });
+                }
+            }
+        } else {
+            // For non-poll broadcasts, message is required
+            if (!message) {
+                return res.status(400).json({ error: 'Message is required for non-poll broadcasts' });
+            }
         }
 
         // Validate scheduled time if provided
@@ -1532,17 +1559,35 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
         // Filter out banned/suspended users unless it's an alert for them
         const activeUsers = allUsers.filter(u => u.accountStatus === 'normal');
 
+        // Prepare poll options if this is a poll
+        let pollOptionsFormatted = null;
+        if (type === 'poll' && pollOptions) {
+            pollOptionsFormatted = pollOptions.map(option => ({
+                text: option,
+                votes: 0,
+                voters: []
+            }));
+        }
+
         // Create notifications for each user
         const notificationDocs = activeUsers.map(user => ({
             userId: user._id,
             type: 'broadcast',
             title: title,
-            message: message,
+            message: message || '',
             broadcastType: type || 'info',
             isRead: false,
             createdAt: sendAt,
             sendAt: sendAt,
-            isPending: sendAt > new Date() // Mark as pending if scheduled
+            isPending: sendAt > new Date(), // Mark as pending if scheduled
+            // Poll-specific fields
+            ...(type === 'poll' && {
+                pollQuestion: pollQuestion,
+                pollOptions: pollOptionsFormatted,
+                pollEndsAt: pollEndsAt ? new Date(pollEndsAt) : null,
+                allowMultipleChoices: allowMultipleChoices || false,
+                isAnonymous: isAnonymous || false
+            })
         }));
 
         // Bulk insert notifications
@@ -1621,6 +1666,150 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Failed to fetch broadcasts:', error);
         res.status(500).json({ error: 'Failed to fetch broadcast history' });
+    }
+});
+
+// POST /api/moderation/poll/vote - Vote on a broadcast poll (Authenticated users)
+router.post('/poll/vote', requireAuth, async (req, res) => {
+    try {
+        const { notificationId, selectedOptions } = req.body;
+        const userId = req.user.id;
+
+        if (!notificationId || !selectedOptions) {
+            return res.status(400).json({ error: 'Notification ID and selected options are required' });
+        }
+
+        // Find the poll notification
+        const notification = await Notification.findOne({
+            _id: notificationId,
+            userId: userId,
+            broadcastType: 'poll'
+        });
+
+        if (!notification) {
+            return res.status(404).json({ error: 'Poll not found or not accessible' });
+        }
+
+        // Check if poll has ended
+        if (notification.pollEndsAt && new Date() > notification.pollEndsAt) {
+            return res.status(400).json({ error: 'Poll has ended' });
+        }
+
+        // Validate selected options
+        const optionsArray = Array.isArray(selectedOptions) ? selectedOptions : [selectedOptions];
+        
+        if (!notification.allowMultipleChoices && optionsArray.length > 1) {
+            return res.status(400).json({ error: 'Multiple choices not allowed for this poll' });
+        }
+
+        // Check if user has already voted
+        const hasVoted = notification.pollOptions.some(option => 
+            option.voters.some(voter => voter.toString() === userId.toString())
+        );
+
+        if (hasVoted) {
+            return res.status(400).json({ error: 'You have already voted on this poll' });
+        }
+
+        // Process the vote
+        const updateOperations = [];
+        for (const optionIndex of optionsArray) {
+            if (optionIndex < 0 || optionIndex >= notification.pollOptions.length) {
+                return res.status(400).json({ error: 'Invalid option selected' });
+            }
+
+            updateOperations.push({
+                [`pollOptions.${optionIndex}.votes`]: { $inc: 1 },
+                [`pollOptions.${optionIndex}.voters`]: { $push: new mongoose.Types.ObjectId(userId) }
+            });
+        }
+
+        // Update all user's copies of this poll notification
+        const pollId = notification._id.toString();
+        
+        // Find all notifications for this poll (same poll sent to all users)
+        const allPollNotifications = await Notification.find({
+            pollQuestion: notification.pollQuestion,
+            broadcastType: 'poll',
+            createdAt: notification.createdAt
+        });
+
+        // Update vote counts in all copies
+        for (const pollNotification of allPollNotifications) {
+            for (const optionIndex of optionsArray) {
+                pollNotification.pollOptions[optionIndex].votes += 1;
+                if (!pollNotification.pollOptions[optionIndex].voters.includes(userId)) {
+                    pollNotification.pollOptions[optionIndex].voters.push(userId);
+                }
+            }
+            await pollNotification.save();
+        }
+
+        // Mark user's vote in their notification
+        const userNotification = await Notification.findOneAndUpdate(
+            { _id: notificationId, userId: userId },
+            { 
+                userVote: optionsArray,
+                isRead: true 
+            },
+            { new: true }
+        );
+
+        console.log(`[POLL] User ${req.user.email} voted on poll: ${notification.pollQuestion}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Vote recorded successfully',
+            userVote: optionsArray,
+            pollResults: userNotification.pollOptions
+        });
+    } catch (error) {
+        console.error('Failed to record poll vote:', error);
+        res.status(500).json({ error: 'Failed to record vote' });
+    }
+});
+
+// GET /api/moderation/poll/:notificationId/results - Get poll results (Authenticated users)
+router.get('/poll/:notificationId/results', requireAuth, async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        const userId = req.user.id;
+
+        // Find the user's poll notification
+        const notification = await Notification.findOne({
+            _id: notificationId,
+            userId: userId,
+            broadcastType: 'poll'
+        });
+
+        if (!notification) {
+            return res.status(404).json({ error: 'Poll not found' });
+        }
+
+        // Calculate total votes
+        const totalVotes = notification.pollOptions.reduce((sum, option) => sum + option.votes, 0);
+
+        // Prepare results
+        const results = notification.pollOptions.map(option => ({
+            text: option.text,
+            votes: option.votes,
+            percentage: totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0,
+            voterCount: notification.isAnonymous ? null : option.voters.length
+        }));
+
+        res.json({
+            pollQuestion: notification.pollQuestion,
+            totalVotes,
+            results,
+            userVote: notification.userVote,
+            hasEnded: notification.pollEndsAt ? new Date() > notification.pollEndsAt : false,
+            endsAt: notification.pollEndsAt,
+            allowMultipleChoices: notification.allowMultipleChoices,
+            isAnonymous: notification.isAnonymous
+        });
+    } catch (error) {
+        console.error('Failed to fetch poll results:', error);
+        res.status(500).json({ error: 'Failed to fetch poll results' });
     }
 });
 
