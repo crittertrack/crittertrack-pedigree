@@ -399,6 +399,144 @@ app.get('/api/users/tutorial-progress', authMiddleware, async (req, res) => {
     }
 });
 
+// ==================== BREEDER DIRECTORY ENDPOINTS ====================
+
+// GET /api/users/breeder-directory
+// Public endpoint: Returns list of users who are active or retired breeders
+app.get('/api/users/breeder-directory', async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        
+        // Find all users with breedingStatus containing 'breeder' or 'retired'
+        const breeders = await PublicProfile.find({
+            $or: [
+                { 'breedingStatus': { $exists: true } }
+            ]
+        }).select('id_public personalName showPersonalName breederName showBreederName bio profileImage breedingStatus country')
+          .lean();
+
+        // Filter to only include users with at least one 'breeder' or 'retired' status
+        const filteredBreeders = breeders.filter(profile => {
+            if (!profile.breedingStatus) return false;
+            
+            // breedingStatus is a Map, need to check its values
+            const statusObj = profile.breedingStatus instanceof Map 
+                ? Object.fromEntries(profile.breedingStatus) 
+                : profile.breedingStatus;
+            
+            return Object.values(statusObj).some(status => 
+                status === 'breeder' || status === 'retired'
+            );
+        });
+
+        // Convert Map to plain object for JSON response
+        const processedBreeders = filteredBreeders.map(breeder => ({
+            ...breeder,
+            breedingStatus: breeder.breedingStatus instanceof Map 
+                ? Object.fromEntries(breeder.breedingStatus)
+                : breeder.breedingStatus
+        }));
+
+        res.json(processedBreeders);
+    } catch (error) {
+        console.error('Error fetching breeder directory:', error);
+        res.status(500).json({ message: 'Failed to fetch breeder directory' });
+    }
+});
+
+// PUT /api/users/breeding-status
+// Protected endpoint: Update user's breeding status for species
+app.put('/api/users/breeding-status', authMiddleware, async (req, res) => {
+    try {
+        const { User, PublicProfile } = require('./database/models');
+        const { species, status } = req.body;
+
+        // Validate inputs
+        if (!species || typeof species !== 'string') {
+            return res.status(400).json({ message: 'Species name is required' });
+        }
+
+        if (!['breeder', 'retired', 'hobbyist', null].includes(status)) {
+            return res.status(400).json({ 
+                message: 'Invalid status. Must be: breeder, retired, hobbyist, or null' 
+            });
+        }
+
+        // Update in User model
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Initialize breedingStatus as Map if not exists
+        if (!user.breedingStatus) {
+            user.breedingStatus = new Map();
+        }
+
+        // Set or remove the status
+        if (status === null || status === 'hobbyist') {
+            user.breedingStatus.delete(species);
+        } else {
+            user.breedingStatus.set(species, status);
+        }
+
+        await user.save();
+
+        // Also update PublicProfile
+        const publicProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (publicProfile) {
+            if (!publicProfile.breedingStatus) {
+                publicProfile.breedingStatus = new Map();
+            }
+
+            if (status === null || status === 'hobbyist') {
+                publicProfile.breedingStatus.delete(species);
+            } else {
+                publicProfile.breedingStatus.set(species, status);
+            }
+
+            await publicProfile.save();
+        }
+
+        // Convert Map to object for response
+        const breedingStatusObj = Object.fromEntries(user.breedingStatus);
+
+        res.json({ 
+            message: 'Breeding status updated successfully',
+            breedingStatus: breedingStatusObj
+        });
+    } catch (error) {
+        console.error('Error updating breeding status:', error);
+        res.status(500).json({ message: 'Failed to update breeding status' });
+    }
+});
+
+// GET /api/users/breeding-status
+// Protected endpoint: Get current user's breeding status
+app.get('/api/users/breeding-status', authMiddleware, async (req, res) => {
+    try {
+        const { User } = require('./database/models');
+        
+        const user = await User.findById(req.user.id).select('breedingStatus');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Convert Map to object for response
+        const breedingStatusObj = user.breedingStatus 
+            ? Object.fromEntries(user.breedingStatus)
+            : {};
+
+        res.json({ breedingStatus: breedingStatusObj });
+    } catch (error) {
+        console.error('Error fetching breeding status:', error);
+        res.status(500).json({ message: 'Failed to fetch breeding status' });
+    }
+});
+
+// ==================== END BREEDER DIRECTORY ENDPOINTS ====================
+
+
 // Delete user account
 app.delete('/api/users/account', authMiddleware, async (req, res) => {
     try {

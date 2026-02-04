@@ -47,6 +47,12 @@ const UserSchema = new mongoose.Schema({
     },
     // User location
     country: { type: String, default: null },
+    // Breeding status for species (for breeder directory)
+    breedingStatus: { 
+        type: Map, 
+        of: String, // Values: 'breeder', 'retired', 'hobbyist', or null
+        default: new Map()
+    },
     // Admin/Moderator fields for 2FA
     role: { 
         type: String, 
@@ -110,6 +116,11 @@ const PublicProfileSchema = new mongoose.Schema({
         default: 'none' 
     },
     country: { type: String, default: null },
+    breedingStatus: { 
+        type: Map, 
+        of: String, // Values: 'breeder', 'retired', 'hobbyist', or null
+        default: new Map()
+    },
     completedTutorials: { type: [String], default: [] }, // Array of completed tutorial IDs
     hasCompletedOnboarding: { type: Boolean, default: false }, // Track if user completed initial onboarding
     hasCompletedAdvancedFeatures: { type: Boolean, default: false }, // Track if user completed advanced features
