@@ -449,17 +449,21 @@ app.get('/api/users/breeder-directory', async (req, res) => {
 app.put('/api/users/breeding-status', authMiddleware, async (req, res) => {
     try {
         const { User, PublicProfile } = require('./database/models');
-        const { species, status } = req.body;
+        const { breedingStatus } = req.body;
 
-        // Validate inputs
-        if (!species || typeof species !== 'string') {
-            return res.status(400).json({ message: 'Species name is required' });
+        // Validate input
+        if (!breedingStatus || typeof breedingStatus !== 'object') {
+            return res.status(400).json({ message: 'breedingStatus object is required' });
         }
 
-        if (!['breeder', 'retired', 'hobbyist', null].includes(status)) {
-            return res.status(400).json({ 
-                message: 'Invalid status. Must be: breeder, retired, hobbyist, or null' 
-            });
+        // Validate all status values
+        const validStatuses = ['breeder', 'retired'];
+        for (const [species, status] of Object.entries(breedingStatus)) {
+            if (!validStatuses.includes(status)) {
+                return res.status(400).json({ 
+                    message: `Invalid status "${status}" for ${species}. Must be: breeder or retired` 
+                });
+            }
         }
 
         // Update in User model
@@ -468,33 +472,14 @@ app.put('/api/users/breeding-status', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Initialize breedingStatus as Map if not exists
-        if (!user.breedingStatus) {
-            user.breedingStatus = new Map();
-        }
-
-        // Set or remove the status
-        if (status === null || status === 'hobbyist') {
-            user.breedingStatus.delete(species);
-        } else {
-            user.breedingStatus.set(species, status);
-        }
-
+        // Replace the entire breedingStatus Map
+        user.breedingStatus = new Map(Object.entries(breedingStatus));
         await user.save();
 
         // Also update PublicProfile
         const publicProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
         if (publicProfile) {
-            if (!publicProfile.breedingStatus) {
-                publicProfile.breedingStatus = new Map();
-            }
-
-            if (status === null || status === 'hobbyist') {
-                publicProfile.breedingStatus.delete(species);
-            } else {
-                publicProfile.breedingStatus.set(species, status);
-            }
-
+            publicProfile.breedingStatus = new Map(Object.entries(breedingStatus));
             await publicProfile.save();
         }
 
