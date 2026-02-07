@@ -383,6 +383,7 @@ router.get('/animals', async (req, res) => {
             species = '',
             isPublic = '',
             hasReports = '',
+            owner = '',
             sortBy = 'createdAt',
             sortOrder = 'desc'
         } = req.query;
@@ -407,6 +408,10 @@ router.get('/animals', async (req, res) => {
             query.showOnPublicProfile = true;
         } else if (isPublic === 'false') {
             query.showOnPublicProfile = { $ne: true };
+        }
+        
+        if (owner) {
+            query.ownerId_public = owner;
         }
 
         // Get animals with pagination
