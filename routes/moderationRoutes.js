@@ -1429,20 +1429,30 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
             console.log('[MODERATION EDIT] Updated profile:', targetName, 'with edits:', processedEdits);
         } 
         else if (contentType === 'animal') {
+            // Process field edits - remove empty/undefined values to avoid clearing unedited fields
+            const processedEdits = {};
+            for (const key of Object.keys(fieldEdits)) {
+                // Only include fields that have actual values
+                // Empty strings should clear the field, but undefined/null should be skipped
+                if (fieldEdits[key] !== undefined) {
+                    processedEdits[key] = fieldEdits[key] === '' ? null : fieldEdits[key];
+                }
+            }
+            
             // Try to find by ObjectId first, then by public ID
             let animal = null;
             
             if (isObjectId) {
                 animal = await Animal.findByIdAndUpdate(
                     contentId,
-                    fieldEdits,
+                    processedEdits,
                     { new: true, runValidators: true }
                 );
             } else {
                 // Try by public ID
                 animal = await Animal.findOneAndUpdate(
                     { id_public: contentId },
-                    fieldEdits,
+                    processedEdits,
                     { new: true, runValidators: true }
                 );
             }
@@ -1455,7 +1465,7 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
             // Also update public animal if exists
             await PublicAnimal.findOneAndUpdate(
                 { id_public: animal.id_public },
-                fieldEdits,
+                processedEdits,
                 { runValidators: true }
             );
 
