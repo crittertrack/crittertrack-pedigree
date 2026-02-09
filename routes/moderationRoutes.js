@@ -1462,12 +1462,9 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                 return res.status(404).json({ message: 'Animal not found' });
             }
 
-            // Also update public animal if exists
-            await PublicAnimal.findOneAndUpdate(
-                { id_public: animal.id_public },
-                processedEdits,
-                { runValidators: true }
-            );
+            // Sync to publicanimals collection based on showOnPublicProfile
+            const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
+            await syncAnimalToPublic(animal);
 
             updated = animal;
             targetName = `${animal.name} (${animal.id_public || 'No ID'})`;
