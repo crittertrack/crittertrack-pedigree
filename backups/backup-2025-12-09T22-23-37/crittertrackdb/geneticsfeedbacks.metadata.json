@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"userId":{"$numberInt":"1"}},"name":"userId_1","background":true},{"v":{"$numberInt":"2"},"key":{"status":{"$numberInt":"1"}},"name":"status_1","background":true}],"uuid":"230c3ab572a3468f907a2db165e46042","collectionName":"geneticsfeedbacks","type":"collection"}

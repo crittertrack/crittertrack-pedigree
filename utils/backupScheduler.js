@@ -152,9 +152,9 @@ const createAutomatedBackup = async () => {
             storageLocation: 'r2'
         });
 
-        // Keep only last 30 backups
-        if (metadata.backups.length > 30) {
-            const oldBackups = metadata.backups.slice(30);
+        // Keep only last 10 backups
+        if (metadata.backups.length > 10) {
+            const oldBackups = metadata.backups.slice(10);
             for (const oldBackup of oldBackups) {
                 try {
                     await deleteBackupFromR2(oldBackup.id);
@@ -163,7 +163,7 @@ const createAutomatedBackup = async () => {
                     console.error(`[BackupScheduler] Failed to remove old backup ${oldBackup.id}:`, err);
                 }
             }
-            metadata.backups = metadata.backups.slice(0, 30);
+            metadata.backups = metadata.backups.slice(0, 10);
         }
 
         metadata.lastAutoBackup = timestamp;

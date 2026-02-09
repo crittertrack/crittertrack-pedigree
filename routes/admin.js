@@ -915,9 +915,9 @@ router.post('/trigger-backup', async (req, res) => {
             storageLocation: 'r2'
         });
 
-        // Keep only last 30 backups in metadata
-        if (metadata.backups.length > 30) {
-            metadata.backups = metadata.backups.slice(0, 30);
+        // Keep only last 10 backups in metadata
+        if (metadata.backups.length > 10) {
+            metadata.backups = metadata.backups.slice(0, 10);
         }
 
         // Save updated metadata
