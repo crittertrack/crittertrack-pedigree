@@ -581,6 +581,10 @@ app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
 const bugReportRoutes = require('./routes/bugReportRoutes');
 app.use('/api/bug-reports', authMiddleware, bugReportRoutes);
 
+// Feedback Routes (Require authMiddleware)
+const feedbackRoutes = require('./routes/feedbackRoutes');
+app.use('/api/feedback', authMiddleware, feedbackRoutes);
+
 // Message Routes (Require authMiddleware)
 const messageRoutes = require('./routes/messageRoutes');
 app.use('/api/messages', authMiddleware, messageRoutes);

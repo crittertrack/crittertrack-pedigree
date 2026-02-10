@@ -687,7 +687,33 @@ const BugReportSchema = new mongoose.Schema({
 const BugReport = mongoose.model('BugReport', BugReportSchema);
 
 
-// --- 9. MESSAGE SCHEMA ---
+// --- 9. FEEDBACK SCHEMA (General Feedback: Species, UI, etc.) ---
+const FeedbackSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    userIdPublic: { type: String, required: true },
+    userEmail: { type: String, required: true },
+    userName: { type: String, required: true },
+    species: { type: String, default: null },
+    feedback: { type: String, required: true },
+    type: { 
+        type: String, 
+        enum: ['species-customization', 'ui-feedback', 'feature-request', 'general'], 
+        default: 'general' 
+    },
+    status: { 
+        type: String, 
+        enum: ['pending', 'reviewed', 'resolved', 'dismissed'], 
+        default: 'pending',
+        index: true 
+    },
+    adminNotes: { type: String, default: null },
+    resolvedAt: { type: Date, default: null },
+    createdAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+const Feedback = mongoose.model('Feedback', FeedbackSchema);
+
+
+// --- 10. MESSAGE SCHEMA ---
 const MessageSchema = new mongoose.Schema({
     conversationId: { type: String, required: true, index: true }, // Format: "userId1_userId2" (sorted)
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -1051,6 +1077,7 @@ module.exports = {
     Notification,
     GeneticsFeedback,
     BugReport,
+    Feedback,
     Message,
     MessageReport,
     ProfileReport,

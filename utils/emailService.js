@@ -167,10 +167,45 @@ const sendGeneticsFeedbackNotification = async (feedbackData) => {
     }
 };
 
+/**
+ * Send general feedback notification to admin
+ */
+const sendFeedbackNotification = async (feedbackData) => {
+    const { userName, userEmail, userIdPublic, species, feedback, type, createdAt } = feedbackData;
+    
+    try {
+        await resend.emails.send({
+            from: fromEmail,
+            to: 'crittertrackowner@gmail.com',
+            subject: `[CritterTrack] New ${type === 'species-customization' ? 'Species' : 'General'} Feedback`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #ec4899;">New ${type === 'species-customization' ? 'Species Customization' : 'General'} Feedback</h2>
+                    <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <p><strong>From:</strong> ${userName} (${userEmail})</p>
+                        <p><strong>User ID:</strong> ${userIdPublic}</p>
+                        <p><strong>Type:</strong> <span style="background-color: #ec4899; color: white; padding: 3px 10px; border-radius: 3px;">${type}</span></p>
+                        ${species ? `<p><strong>Species:</strong> ${species}</p>` : ''}
+                        <p><strong>Submitted:</strong> ${new Date(createdAt).toLocaleString()}</p>
+                    </div>
+                    <h3>Feedback:</h3>
+                    <p style="background-color: #f9fafb; padding: 15px; border-left: 3px solid #ec4899;">${feedback}</p>
+                    <hr style="margin-top: 30px; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 12px;">CritterTrack Admin Notification</p>
+                </div>
+            `
+        });
+    } catch (error) {
+        console.error('Error sending feedback notification:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     sendEmail,
     sendVerificationEmail,
     sendPasswordResetEmail,
     sendBugReportNotification,
-    sendGeneticsFeedbackNotification
+    sendGeneticsFeedbackNotification,
+    sendFeedbackNotification
 };

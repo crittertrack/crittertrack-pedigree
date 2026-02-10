@@ -7,7 +7,7 @@ const { sendBugReportNotification } = require('../utils/emailService');
 router.post('/', async (req, res) => {
     try {
         const { category, description, page } = req.body;
-        const userId = req.user.userId;
+        const userId = req.user.id; // Fixed: auth middleware sets req.user.id, not req.user.userId
 
         // Validate required fields
         if (!category || !description) {
@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
 
         // Get user details for the report
         const { User } = require('../database/models');
-        const user = await User.findById(userId).select('username email');
+        const user = await User.findById(userId).select('personalName breederName email');
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -28,7 +28,7 @@ router.post('/', async (req, res) => {
         const bugReport = new BugReport({
             userId,
             userEmail: user.email,
-            userName: user.username,
+            userName: user.personalName || user.breederName || 'Anonymous',
             category,
             description,
             page: page || null
@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
         // Send admin email notification
         try {
             await sendBugReportNotification({
-                userName: user.username,
+                userName: user.personalName || user.breederName || 'Anonymous',
                 userEmail: user.email,
                 category,
                 description,
@@ -119,7 +119,7 @@ router.patch('/:id/status', async (req, res) => {
 // Get user's own bug reports
 router.get('/my-reports', async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.user.id; // Fixed: use req.user.id, not req.user._id
 
         const reports = await BugReport.find({ userId })
             .sort({ createdAt: -1 })
