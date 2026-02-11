@@ -50,8 +50,9 @@ router.post('/send', async (req, res) => {
         });
         const isReplyToModConversation = existingModMessages !== null;
 
+        // Always allow replies to moderator conversations, regardless of privacy settings
         if (!bypassPrivacy && !isReplyToModConversation) {
-            // Standard privacy checks (skip if replying to mod conversation)
+            // Standard privacy checks (skip completely if replying to mod conversation)
             // Check if sender allows messages (prevent sending if disabled)
             if (!sender.allowMessages) {
                 return res.status(403).json({ error: 'You have disabled messages. Enable messages to send them.' });
