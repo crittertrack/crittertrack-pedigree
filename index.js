@@ -113,8 +113,8 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
 // Admin routes (protected by authMiddleware and restricted by ADMIN_USER_ID)
-const adminRoutes = require('./routes/admin');
-app.use('/api/admin', authMiddleware, adminRoutes);
+const legacyAdminRoutes = require('./routes/admin');
+app.use('/api/admin', authMiddleware, legacyAdminRoutes);
 
 // Species admin routes (species management, configs, genetics builder)
 const speciesAdminRoutes = require('./routes/speciesAdminRoutes');
