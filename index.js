@@ -607,6 +607,10 @@ app.use('/api/migrations', migrationRoutes);
 const twoFactorRoutes = require('./routes/twoFactorRoutes');
 app.use('/api/admin', authMiddleware, twoFactorRoutes); // 2FA endpoints: send-code, verify-code, resend-code, track-login, login-history, suspicious-logins
 
+// Admin Routes (Require authMiddleware)
+const adminRoutes = require('./routes/adminRoutes');
+app.use('/api/admin', authMiddleware, adminRoutes);
+
 
 // --- Error Handling Middleware ---
 // Error handling middleware
