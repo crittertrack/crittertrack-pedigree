@@ -65,24 +65,39 @@ router.get('/migrate-public-profiles', async (req, res) => {
 // GET /api/admin/moderator-conversations - Get all conversations initiated by moderators
 router.get('/moderator-conversations', async (req, res) => {
     try {
-        // Find all moderator messages
+        // First, find all conversations that contain moderator messages
         const modMessages = await Message.find({
             isModeratorMessage: true
-        }).sort({ createdAt: -1 }).lean();
+        }).distinct('conversationId');
 
         if (!modMessages.length) {
             return res.json({ conversations: [] });
         }
 
+        // Now get ALL messages from those conversations to include user replies
+        const allMessages = await Message.find({
+            conversationId: { $in: modMessages }
+        }).sort({ createdAt: -1 }).lean();
+
         // Group by conversation
         const conversationsMap = new Map();
         
-        for (const msg of modMessages) {
+        for (const msg of allMessages) {
             if (!conversationsMap.has(msg.conversationId)) {
-                // Get the other user ID (the one who isn't staff)
-                const modUser = await User.findById(msg.senderId).select('role id_public').lean();
-                const isStaff = modUser && (modUser.role === 'admin' || modUser.role === 'moderator');
-                const otherUserId = isStaff ? msg.receiverId : msg.senderId;
+                // Find the other user ID (non-staff user in the conversation)
+                const senderUser = await User.findById(msg.senderId).select('role id_public').lean();
+                const receiverUser = await User.findById(msg.receiverId).select('role id_public').lean();
+                
+                // Determine which user is the regular user (not staff)
+                let otherUserId;
+                if (senderUser && (senderUser.role === 'admin' || senderUser.role === 'moderator')) {
+                    otherUserId = msg.receiverId;
+                } else if (receiverUser && (receiverUser.role === 'admin' || receiverUser.role === 'moderator')) {
+                    otherUserId = msg.senderId;
+                } else {
+                    // Fallback: use sender if we can't determine staff role
+                    otherUserId = msg.senderId;
+                }
                 
                 conversationsMap.set(msg.conversationId, {
                     _id: msg.conversationId,
@@ -95,11 +110,19 @@ router.get('/moderator-conversations', async (req, res) => {
                 });
             }
             
-            conversationsMap.get(msg.conversationId).messageCount++;
+            const conversation = conversationsMap.get(msg.conversationId);
+            conversation.messageCount++;
             
-            // Set initiatedBy from the first mod message in the conversation
-            if (msg.sentBy && !conversationsMap.get(msg.conversationId).initiatedBy) {
-                conversationsMap.get(msg.conversationId).initiatedBy = msg.sentBy;
+            // Update to the most recent message (allMessages is sorted by createdAt desc)
+            if (!conversation.lastMessageUpdated) {
+                conversation.lastMessage = msg.message;
+                conversation.lastMessageAt = msg.createdAt;
+                conversation.lastMessageUpdated = true;
+            }
+            
+            // Set initiatedBy from moderator messages
+            if (msg.isModeratorMessage && msg.sentBy && !conversation.initiatedBy) {
+                conversation.initiatedBy = msg.sentBy;
             }
         }
 
