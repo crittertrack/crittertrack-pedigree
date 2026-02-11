@@ -12,7 +12,7 @@ const getConversationId = (userId1, userId2) => {
 // POST /api/messages/send - Send a message
 router.post('/send', async (req, res) => {
     try {
-        const { receiverId, message } = req.body;
+        const { receiverId, message, adminOverride = false, isModeratorMessage = false } = req.body;
         const senderId = req.user.id;
 
         if (!receiverId || typeof message !== 'string' || !message.trim()) {
@@ -36,30 +36,56 @@ router.post('/send', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Check if sender allows messages (prevent sending if disabled)
-        if (!sender.allowMessages) {
-            return res.status(403).json({ error: 'You have disabled messages. Enable messages to send them.' });
-        }
+        // Admin override: if sender is admin/moderator and adminOverride is true, bypass privacy settings
+        const isAdminOrMod = sender.role === 'admin' || sender.role === 'moderator';
+        const bypassPrivacy = adminOverride && isAdminOrMod;
 
-        // Check if receiver allows messages
-        if (!receiver.allowMessages) {
-            return res.status(403).json({ error: 'This user has disabled messages' });
-        }
+        // Check if user is replying to an existing moderator conversation
+        const conversationId = getConversationId(senderId, receiverId);
+        const existingModMessages = await Message.findOne({
+            conversationId,
+            isModeratorMessage: true
+        });
+        const isReplyToModConversation = existingModMessages !== null;
 
-        // Check if either user has blocked the other
-        if (sender.blockedUsers.includes(receiverId) || receiver.blockedUsers.includes(senderId)) {
-            return res.status(403).json({ error: 'Cannot send message to this user' });
+        if (!bypassPrivacy && !isReplyToModConversation) {
+            // Standard privacy checks (skip if replying to mod conversation)
+            // Check if sender allows messages (prevent sending if disabled)
+            if (!sender.allowMessages) {
+                return res.status(403).json({ error: 'You have disabled messages. Enable messages to send them.' });
+            }
+
+            // Check if receiver allows messages
+            if (!receiver.allowMessages) {
+                return res.status(403).json({ error: 'This user has disabled messages' });
+            }
+
+            // Check if either user has blocked the other
+            if (sender.blockedUsers.includes(receiverId) || receiver.blockedUsers.includes(senderId)) {
+                return res.status(403).json({ error: 'Cannot send message to this user' });
+            }
         }
 
         const conversationId = getConversationId(senderId, receiverId);
 
-        const newMessage = new Message({
+        // Prepare message data
+        const messageData = {
             conversationId,
             senderId,
             receiverId,
             message: normalizedMessage,
             read: false
-        });
+        };
+
+        // If this is a moderator message, add tracking fields
+        if (isModeratorMessage && isAdminOrMod) {
+            messageData.isModeratorMessage = true;
+            messageData.senderRole = sender.role;
+            messageData.sentBy = sender.id_public; // Store sender's CTU for internal logging
+            messageData.displayName = sender.role === 'admin' ? 'Admin' : 'Moderator'; // What users see
+        }
+
+        const newMessage = new Message(messageData);
 
         await newMessage.save();
 
@@ -135,15 +161,36 @@ router.get('/conversations', async (req, res) => {
 
         // Fetch user info for all conversation partners
         const otherUserIds = conversations.map(c => c.otherUserId);
-        const users = await User.find({ _id: { $in: otherUserIds } }).select('id_public personalName breederName profileImage showPersonalName showBreederName allowMessages').lean();
+        const users = await User.find({ _id: { $in: otherUserIds } }).select('id_public personalName breederName profileImage showPersonalName showBreederName allowMessages role').lean();
         
         const userMap = new Map(users.map(u => [u._id.toString(), u]));
 
         // Attach user info to each conversation
-        const conversationsWithUserInfo = conversations.map(conv => ({
-            ...conv,
-            otherUser: userMap.get(conv.otherUserId) || null
-        }));
+        const conversationsWithUserInfo = conversations.map(conv => {
+            const otherUser = userMap.get(conv.otherUserId);
+            
+            // Check if this conversation has moderator messages
+            const hasModMessages = messages.some(m => 
+                m.conversationId === conv.conversationId && m.isModeratorMessage
+            );
+            
+            // If other user is staff and this has mod messages, display as "Admin" or "Moderator"
+            if (otherUser && hasModMessages && (otherUser.role === 'admin' || otherUser.role === 'moderator')) {
+                return {
+                    ...conv,
+                    otherUser: {
+                        ...otherUser,
+                        displayName: otherUser.role === 'admin' ? 'Admin' : 'Moderator',
+                        isStaff: true
+                    }
+                };
+            }
+            
+            return {
+                ...conv,
+                otherUser: otherUser || null
+            };
+        });
 
         res.json(conversationsWithUserInfo);
     } catch (error) {
@@ -178,11 +225,24 @@ router.get('/conversation/:otherUserId', async (req, res) => {
         }, { read: true });
 
         // Get other user info
-        const otherUser = await User.findById(otherUserId).select('id_public personalName breederName profileImage showPersonalName showBreederName allowMessages').lean();
+        const otherUser = await User.findById(otherUserId).select('id_public personalName breederName profileImage showPersonalName showBreederName allowMessages role').lean();
+
+        // Check if this conversation has moderator messages
+        const hasModMessages = messages.some(m => m.isModeratorMessage);
+        
+        // If conversation has mod messages and other user is staff, show display name
+        let otherUserDisplay = otherUser;
+        if (otherUser && hasModMessages && (otherUser.role === 'admin' || otherUser.role === 'moderator')) {
+            otherUserDisplay = {
+                ...otherUser,
+                displayName: otherUser.role === 'admin' ? 'Admin' : 'Moderator',
+                isStaff: true
+            };
+        }
 
         res.json({
             messages,
-            otherUser
+            otherUser: otherUserDisplay
         });
     } catch (error) {
         console.error('Error fetching conversation:', error);

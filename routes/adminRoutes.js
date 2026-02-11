@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, PublicProfile } = require('../database/models');
+const { User, PublicProfile, Message } = require('../database/models');
 
 // Admin endpoint to migrate public profiles
 // GET /api/admin/migrate-public-profiles
@@ -59,6 +59,92 @@ router.get('/migrate-public-profiles', async (req, res) => {
     } catch (error) {
         console.error('Migration error:', error);
         res.status(500).json({ message: 'Migration failed', error: error.message });
+    }
+});
+
+// GET /api/admin/moderator-conversations - Get all conversations initiated by moderators
+router.get('/moderator-conversations', async (req, res) => {
+    try {
+        // Find all moderator messages
+        const modMessages = await Message.find({
+            isModeratorMessage: true
+        }).sort({ createdAt: -1 }).lean();
+
+        if (!modMessages.length) {
+            return res.json({ conversations: [] });
+        }
+
+        // Group by conversation
+        const conversationsMap = new Map();
+        
+        for (const msg of modMessages) {
+            if (!conversationsMap.has(msg.conversationId)) {
+                // Get the other user ID (the one who isn't staff)
+                const modUser = await User.findById(msg.senderId).select('role id_public').lean();
+                const isStaff = modUser && (modUser.role === 'admin' || modUser.role === 'moderator');
+                const otherUserId = isStaff ? msg.receiverId : msg.senderId;
+                
+                conversationsMap.set(msg.conversationId, {
+                    _id: msg.conversationId,
+                    conversationId: msg.conversationId,
+                    otherUserId: otherUserId.toString(),
+                    lastMessage: msg.message,
+                    lastMessageAt: msg.createdAt,
+                    messageCount: 0,
+                    initiatedBy: null // Will be set from first message
+                });
+            }
+            
+            conversationsMap.get(msg.conversationId).messageCount++;
+            
+            // Set initiatedBy from the first mod message in the conversation
+            if (msg.sentBy && !conversationsMap.get(msg.conversationId).initiatedBy) {
+                conversationsMap.get(msg.conversationId).initiatedBy = msg.sentBy;
+            }
+        }
+
+        const conversations = Array.from(conversationsMap.values());
+
+        // Fetch user info for all conversation partners
+        const otherUserIds = conversations.map(c => c.otherUserId);
+        const users = await User.find({ _id: { $in: otherUserIds } })
+            .select('id_public personalName breederName showPersonalName showBreederName')
+            .lean();
+        
+        const userMap = new Map(users.map(u => [u._id.toString(), u]));
+
+        // Attach user info to each conversation
+        const conversationsWithUserInfo = conversations.map(conv => ({
+            ...conv,
+            otherUser: userMap.get(conv.otherUserId) || null
+        }));
+
+        res.json({ conversations: conversationsWithUserInfo });
+    } catch (error) {
+        console.error('Error fetching moderator conversations:', error);
+        res.status(500).json({ error: 'Failed to fetch moderator conversations' });
+    }
+});
+
+// DELETE /api/admin/close-conversation/:userId - Close (delete) a conversation
+router.delete('/close-conversation/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const adminId = req.user.id;
+
+        // Get the conversation ID
+        const conversationId = [adminId, userId].sort().join('_');
+
+        // Delete all messages in this conversation
+        const result = await Message.deleteMany({ conversationId });
+
+        res.json({ 
+            message: 'Conversation closed successfully',
+            deletedCount: result.deletedCount 
+        });
+    } catch (error) {
+        console.error('Error closing conversation:', error);
+        res.status(500).json({ error: 'Failed to close conversation' });
     }
 });
 

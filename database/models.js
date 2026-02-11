@@ -721,6 +721,11 @@ const MessageSchema = new mongoose.Schema({
     message: { type: String, required: true },
     read: { type: Boolean, default: false, index: true },
     deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who have deleted this message
+    // Moderator message fields
+    isModeratorMessage: { type: Boolean, default: false, index: true }, // Flag for admin/mod initiated conversations
+    senderRole: { type: String, enum: ['user', 'moderator', 'admin', null], default: null }, // Role of sender if mod/admin
+    sentBy: { type: String, default: null }, // Public ID of sender for internal logging (CTU-XXX)
+    displayName: { type: String, default: null }, // What users see: "Admin" or "Moderator"
 }, { timestamps: true });
 const Message = mongoose.model('Message', MessageSchema);
 
