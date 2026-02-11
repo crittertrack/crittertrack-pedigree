@@ -29,7 +29,7 @@ const publicRoutes = require('./routes/publicRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const moderationRoutes = require('./routes/moderationRoutes');
-// const adminRoutes = require('./routes/adminRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 
 const app = express();
@@ -608,7 +608,6 @@ const twoFactorRoutes = require('./routes/twoFactorRoutes');
 app.use('/api/admin', authMiddleware, twoFactorRoutes); // 2FA endpoints: send-code, verify-code, resend-code, track-login, login-history, suspicious-logins
 
 // Admin Routes (Require authMiddleware)
-const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', authMiddleware, adminRoutes);
 
 
