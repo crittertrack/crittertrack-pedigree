@@ -82,7 +82,7 @@ router.post('/send', async (req, res) => {
             messageData.isModeratorMessage = true;
             messageData.senderRole = sender.role;
             messageData.sentBy = sender.id_public; // Store sender's CTU for internal logging
-            messageData.displayName = sender.role === 'admin' ? 'Admin' : 'Moderator'; // What users see
+            messageData.displayName = 'Crittertrack'; // All mod messages show as "Crittertrack"
         }
 
         const newMessage = new Message(messageData);
@@ -174,13 +174,13 @@ router.get('/conversations', async (req, res) => {
                 m.conversationId === conv.conversationId && m.isModeratorMessage
             );
             
-            // If other user is staff and this has mod messages, display as "Admin" or "Moderator"
+            // If other user is staff and this has mod messages, display as "Crittertrack"
             if (otherUser && hasModMessages && (otherUser.role === 'admin' || otherUser.role === 'moderator')) {
                 return {
                     ...conv,
                     otherUser: {
                         ...otherUser,
-                        displayName: otherUser.role === 'admin' ? 'Admin' : 'Moderator',
+                        displayName: 'Crittertrack',
                         isStaff: true
                     }
                 };
@@ -230,12 +230,12 @@ router.get('/conversation/:otherUserId', async (req, res) => {
         // Check if this conversation has moderator messages
         const hasModMessages = messages.some(m => m.isModeratorMessage);
         
-        // If conversation has mod messages and other user is staff, show display name
+        // If conversation has mod messages and other user is staff, show display name as Crittertrack
         let otherUserDisplay = otherUser;
         if (otherUser && hasModMessages && (otherUser.role === 'admin' || otherUser.role === 'moderator')) {
             otherUserDisplay = {
                 ...otherUser,
-                displayName: otherUser.role === 'admin' ? 'Admin' : 'Moderator',
+                displayName: 'Crittertrack',
                 isStaff: true
             };
         }
