@@ -40,8 +40,10 @@ router.post('/send', async (req, res) => {
         const isAdminOrMod = sender.role === 'admin' || sender.role === 'moderator';
         const bypassPrivacy = adminOverride && isAdminOrMod;
 
-        // Check if user is replying to an existing moderator conversation
+        // Generate conversation ID (will be needed for various checks)
         const conversationId = getConversationId(senderId, receiverId);
+        
+        // Check if user is replying to an existing moderator conversation
         const existingModMessages = await Message.findOne({
             conversationId,
             isModeratorMessage: true
@@ -65,8 +67,6 @@ router.post('/send', async (req, res) => {
                 return res.status(403).json({ error: 'Cannot send message to this user' });
             }
         }
-
-        const conversationId = getConversationId(senderId, receiverId);
 
         // Prepare message data
         const messageData = {
