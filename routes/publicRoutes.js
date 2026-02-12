@@ -150,7 +150,7 @@ router.get('/users/newest', async (req, res) => {
 // GET /api/public/users/active - Get users who were active recently (logged in)
 router.get('/users/active', async (req, res) => {
     try {
-        const minutes = Math.min(parseInt(req.query.minutes || '15', 10), 60);
+        const minutes = Math.min(parseInt(req.query.minutes || '15', 10), 4320); // Max 3 days
         const timeThreshold = new Date(Date.now() - minutes * 60 * 1000);
         
         // Find users who have logged in within the time threshold

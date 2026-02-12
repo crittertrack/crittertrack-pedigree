@@ -307,6 +307,371 @@ router.post('/fix-animal-viewonly', async (req, res) => {
     }
 });
 
+// Fix broken animal transfers by reverting ownership to original owner
+router.post('/fix-broken-transfer', async (req, res) => {
+    try {
+        const { animalIds } = req.body;
+        
+        if (!animalIds || !Array.isArray(animalIds) || animalIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing animalIds array'
+            });
+        }
+
+        const results = [];
+        let fixed = 0;
+        let failed = 0;
+
+        for (const animalId of animalIds) {
+            try {
+                // Find the animal
+                const animal = await Animal.findOne({ id_public: animalId });
+                
+                if (!animal) {
+                    results.push({
+                        animalId,
+                        success: false,
+                        message: `Animal ${animalId} not found`
+                    });
+                    failed++;
+                    continue;
+                }
+
+                // Check if animal has originalOwnerId (was transferred)
+                if (!animal.originalOwnerId) {
+                    results.push({
+                        animalId,
+                        success: false,
+                        message: `Animal ${animalId} has no original owner (never transferred)`
+                    });
+                    failed++;
+                    continue;
+                }
+
+                // Get original owner info
+                const originalOwner = await User.findById(animal.originalOwnerId).select('id_public');
+                
+                if (!originalOwner) {
+                    results.push({
+                        animalId,
+                        success: false,
+                        message: `Original owner not found for ${animalId}`
+                    });
+                    failed++;
+                    continue;
+                }
+
+                console.log(`[Fix Transfer] Reverting ${animalId} back to original owner CT${originalOwner.id_public}`);
+
+                const currentOwnerId = animal.ownerId;
+                const originalOwnerId = animal.originalOwnerId;
+
+                // Update animal ownership back to original owner
+                animal.ownerId = originalOwnerId;
+                animal.ownerId_public = originalOwner.id_public;
+                animal.soldStatus = null; // Clear sold status
+                animal.originalOwnerId = null; // Clear original owner reference
+                
+                // Remove both original owner and current owner from viewOnlyForUsers
+                animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(
+                    userId => userId.toString() !== originalOwnerId.toString() && 
+                              userId.toString() !== currentOwnerId.toString()
+                );
+                
+                await animal.save();
+
+                // Update PublicAnimal if this animal is public
+                if (animal.showOnPublicProfile) {
+                    await PublicAnimal.updateOne(
+                        { id_public: animal.id_public },
+                        { 
+                            $set: { 
+                                ownerId_public: animal.ownerId_public,
+                                status: animal.status
+                            } 
+                        }
+                    );
+                }
+
+                // Update user ownedAnimals arrays
+                await User.findByIdAndUpdate(currentOwnerId, {
+                    $pull: { ownedAnimals: animal._id }
+                });
+
+                await User.findByIdAndUpdate(originalOwnerId, {
+                    $addToSet: { ownedAnimals: animal._id }
+                });
+
+                results.push({
+                    animalId,
+                    success: true,
+                    message: `Successfully reverted ${animalId} to CT${originalOwner.id_public}`
+                });
+                fixed++;
+
+            } catch (error) {
+                console.error(`Error fixing ${animalId}:`, error);
+                results.push({
+                    animalId,
+                    success: false,
+                    message: `Error fixing ${animalId}: ${error.message}`
+                });
+                failed++;
+            }
+        }
+
+        res.json({
+            success: true,
+            fixed,
+            failed,
+            total: animalIds.length,
+            results
+        });
+
+    } catch (error) {
+        console.error('Error in fix-broken-transfer:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fix broken transfers',
+            error: error.message
+        });
+    }
+});
+
+// Diagnostic endpoint to check animal states
+router.get('/check-animals/:animalIds', async (req, res) => {
+    try {
+        const animalIds = req.params.animalIds.split(',');
+        const results = [];
+
+        for (const animalId of animalIds) {
+            try {
+                const animal = await Animal.findOne({ id_public: animalId })
+                    .populate('ownerId', 'id_public personalName email')
+                    .populate('originalOwnerId', 'id_public personalName email')
+                    .lean();
+
+                if (!animal) {
+                    results.push({
+                        animalId,
+                        found: false,
+                        message: `Animal ${animalId} not found`
+                    });
+                    continue;
+                }
+
+                results.push({
+                    animalId,
+                    found: true,
+                    name: animal.name,
+                    currentOwner: {
+                        id_public: animal.ownerId_public,
+                        personalName: animal.ownerId?.personalName,
+                        email: animal.ownerId?.email
+                    },
+                    originalOwner: animal.originalOwnerId ? {
+                        id_public: animal.originalOwnerId.id_public,
+                        personalName: animal.originalOwnerId.personalName,
+                        email: animal.originalOwnerId.email
+                    } : null,
+                    soldStatus: animal.soldStatus,
+                    isViewOnly: !!animal.originalOwnerId,
+                    viewOnlyForUsers: animal.viewOnlyForUsers || [],
+                    hiddenForUsers: animal.hiddenForUsers || []
+                });
+
+            } catch (error) {
+                results.push({
+                    animalId,
+                    found: false,
+                    error: error.message
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            animals: results
+        });
+
+    } catch (error) {
+        console.error('Error checking animals:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check animals',
+            error: error.message
+        });
+    }
+});
+
+// Get all animals for a specific user (including private)
+router.get('/user-animals/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        
+        // Find the user
+        const user = await User.findOne({ id_public: userId }).select('_id id_public personalName');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: `User ${userId} not found`
+            });
+        }
+
+        // Get all animals owned by this user
+        const animals = await Animal.find({ ownerId: user._id })
+            .select('id_public name species gender status color breederId_public showOnPublicProfile soldStatus originalOwnerId')
+            .populate('originalOwnerId', 'id_public personalName')
+            .sort({ id_public: 1 })
+            .lean();
+
+        res.json({
+            success: true,
+            userId,
+            userName: user.personalName,
+            totalAnimals: animals.length,
+            animals: animals.map(a => ({
+                id_public: a.id_public,
+                name: a.name,
+                species: a.species,
+                gender: a.gender,
+                status: a.status,
+                color: a.color,
+                breeder: a.breederId_public,
+                isPublic: a.showOnPublicProfile || false,
+                soldStatus: a.soldStatus || null,
+                originalOwner: a.originalOwnerId ? a.originalOwnerId.id_public : null
+            }))
+        });
+
+    } catch (error) {
+        console.error('Error fetching user animals:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch user animals',
+            error: error.message
+        });
+    }
+});
+
+// Set animal ownership directly
+router.post('/set-animal-owner', async (req, res) => {
+    try {
+        const { animalIds, newOwnerId } = req.body;
+        
+        if (!animalIds || !Array.isArray(animalIds) || !newOwnerId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing animalIds array or newOwnerId'
+            });
+        }
+
+        // Find the new owner
+        const newOwner = await User.findOne({ id_public: newOwnerId }).select('_id id_public');
+        
+        if (!newOwner) {
+            return res.status(404).json({
+                success: false,
+                message: `User ${newOwnerId} not found`
+            });
+        }
+
+        const results = [];
+        let fixed = 0;
+        let failed = 0;
+
+        for (const animalId of animalIds) {
+            try {
+                // Find the animal
+                const animal = await Animal.findOne({ id_public: animalId });
+                
+                if (!animal) {
+                    results.push({
+                        animalId,
+                        success: false,
+                        message: `Animal ${animalId} not found`
+                    });
+                    failed++;
+                    continue;
+                }
+
+                console.log(`[Set Owner] Setting ${animalId} ownership to CT${newOwnerId}`);
+
+                const currentOwnerId = animal.ownerId;
+
+                // Update animal ownership
+                animal.ownerId = newOwner._id;
+                animal.ownerId_public = newOwnerId;
+                animal.soldStatus = null; // Clear sold status
+                animal.originalOwnerId = null; // Clear original owner reference
+                
+                // Clear viewOnlyForUsers array
+                animal.viewOnlyForUsers = [];
+                
+                await animal.save();
+
+                // Update PublicAnimal if this animal is public
+                if (animal.showOnPublicProfile) {
+                    await PublicAnimal.updateOne(
+                        { id_public: animal.id_public },
+                        { 
+                            $set: { 
+                                ownerId_public: animal.ownerId_public,
+                                status: animal.status
+                            } 
+                        }
+                    );
+                }
+
+                // Update user ownedAnimals arrays
+                if (currentOwnerId && currentOwnerId.toString() !== newOwner._id.toString()) {
+                    await User.findByIdAndUpdate(currentOwnerId, {
+                        $pull: { ownedAnimals: animal._id }
+                    });
+                }
+
+                await User.findByIdAndUpdate(newOwner._id, {
+                    $addToSet: { ownedAnimals: animal._id }
+                });
+
+                results.push({
+                    animalId,
+                    success: true,
+                    message: `Successfully set ${animalId} owner to CT${newOwnerId}`
+                });
+                fixed++;
+
+            } catch (error) {
+                console.error(`Error setting owner for ${animalId}:`, error);
+                results.push({
+                    animalId,
+                    success: false,
+                    message: `Error setting owner for ${animalId}: ${error.message}`
+                });
+                failed++;
+            }
+        }
+
+        res.json({
+            success: true,
+            fixed,
+            failed,
+            total: animalIds.length,
+            results
+        });
+
+    } catch (error) {
+        console.error('Error in set-animal-owner:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to set animal owner',
+            error: error.message
+        });
+    }
+});
+
 // Migration: Enable allowMessages for all existing users
 router.post('/enable-allow-messages', async (req, res) => {
     try {
@@ -394,6 +759,30 @@ router.post('/set-email-notification-defaults', async (req, res) => {
     } catch (error) {
         console.error('[Migration] Error:', error);
         res.status(500).json({ error: 'Migration failed', details: error.message });
+    }
+});
+
+// GET /check-last-login - Check users' last_login values for debugging
+router.get('/check-last-login', async (req, res) => {
+    try {
+        const usersWithLastLogin = await User.find({ last_login: { $exists: true, $ne: null } })
+            .select('id_public personalName last_login last_login_ip')
+            .sort({ last_login: -1 })
+            .limit(20)
+            .lean();
+        
+        const totalUsers = await User.countDocuments();
+        const usersWithLoginData = await User.countDocuments({ last_login: { $exists: true, $ne: null } });
+        
+        res.json({
+            success: true,
+            totalUsers,
+            usersWithLoginData,
+            recentLogins: usersWithLastLogin
+        });
+    } catch (error) {
+        console.error('[Migration] Error checking last_login:', error);
+        res.status(500).json({ error: 'Failed to check last_login', details: error.message });
     }
 });
 
