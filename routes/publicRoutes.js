@@ -345,9 +345,26 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
         // Find all offspring where this animal is either sire or dam
         let allOffspring = [];
 
+        // ALWAYS get public offspring first
+        const publicOffspring = await PublicAnimal.find({
+            $or: [
+                { sireId_public: animalIdPublic },
+                { damId_public: animalIdPublic },
+                { fatherId_public: animalIdPublic },
+                { motherId_public: animalIdPublic }
+            ]
+        }).lean();
+
+        // Use a map to deduplicate by id_public
+        const offspringMap = new Map();
+        
+        publicOffspring.forEach(animal => {
+            offspringMap.set(animal.id_public, animal);
+        });
+
         if (isAuthenticated) {
-            // For authenticated users: get ALL offspring from user's private animals
-            // Search ALL animals owned by this user (don't filter by parent ownership)
+            // For authenticated users: ALSO include their own private offspring
+            // Only add private offspring that the authenticated user owns
             const privateOffspring = await Animal.find({
                 $or: [
                     { sireId_public: animalIdPublic },
@@ -357,26 +374,16 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
                 ],
                 ownerId: authenticatedUserId
             }).lean();
-
-            // Map by id_public
-            const offspringMap = new Map();
             
+            // Add private offspring (won't duplicate if already in public collection)
             privateOffspring.forEach(animal => {
-                offspringMap.set(animal.id_public, animal);
+                if (!offspringMap.has(animal.id_public)) {
+                    offspringMap.set(animal.id_public, animal);
+                }
             });
-
-            allOffspring = Array.from(offspringMap.values());
-        } else {
-            // For unauthenticated users: only get PUBLIC offspring
-            allOffspring = await PublicAnimal.find({
-                $or: [
-                    { sireId_public: animalIdPublic },
-                    { damId_public: animalIdPublic },
-                    { fatherId_public: animalIdPublic },
-                    { motherId_public: animalIdPublic }
-                ]
-            }).lean();
         }
+
+        allOffspring = Array.from(offspringMap.values());
 
         // Group offspring by litter (based on birthDate and other parent)
         const litterGroups = new Map();
