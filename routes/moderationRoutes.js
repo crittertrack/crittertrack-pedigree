@@ -1634,13 +1634,13 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
     }
 });
 
-// DELETE /api/moderation/broadcasts/:id - Delete a broadcast from history (Admin only)
+// DELETE /api/moderation/broadcasts/:id - Delete a broadcast from history and user notifications (Admin only)
 router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Find and delete the broadcast audit log entry
-        const broadcast = await AuditLog.findOneAndDelete({ 
+        // Find the broadcast audit log entry first
+        const broadcast = await AuditLog.findOne({ 
             _id: id, 
             action: 'broadcast_sent' 
         });
@@ -1649,6 +1649,30 @@ router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
             return res.status(404).json({ error: 'Broadcast not found' });
         }
 
+        // Extract broadcast details to find matching notifications
+        const broadcastTitle = broadcast.details?.title;
+        const broadcastCreatedAt = broadcast.createdAt;
+
+        // Delete all user notifications matching this broadcast
+        // Match by type='broadcast', title, and createdAt within 1 second window
+        let deletedNotificationsCount = 0;
+        if (broadcastTitle) {
+            const timeWindowStart = new Date(broadcastCreatedAt.getTime() - 1000); // 1 second before
+            const timeWindowEnd = new Date(broadcastCreatedAt.getTime() + 1000); // 1 second after
+            
+            const deleteResult = await Notification.deleteMany({
+                type: 'broadcast',
+                title: broadcastTitle,
+                createdAt: { $gte: timeWindowStart, $lte: timeWindowEnd }
+            });
+            
+            deletedNotificationsCount = deleteResult.deletedCount || 0;
+            console.log(`[DELETE BROADCAST] Removed ${deletedNotificationsCount} user notifications for broadcast "${broadcastTitle}"`);
+        }
+
+        // Delete the broadcast audit log entry
+        await AuditLog.findByIdAndDelete(id);
+
         // Log the deletion action
         await AuditLog.create({
             action: 'broadcast_deleted',
@@ -1656,12 +1680,16 @@ router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
             moderatorEmail: req.user.email,
             details: {
                 deletedBroadcastId: id,
-                originalTitle: broadcast.details?.title,
-                originalCreatedAt: broadcast.createdAt
+                originalTitle: broadcastTitle,
+                originalCreatedAt: broadcastCreatedAt,
+                deletedNotificationsCount
             }
         });
 
-        res.json({ message: 'Broadcast deleted successfully' });
+        res.json({ 
+            message: 'Broadcast deleted successfully', 
+            deletedNotificationsCount 
+        });
     } catch (error) {
         console.error('Failed to delete broadcast:', error);
         res.status(500).json({ error: 'Failed to delete broadcast' });
