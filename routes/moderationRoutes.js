@@ -1638,6 +1638,7 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
 router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        console.log(`[DELETE BROADCAST] Request to delete broadcast: ${id}`);
 
         // Find the broadcast audit log entry first
         const broadcast = await AuditLog.findOne({ 
@@ -1646,8 +1647,11 @@ router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
         });
 
         if (!broadcast) {
+            console.log(`[DELETE BROADCAST] Broadcast not found: ${id}`);
             return res.status(404).json({ error: 'Broadcast not found' });
         }
+
+        console.log(`[DELETE BROADCAST] Found broadcast: ${broadcast.details?.title}`);
 
         // Extract broadcast details to find matching notifications
         const broadcastTitle = broadcast.details?.title;
@@ -1672,6 +1676,7 @@ router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
 
         // Delete the broadcast audit log entry
         await AuditLog.findByIdAndDelete(id);
+        console.log(`[DELETE BROADCAST] Deleted audit log entry`);
 
         // Log the deletion action
         await AuditLog.create({
@@ -1686,13 +1691,17 @@ router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
             }
         });
 
+        console.log(`[DELETE BROADCAST] Success - deleted broadcast and ${deletedNotificationsCount} notifications`);
         res.json({ 
             message: 'Broadcast deleted successfully', 
             deletedNotificationsCount 
         });
     } catch (error) {
-        console.error('Failed to delete broadcast:', error);
-        res.status(500).json({ error: 'Failed to delete broadcast' });
+        console.error('[DELETE BROADCAST] Error:', error);
+        res.status(500).json({ 
+            error: 'Failed to delete broadcast',
+            details: error.message 
+        });
     }
 });
 
