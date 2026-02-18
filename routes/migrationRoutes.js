@@ -397,4 +397,103 @@ router.post('/set-email-notification-defaults', async (req, res) => {
     }
 });
 
+// Migration: Fix isOwned flag for all animals owned by a specific user or all users
+router.post('/fix-animal-ownership', async (req, res) => {
+    try {
+        const { userId_public } = req.body; // Optional: specific user, or all users if not provided
+        
+        console.log(`[Migration] Starting isOwned flag fix${userId_public ? ` for user ${userId_public}` : ' for all users'}...`);
+
+        let query = {};
+        if (userId_public) {
+            query.ownerId_public = userId_public;
+        }
+
+        // Find all animals (for specific user or all)
+        const animals = await Animal.find(query);
+        console.log(`[Migration] Found ${animals.length} animals to check`);
+
+        let updated = 0;
+        let alreadyCorrect = 0;
+        let failed = 0;
+        const errors = [];
+
+        for (const animal of animals) {
+            try {
+                // Animals with an ownerId_public should have isOwned: true
+                // Animals without an ownerId_public should have isOwned: false
+                const shouldBeOwned = !!animal.ownerId_public;
+                
+                if (animal.isOwned !== shouldBeOwned) {
+                    animal.isOwned = shouldBeOwned;
+                    await animal.save();
+                    updated++;
+                    console.log(`✓ Fixed ${animal.id_public} (${animal.name}): isOwned set to ${shouldBeOwned}`);
+                } else {
+                    alreadyCorrect++;
+                }
+            } catch (error) {
+                failed++;
+                console.error(`✗ Failed to update animal ${animal.id_public}:`, error.message);
+                errors.push(`Failed ${animal.id_public}: ${error.message}`);
+            }
+        }
+
+        // Also update PublicAnimal collection
+        const publicAnimals = await PublicAnimal.find(query);
+        console.log(`[Migration] Found ${publicAnimals.length} public animals to check`);
+
+        let publicUpdated = 0;
+        let publicAlreadyCorrect = 0;
+
+        for (const publicAnimal of publicAnimals) {
+            try {
+                const shouldBeOwned = !!publicAnimal.ownerId_public;
+                
+                if (publicAnimal.isOwned !== shouldBeOwned) {
+                    publicAnimal.isOwned = shouldBeOwned;
+                    await publicAnimal.save();
+                    publicUpdated++;
+                    console.log(`✓ Fixed public ${publicAnimal.id_public}: isOwned set to ${shouldBeOwned}`);
+                } else {
+                    publicAlreadyCorrect++;
+                }
+            } catch (error) {
+                failed++;
+                console.error(`✗ Failed to update public animal ${publicAnimal.id_public}:`, error.message);
+                errors.push(`Failed public ${publicAnimal.id_public}: ${error.message}`);
+            }
+        }
+
+        const result = {
+            success: true,
+            message: 'Animal ownership flag fix completed',
+            scope: userId_public ? `user ${userId_public}` : 'all users',
+            privateAnimals: {
+                total: animals.length,
+                updated,
+                alreadyCorrect
+            },
+            publicAnimals: {
+                total: publicAnimals.length,
+                updated: publicUpdated,
+                alreadyCorrect: publicAlreadyCorrect
+            },
+            failed,
+            errors: errors.length > 0 ? errors : undefined
+        };
+
+        console.log('[Migration] Result:', result);
+        res.json(result);
+
+    } catch (error) {
+        console.error('[Migration] Error fixing animal ownership:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Migration failed', 
+            details: error.message 
+        });
+    }
+});
+
 module.exports = router;
