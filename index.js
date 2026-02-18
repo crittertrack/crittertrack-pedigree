@@ -391,11 +391,66 @@ app.get('/api/users/tutorial-progress', authMiddleware, async (req, res) => {
             completedTutorials: userProfile.completedTutorials || [],
             hasCompletedOnboarding: userProfile.hasCompletedOnboarding || false,
             hasCompletedAdvancedFeatures: userProfile.hasCompletedAdvancedFeatures || false,
-            hasSeenWelcomeBanner: userProfile.hasSeenWelcomeBanner || false
+            hasSeenWelcomeBanner: userProfile.hasSeenWelcomeBanner || false,
+            hasSeenProfileSetupGuide: userProfile.hasSeenProfileSetupGuide || false
         });
     } catch (error) {
         console.error('Error fetching tutorial progress:', error);
         res.status(500).json({ message: 'Failed to fetch tutorial progress' });
+    }
+});
+
+// Dismiss profile setup guide
+app.post('/api/users/dismiss-profile-setup-guide', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        userProfile.hasSeenProfileSetupGuide = true;
+        await userProfile.save();
+
+        res.json({ 
+            success: true, 
+            hasSeenProfileSetupGuide: true 
+        });
+    } catch (error) {
+        console.error('Error dismissing profile setup guide:', error);
+        res.status(500).json({ message: 'Failed to dismiss profile setup guide' });
+    }
+});
+
+// Reset profile setup guide for testing (admin/moderator only)
+app.post('/api/users/reset-profile-setup-guide/:userIdPublic', authMiddleware, async (req, res) => {
+    try {
+        const { User, PublicProfile } = require('./database/models');
+        const { userIdPublic } = req.params;
+        
+        // Check if requester is admin or moderator
+        const requester = await User.findById(req.user.id);
+        if (!requester || !['admin', 'moderator'].includes(requester.role)) {
+            return res.status(403).json({ message: 'Access denied. Admin/Moderator only.' });
+        }
+
+        const userProfile = await PublicProfile.findOne({ id_public: userIdPublic });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        userProfile.hasSeenProfileSetupGuide = false;
+        await userProfile.save();
+
+        res.json({ 
+            success: true, 
+            message: `Reset profile setup guide for user ${userIdPublic}`,
+            hasSeenProfileSetupGuide: false 
+        });
+    } catch (error) {
+        console.error('Error resetting profile setup guide:', error);
+        res.status(500).json({ message: 'Failed to reset profile setup guide' });
     }
 });
 
