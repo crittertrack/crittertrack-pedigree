@@ -125,6 +125,7 @@ const PublicProfileSchema = new mongoose.Schema({
     hasCompletedOnboarding: { type: Boolean, default: false }, // Track if user completed initial onboarding
     hasCompletedAdvancedFeatures: { type: Boolean, default: false }, // Track if user completed advanced features
     hasSeenWelcomeBanner: { type: Boolean, default: false }, // Track if user has dismissed the welcome banner
+    hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
 }, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
 

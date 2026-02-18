@@ -382,20 +382,91 @@ app.get('/api/users/tutorial-progress', authMiddleware, async (req, res) => {
     try {
         const { PublicProfile } = require('./database/models');
         
+        console.log('[TUTORIAL PROGRESS] Fetching for user:', req.user.id);
+        
         const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            console.log('[TUTORIAL PROGRESS] User profile not found for:', req.user.id);
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        const response = {
+            completedTutorials: userProfile.completedTutorials || [],
+            hasCompletedOnboarding: userProfile.hasCompletedOnboarding || false,
+            hasCompletedAdvancedFeatures: userProfile.hasCompletedAdvancedFeatures || false,
+            hasSeenWelcomeBanner: userProfile.hasSeenWelcomeBanner || false,
+            hasSeenProfileSetupGuide: userProfile.hasSeenProfileSetupGuide || false
+        };
+        
+        console.log('[TUTORIAL PROGRESS] Returning:', response);
+        
+        res.json(response);
+    } catch (error) {
+        console.error('[TUTORIAL PROGRESS] Error:', error);
+        res.status(500).json({ message: 'Failed to fetch tutorial progress' });
+    }
+});
+
+// Dismiss profile setup guide
+app.post('/api/users/dismiss-profile-setup-guide', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        
+        console.log('[DISMISS PROFILE SETUP GUIDE] User ID:', req.user.id);
+        
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            console.log('[DISMISS PROFILE SETUP GUIDE] User profile not found for:', req.user.id);
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        console.log('[DISMISS PROFILE SETUP GUIDE] Before save:', userProfile.hasSeenProfileSetupGuide);
+        userProfile.hasSeenProfileSetupGuide = true;
+        await userProfile.save();
+        console.log('[DISMISS PROFILE SETUP GUIDE] After save:', userProfile.hasSeenProfileSetupGuide);
+        
+        // Verify it was saved by reading it back
+        const verifyProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        console.log('[DISMISS PROFILE SETUP GUIDE] Verification read:', verifyProfile.hasSeenProfileSetupGuide);
+
+        res.json({ 
+            success: true, 
+            hasSeenProfileSetupGuide: true 
+        });
+    } catch (error) {
+        console.error('[DISMISS PROFILE SETUP GUIDE] Error:', error);
+        res.status(500).json({ message: 'Failed to dismiss profile setup guide' });
+    }
+});
+
+// Reset profile setup guide for testing (admin/moderator only)
+app.post('/api/users/reset-profile-setup-guide/:userIdPublic', authMiddleware, async (req, res) => {
+    try {
+        const { User, PublicProfile } = require('./database/models');
+        const { userIdPublic } = req.params;
+        
+        // Check if requester is admin or moderator
+        const requester = await User.findById(req.user.id);
+        if (!requester || !['admin', 'moderator'].includes(requester.role)) {
+            return res.status(403).json({ message: 'Access denied. Admin/Moderator only.' });
+        }
+
+        const userProfile = await PublicProfile.findOne({ id_public: userIdPublic });
         if (!userProfile) {
             return res.status(404).json({ message: 'User profile not found' });
         }
 
-        res.json({
-            completedTutorials: userProfile.completedTutorials || [],
-            hasCompletedOnboarding: userProfile.hasCompletedOnboarding || false,
-            hasCompletedAdvancedFeatures: userProfile.hasCompletedAdvancedFeatures || false,
-            hasSeenWelcomeBanner: userProfile.hasSeenWelcomeBanner || false
+        userProfile.hasSeenProfileSetupGuide = false;
+        await userProfile.save();
+
+        res.json({ 
+            success: true, 
+            message: `Reset profile setup guide for user ${userIdPublic}`,
+            hasSeenProfileSetupGuide: false 
         });
     } catch (error) {
-        console.error('Error fetching tutorial progress:', error);
-        res.status(500).json({ message: 'Failed to fetch tutorial progress' });
+        console.error('Error resetting profile setup guide:', error);
+        res.status(500).json({ message: 'Failed to reset profile setup guide' });
     }
 });
 
