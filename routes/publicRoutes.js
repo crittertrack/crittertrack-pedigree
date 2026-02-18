@@ -531,6 +531,30 @@ router.get('/marketplace', async (req, res) => {
             filter.gender = query.gender;
         }
 
+        // Country filter - filter by owner's country
+        let countryFilteredOwnerIds = null;
+        if (query.country) {
+            const usersInCountry = await User.find({ country: query.country })
+                .select('id_public')
+                .lean();
+            countryFilteredOwnerIds = usersInCountry.map(u => u.id_public);
+            
+            // If no users found in that country, return empty results
+            if (countryFilteredOwnerIds.length === 0) {
+                return res.status(200).json({
+                    animals: [],
+                    pagination: {
+                        page,
+                        limit,
+                        total: 0,
+                        totalPages: 0
+                    }
+                });
+            }
+            
+            filter.ownerId_public = { $in: countryFilteredOwnerIds };
+        }
+
         // Search by name or ID
         if (query.search) {
             const searchFilter = [
@@ -648,6 +672,66 @@ router.get('/marketplace/species', async (req, res) => {
         res.status(500).json({ message: 'Internal server error.' });
     }
 });
+
+// --- Get available countries for marketplace filter (public endpoint) ---
+router.get('/marketplace/countries', async (req, res) => {
+    try {
+        // Get distinct countries from users who have animals for sale or available for breeding
+        // First, get animals that are for sale or breeding
+        const Model = (typeof PublicAnimal !== 'undefined' && PublicAnimal) ? PublicAnimal : Animal;
+        const animals = await Model.find({
+            $or: [
+                { isForSale: true },
+                { availableForBreeding: true }
+            ]
+        }).select('ownerId_public').lean();
+
+        // Get unique owner IDs
+        const ownerIds = [...new Set(animals.map(a => a.ownerId_public).filter(Boolean))];
+
+        // Fetch countries from users
+        const users = await User.find({ 
+            id_public: { $in: ownerIds },
+            country: { $exists: true, $ne: null, $ne: '' }
+        }).select('country').lean();
+
+        // Get distinct countries
+        const countries = [...new Set(users.map(u => u.country).filter(Boolean))];
+
+        // Map country codes to names and flags
+        const countryNames = {
+            'US': 'United States', 'CA': 'Canada', 'GB': 'United Kingdom', 'AU': 'Australia',
+            'NZ': 'New Zealand', 'DE': 'Germany', 'FR': 'France', 'IT': 'Italy',
+            'ES': 'Spain', 'NL': 'Netherlands', 'SE': 'Sweden', 'NO': 'Norway',
+            'DK': 'Denmark', 'CH': 'Switzerland', 'BE': 'Belgium', 'AT': 'Austria',
+            'PL': 'Poland', 'CZ': 'Czech Republic', 'IE': 'Ireland', 'PT': 'Portugal',
+            'GR': 'Greece', 'RU': 'Russia', 'JP': 'Japan', 'KR': 'South Korea',
+            'CN': 'China', 'IN': 'India', 'BR': 'Brazil', 'MX': 'Mexico',
+            'ZA': 'South Africa', 'SG': 'Singapore', 'HK': 'Hong Kong', 'MY': 'Malaysia', 'TH': 'Thailand'
+        };
+
+        const countryList = countries.map(code => ({
+            code,
+            name: countryNames[code] || code,
+            flag: getFlagEmoji(code)
+        })).sort((a, b) => a.name.localeCompare(b.name));
+
+        res.status(200).json(countryList);
+    } catch (error) {
+        console.error('Error fetching marketplace countries:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// Helper function to convert country code to flag emoji
+function getFlagEmoji(countryCode) {
+    if (!countryCode || countryCode.length !== 2) return '🌍';
+    const codePoints = countryCode
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt());
+    return String.fromCodePoint(...codePoints);
+}
 
 // ============================================
 // GENETICS CALCULATOR PUBLIC ROUTES
