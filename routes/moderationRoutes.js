@@ -1783,6 +1783,68 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
     }
 });
 
+// DELETE /api/moderation/broadcasts/:id - Delete a broadcast from history and user notifications (Admin only)
+router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find the broadcast audit log entry first
+        const broadcast = await AuditLog.findOne({ 
+            _id: id, 
+            action: 'broadcast_sent' 
+        });
+
+        if (!broadcast) {
+            return res.status(404).json({ error: 'Broadcast not found' });
+        }
+
+        // Extract broadcast details to find matching notifications
+        const broadcastTitle = broadcast.details?.title;
+        const broadcastCreatedAt = broadcast.createdAt;
+
+        // Delete all user notifications matching this broadcast
+        // Match by type='broadcast', title, and createdAt within 1 second window
+        let deletedNotificationsCount = 0;
+        if (broadcastTitle) {
+            const timeWindowStart = new Date(broadcastCreatedAt.getTime() - 1000); // 1 second before
+            const timeWindowEnd = new Date(broadcastCreatedAt.getTime() + 1000); // 1 second after
+            
+            const deleteResult = await Notification.deleteMany({
+                type: 'broadcast',
+                title: broadcastTitle,
+                createdAt: { $gte: timeWindowStart, $lte: timeWindowEnd }
+            });
+            
+            deletedNotificationsCount = deleteResult.deletedCount || 0;
+            console.log(`[DELETE BROADCAST] Removed ${deletedNotificationsCount} user notifications for broadcast "${broadcastTitle}"`);
+        }
+
+        // Delete the broadcast audit log entry
+        await AuditLog.findByIdAndDelete(id);
+
+        // Log the deletion action
+        await AuditLog.create({
+            action: 'broadcast_deleted',
+            moderatorId: req.user._id,
+            moderatorEmail: req.user.email,
+            details: {
+                deletedBroadcastId: id,
+                originalTitle: broadcastTitle,
+                originalCreatedAt: broadcastCreatedAt,
+                deletedNotificationsCount
+            }
+        });
+
+        res.json({ 
+            message: 'Broadcast deleted successfully', 
+            deletedNotificationsCount 
+        });
+    } catch (error) {
+        console.error('Failed to delete broadcast:', error);
+        res.status(500).json({ error: 'Failed to delete broadcast' });
+    }
+});
+
 // GET /api/moderation/polls - Get all polls (Admin/Moderator only)
 router.get('/polls', requireModerator, async (req, res) => {
     try {
