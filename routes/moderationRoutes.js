@@ -1634,6 +1634,40 @@ router.get('/broadcasts', requireAdmin, async (req, res) => {
     }
 });
 
+// DELETE /api/moderation/broadcasts/:id - Delete a broadcast from history (Admin only)
+router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find and delete the broadcast audit log entry
+        const broadcast = await AuditLog.findOneAndDelete({ 
+            _id: id, 
+            action: 'broadcast_sent' 
+        });
+
+        if (!broadcast) {
+            return res.status(404).json({ error: 'Broadcast not found' });
+        }
+
+        // Log the deletion action
+        await AuditLog.create({
+            action: 'broadcast_deleted',
+            moderatorId: req.user._id,
+            moderatorEmail: req.user.email,
+            details: {
+                deletedBroadcastId: id,
+                originalTitle: broadcast.details?.title,
+                originalCreatedAt: broadcast.createdAt
+            }
+        });
+
+        res.json({ message: 'Broadcast deleted successfully' });
+    } catch (error) {
+        console.error('Failed to delete broadcast:', error);
+        res.status(500).json({ error: 'Failed to delete broadcast' });
+    }
+});
+
 // ============================================
 // ANALYTICS ENDPOINTS
 // ============================================
