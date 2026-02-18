@@ -1200,7 +1200,7 @@ router.post('/regenerate-admin-password/:userId', async (req, res) => {
  */
 router.get('/dashboard-stats', async (req, res) => {
     try {
-        const { User, Animal } = require('../database/models');
+        const { User, Animal, Message } = require('../database/models');
         
         // Get total users
         const totalUsers = await User.countDocuments({});
@@ -1217,11 +1217,25 @@ router.get('/dashboard-stats', async (req, res) => {
         // Get pending reports (placeholder - adjust based on your report model)
         const pendingReports = 0; // Update if you have a Reports model
         
+        // Get new mod replies: unread messages sent by users to moderators/admins
+        // First, get all moderators and admins
+        const moderators = await User.find({
+            $or: [{ isModerator: true }, { isAdmin: true }]
+        }).select('_id');
+        const moderatorIds = moderators.map(m => m._id);
+        
+        // Count unread messages where receiver is a moderator and sender is not
+        const newModReplies = await Message.countDocuments({
+            receiverId: { $in: moderatorIds },
+            read: false
+        });
+        
         res.json({
             totalUsers,
             activeUsers,
             totalAnimals,
             pendingReports,
+            newModReplies,
             systemHealth: 'good',
             lastBackup: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Mock last backup
         });
