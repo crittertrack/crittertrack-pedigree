@@ -439,6 +439,48 @@ app.post('/api/users/dismiss-profile-setup-guide', authMiddleware, async (req, r
     }
 });
 
+// Get user's custom species order
+app.get('/api/users/species-order', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        res.json({ speciesOrder: userProfile.speciesOrder || [] });
+    } catch (error) {
+        console.error('[SPECIES ORDER] Error fetching:', error);
+        res.status(500).json({ message: 'Failed to fetch species order' });
+    }
+});
+
+// Save user's custom species order
+app.post('/api/users/species-order', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        const { speciesOrder } = req.body;
+
+        if (!Array.isArray(speciesOrder)) {
+            return res.status(400).json({ message: 'speciesOrder must be an array' });
+        }
+
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        userProfile.speciesOrder = speciesOrder;
+        await userProfile.save();
+
+        res.json({ success: true, speciesOrder });
+    } catch (error) {
+        console.error('[SPECIES ORDER] Error saving:', error);
+        res.status(500).json({ message: 'Failed to save species order' });
+    }
+});
+
 // Reset profile setup guide for testing (admin/moderator only)
 app.post('/api/users/reset-profile-setup-guide/:userIdPublic', authMiddleware, async (req, res) => {
     try {
