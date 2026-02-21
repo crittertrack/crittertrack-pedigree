@@ -51,6 +51,7 @@ router.get('/:id', protect, async (req, res) => {
 /**
  * GET /api/field-templates/species/:speciesId
  * Get the field template for a specific species WITH feature flag support
+ * Falls back to category-based template mapping if species has no template assigned
  */
 router.get('/species/:speciesId', async (req, res) => {
     try {
@@ -65,12 +66,44 @@ router.get('/species/:speciesId', async (req, res) => {
             return res.status(404).json({ error: 'Species not found' });
         }
         
-        if (!species.fieldTemplateId) {
-            return res.status(404).json({ error: 'No field template assigned to this species' });
-        }
+        let template = species.fieldTemplateId;
+        let templateName = null;
         
-        const template = species.fieldTemplateId;
-        const templateName = template.name;
+        // If no template assigned, map by category
+        if (!template) {
+            // Category to template mapping (use Other as default for any edge cases)
+            const categoryTemplateMap = {
+                'Small Mammal': 'Small Mammal Template',
+                'Mammal': 'Full Mammal Template',
+                'Reptile': 'Reptile Template',
+                'Bird': 'Bird Template',
+                'Fish': 'Fish Template',
+                'Amphibian': 'Amphibian Template',
+                'Invertebrate': 'Invertebrate Template',
+                'Other': 'Other Template'
+            };
+            
+            // Default to 'Other Template' if category is missing or unknown (shouldn't happen, but safety first)
+            templateName = categoryTemplateMap[species.category] || 'Other Template';
+            
+            // Fetch the template by name
+            template = await FieldTemplate.findOne({ name: templateName });
+            
+            if (!template) {
+                // Final fallback: try to get 'Other Template' directly
+                template = await FieldTemplate.findOne({ name: 'Other Template' });
+                
+                if (!template) {
+                    return res.status(500).json({ 
+                        error: 'Critical error: No field templates available in database',
+                        category: species.category,
+                        expectedTemplate: templateName
+                    });
+                }
+            }
+        } else {
+            templateName = template.name;
+        }
         
         // Check feature flag
         const uiEnabled = FEATURE_FLAGS.FIELD_TEMPLATES_UI_ENABLED[templateName] || false;
@@ -78,7 +111,8 @@ router.get('/species/:speciesId', async (req, res) => {
         res.json({
             ...template.toObject(),
             uiEnabled,  // Flag indicating if new UI should be used
-            fallbackToLegacy: !uiEnabled  // Flag to use legacy UI
+            fallbackToLegacy: !uiEnabled,  // Flag to use legacy UI
+            mappedByCategory: !species.fieldTemplateId  // Indicates if template was mapped by category
         });
     } catch (error) {
         console.error('Error fetching species field template:', error);
