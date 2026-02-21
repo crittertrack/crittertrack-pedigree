@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { FieldTemplate, Species } = require('../database/models');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const { protect, checkRole } = require('../middleware/authMiddleware');
 
 /**
  * GET /api/field-templates
  * Get all field templates (admin only)
  */
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/', protect, checkRole(['admin']), async (req, res) => {
     try {
         const templates = await FieldTemplate.find().sort({ isDefault: -1, name: 1 });
         res.json(templates);
@@ -21,7 +21,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
  * GET /api/field-templates/:id
  * Get a single field template by ID
  */
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
     try {
         const template = await FieldTemplate.findById(req.params.id);
         if (!template) {
@@ -66,7 +66,7 @@ router.get('/species/:speciesId', async (req, res) => {
  * POST /api/field-templates
  * Create a new field template (admin only)
  */
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', protect, checkRole(['admin']), async (req, res) => {
     try {
         const { name, description, fields } = req.body;
         
@@ -101,7 +101,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
  * PUT /api/field-templates/:id
  * Update an existing field template (admin only)
  */
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', protect, checkRole(['admin']), async (req, res) => {
     try {
         const { name, description, fields } = req.body;
         
@@ -135,7 +135,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
  * POST /api/field-templates/:id/clone
  * Clone an existing field template (admin only)
  */
-router.post('/:id/clone', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/:id/clone', protect, checkRole(['admin']), async (req, res) => {
     try {
         const { name } = req.body;
         
@@ -175,7 +175,7 @@ router.post('/:id/clone', authenticateToken, requireAdmin, async (req, res) => {
  * DELETE /api/field-templates/:id
  * Delete a field template (admin only)
  */
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', protect, checkRole(['admin']), async (req, res) => {
     try {
         const template = await FieldTemplate.findById(req.params.id);
         if (!template) {
@@ -208,7 +208,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
  * PUT /api/field-templates/species/:speciesId/assign
  * Assign a field template to a species (admin only)
  */
-router.put('/species/:speciesId/assign', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/species/:speciesId/assign', protect, checkRole(['admin']), async (req, res) => {
     try {
         const { templateId } = req.body;
         
