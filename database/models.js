@@ -821,20 +821,662 @@ const FieldTemplateSchema = new mongoose.Schema({
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // User who created custom template
     
     // Field configuration - defines what fields appear in forms and with what labels/requirements
+    // Structure: { enabled: Boolean, label: String, required: Boolean }
     fields: {
-        // Basic fields (always present)
-        name: { type: Boolean, default: true },
-        sex: { type: Boolean, default: true },
-        birthDate: { type: Boolean, default: true },
-        deathDate: { type: Boolean, default: true },
-        status: { type: Boolean, default: true },
+        // ===== TAB 1: OVERVIEW / IDENTITY =====
+        // Core identity fields (always required, not configurable)
+        prefix: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Prefix' },
+            required: { type: Boolean, default: false }
+        },
+        suffix: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Suffix' },
+            required: { type: Boolean, default: false }
+        },
+        breederyId: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Breeder ID' },
+            required: { type: Boolean, default: false }
+        },
         
-        // Genetics & Appearance
+        // ===== TAB 2: OWNERSHIP =====
+        currentOwner: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Current Owner' },
+            required: { type: Boolean, default: false }
+        },
+        ownershipHistory: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Ownership History' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 3: PHYSICAL PROFILE =====
+        color: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Color' },
+            required: { type: Boolean, default: false }
+        },
+        coat: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Coat Type' },
+            required: { type: Boolean, default: false }
+        },
+        earset: { 
+            enabled: { type: Boolean, default: false }, // Specific to rats/mice
+            label: { type: String, default: 'Earset' },
+            required: { type: Boolean, default: false }
+        },
+        coatPattern: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Pattern' },
+            required: { type: Boolean, default: false }
+        },
+        lifeStage: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Life Stage' },
+            required: { type: Boolean, default: false }
+        },
+        heightAtWithers: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats/horses
+            label: { type: String, default: 'Height at Withers' },
+            required: { type: Boolean, default: false }
+        },
+        bodyLength: { 
+            enabled: { type: Boolean, default: false },
+            label: { type: String, default: 'Body Length' },
+            required: { type: Boolean, default: false }
+        },
+        chestGirth: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Chest Girth' },
+            required: { type: Boolean, default: false }
+        },
+        adultWeight: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Adult Weight' },
+            required: { type: Boolean, default: false }
+        },
+        bodyConditionScore: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Body Condition Score' },
+            required: { type: Boolean, default: false }
+        },
+        weight: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Weight' },
+            required: { type: Boolean, default: false }
+        },
+        length: { 
+            enabled: { type: Boolean, default: false }, // Reptiles, fish
+            label: { type: String, default: 'Length' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 4: IDENTIFICATION =====
+        microchipNumber: { 
+            enabled: { type: Boolean, default: false }, // Larger mammals
+            label: { type: String, default: 'Microchip #' },
+            required: { type: Boolean, default: false }
+        },
+        pedigreeRegistrationId: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Pedigree Registration #' },
+            required: { type: Boolean, default: false }
+        },
+        breed: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Breed' },
+            required: { type: Boolean, default: false }
+        },
         strain: { 
-            enabled: { type: Boolean, default: false }, // Only for rodents/lab animals
+            enabled: { type: Boolean, default: false }, // Lab animals/rodents
             label: { type: String, default: 'Strain' },
             required: { type: Boolean, default: false }
         },
+        licenseNumber: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'License Number' },
+            required: { type: Boolean, default: false }
+        },
+        licenseJurisdiction: { 
+            enabled: { type: Boolean, default: false },
+            label: { type: String, default: 'License Jurisdiction' },
+            required: { type: Boolean, default: false }
+        },
+        rabiesTagNumber: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Rabies Tag #' },
+            required: { type: Boolean, default: false }
+        },
+        tattooId: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Tattoo ID' },
+            required: { type: Boolean, default: false }
+        },
+        akcRegistrationNumber: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'AKC Registration #' },
+            required: { type: Boolean, default: false }
+        },
+        fciRegistrationNumber: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'FCI Registration #' },
+            required: { type: Boolean, default: false }
+        },
+        cfaRegistrationNumber: { 
+            enabled: { type: Boolean, default: false }, // Cats
+            label: { type: String, default: 'CFA Registration #' },
+            required: { type: Boolean, default: false }
+        },
+        workingRegistryIds: { 
+            enabled: { type: Boolean, default: false }, // Working dogs
+            label: { type: String, default: 'Working Registry IDs' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 5: LINEAGE & ORIGIN =====
+        origin: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Origin' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 6: REPRODUCTION & BREEDING =====
+        isNeutered: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Neutered/Spayed' },
+            required: { type: Boolean, default: false }
+        },
+        spayNeuterDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Spay/Neuter Date' },
+            required: { type: Boolean, default: false }
+        },
+        heatStatus: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Heat Status' },
+            required: { type: Boolean, default: false }
+        },
+        lastHeatDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Last Heat Date' },
+            required: { type: Boolean, default: false }
+        },
+        ovulationDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Ovulation Date' },
+            required: { type: Boolean, default: false }
+        },
+        matingDates: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Mating Dates' },
+            required: { type: Boolean, default: false }
+        },
+        expectedDueDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Expected Due Date' },
+            required: { type: Boolean, default: false }
+        },
+        litterCount: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Litter Count' },
+            required: { type: Boolean, default: false }
+        },
+        nursingStartDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Nursing Start Date' },
+            required: { type: Boolean, default: false }
+        },
+        weaningDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Weaning Date' },
+            required: { type: Boolean, default: false }
+        },
+        breedingRole: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Breeding Role' },
+            required: { type: Boolean, default: false }
+        },
+        lastMatingDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Last Mating Date' },
+            required: { type: Boolean, default: false }
+        },
+        successfulMatings: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Successful Matings' },
+            required: { type: Boolean, default: false }
+        },
+        lastPregnancyDate: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Last Pregnancy Date' },
+            required: { type: Boolean, default: false }
+        },
+        offspringCount: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Offspring Count' },
+            required: { type: Boolean, default: false }
+        },
+        isStudAnimal: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Stud Animal' },
+            required: { type: Boolean, default: false }
+        },
+        availableForBreeding: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Available for Breeding' },
+            required: { type: Boolean, default: false }
+        },
+        studFeeCurrency: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Stud Fee Currency' },
+            required: { type: Boolean, default: false }
+        },
+        studFeeAmount: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Stud Fee Amount' },
+            required: { type: Boolean, default: false }
+        },
+        fertilityStatus: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Fertility Status' },
+            required: { type: Boolean, default: false }
+        },
+        fertilityNotes: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Fertility Notes' },
+            required: { type: Boolean, default: false }
+        },
+        isDamAnimal: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Dam Animal' },
+            required: { type: Boolean, default: false }
+        },
+        damFertilityStatus: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Dam Fertility Status' },
+            required: { type: Boolean, default: false }
+        },
+        damFertilityNotes: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Dam Fertility Notes' },
+            required: { type: Boolean, default: false }
+        },
+        estrusCycleLength: { 
+            enabled: { type: Boolean, default: false }, // Mammals
+            label: { type: String, default: 'Estrus Cycle Length (days)' },
+            required: { type: Boolean, default: false }
+        },
+        gestationLength: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Gestation Length (days)' },
+            required: { type: Boolean, default: false }
+        },
+        artificialInseminationUsed: { 
+            enabled: { type: Boolean, default: false }, // Larger mammals
+            label: { type: String, default: 'Artificial Insemination Used' },
+            required: { type: Boolean, default: false }
+        },
+        whelpingDate: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Whelping Date' },
+            required: { type: Boolean, default: false }
+        },
+        queeningDate: { 
+            enabled: { type: Boolean, default: false }, // Cats
+            label: { type: String, default: 'Queening Date' },
+            required: { type: Boolean, default: false }
+        },
+        deliveryMethod: { 
+            enabled: { type: Boolean, default: false }, // Larger mammals
+            label: { type: String, default: 'Delivery Method' },
+            required: { type: Boolean, default: false }
+        },
+        reproductiveComplications: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Reproductive Complications' },
+            required: { type: Boolean, default: false }
+        },
+        reproductiveClearances: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Reproductive Clearances' },
+            required: { type: Boolean, default: false }
+        },
+        isForSale: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'For Sale' },
+            required: { type: Boolean, default: false }
+        },
+        salePriceCurrency: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Sale Price Currency' },
+            required: { type: Boolean, default: false }
+        },
+        salePriceAmount: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Sale Price Amount' },
+            required: { type: Boolean, default: false }
+        },
+        isInfertile: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Infertile' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 7: HEALTH & VETERINARY =====
+        vaccinations: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Vaccinations' },
+            required: { type: Boolean, default: false }
+        },
+        dewormingRecords: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Deworming Records' },
+            required: { type: Boolean, default: false }
+        },
+        parasiteControl: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Parasite Control' },
+            required: { type: Boolean, default: false }
+        },
+        medicalConditions: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Medical Conditions' },
+            required: { type: Boolean, default: false }
+        },
+        allergies: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Allergies' },
+            required: { type: Boolean, default: false }
+        },
+        medications: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Medications' },
+            required: { type: Boolean, default: false }
+        },
+        medicalProcedures: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Medical Procedures' },
+            required: { type: Boolean, default: false }
+        },
+        labResults: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Lab Results' },
+            required: { type: Boolean, default: false }
+        },
+        vetVisits: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Vet Visits' },
+            required: { type: Boolean, default: false }
+        },
+        primaryVet: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Primary Veterinarian' },
+            required: { type: Boolean, default: false }
+        },
+        parasitePreventionSchedule: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Parasite Prevention Schedule' },
+            required: { type: Boolean, default: false }
+        },
+        heartwormStatus: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Heartworm Status' },
+            required: { type: Boolean, default: false }
+        },
+        hipElbowScores: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Hip/Elbow Scores' },
+            required: { type: Boolean, default: false }
+        },
+        geneticTestResults: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Genetic Test Results' },
+            required: { type: Boolean, default: false }
+        },
+        eyeClearance: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Eye Clearance' },
+            required: { type: Boolean, default: false }
+        },
+        cardiacClearance: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Cardiac Clearance' },
+            required: { type: Boolean, default: false }
+        },
+        dentalRecords: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Dental Records' },
+            required: { type: Boolean, default: false }
+        },
+        chronicConditions: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Chronic Conditions' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 8: NUTRITION & HUSBANDRY =====
+        dietType: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Diet Type' },
+            required: { type: Boolean, default: false }
+        },
+        feedingSchedule: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Feeding Schedule' },
+            required: { type: Boolean, default: false }
+        },
+        supplements: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Supplements' },
+            required: { type: Boolean, default: false }
+        },
+        housingType: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Housing Type' },
+            required: { type: Boolean, default: false }
+        },
+        bedding: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Bedding' },
+            required: { type: Boolean, default: false }
+        },
+        temperatureRange: { 
+            enabled: { type: Boolean, default: false }, // Reptiles/exotics
+            label: { type: String, default: 'Temperature Range' },
+            required: { type: Boolean, default: false }
+        },
+        humidity: { 
+            enabled: { type: Boolean, default: false }, // Reptiles/amphibians
+            label: { type: String, default: 'Humidity' },
+            required: { type: Boolean, default: false }
+        },
+        lighting: { 
+            enabled: { type: Boolean, default: false }, // Reptiles/exotics
+            label: { type: String, default: 'Lighting' },
+            required: { type: Boolean, default: false }
+        },
+        noise: { 
+            enabled: { type: Boolean, default: false },
+            label: { type: String, default: 'Noise Levels' },
+            required: { type: Boolean, default: false }
+        },
+        enrichment: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Enrichment' },
+            required: { type: Boolean, default: false }
+        },
+        exerciseRequirements: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Exercise Requirements' },
+            required: { type: Boolean, default: false }
+        },
+        dailyExerciseMinutes: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Daily Exercise (minutes)' },
+            required: { type: Boolean, default: false }
+        },
+        groomingNeeds: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Grooming Needs' },
+            required: { type: Boolean, default: false }
+        },
+        sheddingLevel: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Shedding Level' },
+            required: { type: Boolean, default: false }
+        },
+        crateTrained: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Crate Trained' },
+            required: { type: Boolean, default: false }
+        },
+        litterTrained: { 
+            enabled: { type: Boolean, default: false }, // Cats
+            label: { type: String, default: 'Litter Trained' },
+            required: { type: Boolean, default: false }
+        },
+        leashTrained: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Leash Trained' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 9: BEHAVIOR & WELFARE =====
+        temperament: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Temperament' },
+            required: { type: Boolean, default: false }
+        },
+        handlingTolerance: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Handling Tolerance' },
+            required: { type: Boolean, default: false }
+        },
+        socialStructure: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Social Structure' },
+            required: { type: Boolean, default: false }
+        },
+        activityCycle: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Activity Cycle' },
+            required: { type: Boolean, default: false }
+        },
+        trainingLevel: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Training Level' },
+            required: { type: Boolean, default: false }
+        },
+        trainingDisciplines: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Training Disciplines' },
+            required: { type: Boolean, default: false }
+        },
+        certifications: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Certifications' },
+            required: { type: Boolean, default: false }
+        },
+        workingRole: { 
+            enabled: { type: Boolean, default: false }, // Working dogs
+            label: { type: String, default: 'Working Role' },
+            required: { type: Boolean, default: false }
+        },
+        behavioralIssues: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Behavioral Issues' },
+            required: { type: Boolean, default: false }
+        },
+        biteHistory: { 
+            enabled: { type: Boolean, default: false }, // Dogs/cats
+            label: { type: String, default: 'Bite History' },
+            required: { type: Boolean, default: false }
+        },
+        reactivityNotes: { 
+            enabled: { type: Boolean, default: false }, // Dogs
+            label: { type: String, default: 'Reactivity Notes' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 10: SHOW =====
+        showTitles: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Show Titles' },
+            required: { type: Boolean, default: false }
+        },
+        showRatings: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Show Ratings' },
+            required: { type: Boolean, default: false }
+        },
+        judgeComments: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Judge Comments' },
+            required: { type: Boolean, default: false }
+        },
+        workingTitles: { 
+            enabled: { type: Boolean, default: false }, // Working dogs
+            label: { type: String, default: 'Working Titles' },
+            required: { type: Boolean, default: false }
+        },
+        performanceScores: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Performance Scores' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 11: END OF LIFE & LEGAL =====
+        causeOfDeath: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Cause of Death' },
+            required: { type: Boolean, default: false }
+        },
+        necropsyResults: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Necropsy Results' },
+            required: { type: Boolean, default: false }
+        },
+        insurance: { 
+            enabled: { type: Boolean, default: false }, // Larger animals
+            label: { type: String, default: 'Insurance' },
+            required: { type: Boolean, default: false }
+        },
+        legalStatus: { 
+            enabled: { type: Boolean, default: false }, // Exotic animals
+            label: { type: String, default: 'Legal Status' },
+            required: { type: Boolean, default: false }
+        },
+        endOfLifeCareNotes: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'End of Life Care Notes' },
+            required: { type: Boolean, default: false }
+        },
+        coOwnership: { 
+            enabled: { type: Boolean, default: false }, // Larger animals
+            label: { type: String, default: 'Co-Ownership' },
+            required: { type: Boolean, default: false }
+        },
+        transferHistory: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Transfer History' },
+            required: { type: Boolean, default: false }
+        },
+        breedingRestrictions: { 
+            enabled: { type: Boolean, default: false }, // Purebred animals
+            label: { type: String, default: 'Breeding Restrictions' },
+            required: { type: Boolean, default: false }
+        },
+        exportRestrictions: { 
+            enabled: { type: Boolean, default: false }, // Regulated species
+            label: { type: String, default: 'Export Restrictions' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // ===== TAB 12: GENETICS & NOTES =====
         geneticCode: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Genetic Code' },
@@ -846,13 +1488,8 @@ const FieldTemplateSchema = new mongoose.Schema({
             required: { type: Boolean, default: false }
         },
         morph: { 
-            enabled: { type: Boolean, default: false }, // For reptiles
+            enabled: { type: Boolean, default: false }, // Reptiles
             label: { type: String, default: 'Morph' },
-            required: { type: Boolean, default: false }
-        },
-        color: { 
-            enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Color' },
             required: { type: Boolean, default: false }
         },
         markings: { 
@@ -860,45 +1497,9 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Markings' },
             required: { type: Boolean, default: false }
         },
-        
-        // Physical characteristics
-        weight: { 
+        remarks: { 
             enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Weight' },
-            required: { type: Boolean, default: false }
-        },
-        length: { 
-            enabled: { type: Boolean, default: false }, // For reptiles, fish
-            label: { type: String, default: 'Length' },
-            required: { type: Boolean, default: false }
-        },
-        
-        // Breeding & Registration
-        breedingStatus: { 
-            enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Breeding Status' },
-            required: { type: Boolean, default: false }
-        },
-        registrationNumber: { 
-            enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Registration #' },
-            required: { type: Boolean, default: false }
-        },
-        microchipNumber: { 
-            enabled: { type: Boolean, default: false }, // For larger mammals
-            label: { type: String, default: 'Microchip #' },
-            required: { type: Boolean, default: false }
-        },
-        
-        // Additional info
-        temperament: { 
-            enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Temperament' },
-            required: { type: Boolean, default: false }
-        },
-        notes: { 
-            enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Notes' },
+            label: { type: String, default: 'Notes/Remarks' },
             required: { type: Boolean, default: false }
         }
     },
