@@ -61,13 +61,13 @@ router.post('/migrate-categories', async (req, res) => {
             skipped: []
         };
         
-        // Update/create default species with Rodent category
+        // Update/create default species with Mammal category
         for (const speciesName of defaultSpecies) {
             const existing = await Species.findOne({ name: speciesName });
             
             if (existing) {
                 if (!existing.category || !existing.isDefault) {
-                    existing.category = 'Rodent';
+                    existing.category = 'Mammal';
                     existing.isDefault = true;
                     await existing.save();
                     results.updated.push(speciesName);
@@ -77,7 +77,7 @@ router.post('/migrate-categories', async (req, res) => {
             } else {
                 const newSpecies = new Species({
                     name: speciesName,
-                    category: 'Rodent',
+                    category: 'Mammal',
                     isDefault: true
                 });
                 await newSpecies.save();

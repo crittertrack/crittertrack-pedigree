@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { Species, SpeciesConfig } = require('../database/models');
+const { Species, SpeciesConfig, FieldTemplate } = require('../database/models');
 
 /**
  * GET /api/species
  * Get all species, optionally filtered by category
+ * Includes field template data if includeTemplate=true query param is provided
  */
 router.get('/', async (req, res) => {
     try {
-        const { category, search } = req.query;
+        const { category, search, includeTemplate } = req.query;
         let query = {};
         
         if (category) {
@@ -19,7 +20,14 @@ router.get('/', async (req, res) => {
             query.name = { $regex: search, $options: 'i' }; // Case-insensitive search
         }
         
-        const species = await Species.find(query).sort({ isDefault: -1, name: 1 });
+        // Optionally populate field template data
+        let speciesQuery = Species.find(query).sort({ isDefault: -1, name: 1 });
+        
+        if (includeTemplate === 'true') {
+            speciesQuery = speciesQuery.populate('fieldTemplateId');
+        }
+        
+        const species = await speciesQuery;
         res.json(species);
     } catch (error) {
         console.error('Error fetching species:', error);
@@ -80,7 +88,7 @@ router.post('/', async (req, res) => {
  * Get list of all available categories
  */
 router.get('/categories', (req, res) => {
-    const categories = ['Rodent', 'Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'];
+    const categories = ['Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'];
     res.json(categories);
 });
 
@@ -141,6 +149,35 @@ router.get('/configs', async (req, res) => {
 });
 
 /**
+ * GET /api/species/with-template/:speciesName
+ * Get a specific species with its field template populated
+ * This is the main endpoint for the frontend to get template configuration
+ */
+router.get('/with-template/:speciesName', async (req, res) => {
+    try {
+        const { speciesName } = req.params;
+        
+        const species = await Species.findOne({ name: speciesName }).populate('fieldTemplateId');
+        
+        if (!species) {
+            return res.status(404).json({ message: `Species "${speciesName}" not found` });
+        }
+        
+        // Return species with populated field template
+        res.json({
+            name: species.name,
+            latinName: species.latinName,
+            category: species.category,
+            isDefault: species.isDefault,
+            fieldTemplate: species.fieldTemplateId || null
+        });
+    } catch (error) {
+        console.error('Error fetching species with template:', error);
+        res.status(500).json({ message: 'Failed to fetch species template' });
+    }
+});
+
+/**
  * POST /api/species/migrate-categories
  * One-time migration to add categories to existing species
  */
@@ -153,13 +190,13 @@ router.post('/migrate-categories', async (req, res) => {
             skipped: []
         };
         
-        // Update/create default species with Rodent category
+        // Update/create default species with Mammal category
         for (const speciesName of defaultSpecies) {
             const existing = await Species.findOne({ name: speciesName });
             
             if (existing) {
                 if (!existing.category || existing.category === 'Other' || !existing.isDefault) {
-                    existing.category = 'Rodent';
+                    existing.category = 'Mammal';
                     existing.isDefault = true;
                     await existing.save();
                     results.updated.push(speciesName);
@@ -169,7 +206,7 @@ router.post('/migrate-categories', async (req, res) => {
             } else {
                 const newSpecies = new Species({
                     name: speciesName,
-                    category: 'Rodent',
+                    category: 'Mammal',
                     isDefault: true
                 });
                 await newSpecies.save();
