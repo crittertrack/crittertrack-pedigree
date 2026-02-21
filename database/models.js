@@ -197,6 +197,15 @@ const AnimalSchema = new mongoose.Schema({
     // Tab 3: Physical Profile Fields
     coatPattern: { type: String, default: null },
     lifeStage: { type: String, default: null },
+    // Universal animal appearance fields
+    phenotype: { type: String, default: null }, // Observable traits
+    morph: { type: String, default: null }, // Mutation/Morph (esp. reptiles/invertebrates)
+    markings: { type: String, default: null }, // Body markings/patterns
+    eyeColor: { type: String, default: null }, // Eye color
+    nailColor: { type: String, default: null }, // Nail/claw color (mammals)
+    // Current measurements (snapshot - growth records track history)
+    weight: { type: String, default: null }, // Current weight
+    length: { type: String, default: null }, // Current length/wingspan/snout-vent length
     // Physical measurements (Dog/Cat specific)
     heightAtWithers: { type: String, default: null },
     bodyLength: { type: String, default: null },
@@ -426,6 +435,15 @@ const PublicAnimalSchema = new mongoose.Schema({
     coatPattern: { type: String, default: null },
     earset: { type: String, default: null },
     lifeStage: { type: String, default: null },
+    // Universal animal appearance fields
+    phenotype: { type: String, default: null },
+    morph: { type: String, default: null },
+    markings: { type: String, default: null },
+    eyeColor: { type: String, default: null },
+    nailColor: { type: String, default: null },
+    // Current measurements
+    weight: { type: String, default: null },
+    length: { type: String, default: null },
     
     // Breeder info (public)
     breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder
