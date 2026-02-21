@@ -501,7 +501,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Bird Template
 
-**Enabled:** 114 fields | **Disabled:** 17 fields
+**Enabled:** 114 fields | **Disabled:** 26 fields
 
 ### ✅ Enabled Template Fields (114)
 
@@ -621,7 +621,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `workingRole` | Working Role |  | Behavior |
 | `workingTitles` | Working Titles |  | Records |
 
-### ❌ Disabled Fields (17)
+### ❌ Disabled Fields (26)
 
 | Field Name | Label |
 |------------|-------|
@@ -643,6 +643,15 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `heartwormStatus` | Heartworm Status |
 | `hipElbowScores` | Hip/Elbow Scores |
 | `sheddingLevel` | Shedding Level |
+| `currentOwner` | Owner Name |
+| `eyeColor` | Eye Color |
+| `nailColor` | Nail Color |
+| `carrierTraits` | Carrier Traits |
+| `colonyId` | Colony ID |
+| `groupRole` | Group Role |
+| `litterSizeBorn` | Litter Size Born |
+| `litterSizeWeaned` | Litter Size Weaned |
+| `stillbornCount` | Stillborn Count |
 
 ---
 
