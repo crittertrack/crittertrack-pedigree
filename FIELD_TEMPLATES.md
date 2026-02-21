@@ -47,7 +47,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Small Mammal Template
 
-**Enabled:** 99 fields | **Disabled:** 42 fields
+**Enabled:** 100 fields | **Disabled:** 41 fields
 
 ### ✅ Enabled Template Fields (96)
 
@@ -120,6 +120,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `vetVisits` | Vet Visits |  | Health |
 | `primaryVet` | Primary Veterinarian |  | Health |
 | `geneticTestResults` | Genetic Test Results |  | Health |
+| `parasitePreventionSchedule` | Parasite Prevention Schedule |  | Health |
 | `chronicConditions` | Chronic Conditions |  | Health |
 | `dietType` | Diet Type |  | Husbandry |
 | `feedingSchedule` | Feeding Schedule |  | Husbandry |
@@ -172,7 +173,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `queeningDate` | Queening Date |
 | `deliveryMethod` | Delivery Method |
 | `reproductiveClearances` | Reproductive Clearances |
-| `parasitePreventionSchedule` | Parasite Prevention Schedule |
 | `heartwormStatus` | Heartworm Status |
 | `hipElbowScores` | Hip/Elbow Scores |
 | `eyeClearance` | Eye Clearance |
