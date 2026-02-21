@@ -3,6 +3,20 @@ const router = express.Router();
 const { FieldTemplate, Species } = require('../database/models');
 const { protect, checkRole } = require('../middleware/authMiddleware');
 
+// Feature flags for safe rollout - PHASE 1-3: Only safe templates enabled
+const FEATURE_FLAGS = {
+    FIELD_TEMPLATES_UI_ENABLED: {
+        'Small Mammal Template': false,  // DISABLED - 950+ animals at risk
+        'Full Mammal Template': false,   // DISABLED - 5 animals at risk
+        'Reptile Template': false,       // DISABLED - 1 animal at risk
+        'Bird Template': true,           // ENABLED - 0 animals, safe to test
+        'Fish Template': true,           // ENABLED - 0 animals, safe to test
+        'Amphibian Template': true,      // ENABLED - 0 animals, safe to test
+        'Invertebrate Template': true,   // ENABLED - 0 animals, safe to test
+        'Other Template': false          // DISABLED - used as fallback
+    }
+};
+
 /**
  * GET /api/field-templates
  * Get all field templates (admin only)
@@ -36,7 +50,7 @@ router.get('/:id', protect, async (req, res) => {
 
 /**
  * GET /api/field-templates/species/:speciesId
- * Get the field template for a specific species
+ * Get the field template for a specific species WITH feature flag support
  */
 router.get('/species/:speciesId', async (req, res) => {
     try {
@@ -55,7 +69,17 @@ router.get('/species/:speciesId', async (req, res) => {
             return res.status(404).json({ error: 'No field template assigned to this species' });
         }
         
-        res.json(species.fieldTemplateId);
+        const template = species.fieldTemplateId;
+        const templateName = template.name;
+        
+        // Check feature flag
+        const uiEnabled = FEATURE_FLAGS.FIELD_TEMPLATES_UI_ENABLED[templateName] || false;
+        
+        res.json({
+            ...template.toObject(),
+            uiEnabled,  // Flag indicating if new UI should be used
+            fallbackToLegacy: !uiEnabled  // Flag to use legacy UI
+        });
     } catch (error) {
         console.error('Error fetching species field template:', error);
         res.status(500).json({ error: 'Failed to fetch field template for species' });
