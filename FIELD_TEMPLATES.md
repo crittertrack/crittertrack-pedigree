@@ -410,8 +410,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
-| `isPregnant` | Pregnant |  | Breeding |
-| `isNursing` | Nursing |  | Breeding |
+| `isPregnant` | Gravid |  | Breeding |
+| `isNursing` | Brooding |  | Breeding |
 | `isInMating` | In Mating |  | Breeding |
 | `dewormingRecords` | Deworming Records |  | Health |
 | `parasiteControl` | Parasite Control |  | Health |
@@ -571,8 +571,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
-| `isPregnant` | Egg-Bound/Pregnant |  | Breeding |
-| `isNursing` | Nursing/Chick Feeding |  | Breeding |
+| `isPregnant` | Gravid/Egg-Laying |  | Breeding |
+| `isNursing` | Brooding/Chick Rearing |  | Breeding |
 | `isInMating` | In Mating |  | Breeding |
 | `vaccinations` | Vaccinations |  | Health |
 | `dewormingRecords` | Deworming Records |  | Health |
@@ -722,8 +722,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
-| `isPregnant` | Gravid/Pregnant |  | Breeding |
-| `isNursing` | Nursing |  | Breeding |
+| `isPregnant` | Gravid |  | Breeding |
+| `isNursing` | Brooding/Guarding Eggs |  | Breeding |
 | `isInMating` | In Mating |  | Breeding |
 | `breed` | Species/Locality |  | Overview |
 | `strain` | Strain/Lineage |  | Overview |
@@ -887,8 +887,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
-| `isPregnant` | Gravid/Pregnant |  | Breeding |
-| `isNursing` | Nursing/Mouthbrooding |  | Breeding |
+| `isPregnant` | Gravid |  | Breeding |
+| `isNursing` | Mouthbrooding |  | Breeding |
 | `isInMating` | In Mating |  | Breeding |
 | `adultWeight` | Adult Weight |  | Physical |
 | `weight` | Weight |  | Physical |
@@ -1033,7 +1033,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `gestationLength` | Egg Sac/Incubation Period |  | Breeding |
 | `reproductiveComplications` | Reproductive Complications |  | Breeding |
 | `isPregnant` | Gravid/Egg-Bearing |  | Breeding |
-| `isNursing` | Nursing |  | Breeding |
+| `isNursing` | Guarding Egg Sac |  | Breeding |
 | `isInMating` | In Mating |  | Breeding |
 | `isForSale` | For Sale |  | Overview |
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
