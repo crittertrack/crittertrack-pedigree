@@ -829,9 +829,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Fish Template
 
-**Enabled:** 80 fields | **Disabled:** 61 fields
+**Enabled:** 79 fields | **Disabled:** 62 fields
 
-### ✅ Enabled Template Fields (77)
+### ✅ Enabled Template Fields (79)
 
 | Field Name | Label | Required | Tab |
 |------------|-------|----------|-----|
@@ -850,7 +850,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `length` | Length |  | Physical |
 | `pedigreeRegistrationId` | Registration # |  | Identification |
 | `breed` | Variety |  | Overview |
-| `strain` | Breeding Line |  | Overview |
 | `origin` | Origin |  | Lineage |
 | `matingDates` | Spawn Dates |  | Breeding |
 | `expectedDueDate` | Expected Hatch Date |  | Breeding |
@@ -982,14 +981,15 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `carrierTraits` | Carrier Traits |
 | `groupRole` | Group Role |
 | `freeFlightTrained` | Free Flight Trained |
+| `strain` | Breeding Line |
 
 ---
 
 ## Invertebrate Template
 
-**Enabled:** 64 fields | **Disabled:** 77 fields
+**Enabled:** 66 fields | **Disabled:** 75 fields
 
-### ✅ Enabled Template Fields (61)
+### ✅ Enabled Template Fields (66)
 
 | Field Name | Label | Required | Tab |
 |------------|-------|----------|-----|
@@ -1004,7 +1004,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `coatPattern` | Exoskeleton Pattern |  | Overview |
 | `lifeStage` | Life Stage (Instar) |  | Physical |
 | `bodyLength` | Body Length |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
 | `length` | Leg Span/Length |  | Physical |
 | `origin` | Origin |  | Lineage |
 | `matingDates` | Mating Dates |  | Breeding |
@@ -1059,9 +1058,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `breed` | Species/Locality |  | Overview |
 | `remarks` | Notes/Remarks |  | Overview |
 
-> ⚠️ **Invertebrate Notes:** `bodyConditionScore` — BCS is a mammal-derived scoring system; has limited applicability to most invertebrates, consider disabling per use case. `colonyId` is disabled but should be enabled for colonial species (ants, bees, termites). `licenseNumber` (disabled) — CITES permits apply to some species (e.g. certain tarantulas, beetles); consider enabling for those.
+> ⚠️ **Invertebrate Notes:** `licenseJurisdiction` (disabled) — enable alongside `licenseNumber` if jurisdiction tracking is needed.
 
-### ❌ Disabled Fields (77)
+### ❌ Disabled Fields (75)
 
 | Field Name | Label |
 |------------|-------|
@@ -1071,7 +1070,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `chestGirth` | Chest Girth |
 | `microchipNumber` | Microchip # |
 | `strain` | Strain |
-| `licenseNumber` | Permit Number |
 | `licenseJurisdiction` | Permit Jurisdiction |
 | `rabiesTagNumber` | Rabies Tag # |
 | `tattooId` | Tattoo ID |
@@ -1136,11 +1134,11 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `coOwnership` | Co-Ownership |
 | `breedingRestrictions` | Breeding Restrictions |
 | `geneticCode` | Genetic Code |
-| `colonyId` | Colony ID |
 | `carrierTraits` | Carrier Traits |
 | `groupRole` | Group Role |
 | `freeFlightTrained` | Free Flight Trained |
 | `strain` | Strain/Line |
+| `bodyConditionScore` | Body Condition Score |
 
 ---
 
