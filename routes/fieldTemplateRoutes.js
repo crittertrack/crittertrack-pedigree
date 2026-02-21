@@ -86,20 +86,38 @@ router.get('/species/:speciesId', async (req, res) => {
             // Default to 'Other Template' if category is missing or unknown (shouldn't happen, but safety first)
             templateName = categoryTemplateMap[species.category] || 'Other Template';
             
-            // Fetch the template by name
-            template = await FieldTemplate.findOne({ name: templateName });
-            
-            if (!template) {
-                // Final fallback: try to get 'Other Template' directly
-                template = await FieldTemplate.findOne({ name: 'Other Template' });
+            // Fetch the template by name - GRACEFULLY handle if not seeded yet
+            try {
+                template = await FieldTemplate.findOne({ name: templateName });
                 
                 if (!template) {
-                    return res.status(500).json({ 
-                        error: 'Critical error: No field templates available in database',
-                        category: species.category,
-                        expectedTemplate: templateName
-                    });
+                    // Final fallback: try to get 'Other Template' directly
+                    template = await FieldTemplate.findOne({ name: 'Other Template' });
                 }
+            } catch (templateError) {
+                console.warn('Field templates not yet seeded:', templateError.message);
+                // Return gracefully with null template - legacy UI will be used
+                return res.json({
+                    fields: {},
+                    name: 'Legacy Form',
+                    uiEnabled: false,
+                    fallbackToLegacy: true,
+                    mappedByCategory: false,
+                    _note: 'Field templates not yet available - using legacy UI'
+                });
+            }
+            
+            // If still no template found after both attempts
+            if (!template) {
+                console.warn(`No template found for category: ${species.category}, expected: ${templateName}`);
+                return res.json({
+                    fields: {},
+                    name: 'Legacy Form',
+                    uiEnabled: false,
+                    fallbackToLegacy: true,
+                    mappedByCategory: false,
+                    _note: 'Template not found - using legacy UI'
+                });
             }
         } else {
             templateName = template.name;
@@ -116,7 +134,15 @@ router.get('/species/:speciesId', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching species field template:', error);
-        res.status(500).json({ error: 'Failed to fetch field template for species' });
+        // Graceful degradation - return safe fallback
+        res.json({
+            fields: {},
+            name: 'Legacy Form',
+            uiEnabled: false,
+            fallbackToLegacy: true,
+            mappedByCategory: false,
+            _note: 'Error loading template - using legacy UI'
+        });
     }
 });
 

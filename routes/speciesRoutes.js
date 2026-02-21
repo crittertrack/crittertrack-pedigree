@@ -183,16 +183,22 @@ router.get('/with-template/:speciesName', async (req, res) => {
             // Default to 'Other Template' if category is missing or unknown
             const templateName = categoryTemplateMap[species.category] || 'Other Template';
             
-            // Fetch the template by name
-            fieldTemplate = await FieldTemplate.findOne({ name: templateName });
-            
-            if (!fieldTemplate) {
-                // Final fallback: try to get 'Other Template' directly
-                fieldTemplate = await FieldTemplate.findOne({ name: 'Other Template' });
+            // Fetch the template by name - GRACEFULLY handle if templates don't exist yet
+            try {
+                fieldTemplate = await FieldTemplate.findOne({ name: templateName });
+                
+                if (!fieldTemplate) {
+                    // Final fallback: try to get 'Other Template' directly
+                    fieldTemplate = await FieldTemplate.findOne({ name: 'Other Template' });
+                }
+            } catch (templateError) {
+                console.warn('Field templates not yet seeded in database:', templateError.message);
+                // Continue without template - legacy UI will be used
+                fieldTemplate = null;
             }
         }
         
-        // Return species with populated field template
+        // Return species with populated field template (or null if not available)
         res.json({
             name: species.name,
             latinName: species.latinName,
@@ -203,7 +209,24 @@ router.get('/with-template/:speciesName', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching species with template:', error);
-        res.status(500).json({ message: 'Failed to fetch species template' });
+        // Return species data even if template fetch fails
+        try {
+            const species = await Species.findOne({ name: req.params.speciesName });
+            if (species) {
+                res.json({
+                    name: species.name,
+                    latinName: species.latinName,
+                    category: species.category,
+                    isDefault: species.isDefault,
+                    fieldTemplate: null,
+                    mappedByCategory: false
+                });
+            } else {
+                res.status(500).json({ message: 'Failed to fetch species template' });
+            }
+        } catch (fallbackError) {
+            res.status(500).json({ message: 'Failed to fetch species template' });
+        }
     }
 });
 
