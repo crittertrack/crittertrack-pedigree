@@ -40,9 +40,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 - `isDisplay` - Display on public profile
 
 **Tracking:**
-- `isPregnant` - Pregnancy status
-- `isNursing` - Nursing status
-- `isInMating` - Currently in mating
 - `growthRecords` - Growth history array
 - `measurementUnits` - Measurement preferences
 
@@ -50,7 +47,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Small Mammal Template
 
-**Enabled:** 96 fields | **Disabled:** 42 fields
+**Enabled:** 99 fields | **Disabled:** 42 fields
 
 ### ✅ Enabled Template Fields (96)
 
@@ -109,6 +106,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
+| `isPregnant` | Pregnant |  | Breeding |
+| `isNursing` | Nursing |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `vaccinations` | Vaccinations |  | Health |
 | `dewormingRecords` | Deworming Records |  | Health |
 | `parasiteControl` | Parasite Control |  | Health |
@@ -203,7 +203,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Full Mammal Template
 
-**Enabled:** 127 fields | **Disabled:** 11 fields
+**Enabled:** 130 fields | **Disabled:** 11 fields
 
 ### ✅ Enabled Template Fields (127)
 
@@ -274,6 +274,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
+| `isPregnant` | Pregnant |  | Breeding |
+| `isNursing` | Nursing |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `vaccinations` | Vaccinations |  | Health |
 | `dewormingRecords` | Deworming Records |  | Health |
 | `parasiteControl` | Parasite Control |  | Health |
@@ -356,7 +359,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Reptile Template
 
-**Enabled:** 91 fields | **Disabled:** 47 fields
+**Enabled:** 94 fields | **Disabled:** 47 fields
 
 ### ✅ Enabled Template Fields (91)
 
@@ -407,6 +410,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
+| `isPregnant` | Pregnant |  | Breeding |
+| `isNursing` | Nursing |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `dewormingRecords` | Deworming Records |  | Health |
 | `parasiteControl` | Parasite Control |  | Health |
 | `medicalConditions` | Medical Conditions |  | Health |
@@ -509,7 +515,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Bird Template
 
-**Enabled:** 105 fields | **Disabled:** 33 fields
+**Enabled:** 108 fields | **Disabled:** 33 fields
 
 ### ✅ Enabled Template Fields (105)
 
@@ -565,6 +571,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
+| `isPregnant` | Egg-Bound/Pregnant |  | Breeding |
+| `isNursing` | Nursing/Chick Feeding |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `vaccinations` | Vaccinations |  | Health |
 | `dewormingRecords` | Deworming Records |  | Health |
 | `parasiteControl` | Parasite Control |  | Health |
@@ -664,7 +673,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Amphibian Template
 
-**Enabled:** 86 fields | **Disabled:** 52 fields
+**Enabled:** 89 fields | **Disabled:** 52 fields
 
 ### ✅ Enabled Template Fields (86)
 
@@ -713,6 +722,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
+| `isPregnant` | Gravid/Pregnant |  | Breeding |
+| `isNursing` | Nursing |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `breed` | Species/Locality |  | Overview |
 | `strain` | Strain/Lineage |  | Overview |
 | `microchipNumber` | Microchip # |  | Identification |
@@ -830,7 +842,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Fish Template
 
-**Enabled:** 77 fields | **Disabled:** 61 fields
+**Enabled:** 80 fields | **Disabled:** 61 fields
 
 ### ✅ Enabled Template Fields (77)
 
@@ -875,6 +887,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
+| `isPregnant` | Gravid/Pregnant |  | Breeding |
+| `isNursing` | Nursing/Mouthbrooding |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `adultWeight` | Adult Weight |  | Physical |
 | `weight` | Weight |  | Physical |
 | `licenseNumber` | Permit Number |  | Legal & Documentation |
@@ -983,7 +998,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Invertebrate Template
 
-**Enabled:** 61 fields | **Disabled:** 77 fields
+**Enabled:** 64 fields | **Disabled:** 77 fields
 
 ### ✅ Enabled Template Fields (61)
 
@@ -1017,6 +1032,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `isDamAnimal` | Breeding Female |  | Breeding |
 | `gestationLength` | Egg Sac/Incubation Period |  | Breeding |
 | `reproductiveComplications` | Reproductive Complications |  | Breeding |
+| `isPregnant` | Gravid/Egg-Bearing |  | Breeding |
+| `isNursing` | Nursing |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `isForSale` | For Sale |  | Overview |
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
@@ -1137,7 +1155,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Other Template
 
-**Enabled:** 139 fields | **Disabled:** 0 fields
+**Enabled:** 142 fields | **Disabled:** 0 fields
 
 *This is the flexible catch-all template. All fields are enabled to accommodate any animal type not covered by a dedicated template.*
 
@@ -1216,6 +1234,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
 | `isInfertile` | Infertile |  | Breeding |
+| `isPregnant` | Pregnant |  | Breeding |
+| `isNursing` | Nursing |  | Breeding |
+| `isInMating` | In Mating |  | Breeding |
 | `vaccinations` | Vaccinations/Treatments |  | Health |
 | `dewormingRecords` | Deworming/Parasite Records |  | Health |
 | `parasiteControl` | Parasite Control |  | Health |
