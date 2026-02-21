@@ -188,6 +188,8 @@ const AnimalSchema = new mongoose.Schema({
     
     // Tab 2: Status & Privacy Fields
     currentOwner: { type: String, default: null },
+    currentOwnerDisplay: { type: String, default: null }, // Display name for current owner
+    groupRole: { type: String, default: null }, // Role in group/colony (e.g., alpha, beta, omega)
     ownershipHistory: [{
         name: { type: String },
         startDate: { type: String },
@@ -197,6 +199,7 @@ const AnimalSchema = new mongoose.Schema({
     // Tab 3: Physical Profile Fields
     coatPattern: { type: String, default: null },
     lifeStage: { type: String, default: null },
+    carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
     phenotype: { type: String, default: null }, // Observable traits
     morph: { type: String, default: null }, // Mutation/Morph (esp. reptiles/invertebrates)
@@ -214,8 +217,10 @@ const AnimalSchema = new mongoose.Schema({
     bodyConditionScore: { type: String, default: null }, // 1-9 canine / 1-5 feline
     
     // Tab 4: Identification Fields
+    breederAssignedId: { type: String, default: null }, // Breeder's custom ID (can be band number for birds)
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
+    colonyId: { type: String, default: null }, // Colony or group identifier
     breed: { type: String, default: null },
     strain: { type: String, default: null }, // "Bloodline" for dogs/cats
     // Dog/Cat specific identification
@@ -239,6 +244,9 @@ const AnimalSchema = new mongoose.Schema({
     matingDates: { type: String, default: null },
     expectedDueDate: { type: Date, default: null },
     litterCount: { type: String, default: null },
+    litterSizeBorn: { type: Number, default: null }, // Number of offspring born
+    litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
+    stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
@@ -435,6 +443,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     coatPattern: { type: String, default: null },
     earset: { type: String, default: null },
     lifeStage: { type: String, default: null },
+    carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
     phenotype: { type: String, default: null },
     morph: { type: String, default: null },
@@ -450,6 +459,8 @@ const PublicAnimalSchema = new mongoose.Schema({
     manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
     
     // Ownership and breeding status
+    currentOwnerDisplay: { type: String, default: null }, // Display name for current owner
+    groupRole: { type: String, default: null }, // Role in group/colony
     isOwned: { type: Boolean, default: true },
     isPregnant: { type: Boolean, default: false },
     isNursing: { type: Boolean, default: false },
@@ -479,8 +490,10 @@ const PublicAnimalSchema = new mongoose.Schema({
     geneticCode: { type: String, default: null },
     
     // Identification fields
+    breederAssignedId: { type: String, default: null }, // Breeder's custom ID
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
+    colonyId: { type: String, default: null }, // Colony or group identifier
     breed: { type: String, default: null },
     strain: { type: String, default: null },
     
@@ -495,6 +508,9 @@ const PublicAnimalSchema = new mongoose.Schema({
     matingDates: { type: Date, default: null },
     expectedDueDate: { type: Date, default: null },
     litterCount: { type: Number, default: null },
+    litterSizeBorn: { type: Number, default: null }, // Number of offspring born
+    litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
+    stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
