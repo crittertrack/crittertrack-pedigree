@@ -501,9 +501,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Bird Template
 
-**Enabled:** 114 fields | **Disabled:** 26 fields
+**Enabled:** 106 fields | **Disabled:** 38 fields
 
-### ✅ Enabled Template Fields (114)
+### ✅ Enabled Template Fields (106)
 
 | Field Name | Label | Required | Tab |
 |------------|-------|----------|-----|
@@ -522,12 +522,12 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `weight` | Weight |  | Physical |
 | `length` | Wingspan |  | Physical |
 | `microchipNumber` | Microchip # |  | Identification |
+| `colonyId` | Colony ID |  | Identification |
 | `pedigreeRegistrationId` | Registration # |  | Identification |
 | `breed` | Breed/Variety |  | Overview |
 | `licenseNumber` | Permit Number |  | Legal & Documentation |
 | `licenseJurisdiction` | Jurisdiction |  | Legal & Documentation |
 | `origin` | Origin |  | Lineage |
-| `ovulationDate` | Ovulation Date |  | Breeding |
 | `matingDates` | Mating Dates |  | Breeding |
 | `expectedDueDate` | Expected Hatch Date |  | Breeding |
 | `litterCount` | Clutch Size |  | Breeding |
@@ -601,27 +601,21 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `morph` | Mutation/Morph |  | Physical |
-| `markings` | Markings |  | Physical |
+| `eyeColor` | Eye Color |  | Physical |
+| `carrierTraits` | Carrier Traits |  | Physical |
 | `remarks` | Notes/Remarks |  | Overview |
 | `strain` | Strain/Line |  | Overview |
-| `isNeutered` | Neutered/Spayed |  | Breeding |
-| `spayNeuterDate` | Spay/Neuter Date |  | Breeding |
 | `artificialInseminationUsed` | Artificial Insemination Used |  | Breeding |
 | `deliveryMethod` | Egg-laying/Live Birth |  | Breeding |
 | `reproductiveClearances` | Reproductive Clearances |  | Breeding |
 | `allergies` | Allergies |  | Health |
-| `eyeClearance` | Eye Clearance |  | Health |
-| `cardiacClearance` | Cardiac Clearance |  | Health |
-| `crateTrained` | Carrier Trained |  | Behavior |
-| `litterTrained` | Litter Trained |  | Behavior |
 | `leashTrained` | Harness Trained |  | Behavior |
+| `freeFlightTrained` | Free Flight Trained |  | Behavior |
 | `certifications` | Certifications |  | Behavior |
 | `workingRole` | Working Role |  | Behavior |
 | `workingTitles` | Working Titles |  | Records |
 
-### ❌ Disabled Fields (26)
+### ❌ Disabled Fields (38)
 
 | Field Name | Label |
 |------------|-------|
@@ -634,6 +628,13 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `fciRegistrationNumber` | FCI Registration # |
 | `cfaRegistrationNumber` | CFA Registration # |
 | `workingRegistryIds` | Working Registry IDs |
+| `isNeutered` | Neutered/Spayed |
+| `isInfertile` | Infertile |
+| `isPregnant` | Pregnant |
+| `isNursing` | Nursing |
+| `isInMating` | In Mating |
+| `ovulationDate` | Ovulation Date |
+| `spayNeuterDate` | Spay/Neuter Date |
 | `heatStatus` | Heat Status |
 | `lastHeatDate` | Last Heat Date |
 | `nursingStartDate` | Nursing Start Date |
@@ -642,12 +643,16 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `queeningDate` | Queening Date |
 | `heartwormStatus` | Heartworm Status |
 | `hipElbowScores` | Hip/Elbow Scores |
+| `eyeClearance` | Eye Clearance |
+| `cardiacClearance` | Cardiac Clearance |
 | `sheddingLevel` | Shedding Level |
+| `crateTrained` | Carrier Trained |
+| `litterTrained` | Litter Trained |
 | `currentOwner` | Owner Name |
-| `eyeColor` | Eye Color |
+| `phenotype` | Phenotype |
+| `morph` | Mutation/Morph |
+| `markings` | Markings |
 | `nailColor` | Nail Color |
-| `carrierTraits` | Carrier Traits |
-| `colonyId` | Colony ID |
 | `groupRole` | Group Role |
 | `litterSizeBorn` | Litter Size Born |
 | `litterSizeWeaned` | Litter Size Weaned |
