@@ -217,7 +217,6 @@ const AnimalSchema = new mongoose.Schema({
     bodyConditionScore: { type: String, default: null }, // 1-9 canine / 1-5 feline
     
     // Tab 4: Identification Fields
-    breederAssignedId: { type: String, default: null }, // Breeder's custom ID (can be band number for birds)
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
     colonyId: { type: String, default: null }, // Colony or group identifier
@@ -490,7 +489,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     geneticCode: { type: String, default: null },
     
     // Identification fields
-    breederAssignedId: { type: String, default: null }, // Breeder's custom ID
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
     colonyId: { type: String, default: null }, // Colony or group identifier
