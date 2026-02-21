@@ -531,9 +531,11 @@ const templates = [
             
             // Genetics & Notes
             geneticCode: createFieldConfig(true, 'Genetic Code', false),
-            phenotype: createFieldConfig(true, 'Phenotype', false),
-            morph: createFieldConfig(true, 'Morph', false), // KEY for reptiles (especially ball pythons)
-            markings: createFieldConfig(true, 'Markings', false),
+            eyeColor: createFieldConfig(true, 'Eye Color', false),
+            nailColor: createFieldConfig(false, 'Nail/Claw Color', false), // N/A for reptiles
+            phenotype: createFieldConfig(false, 'Phenotype', false), // coatPattern (Morph/Pattern) is the primary field
+            morph: createFieldConfig(false, 'Morph', false), // Use coatPattern (Morph/Pattern) to avoid duplication
+            markings: createFieldConfig(false, 'Markings', false),
             carrierTraits: createFieldConfig(false, 'Carrier Traits', false),
             colonyId: createFieldConfig(false, 'Colony ID', false),
             groupRole: createFieldConfig(false, 'Group Role', false),
@@ -565,7 +567,7 @@ const templates = [
             color: createFieldConfig(true, 'Color', false),
             coat: createFieldConfig(true, 'Feather Type', false), // Adapted
             earset: createFieldConfig(false, 'Earset', false), // N/A
-            coatPattern: createFieldConfig(true, 'Plumage Pattern', false),
+            coatPattern: createFieldConfig(false, 'Plumage Pattern', false), // Disabled - use Mutation/Morph field
             lifeStage: createFieldConfig(true, 'Life Stage', false),
             heightAtWithers: createFieldConfig(false, 'Height at Withers', false),
             bodyLength: createFieldConfig(true, 'Body Length', false),
@@ -666,7 +668,7 @@ const templates = [
             enrichment: createFieldConfig(true, 'Enrichment', false),
             exerciseRequirements: createFieldConfig(true, 'Flight/Exercise Requirements', false),
             dailyExerciseMinutes: createFieldConfig(true, 'Out-of-Cage Time (minutes)', false),
-            groomingNeeds: createFieldConfig(true, 'Grooming Needs', false),
+            groomingNeeds: createFieldConfig(false, 'Grooming Needs', false), // Not applicable for birds
             sheddingLevel: createFieldConfig(false, 'Shedding Level', false),
             crateTrained: createFieldConfig(false, 'Crate Trained', false),
             litterTrained: createFieldConfig(false, 'Litter Trained', false),
@@ -707,9 +709,11 @@ const templates = [
             
             // Genetics & Notes
             geneticCode: createFieldConfig(true, 'Genetic Code', false),
-            phenotype: createFieldConfig(true, 'Phenotype', false),
+            eyeColor: createFieldConfig(true, 'Eye Color', false),
+            nailColor: createFieldConfig(false, 'Nail/Claw Color', false), // N/A for birds
+            phenotype: createFieldConfig(false, 'Phenotype', false),
             morph: createFieldConfig(true, 'Mutation/Morph', false), // For color mutations
-            markings: createFieldConfig(true, 'Markings', false),
+            markings: createFieldConfig(false, 'Markings', false),
             remarks: createFieldConfig(true, 'Notes/Remarks', false)
         }
     },
@@ -735,7 +739,7 @@ const templates = [
             color: createFieldConfig(true, 'Color', false),
             coat: createFieldConfig(false, 'Coat Type', false), // N/A
             earset: createFieldConfig(false, 'Earset', false),
-            coatPattern: createFieldConfig(true, 'Pattern', false),
+            coatPattern: createFieldConfig(false, 'Pattern', false), // Disabled for amphibians
             lifeStage: createFieldConfig(true, 'Life Stage', false), // Tadpole/metamorph/adult
             heightAtWithers: createFieldConfig(false, 'Height at Withers', false),
             bodyLength: createFieldConfig(true, 'Body Length', false),
@@ -800,9 +804,9 @@ const templates = [
             salePriceCurrency: createFieldConfig(true, 'Sale Price Currency', false),
             salePriceAmount: createFieldConfig(true, 'Sale Price Amount', false),
             isInfertile: createFieldConfig(true, 'Infertile', false),
-            isPregnant: createFieldConfig(true, 'Gravid', false),
-            isNursing: createFieldConfig(true, 'Brooding/Guarding Eggs', false),
-            isInMating: createFieldConfig(true, 'In Mating', false),
+            isPregnant: createFieldConfig(true, 'Egg-laying / Spawning', false),
+            isNursing: createFieldConfig(true, 'Brooding / Guarding', false),
+            isInMating: createFieldConfig(true, 'Amplexus', false),
             
             // Health & Veterinary
             vaccinations: createFieldConfig(true, 'Vaccinations/Treatments', false),
@@ -876,9 +880,11 @@ const templates = [
             
             // Genetics & Notes
             geneticCode: createFieldConfig(true, 'Genetic Code', false),
-            phenotype: createFieldConfig(true, 'Phenotype', false),
+            eyeColor: createFieldConfig(true, 'Eye Color', false),
+            nailColor: createFieldConfig(false, 'Nail/Claw Color', false),
+            phenotype: createFieldConfig(false, 'Phenotype', false),
             morph: createFieldConfig(true, 'Morph', false),
-            markings: createFieldConfig(true, 'Markings', false),
+            markings: createFieldConfig(false, 'Markings', false),
             carrierTraits: createFieldConfig(false, 'Carrier Traits', false),
             colonyId: createFieldConfig(false, 'Colony ID', false),
             groupRole: createFieldConfig(false, 'Group Role', false),
@@ -908,7 +914,7 @@ const templates = [
             color: createFieldConfig(true, 'Color', false),
             coat: createFieldConfig(false, 'Coat Type', false), // N/A
             earset: createFieldConfig(false, 'Earset', false),
-            coatPattern: createFieldConfig(true, 'Pattern', false),
+            coatPattern: createFieldConfig(false, 'Pattern', false), // Disabled for fish
             lifeStage: createFieldConfig(true, 'Life Stage', false),
             heightAtWithers: createFieldConfig(false, 'Height at Withers', false),
             bodyLength: createFieldConfig(true, 'Body Length', false),
@@ -947,7 +953,7 @@ const templates = [
             nursingStartDate: createFieldConfig(false, 'Nursing Start Date', false),
             weaningDate: createFieldConfig(true, 'Free-Swimming Date', false),
             breedingRole: createFieldConfig(true, 'Breeding Role', false),
-            lastMatingDate: createFieldConfig(true, 'Last Pairing Date', false),
+            lastMatingDate: createFieldConfig(true, 'Breeding Event Date', false),
             successfulMatings: createFieldConfig(true, 'Successful Spawns', false),
             lastPregnancyDate: createFieldConfig(true, 'Last Spawn Date', false),
             offspringCount: createFieldConfig(true, 'Offspring Count', false),
@@ -972,9 +978,9 @@ const templates = [
             salePriceCurrency: createFieldConfig(true, 'Sale Price Currency', false),
             salePriceAmount: createFieldConfig(true, 'Sale Price Amount', false),
             isInfertile: createFieldConfig(true, 'Infertile', false),
-            isPregnant: createFieldConfig(true, 'Gravid', false),
-            isNursing: createFieldConfig(true, 'Mouthbrooding', false),
-            isInMating: createFieldConfig(true, 'In Mating', false),
+            isPregnant: createFieldConfig(true, 'Gravid (Livebearer)', false),
+            isNursing: createFieldConfig(false, 'Mouthbrooding', false), // Disabled - too species-specific
+            isInMating: createFieldConfig(true, 'Breeding / Courtship', false),
             
             // Health & Veterinary
             vaccinations: createFieldConfig(false, 'Vaccinations', false),
@@ -1017,7 +1023,7 @@ const templates = [
             
             // Behavior & Welfare
             temperament: createFieldConfig(true, 'Temperament', false),
-            handlingTolerance: createFieldConfig(true, 'Handling Stress Tolerance', false),
+            handlingTolerance: createFieldConfig(false, 'Handling Stress Tolerance', false), // Not applicable for fish
             socialStructure: createFieldConfig(true, 'Social Behavior', false),
             activityCycle: createFieldConfig(true, 'Activity Cycle', false),
             trainingLevel: createFieldConfig(false, 'Training Level', false),
@@ -1048,9 +1054,11 @@ const templates = [
             
             // Genetics & Notes
             geneticCode: createFieldConfig(true, 'Genetic Code', false),
-            phenotype: createFieldConfig(true, 'Phenotype', false),
+            eyeColor: createFieldConfig(true, 'Eye Color', false),
+            nailColor: createFieldConfig(false, 'Nail/Claw Color', false),
+            phenotype: createFieldConfig(false, 'Phenotype', false),
             morph: createFieldConfig(true, 'Morph/Variety', false),
-            markings: createFieldConfig(true, 'Markings', false),
+            markings: createFieldConfig(false, 'Markings', false),
             carrierTraits: createFieldConfig(false, 'Carrier Traits', false),
             colonyId: createFieldConfig(false, 'Colony ID', false),
             groupRole: createFieldConfig(false, 'Group Role', false),
@@ -1079,9 +1087,9 @@ const templates = [
             
             // Physical Profile - Minimal
             color: createFieldConfig(true, 'Color', false),
-            coat: createFieldConfig(false, 'Coat Type', false),
+            coat: createFieldConfig(true, 'Texture', false), // Repurposed: body/skin texture for invertebrates
             earset: createFieldConfig(false, 'Earset', false),
-            coatPattern: createFieldConfig(true, 'Pattern', false),
+            coatPattern: createFieldConfig(false, 'Pattern', false), // Disabled for invertebrates
             lifeStage: createFieldConfig(true, 'Life Stage (Instar)', false), // Molt stages
             heightAtWithers: createFieldConfig(false, 'Height at Withers', false),
             bodyLength: createFieldConfig(true, 'Body Length', false),
@@ -1145,9 +1153,9 @@ const templates = [
             salePriceCurrency: createFieldConfig(true, 'Sale Price Currency', false),
             salePriceAmount: createFieldConfig(true, 'Sale Price Amount', false),
             isInfertile: createFieldConfig(false, 'Infertile', false),
-            isPregnant: createFieldConfig(true, 'Gravid/Egg-Bearing', false),
-            isNursing: createFieldConfig(true, 'Guarding Egg Sac', false),
-            isInMating: createFieldConfig(true, 'In Mating', false),
+            isPregnant: createFieldConfig(true, 'Gravid', false),
+            isNursing: createFieldConfig(false, 'Guarding Egg Sac', false), // Disabled - too species-specific
+            isInMating: createFieldConfig(true, 'Breeding Status / Amplexus', false),
             
             // Health & Veterinary - Minimal
             vaccinations: createFieldConfig(false, 'Vaccinations', false),
@@ -1221,9 +1229,11 @@ const templates = [
             
             // Genetics & Notes
             geneticCode: createFieldConfig(false, 'Genetic Code', false),
-            phenotype: createFieldConfig(true, 'Phenotype', false),
+            eyeColor: createFieldConfig(true, 'Eye Color', false),
+            nailColor: createFieldConfig(false, 'Nail/Claw Color', false),
+            phenotype: createFieldConfig(false, 'Phenotype', false),
             morph: createFieldConfig(true, 'Morph/Color Form', false),
-            markings: createFieldConfig(true, 'Markings', false),
+            markings: createFieldConfig(false, 'Markings', false),
             carrierTraits: createFieldConfig(false, 'Carrier Traits', false),
             groupRole: createFieldConfig(false, 'Group Role', false),
             freeFlightTrained: createFieldConfig(false, 'Free Flight Trained', false),
