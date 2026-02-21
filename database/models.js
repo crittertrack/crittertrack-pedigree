@@ -961,6 +961,16 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Pattern' },
             required: { type: Boolean, default: false }
         },
+        eyeColor: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Eye Color' },
+            required: { type: Boolean, default: false }
+        },
+        nailColor: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Nail/Claw Color' },
+            required: { type: Boolean, default: false }
+        },
         lifeStage: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Life Stage' },
@@ -1250,6 +1260,21 @@ const FieldTemplateSchema = new mongoose.Schema({
         isInfertile: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Infertile' },
+            required: { type: Boolean, default: false }
+        },
+        isPregnant: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Pregnant' },
+            required: { type: Boolean, default: false }
+        },
+        isNursing: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Nursing' },
+            required: { type: Boolean, default: false }
+        },
+        isInMating: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'In Mating' },
             required: { type: Boolean, default: false }
         },
         
