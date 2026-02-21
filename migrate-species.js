@@ -45,8 +45,8 @@ const speciesList = [
     { name: 'Hedgehog',                 latinName: 'Atelerix albiventris',      category: 'Mammal', templateName: 'Full Mammal Template' },
     { name: 'Sugar Glider',             latinName: 'Petaurus breviceps',        category: 'Mammal', templateName: 'Full Mammal Template' },
     { name: 'Prairie Dog',              latinName: 'Cynomys ludovicianus',      category: 'Mammal', templateName: 'Full Mammal Template' },
-    { name: 'Domestic Cat',             latinName: 'Felis catus',               category: 'Mammal', templateName: 'Full Mammal Template' },
-    { name: 'Domestic Dog',             latinName: 'Canis lupus familiaris',    category: 'Mammal', templateName: 'Full Mammal Template' },
+    { name: 'Cat',                      latinName: 'Felis catus',               category: 'Mammal', templateName: 'Full Mammal Template' },
+    { name: 'Dog',                      latinName: 'Canis lupus familiaris',    category: 'Mammal', templateName: 'Full Mammal Template' },
 
     // ── REPTILE TEMPLATE ─────────────────────────────────────
     { name: 'Leopard Gecko',            latinName: 'Eublepharis macularius',    category: 'Reptile', templateName: 'Reptile Template' },
