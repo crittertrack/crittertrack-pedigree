@@ -515,9 +515,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Bird Template
 
-**Enabled:** 108 fields | **Disabled:** 33 fields
+**Enabled:** 107 fields | **Disabled:** 34 fields
 
-### ✅ Enabled Template Fields (105)
+### ✅ Enabled Template Fields (107)
 
 | Field Name | Label | Required | Tab |
 |------------|-------|----------|-----|
@@ -628,7 +628,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `phenotype` | Phenotype |  | Physical |
 | `morph` | Mutation/Morph |  | Physical |
 | `markings` | Markings |  | Physical |
-| `strain` | Strain/Line |  | Overview |
 | `remarks` | Notes/Remarks |  | Overview |
 
 ### ❌ Disabled Fields (33)
@@ -667,6 +666,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `certifications` | Certifications |
 | `workingRole` | Working Role |
 | `workingTitles` | Working Titles |
+| `strain` | Strain |
 | `groupRole` | Group Role |
 
 ---
