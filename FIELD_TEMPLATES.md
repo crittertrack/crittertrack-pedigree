@@ -47,7 +47,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Small Mammal Template
 
-**Enabled:** 100 fields | **Disabled:** 41 fields
+**Enabled:** 101 fields | **Disabled:** 40 fields
 
 ### ✅ Enabled Template Fields (96)
 
@@ -137,6 +137,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `temperament` | Temperament |  | Behavior |
 | `handlingTolerance` | Handling Tolerance |  | Behavior |
 | `socialStructure` | Social Structure |  | Behavior |
+| `groupRole` | Group Role |  | Behavior |
 | `activityCycle` | Activity Cycle |  | Behavior |
 | `behavioralIssues` | Behavioral Issues |  | Behavior |
 | `biteHistory` | Bite History |  | Behavior |
@@ -153,7 +154,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `markings` | Markings |  | Physical |
 | `remarks` | Notes/Remarks |  | Overview |
 
-### ❌ Disabled Fields (42)
+### ❌ Disabled Fields (41)
 
 | Field Name | Label |
 |------------|-------|
@@ -196,7 +197,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `exportRestrictions` | Export Restrictions |
 | `morph` | Morph |
 | `colonyId` | Colony ID |
-| `groupRole` | Group Role |
 | `freeFlightTrained` | Free Flight Trained |
 
 ---
