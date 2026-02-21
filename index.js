@@ -29,7 +29,8 @@ const publicRoutes = require('./routes/publicRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const moderationRoutes = require('./routes/moderationRoutes');
-// const adminRoutes = require('./routes/adminRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const fieldTemplateRoutes = require('./routes/fieldTemplateRoutes');
 
 
 const app = express();
@@ -512,6 +513,9 @@ app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/moderation', authMiddleware, moderationRoutes);
+
+// Field Template Routes (some endpoints require admin auth)
+app.use('/api/field-templates', fieldTemplateRoutes);
 
 // Budget Routes (Require authMiddleware)
 const budgetRoutes = require('./routes/budgetRoutes');

@@ -811,11 +811,112 @@ UserActivityLogSchema.index({ action: 1, createdAt: -1 });
 const UserActivityLog = mongoose.model('UserActivityLog', UserActivityLogSchema);
 
 
+// --- 14.5. FIELD TEMPLATE SCHEMA ---
+// Defines reusable field configurations for species forms
+// This separates biological taxonomy from UI field requirements
+const FieldTemplateSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true, index: true, trim: true }, // e.g., 'Full Mammal Template', 'Small Mammal Template'
+    description: { type: String, default: null }, // Description of what this template is for
+    isDefault: { type: Boolean, default: false, index: true }, // System default templates vs custom
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // User who created custom template
+    
+    // Field configuration - defines what fields appear in forms and with what labels/requirements
+    fields: {
+        // Basic fields (always present)
+        name: { type: Boolean, default: true },
+        sex: { type: Boolean, default: true },
+        birthDate: { type: Boolean, default: true },
+        deathDate: { type: Boolean, default: true },
+        status: { type: Boolean, default: true },
+        
+        // Genetics & Appearance
+        strain: { 
+            enabled: { type: Boolean, default: false }, // Only for rodents/lab animals
+            label: { type: String, default: 'Strain' },
+            required: { type: Boolean, default: false }
+        },
+        geneticCode: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Genetic Code' },
+            required: { type: Boolean, default: false }
+        },
+        phenotype: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Phenotype' },
+            required: { type: Boolean, default: false }
+        },
+        morph: { 
+            enabled: { type: Boolean, default: false }, // For reptiles
+            label: { type: String, default: 'Morph' },
+            required: { type: Boolean, default: false }
+        },
+        color: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Color' },
+            required: { type: Boolean, default: false }
+        },
+        markings: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Markings' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // Physical characteristics
+        weight: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Weight' },
+            required: { type: Boolean, default: false }
+        },
+        length: { 
+            enabled: { type: Boolean, default: false }, // For reptiles, fish
+            label: { type: String, default: 'Length' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // Breeding & Registration
+        breedingStatus: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Breeding Status' },
+            required: { type: Boolean, default: false }
+        },
+        registrationNumber: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Registration #' },
+            required: { type: Boolean, default: false }
+        },
+        microchipNumber: { 
+            enabled: { type: Boolean, default: false }, // For larger mammals
+            label: { type: String, default: 'Microchip #' },
+            required: { type: Boolean, default: false }
+        },
+        
+        // Additional info
+        temperament: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Temperament' },
+            required: { type: Boolean, default: false }
+        },
+        notes: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Notes' },
+            required: { type: Boolean, default: false }
+        }
+    },
+    
+    // Metadata
+    version: { type: Number, default: 1 }, // For template versioning
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+const FieldTemplate = mongoose.model('FieldTemplate', FieldTemplateSchema);
+
+
 // --- 15. SPECIES SCHEMA ---
 const SpeciesSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true, index: true, trim: true },
     latinName: { type: String, default: null, trim: true },
-    category: { type: String, required: true, index: true }, // e.g., 'Rodent', 'Reptile', etc.
+    category: { type: String, required: true, index: true }, // e.g., 'Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'
+    fieldTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: 'FieldTemplate', default: null, index: true }, // Reference to field template
     isDefault: { type: Boolean, default: false, index: true }, // Built-in species vs user-added
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // User who added custom species
     createdAt: { type: Date, default: Date.now, index: true }
@@ -1036,6 +1137,7 @@ module.exports = {
     AuditLog,
     UserActivityLog,
     SystemSettings,
+    FieldTemplate,
     Species,
     SpeciesConfig,
     GeneticsData,

@@ -84,13 +84,13 @@ router.post('/sync-animal-privacy', async (req, res) => {
 router.post('/seed-default-species', async (req, res) => {
     try {
         const defaultSpecies = [
-            { name: 'Fancy Mouse', latinName: 'Mus musculus', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Fancy Rat', latinName: 'Rattus norvegicus', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Russian Dwarf Hamster', latinName: 'Phodopus sungorus', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Campbells Dwarf Hamster', latinName: 'Phodopus campbelli', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Chinese Dwarf Hamster', latinName: 'Cricetulus barabensis', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Syrian Hamster', latinName: 'Mesocricetus auratus', category: 'Rodent', isDefault: true, createdBy_public: null },
-            { name: 'Guinea Pig', latinName: 'Cavia porcellus', category: 'Rodent', isDefault: true, createdBy_public: null }
+            { name: 'Fancy Mouse', latinName: 'Mus musculus', category: 'Mammal', isDefault: true, createdBy_public: null },
+            { name: 'Fancy Rat', latinName: 'Rattus norvegicus', category: 'Mammal', isDefault: true, createdBy_public: null },
+            { name: 'Russian Dwarf Hamster', latinName: 'Phodopus sungorus', category: 'Mammal', isDefault: true, createdBy_public: null },
+            { name: 'Campbells Dwarf Hamster', latinName: 'Phodopus campbelli', category: 'Mammal', isDefault: true, createdBy_public: null },
+            { name: 'Chinese Dwarf Hamster', latinName: 'Cricetulus barabensis', category: 'Mammal', isDefault: true, createdBy_public: null },
+            { name: 'Syrian Hamster', latinName: 'Mesocricetus auratus', category: 'Mammal', isDefault: true, createdBy_public: null },
+            { name: 'Guinea Pig', latinName: 'Cavia porcellus', category: 'Mammal', isDefault: true, createdBy_public: null }
         ];
         
         let created = 0;
