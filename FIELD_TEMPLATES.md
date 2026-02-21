@@ -69,7 +69,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `adultWeight` | Adult Weight |  | Physical |
 | `bodyConditionScore` | Body Condition Score |  | Physical |
 | `weight` | Weight |  | Physical |
-| `length` | Length |  | Physical |
+| `length` | Body/Tail Length |  | Physical |
 | `carrierTraits` | Carrier Traits |  | Physical |
 | `pedigreeRegistrationId` | Pedigree Registration # |  | Identification |
 | `breed` | Breed |  | Overview |
@@ -381,11 +381,11 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `weight` | Weight |  | Physical |
 | `length` | Total Length |  | Physical |
 | `microchipNumber` | Microchip # |  | Identification |
-| `pedigreeRegistrationId` | Pedigree Registration # |  | Identification |
-| `licenseNumber` | License Number |  | Legal & Documentation |
+| `pedigreeRegistrationId` | Registry/Studbook # |  | Identification |
+| `licenseNumber` | CITES/License Number |  | Legal & Documentation |
 | `licenseJurisdiction` | License Jurisdiction |  | Legal & Documentation |
 | `origin` | Origin |  | Lineage |
-| `ovulationDate` | Ovulation Date |  | Breeding |
+| `ovulationDate` | Pre-lay/Ovulation Date |  | Breeding |
 | `matingDates` | Breeding Dates |  | Breeding |
 | `expectedDueDate` | Expected Lay/Birth Date |  | Breeding |
 | `litterCount` | Clutch Size |  | Breeding |
@@ -528,7 +528,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `breederyId` | Band Number |  | Identification |
 | `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
 | `ownershipHistory` | Ownership History |  | Status & Privacy |
-| `colonyId` | Colony ID |  | Identification |
+| `colonyId` | Flock/Aviary ID |  | Identification |
 | `carrierTraits` | Carrier Traits |  | Physical |
 | `color` | Color |  | Overview |
 | `coat` | Feather Type |  | Overview |
@@ -595,7 +595,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `temperatureRange` | Temperature Range |  | Husbandry |
 | `humidity` | Humidity |  | Husbandry |
 | `lighting` | Lighting/Daylight Hours |  | Husbandry |
-| `noise` | Noise Levels |  | Husbandry |
+| `noise` | Vocalizations/Noise |  | Husbandry |
 | `enrichment` | Enrichment |  | Husbandry |
 | `exerciseRequirements` | Flight/Exercise Requirements |  | Husbandry |
 | `dailyExerciseMinutes` | Out-of-Cage Time (minutes) |  | Husbandry |
@@ -673,9 +673,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Amphibian Template
 
-**Enabled:** 89 fields | **Disabled:** 52 fields
+**Enabled:** 89 fields | **Disabled:** 39 fields
 
-### ✅ Enabled Template Fields (86)
+### ✅ Enabled Template Fields (89)
 
 | Field Name | Label | Required | Tab |
 |------------|-------|----------|-----|
@@ -695,7 +695,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `weight` | Weight |  | Physical |
 | `length` | Snout-Vent Length |  | Physical |
 | `pedigreeRegistrationId` | Registration # |  | Identification |
-| `licenseNumber` | License Number |  | Legal & Documentation |
+| `licenseNumber` | CITES/Export License |  | Legal & Documentation |
 | `licenseJurisdiction` | Jurisdiction |  | Legal & Documentation |
 | `origin` | Origin |  | Lineage |
 | `ovulationDate` | Egg-laying Date |  | Breeding |
@@ -760,7 +760,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `socialStructure` | Social Behavior |  | Behavior |
 | `activityCycle` | Activity Cycle |  | Behavior |
 | `behavioralIssues` | Behavioral Issues |  | Behavior |
-| `biteHistory` | Bite History |  | Behavior |
+| `biteHistory` | Bite/Toxin Contact History |  | Behavior |
 | `reactivityNotes` | Stress Response Notes |  | Behavior |
 | `showTitles` | Show Titles |  | Records |
 | `showRatings` | Show Ratings |  | Records |
@@ -824,19 +824,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `carrierTraits` | Carrier Traits |
 | `groupRole` | Group Role |
 | `freeFlightTrained` | Free Flight Trained |
-| `adultWeight` | Adult Weight |
-| `weight` | Weight |
-| `microchipNumber` | Microchip # |
-| `isNeutered` | Neutered/Spayed |
-| `spayNeuterDate` | Spay/Neuter Date |
-| `lastHeatDate` | Last Heat Date |
-| `nursingStartDate` | Nursing Start Date |
-| `artificialInseminationUsed` | Artificial Insemination Used |
-| `whelpingDate` | Whelping Date |
-| `queeningDate` | Queening Date |
-| `injectionNotes` | Vaccination Notes |
-| `reactivityNotes` | Reactivity Notes |
-| `biteHistory` | Bite History |
 
 ---
 
@@ -862,14 +849,14 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `bodyConditionScore` | Body Condition Score |  | Physical |
 | `length` | Length |  | Physical |
 | `pedigreeRegistrationId` | Registration # |  | Identification |
-| `breed` | Variety/Strain |  | Overview |
-| `strain` | Strain/Line |  | Overview |
+| `breed` | Variety |  | Overview |
+| `strain` | Breeding Line |  | Overview |
 | `origin` | Origin |  | Lineage |
 | `matingDates` | Spawn Dates |  | Breeding |
 | `expectedDueDate` | Expected Hatch Date |  | Breeding |
 | `litterCount` | Fry Count |  | Breeding |
 | `breedingRole` | Breeding Role |  | Breeding |
-| `lastMatingDate` | Last Spawn Date |  | Breeding |
+| `lastMatingDate` | Last Pairing Date |  | Breeding |
 | `successfulMatings` | Successful Spawns |  | Breeding |
 | `offspringCount` | Offspring Count |  | Breeding |
 | `isStudAnimal` | Breeding Male |  | Overview |
@@ -916,7 +903,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `housingType` | Tank Type |  | Husbandry |
 | `bedding` | Substrate |  | Husbandry |
 | `temperatureRange` | Water Temperature |  | Husbandry |
-| `humidity` | Water Humidity/Parameters |  | Husbandry |
+| `humidity` | Water Parameters/pH |  | Husbandry |
 | `lighting` | Lighting |  | Husbandry |
 | `noise` | Tank Environment Noise |  | Husbandry |
 | `enrichment` | Tank Enrichment |  | Husbandry |
@@ -944,6 +931,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `morph` | Morph/Variety |  | Physical |
 | `markings` | Markings |  | Physical |
 | `remarks` | Notes/Remarks |  | Overview |
+
+> ⚠️ **Fish Notes:** `breed` ("Variety") and `strain` ("Breeding Line") may overlap for some keepers — review whether both are needed per use case. `humidity` repurposed as "Water Parameters/pH" since atmospheric humidity is N/A for fish.
 
 ### ❌ Disabled Fields (61)
 
@@ -1069,6 +1058,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `pedigreeRegistrationId` | Breeding Registration # |  | Identification |
 | `breed` | Species/Locality |  | Overview |
 | `remarks` | Notes/Remarks |  | Overview |
+
+> ⚠️ **Invertebrate Notes:** `bodyConditionScore` — BCS is a mammal-derived scoring system; has limited applicability to most invertebrates, consider disabling per use case. `colonyId` is disabled but should be enabled for colonial species (ants, bees, termites). `licenseNumber` (disabled) — CITES permits apply to some species (e.g. certain tarantulas, beetles); consider enabling for those.
 
 ### ❌ Disabled Fields (77)
 
