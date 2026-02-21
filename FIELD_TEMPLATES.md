@@ -501,9 +501,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Bird Template
 
-**Enabled:** 106 fields | **Disabled:** 38 fields
+**Enabled:** 101 fields | **Disabled:** 42 fields
 
-### ✅ Enabled Template Fields (106)
+### ✅ Enabled Template Fields (101)
 
 | Field Name | Label | Required | Tab |
 |------------|-------|----------|-----|
@@ -528,10 +528,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `licenseNumber` | Permit Number |  | Legal & Documentation |
 | `licenseJurisdiction` | Jurisdiction |  | Legal & Documentation |
 | `origin` | Origin |  | Lineage |
-| `matingDates` | Mating Dates |  | Breeding |
-| `expectedDueDate` | Expected Hatch Date |  | Breeding |
 | `litterCount` | Clutch Size |  | Breeding |
-| `weaningDate` | Fledging Date |  | Breeding |
 | `breedingRole` | Breeding Role |  | Breeding |
 | `lastMatingDate` | Last Mating Date |  | Breeding |
 | `successfulMatings` | Successful Matings |  | Breeding |
@@ -551,7 +548,6 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `isForSale` | For Sale |  | Overview |
 | `salePriceCurrency` | Sale Price Currency |  | Overview |
 | `salePriceAmount` | Sale Price Amount |  | Overview |
-| `isInfertile` | Infertile |  | Breeding |
 | `vaccinations` | Vaccinations |  | Health |
 | `dewormingRecords` | Deworming Records |  | Health |
 | `parasiteControl` | Parasite Control |  | Health |
@@ -615,7 +611,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `workingRole` | Working Role |  | Behavior |
 | `workingTitles` | Working Titles |  | Records |
 
-### ❌ Disabled Fields (38)
+### ❌ Disabled Fields (42)
 
 | Field Name | Label |
 |------------|-------|
@@ -657,6 +653,10 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `litterSizeBorn` | Litter Size Born |
 | `litterSizeWeaned` | Litter Size Weaned |
 | `stillbornCount` | Stillborn Count |
+| `expectedDueDate` | Expected Hatch Date |
+| `adultWeight` | Adult Weight |
+| `weaningDate` | Fledging Date |
+| `matingDates` | Mating Dates |
 
 ---
 
