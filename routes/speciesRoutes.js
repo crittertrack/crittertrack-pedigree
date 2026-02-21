@@ -152,6 +152,7 @@ router.get('/configs', async (req, res) => {
  * GET /api/species/with-template/:speciesName
  * Get a specific species with its field template populated
  * This is the main endpoint for the frontend to get template configuration
+ * Falls back to category-based template mapping if species has no template assigned
  */
 router.get('/with-template/:speciesName', async (req, res) => {
     try {
@@ -163,13 +164,42 @@ router.get('/with-template/:speciesName', async (req, res) => {
             return res.status(404).json({ message: `Species "${speciesName}" not found` });
         }
         
+        let fieldTemplate = species.fieldTemplateId;
+        
+        // If no template assigned, map by category
+        if (!fieldTemplate) {
+            // Category to template mapping (use Other as default for any edge cases)
+            const categoryTemplateMap = {
+                'Small Mammal': 'Small Mammal Template',
+                'Mammal': 'Full Mammal Template',
+                'Reptile': 'Reptile Template',
+                'Bird': 'Bird Template',
+                'Fish': 'Fish Template',
+                'Amphibian': 'Amphibian Template',
+                'Invertebrate': 'Invertebrate Template',
+                'Other': 'Other Template'
+            };
+            
+            // Default to 'Other Template' if category is missing or unknown
+            const templateName = categoryTemplateMap[species.category] || 'Other Template';
+            
+            // Fetch the template by name
+            fieldTemplate = await FieldTemplate.findOne({ name: templateName });
+            
+            if (!fieldTemplate) {
+                // Final fallback: try to get 'Other Template' directly
+                fieldTemplate = await FieldTemplate.findOne({ name: 'Other Template' });
+            }
+        }
+        
         // Return species with populated field template
         res.json({
             name: species.name,
             latinName: species.latinName,
             category: species.category,
             isDefault: species.isDefault,
-            fieldTemplate: species.fieldTemplateId || null
+            fieldTemplate: fieldTemplate || null,
+            mappedByCategory: !species.fieldTemplateId  // Indicates if template was mapped by category
         });
     } catch (error) {
         console.error('Error fetching species with template:', error);
