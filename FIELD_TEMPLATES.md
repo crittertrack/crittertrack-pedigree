@@ -203,9 +203,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 
 ## Full Mammal Template
 
-**Enabled:** 130 fields | **Disabled:** 11 fields
+**Enabled:** 128 fields | **Disabled:** 13 fields
 
-### ✅ Enabled Template Fields (127)
+### ✅ Enabled Template Fields (125)
 
 | Field Name | Label | Required | Tab |
 |------------|-------|----------|-----|
@@ -335,11 +335,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `markings` | Markings |  | Physical |
 | `remarks` | Notes/Remarks |  | Overview |
 
-### ❌ Disabled Fields (11)
+### ❌ Disabled Fields (13)
 
 | Field Name | Label | Reason |
 |------------|-------|--------|
@@ -354,6 +352,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `carrierTraits` | Carrier Traits | Use geneticTestResults instead |
 | `groupRole` | Group Role | Not standard for most mammal breeders |
 | `freeFlightTrained` | Free Flight Trained | Bird-specific |
+| `phenotype` | Phenotype | Redundant with color, coat type, and pattern fields |
+| `markings` | Markings | Redundant with color, coat type, and pattern fields |
 
 ---
 
