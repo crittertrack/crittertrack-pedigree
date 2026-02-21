@@ -939,6 +939,21 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Ownership History' },
             required: { type: Boolean, default: false }
         },
+        isOwned: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Owned by Me' },
+            required: { type: Boolean, default: false }
+        },
+        manualBreederName: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Breeder Name (Manual)' },
+            required: { type: Boolean, default: false }
+        },
+        currentOwnerDisplay: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Current Owner Display' },
+            required: { type: Boolean, default: false }
+        },
         
         // ===== TAB 3: PHYSICAL PROFILE =====
         color: { 
@@ -1021,6 +1036,11 @@ const FieldTemplateSchema = new mongoose.Schema({
         pedigreeRegistrationId: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Pedigree Registration #' },
+            required: { type: Boolean, default: false }
+        },
+        colonyId: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Colony ID' },
             required: { type: Boolean, default: false }
         },
         breed: { 
@@ -1456,6 +1476,11 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Leash Trained' },
             required: { type: Boolean, default: false }
         },
+        freeFlightTrained: { 
+            enabled: { type: Boolean, default: false }, // Birds
+            label: { type: String, default: 'Free Flight Trained' },
+            required: { type: Boolean, default: false }
+        },
         
         // ===== TAB 9: BEHAVIOR & WELFARE =====
         temperament: { 
@@ -1607,6 +1632,11 @@ const FieldTemplateSchema = new mongoose.Schema({
         markings: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Markings' },
+            required: { type: Boolean, default: false }
+        },
+        carrierTraits: { 
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Carrier Traits' },
             required: { type: Boolean, default: false }
         },
         remarks: { 
