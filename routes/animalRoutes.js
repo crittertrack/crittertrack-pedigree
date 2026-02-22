@@ -984,15 +984,21 @@ router.post('/:id_public/feeding', async (req, res) => {
         animal.lastFedDate = now;
         await animal.save();
 
-        // Deduct supply stock if a supply item was provided
+        // Deduct supply stock only when supplyId AND a positive quantity are provided
         let supplyItem = null;
         if (supplyId) {
             const { SupplyItem } = require('../database/models');
-            supplyItem = await SupplyItem.findOneAndUpdate(
-                { _id: supplyId, userId: req.user.id },
-                { $inc: { currentStock: -(Number(quantity) || 1) } },
-                { new: true }
-            );
+            const deductQty = quantity != null && Number(quantity) > 0 ? Number(quantity) : null;
+            if (deductQty !== null) {
+                supplyItem = await SupplyItem.findOneAndUpdate(
+                    { _id: supplyId, userId: req.user.id },
+                    { $inc: { currentStock: -deductQty } },
+                    { new: true }
+                );
+            } else {
+                // Fetch without modifying (for logging the food name)
+                supplyItem = await SupplyItem.findOne({ _id: supplyId, userId: req.user.id }).lean();
+            }
         }
 
         // Create AnimalLog entry for feeding event
