@@ -167,6 +167,15 @@ const AnimalSchema = new mongoose.Schema({
     isPregnant: { type: Boolean, default: false },
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
+    isQuarantine: { type: Boolean, default: false }, // Animal is in quarantine/isolation
+
+    // Feeding schedule tracking (for Management view)
+    lastFedDate: { type: Date, default: null },
+    feedingFrequencyDays: { type: Number, default: null }, // Feed every N days
+
+    // Maintenance schedule tracking (for Management view)
+    lastMaintenanceDate: { type: Date, default: null },
+    maintenanceFrequencyDays: { type: Number, default: null }, // Maintenance every N days
     
     // Tags for local organization (lines, enclosures, etc)
     tags: [{ type: String, trim: true }],
@@ -464,6 +473,15 @@ const PublicAnimalSchema = new mongoose.Schema({
     isPregnant: { type: Boolean, default: false },
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
+    isQuarantine: { type: Boolean, default: false }, // Animal is in quarantine/isolation
+
+    // Feeding schedule tracking (for Management view)
+    lastFedDate: { type: Date, default: null },
+    feedingFrequencyDays: { type: Number, default: null },
+
+    // Maintenance schedule tracking (for Management view)
+    lastMaintenanceDate: { type: Date, default: null },
+    maintenanceFrequencyDays: { type: Number, default: null },
     
     // Availability for sale/stud (for showcase)
     isForSale: { type: Boolean, default: false },
