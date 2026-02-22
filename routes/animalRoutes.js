@@ -974,6 +974,58 @@ router.delete('/:id_backend', async (req, res) => {
 });
 
 
+// POST /api/animals/:id_public/feeding — record a feeding event, optionally deduct supply stock
+router.post('/:id_public/feeding', async (req, res) => {
+    try {
+        const animal = await Animal.findOne({ id_public: req.params.id_public, ownerId: req.user.id });
+        if (!animal) return res.status(404).json({ message: 'Animal not found or access denied' });
+        const { supplyId, quantity, notes } = req.body;
+        const now = new Date();
+        animal.lastFedDate = now;
+        await animal.save();
+
+        // Deduct supply stock if a supply item was provided
+        let supplyItem = null;
+        if (supplyId) {
+            const { SupplyItem } = require('../database/models');
+            supplyItem = await SupplyItem.findOneAndUpdate(
+                { _id: supplyId, userId: req.user.id },
+                { $inc: { currentStock: -(Number(quantity) || 1) } },
+                { new: true }
+            );
+        }
+
+        // Create AnimalLog entry for feeding event
+        const { AnimalLog } = require('../database/models');
+        await AnimalLog.create({
+            animalId: animal._id,
+            animalId_public: animal.id_public,
+            userId: req.user.id,
+            category: 'feeding',
+            changes: [{
+                field: 'feeding',
+                label: 'Feeding',
+                oldValue: null,
+                newValue: {
+                    supplyId: supplyId || null,
+                    supplyName: supplyItem?.name || null,
+                    feederType: supplyItem?.feederType || null,
+                    feederSize: supplyItem?.feederSize || null,
+                    unit: supplyItem?.unit || null,
+                    quantity: quantity != null ? Number(quantity) : null,
+                    notes: notes || null,
+                    date: now,
+                }
+            }]
+        });
+
+        res.json({ animal: { lastFedDate: animal.lastFedDate }, supply: supplyItem });
+    } catch (err) {
+        console.error('[POST feeding]', err.message);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // GET /api/animals/:id_public/logs — animal changelog (owner only)
 router.get('/:id_public/logs', async (req, res) => {
     try {
