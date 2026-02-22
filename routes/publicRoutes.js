@@ -495,7 +495,7 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
 
 // --- Marketplace: Animals for sale or stud (public endpoint) ---
 // GET /api/public/marketplace
-// Query params: type (sale|stud|all), species, gender, country, minPrice, maxPrice, currency, search, page, limit
+// Query params: type (sale|stud|all), species, gender, country, state, minPrice, maxPrice, currency, search, page, limit
 router.get('/marketplace', async (req, res) => {
     try {
         const query = req.query || {};
@@ -534,7 +534,12 @@ router.get('/marketplace', async (req, res) => {
         // Country filter - filter by owner's country
         let countryFilteredOwnerIds = null;
         if (query.country) {
-            const usersInCountry = await User.find({ country: query.country })
+            const countryQuery = { country: query.country };
+            // If filtering US and a state is provided, also filter by state
+            if (query.country === 'US' && query.state) {
+                countryQuery.state = query.state;
+            }
+            const usersInCountry = await User.find(countryQuery)
                 .select('id_public')
                 .lean();
             countryFilteredOwnerIds = usersInCountry.map(u => u.id_public);
@@ -613,7 +618,7 @@ router.get('/marketplace', async (req, res) => {
         // Fetch owner info for each animal - use ownerId_public to look up owners
         const ownerPublicIds = [...new Set(animals.map(a => a.ownerId_public).filter(Boolean))];
         const owners = await User.find({ id_public: { $in: ownerPublicIds } })
-            .select('id_public personalName breederName showBreederName country profileImage')
+            .select('id_public personalName breederName showBreederName country state profileImage')
             .lean();
         
         const ownerMap = {};
@@ -622,6 +627,7 @@ router.get('/marketplace', async (req, res) => {
                 id_public: o.id_public,
                 displayName: o.showBreederName && o.breederName ? o.breederName : o.personalName,
                 country: o.country || null,
+                state: o.state || null,
                 profileImage: o.profileImage || null
             };
         });
