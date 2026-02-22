@@ -713,12 +713,61 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         }
 
         // Get original animal data to compare for changes before sending notifications
-        const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend }).select('breederId_public sireId_public damId_public').lean();
+        const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend })
+            .select('breederId_public sireId_public damId_public name prefix suffix species status gender birthDate deceasedDate color coat earset coatPattern morph phenotype markings eyeColor nailColor weight length remarks geneticCode isQuarantine isOwned isPregnant isNursing isInMating enclosureId lastFedDate feedingFrequencyDays lastMaintenanceDate maintenanceFrequencyDays careTasks')
+            .lean();
         
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
         // Notifications are created AFTER the save, but the links remain active.
         // Links are only removed if the breeder/parent owner explicitly rejects via notification.
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
+
+        // --- Animal Changelog ---
+        try {
+            const { AnimalLog } = require('../database/models');
+            const CARE_FIELDS = new Set(['lastFedDate', 'feedingFrequencyDays', 'lastMaintenanceDate', 'maintenanceFrequencyDays', 'careTasks']);
+            const FIELD_LABELS = {
+                name: 'Name', prefix: 'Prefix', suffix: 'Suffix', species: 'Species', status: 'Status',
+                gender: 'Gender', birthDate: 'Date of Birth', deceasedDate: 'Date of Death',
+                color: 'Color', coat: 'Coat', earset: 'Earset', coatPattern: 'Coat Pattern',
+                morph: 'Morph', phenotype: 'Phenotype', markings: 'Markings', eyeColor: 'Eye Color', nailColor: 'Nail Color',
+                weight: 'Weight', length: 'Length', remarks: 'Remarks', geneticCode: 'Genetic Code',
+                isQuarantine: 'Quarantine', isOwned: 'Owned', isPregnant: 'Pregnant', isNursing: 'Nursing', isInMating: 'In Mating',
+                breederId_public: 'Breeder', sireId_public: 'Sire', damId_public: 'Dam', enclosureId: 'Enclosure',
+                lastFedDate: 'Last Fed', feedingFrequencyDays: 'Feeding Frequency (days)',
+                lastMaintenanceDate: 'Last Maintenance', maintenanceFrequencyDays: 'Maintenance Frequency (days)',
+                careTasks: 'Care Tasks',
+            };
+            const toString = v => v === null || v === undefined ? '' : v instanceof Date ? v.toISOString() : String(v);
+            const careChanges = [], fieldChanges = [];
+            for (const [key, label] of Object.entries(FIELD_LABELS)) {
+                if (key === 'careTasks') {
+                    const oldTasks = (originalAnimal?.careTasks || []);
+                    const newTasks = (updatedAnimal?.careTasks || []);
+                    const oldDef = JSON.stringify(oldTasks.map(t => ({ n: t.taskName, f: t.frequencyDays })));
+                    const newDef = JSON.stringify(newTasks.map(t => ({ n: t.taskName, f: t.frequencyDays })));
+                    if (oldDef !== newDef) {
+                        careChanges.push({ field: key, label, oldValue: oldTasks, newValue: newTasks });
+                    } else {
+                        // check if lastDoneDate changed for any task
+                        const doneChange = newTasks.find((t, i) => toString(t.lastDoneDate) !== toString(oldTasks[i]?.lastDoneDate));
+                        if (doneChange) careChanges.push({ field: 'careTaskDone', label: 'Care Task Completed', oldValue: null, newValue: doneChange.taskName });
+                    }
+                    continue;
+                }
+                const oldVal = originalAnimal?.[key] ?? null;
+                const newVal = updatedAnimal?.[key] ?? null;
+                if (toString(oldVal) !== toString(newVal)) {
+                    const change = { field: key, label, oldValue: oldVal, newValue: newVal };
+                    if (CARE_FIELDS.has(key)) careChanges.push(change); else fieldChanges.push(change);
+                }
+            }
+            const logEntries = [];
+            if (careChanges.length) logEntries.push({ animalId: updatedAnimal._id, animalId_public: updatedAnimal.id_public, userId: appUserId_backend, category: 'care', changes: careChanges });
+            if (fieldChanges.length) logEntries.push({ animalId: updatedAnimal._id, animalId_public: updatedAnimal.id_public, userId: appUserId_backend, category: 'field', changes: fieldChanges });
+            if (logEntries.length) await AnimalLog.insertMany(logEntries);
+        } catch (logErr) { console.error('[Changelog]', logErr.message); }
+        // --- End Changelog ---
 
         // Create notifications for breeder and parent linkages (if targeting other users' data)
         const currentUserPublicId = req.user.id_public;
@@ -924,6 +973,20 @@ router.delete('/:id_backend', async (req, res) => {
     }
 });
 
+
+// GET /api/animals/:id_public/logs — animal changelog (owner only)
+router.get('/:id_public/logs', async (req, res) => {
+    try {
+        const { AnimalLog } = require('../database/models');
+        const animal = await Animal.findOne({ id_public: req.params.id_public, ownerId: req.user.id }).select('_id').lean();
+        if (!animal) return res.status(404).json({ message: 'Animal not found or access denied' });
+        const logs = await AnimalLog.find({ animalId: animal._id }).sort({ createdAt: -1 }).limit(200).lean();
+        res.json(logs);
+    } catch (err) {
+        console.error('[GET logs]', err.message);
+        res.status(500).json({ message: err.message });
+    }
+});
 
 // GET /api/animals/:id_public/offspring
 // 7. Get all offspring for a specific animal (AUTHENTICATED - shows ALL offspring)

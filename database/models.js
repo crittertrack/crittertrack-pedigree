@@ -1890,6 +1890,22 @@ const GeneticsDataSchema = new mongoose.Schema({
 GeneticsDataSchema.index({ speciesName: 1, isPublished: 1 });
 const GeneticsData = mongoose.model('GeneticsData', GeneticsDataSchema);
 
+// ── Animal Changelog ────────────────────────────────────────────────────────
+const AnimalLogSchema = new mongoose.Schema({
+    animalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Animal', required: true, index: true },
+    animalId_public: { type: String, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    category: { type: String, enum: ['care', 'field'], required: true },
+    changes: [{
+        field:    { type: String },
+        label:    { type: String },
+        oldValue: { type: mongoose.Schema.Types.Mixed },
+        newValue: { type: mongoose.Schema.Types.Mixed },
+    }],
+}, { timestamps: true });
+AnimalLogSchema.index({ animalId: 1, createdAt: -1 });
+const AnimalLog = mongoose.model('AnimalLog', AnimalLogSchema);
+
 // ── Supply Item ──────────────────────────────────────────────────────────────
 const SupplyItemSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -1954,5 +1970,6 @@ module.exports = {
     AnimalTransfer,
     ModChat,
     Enclosure,
-    SupplyItem
+    SupplyItem,
+    AnimalLog,
 };
