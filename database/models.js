@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -151,7 +151,7 @@ const AnimalSchema = new mongoose.Schema({
     gender: { type: String, enum: ['Male', 'Female', 'Intersex', 'Unknown'], default: 'Unknown' },
     birthDate: { type: Date, default: Date.now },
     deceasedDate: { type: Date, default: null },
-    breederyId: { type: String, default: null },
+    breederAssignedId: { type: String, default: null },
     status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
@@ -452,7 +452,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     gender: { type: String },
     birthDate: { type: Date },
     deceasedDate: { type: Date, default: null },
-    breederyId: { type: String, default: null },
+    breederAssignedId: { type: String, default: null },
     status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
@@ -949,7 +949,7 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Suffix' },
             required: { type: Boolean, default: false }
         },
-        breederyId: { 
+        breederAssignedId: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Breeder ID' },
             required: { type: Boolean, default: false }

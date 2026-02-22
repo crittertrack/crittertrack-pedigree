@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { User, PublicProfile, Animal, PublicAnimal, Species, FieldTemplate } = require('../database/models');
 
@@ -555,7 +555,7 @@ router.post('/setup-rat-mouse-templates', async (req, res) => {
 });
 
 // Migration: disable microchipNumber in Small Mammal/Fancy Rat/Fancy Mouse templates,
-// and ensure breederyId is enabled in every template.
+// and ensure breederAssignedId is enabled in every template.
 router.post('/fix-small-mammal-id-fields', async (req, res) => {
     try {
         const templates = await FieldTemplate.find({});
@@ -565,9 +565,9 @@ router.post('/fix-small-mammal-id-fields', async (req, res) => {
         for (const tmpl of templates) {
             let changed = false;
 
-            // Ensure breederyId is always enabled
-            if (tmpl.fields?.breederyId && tmpl.fields.breederyId.enabled !== true) {
-                tmpl.fields.breederyId.enabled = true;
+            // Ensure breederAssignedId is always enabled
+            if (tmpl.fields?.breederAssignedId && tmpl.fields.breederAssignedId.enabled !== true) {
+                tmpl.fields.breederAssignedId.enabled = true;
                 changed = true;
             }
 
@@ -591,6 +591,47 @@ router.post('/fix-small-mammal-id-fields', async (req, res) => {
         res.json({ success: true, results });
     } catch (error) {
         console.error('[Migration] fix-small-mammal-id-fields error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Rename breederyId → breederAssignedId in Animal, PublicAnimal, and FieldTemplate collections
+router.post('/rename-breederyid-field', async (req, res) => {
+    try {
+        const { Animal, PublicAnimal, FieldTemplate } = require('../database/models');
+
+        // $rename on Animal and PublicAnimal documents
+        const animalResult = await Animal.updateMany(
+            { breederyId: { $exists: true } },
+            { $rename: { breederyId: 'breederAssignedId' } }
+        );
+        const publicResult = await PublicAnimal.updateMany(
+            { breederyId: { $exists: true } },
+            { $rename: { breederyId: 'breederAssignedId' } }
+        );
+
+        // Update FieldTemplate documents: move fields.breederyId → fields.breederAssignedId
+        const templates = await FieldTemplate.find({ 'fields.breederyId': { $exists: true } });
+        let templatesFixed = 0;
+        for (const tmpl of templates) {
+            if (tmpl.fields?.breederyId) {
+                tmpl.fields.breederAssignedId = tmpl.fields.breederyId;
+                tmpl.fields.breederyId = undefined;
+                tmpl.markModified('fields');
+                await tmpl.save();
+                templatesFixed++;
+            }
+        }
+
+        console.log(`[Migration] rename-breederyid-field: animals=${animalResult.modifiedCount}, public=${publicResult.modifiedCount}, templates=${templatesFixed}`);
+        res.json({
+            success: true,
+            animalsRenamed: animalResult.modifiedCount,
+            publicAnimalsRenamed: publicResult.modifiedCount,
+            templatesFixed
+        });
+    } catch (error) {
+        console.error('[Migration] rename-breederyid-field error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

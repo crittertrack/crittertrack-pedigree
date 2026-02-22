@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CRITICAL FIELD FIXES MIGRATION
  * 
  * This migration addresses 8 critical issues with field naming, conflicts, and validation:
@@ -16,7 +16,7 @@
  * OWNERSHIP CLARIFICATION:
  * - userId: Backend system owner (creator, controls the animal, appears in their list)
  * - currentOwnerDisplay: Manual text field for display (e.g. "John's Kennel", "Sold to Mary")
- * - breederAssignedId: ID assigned TO the animal BY the breeder (renamed from confusing breederyId)
+ * - breederAssignedId: ID assigned TO the animal BY the breeder (renamed from confusing breederAssignedId)
  * - breederId_public: The public ID OF the breeder person
  * - originalOwner: The first creator (for return functionality on transferred animals)
  * - transferredFrom: Who sent the animal to current owner (null if original owner)
@@ -56,34 +56,34 @@ async function fixCriticalFields() {
         };
         
         // ============================================
-        // 1. RENAME BREEDERYID → BREEDERASSIGNEDID FOR CLARITY
+        // 1. RENAME breederAssignedId → BREEDERASSIGNEDID FOR CLARITY
         // ============================================
-        console.log('🔧 Step 1: Renaming breederyId → breederAssignedId for clarity...\n');
+        console.log('🔧 Step 1: Renaming breederAssignedId → breederAssignedId for clarity...\n');
         
-        // Check how many animals have breederyId
-        const breederyIdCount = await db.collection('animals').countDocuments({
-            breederyId: { $exists: true, $ne: null, $ne: '' }
+        // Check how many animals have breederAssignedId
+        const breederAssignedIdCount = await db.collection('animals').countDocuments({
+            breederAssignedId: { $exists: true, $ne: null, $ne: '' }
         });
-        console.log(`  Found ${breederyIdCount} animals with breederyId field`);
+        console.log(`  Found ${breederAssignedIdCount} animals with breederAssignedId field`);
         
-        if (breederyIdCount > 0) {
+        if (breederAssignedIdCount > 0) {
             // Rename in Animal collection
             const animalRenameResult = await db.collection('animals').updateMany(
-                { breederyId: { $exists: true } },
-                { $rename: { 'breederyId': 'breederAssignedId' } }
+                { breederAssignedId: { $exists: true } },
+                { $rename: { 'breederAssignedId': 'breederAssignedId' } }
             );
-            console.log(`  ✓ Renamed breederyId in ${animalRenameResult.modifiedCount} animals`);
+            console.log(`  ✓ Renamed breederAssignedId in ${animalRenameResult.modifiedCount} animals`);
             
             // Rename in PublicAnimal collection
             const publicRenameResult = await db.collection('publicanimals').updateMany(
-                { breederyId: { $exists: true } },
-                { $rename: { 'breederyId': 'breederAssignedId' } }
+                { breederAssignedId: { $exists: true } },
+                { $rename: { 'breederAssignedId': 'breederAssignedId' } }
             );
-            console.log(`  ✓ Renamed breederyId in ${publicRenameResult.modifiedCount} public animals`);
+            console.log(`  ✓ Renamed breederAssignedId in ${publicRenameResult.modifiedCount} public animals`);
             
             results.breederIdRenamed = animalRenameResult.modifiedCount + publicRenameResult.modifiedCount;
         } else {
-            console.log(`  ✓ No breederyId fields found to rename`);
+            console.log(`  ✓ No breederAssignedId fields found to rename`);
         }
         
         // ============================================
@@ -418,7 +418,7 @@ async function fixCriticalFields() {
         console.log('MIGRATION SUMMARY');
         console.log('========================================\n');
         
-        console.log(`✅ breederyId → breederAssignedId: ${results.breederIdRenamed} documents renamed`);
+        console.log(`✅ breederAssignedId → breederAssignedId: ${results.breederIdRenamed} documents renamed`);
         console.log(`✅ Image consolidation: ${results.imageConsolidated} documents updated`);
         console.log(`✅ currentOwner → currentOwnerDisplay: ${results.currentOwnerRenamed} documents renamed`);
         console.log(`✅ Enum normalization: ${results.enumsNormalized} documents updated`);

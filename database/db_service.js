@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -61,7 +61,7 @@ const ANIMAL_TEXT_FIELDS = {
     suffix: 'animal suffix',
     species: 'animal species',
     gender: 'animal gender',
-    breederyId: 'registry identifier',
+    breederAssignedId: 'registry identifier',
     breederId_public: 'breeder id',
     manualBreederName: 'manual breeder name',
     status: 'animal status',
@@ -585,7 +585,7 @@ const addAnimal = async (appUserId_backend, animalData) => {
         showOnPublicProfile: false,
         ...animalData,
     });
-    console.log('[addAnimal] Creating animal with:', JSON.stringify({ breederyId: newAnimal.breederyId, geneticCode: newAnimal.geneticCode, remarks: newAnimal.remarks }));
+    console.log('[addAnimal] Creating animal with:', JSON.stringify({ breederAssignedId: newAnimal.breederAssignedId, geneticCode: newAnimal.geneticCode, remarks: newAnimal.remarks }));
     await newAnimal.save();
 
     // Update the User's ownedAnimals array
@@ -638,14 +638,14 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         query.id_public = filters.id_public;
     }
     if (filters.name) {
-        // Search in name, prefix, breederyId (registry code), id_public, and tags fields (case-insensitive)
+        // Search in name, prefix, breederAssignedId (registry code), id_public, and tags fields (case-insensitive)
         // Combine with base $or using $and
         const regex = new RegExp(filters.name, 'i');
         const nameQuery = {
             $or: [
                 { name: { $regex: filters.name, $options: 'i' } },
                 { prefix: { $regex: filters.name, $options: 'i' } },
-                { breederyId: { $regex: filters.name, $options: 'i' } },
+                { breederAssignedId: { $regex: filters.name, $options: 'i' } },
                 { id_public: { $regex: filters.name, $options: 'i' } },
                 { tags: regex }
             ]
@@ -837,7 +837,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
     // Use findOneAndUpdate to ensure ownership and get the updated document
     console.log('[updateAnimal] Updating with:', JSON.stringify({ 
-        breederyId: updates.breederyId, 
+        breederAssignedId: updates.breederAssignedId, 
         geneticCode: updates.geneticCode, 
         remarks: updates.remarks,
         vaccinations: updates.vaccinations ? updates.vaccinations.substring(0, 50) : 'null',
