@@ -1890,6 +1890,18 @@ const GeneticsDataSchema = new mongoose.Schema({
 GeneticsDataSchema.index({ speciesName: 1, isPublished: 1 });
 const GeneticsData = mongoose.model('GeneticsData', GeneticsDataSchema);
 
+// ── Supply Item ──────────────────────────────────────────────────────────────
+const SupplyItemSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    name: { type: String, required: true, trim: true },
+    category: { type: String, enum: ['Food', 'Bedding', 'Medication', 'Other'], default: 'Other' },
+    currentStock: { type: Number, default: 0 },
+    unit: { type: String, default: '', trim: true },
+    reorderThreshold: { type: Number, default: null },
+    notes: { type: String, default: '', trim: true },
+}, { timestamps: true });
+const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
+
 // ── Enclosure ─────────────────────────────────────────────────────────────────
 const EnclosureSchema = new mongoose.Schema({
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -1932,5 +1944,6 @@ module.exports = {
     Transaction,
     AnimalTransfer,
     ModChat,
-    Enclosure
+    Enclosure,
+    SupplyItem
 };

@@ -714,6 +714,10 @@ app.use('/api/messages', authMiddleware, messageRoutes);
 const activityLogRoutes = require('./routes/activityLogRoutes');
 app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
 
+// Supplies / Inventory Routes (Require authMiddleware)
+const suppliesRoutes = require('./routes/suppliesRoutes');
+app.use('/api/supplies', authMiddleware, suppliesRoutes);
+
 // Species Routes (GET is public, POST requires auth except migration)
 const speciesRoutes = require('./routes/speciesRoutes');
 app.use('/api/species', (req, res, next) => {
