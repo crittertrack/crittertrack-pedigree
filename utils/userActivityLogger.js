@@ -194,7 +194,18 @@ const USER_ACTIONS = {
     
     // Budget
     TRANSACTION_CREATE: 'transaction_create',
-    TRANSACTION_DELETE: 'transaction_delete'
+    TRANSACTION_DELETE: 'transaction_delete',
+
+    // Management panel
+    ENCLOSURE_CREATE: 'enclosure_create',
+    ENCLOSURE_UPDATE: 'enclosure_update',
+    ENCLOSURE_DELETE: 'enclosure_delete',
+    ENCLOSURE_ASSIGN: 'enclosure_assign',
+    ENCLOSURE_UNASSIGN: 'enclosure_unassign',
+    ANIMAL_FED: 'animal_fed',
+    CARE_TASK_DONE: 'care_task_done',
+    ENCLOSURE_TASK_DONE: 'enclosure_task_done',
+    REPRODUCTION_UPDATE: 'reproduction_update',
 };
 
 module.exports = {
