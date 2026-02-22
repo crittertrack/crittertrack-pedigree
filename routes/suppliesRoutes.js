@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 // POST /api/supplies — create a new supply item
 router.post('/', async (req, res) => {
     try {
-        const { name, category, currentStock, unit, reorderThreshold, notes, isFeederAnimal, feederType, feederSize, costPerUnit } = req.body;
+        const { name, category, currentStock, unit, reorderThreshold, notes, isFeederAnimal, feederType, feederSize, costPerUnit, nextOrderDate, orderFrequency, orderFrequencyUnit } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
         const item = new SupplyItem({
             userId: req.user.id,
@@ -28,7 +28,10 @@ router.post('/', async (req, res) => {
             isFeederAnimal: !!isFeederAnimal,
             feederType: isFeederAnimal ? (feederType || '') : '',
             feederSize: isFeederAnimal ? (feederSize || '') : '',
-            costPerUnit: isFeederAnimal && costPerUnit !== '' && costPerUnit != null ? Number(costPerUnit) : null,
+            costPerUnit: costPerUnit !== '' && costPerUnit != null ? Number(costPerUnit) : null,
+            nextOrderDate: nextOrderDate || null,
+            orderFrequency: orderFrequency !== '' && orderFrequency != null ? Number(orderFrequency) : null,
+            orderFrequencyUnit: orderFrequencyUnit || 'months',
         });
         await item.save();
         res.status(201).json(item);
@@ -42,7 +45,7 @@ router.patch('/:id', async (req, res) => {
     try {
         const item = await SupplyItem.findOne({ _id: req.params.id, userId: req.user.id });
         if (!item) return res.status(404).json({ message: 'Supply item not found' });
-        const { name, category, currentStock, unit, reorderThreshold, notes, isFeederAnimal, feederType, feederSize, costPerUnit } = req.body;
+        const { name, category, currentStock, unit, reorderThreshold, notes, isFeederAnimal, feederType, feederSize, costPerUnit, nextOrderDate, orderFrequency, orderFrequencyUnit } = req.body;
         if (name !== undefined) item.name = name.trim();
         if (category !== undefined) item.category = category;
         if (currentStock !== undefined) item.currentStock = Number(currentStock);
@@ -53,6 +56,9 @@ router.patch('/:id', async (req, res) => {
         if (feederType !== undefined) item.feederType = feederType || '';
         if (feederSize !== undefined) item.feederSize = feederSize || '';
         if (costPerUnit !== undefined) item.costPerUnit = costPerUnit !== '' && costPerUnit != null ? Number(costPerUnit) : null;
+        if (nextOrderDate !== undefined) item.nextOrderDate = nextOrderDate || null;
+        if (orderFrequency !== undefined) item.orderFrequency = orderFrequency !== '' && orderFrequency != null ? Number(orderFrequency) : null;
+        if (orderFrequencyUnit !== undefined) item.orderFrequencyUnit = orderFrequencyUnit || 'months';
         await item.save();
         res.json(item);
     } catch (err) {

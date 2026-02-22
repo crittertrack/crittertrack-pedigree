@@ -1903,7 +1903,11 @@ const SupplyItemSchema = new mongoose.Schema({
     isFeederAnimal: { type: Boolean, default: false },
     feederType: { type: String, default: '', trim: true },  // e.g. Mice, Rats, Crickets
     feederSize: { type: String, default: '', trim: true },  // e.g. Pinky, Fuzzy, Adult
-    costPerUnit: { type: Number, default: null },           // cost per individual animal
+    costPerUnit: { type: Number, default: null },           // cost per individual unit/animal
+    // Schedule-based reorder (for bulk/timed items independent of stock count)
+    nextOrderDate: { type: Date, default: null },           // when to place the next order
+    orderFrequency: { type: Number, default: null },        // repeat interval number
+    orderFrequencyUnit: { type: String, enum: ['days', 'weeks', 'months'], default: 'months' },
 }, { timestamps: true });
 const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
 
