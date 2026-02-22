@@ -34,7 +34,7 @@ const templates = [
             // Identity
             prefix: createFieldConfig(true, 'Prefix', false),
             suffix: createFieldConfig(true, 'Suffix', false),
-            breederAssignedId: createFieldConfig(true, 'Breeder ID', false),
+            breederAssignedId: createFieldConfig(true, 'Identification', false),
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
@@ -206,7 +206,7 @@ const templates = [
             // Identity
             prefix: createFieldConfig(true, 'Prefix', false),
             suffix: createFieldConfig(true, 'Suffix', false),
-            breederAssignedId: createFieldConfig(true, 'Breeder ID', false),
+            breederAssignedId: createFieldConfig(true, 'Identification', false),
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
@@ -378,7 +378,7 @@ const templates = [
             // Identity
             prefix: createFieldConfig(true, 'Prefix', false),
             suffix: createFieldConfig(true, 'Suffix', false),
-            breederAssignedId: createFieldConfig(true, 'Breeder ID', false),
+            breederAssignedId: createFieldConfig(true, 'Identification', false),
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
@@ -726,7 +726,7 @@ const templates = [
             // Identity
             prefix: createFieldConfig(true, 'Prefix', false),
             suffix: createFieldConfig(true, 'Suffix', false),
-            breederAssignedId: createFieldConfig(true, 'Breeder ID', false),
+            breederAssignedId: createFieldConfig(true, 'Identification', false),
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
@@ -901,7 +901,7 @@ const templates = [
             // Identity
             prefix: createFieldConfig(true, 'Prefix', false),
             suffix: createFieldConfig(true, 'Suffix', false),
-            breederAssignedId: createFieldConfig(true, 'Breeder ID', false),
+            breederAssignedId: createFieldConfig(true, 'Identification', false),
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
@@ -1075,7 +1075,7 @@ const templates = [
             // Identity
             prefix: createFieldConfig(true, 'Prefix', false),
             suffix: createFieldConfig(true, 'Suffix', false),
-            breederAssignedId: createFieldConfig(true, 'Breeder ID', false),
+            breederAssignedId: createFieldConfig(true, 'Identification', false),
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
@@ -1249,7 +1249,7 @@ const templates = [
             // Identity
             prefix: createFieldConfig(true, 'Prefix', false),
             suffix: createFieldConfig(true, 'Suffix', false),
-            breederAssignedId: createFieldConfig(true, 'Breeder ID', false),
+            breederAssignedId: createFieldConfig(true, 'Identification', false),
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),

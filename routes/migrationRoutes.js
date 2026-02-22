@@ -636,4 +636,26 @@ router.post('/rename-breederyid-field', async (req, res) => {
     }
 });
 
+// Update breederAssignedId label in all field templates to "Identification"
+router.post('/fix-breederassignedid-label', async (req, res) => {
+    try {
+        const { FieldTemplate } = require('../database/models');
+        const templates = await FieldTemplate.find({ 'fields.breederAssignedId': { $exists: true } });
+        let updated = 0;
+        for (const tmpl of templates) {
+            if (tmpl.fields?.breederAssignedId) {
+                tmpl.fields.breederAssignedId.label = 'Identification';
+                tmpl.markModified('fields');
+                await tmpl.save();
+                updated++;
+            }
+        }
+        console.log(`[Migration] fix-breederassignedid-label: ${updated} templates updated`);
+        res.json({ success: true, templatesUpdated: updated });
+    } catch (error) {
+        console.error('[Migration] fix-breederassignedid-label error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
