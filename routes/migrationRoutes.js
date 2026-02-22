@@ -554,4 +554,45 @@ router.post('/setup-rat-mouse-templates', async (req, res) => {
     }
 });
 
+// Migration: disable microchipNumber in Small Mammal/Fancy Rat/Fancy Mouse templates,
+// and ensure breederyId is enabled in every template.
+router.post('/fix-small-mammal-id-fields', async (req, res) => {
+    try {
+        const templates = await FieldTemplate.find({});
+        const smallMammalNames = ['Small Mammal Template', 'Fancy Rat Template', 'Fancy Mouse Template'];
+        const results = [];
+
+        for (const tmpl of templates) {
+            let changed = false;
+
+            // Ensure breederyId is always enabled
+            if (tmpl.fields?.breederyId && tmpl.fields.breederyId.enabled !== true) {
+                tmpl.fields.breederyId.enabled = true;
+                changed = true;
+            }
+
+            // Disable microchipNumber for small mammal templates
+            if (smallMammalNames.includes(tmpl.name) && tmpl.fields?.microchipNumber) {
+                if (tmpl.fields.microchipNumber.enabled !== false) {
+                    tmpl.fields.microchipNumber.enabled = false;
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                tmpl.markModified('fields');
+                await tmpl.save();
+                results.push({ name: tmpl.name, updated: true });
+            } else {
+                results.push({ name: tmpl.name, updated: false });
+            }
+        }
+
+        res.json({ success: true, results });
+    } catch (error) {
+        console.error('[Migration] fix-small-mammal-id-fields error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
