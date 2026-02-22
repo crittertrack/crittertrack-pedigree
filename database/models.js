@@ -320,6 +320,7 @@ const AnimalSchema = new mongoose.Schema({
     feedingSchedule: { type: String, default: null },
     supplements: { type: String, default: null },
     housingType: { type: String, default: null },
+    enclosureId: { type: String, default: null }, // References Enclosure._id
     bedding: { type: String, default: null },
     temperatureRange: { type: String, default: null },
     humidity: { type: String, default: null },
@@ -542,6 +543,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     feedingSchedule: { type: String, default: null },
     supplements: { type: String, default: null },
     housingType: { type: String, default: null },
+    enclosureId: { type: String, default: null }, // References Enclosure._id
     bedding: { type: String, default: null },
     enrichment: { type: String, default: null },
     temperatureRange: { type: String, default: null },
@@ -1879,6 +1881,15 @@ const GeneticsDataSchema = new mongoose.Schema({
 GeneticsDataSchema.index({ speciesName: 1, isPublished: 1 });
 const GeneticsData = mongoose.model('GeneticsData', GeneticsDataSchema);
 
+// ── Enclosure ─────────────────────────────────────────────────────────────────
+const EnclosureSchema = new mongoose.Schema({
+    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 100 },
+    enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
+    size: { type: String, default: '', trim: true },           // e.g. 40 gallon, 48x24x24
+    notes: { type: String, default: '', maxlength: 500 },
+}, { timestamps: true });
+const Enclosure = mongoose.model('Enclosure', EnclosureSchema);
 
 // --- EXPORTS ---
 module.exports = {
@@ -1905,5 +1916,6 @@ module.exports = {
     GeneticsData,
     Transaction,
     AnimalTransfer,
-    ModChat
+    ModChat,
+    Enclosure
 };

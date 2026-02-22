@@ -674,6 +674,10 @@ app.delete('/api/users/account', authMiddleware, async (req, res) => {
 // The middleware is applied here, before the router handles the request
 app.use('/api/animals', authMiddleware, animalRoutes);
 app.use('/api/litters', authMiddleware, litterRoutes);
+
+// Enclosure Routes (private management)
+const enclosureRoutes = require('./routes/enclosureRoutes');
+app.use('/api/enclosures', authMiddleware, enclosureRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
