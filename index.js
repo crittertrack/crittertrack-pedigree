@@ -710,6 +710,10 @@ app.use('/api/feedback', authMiddleware, feedbackRoutes);
 const messageRoutes = require('./routes/messageRoutes');
 app.use('/api/messages', authMiddleware, messageRoutes);
 
+// Activity Log Routes (Require authMiddleware)
+const activityLogRoutes = require('./routes/activityLogRoutes');
+app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
+
 // Species Routes (GET is public, POST requires auth except migration)
 const speciesRoutes = require('./routes/speciesRoutes');
 app.use('/api/species', (req, res, next) => {
