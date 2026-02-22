@@ -176,6 +176,13 @@ const AnimalSchema = new mongoose.Schema({
     // Maintenance schedule tracking (for Management view)
     lastMaintenanceDate: { type: Date, default: null },
     maintenanceFrequencyDays: { type: Number, default: null }, // Maintenance every N days
+
+    // Flexible per-animal care tasks (nail trim, weight check, health check, etc.)
+    careTasks: [{
+        taskName: { type: String, required: true, trim: true },
+        lastDoneDate: { type: Date, default: null },
+        frequencyDays: { type: Number, default: null },
+    }],
     
     // Tags for local organization (lines, enclosures, etc)
     tags: [{ type: String, trim: true }],
@@ -1888,6 +1895,12 @@ const EnclosureSchema = new mongoose.Schema({
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
     size: { type: String, default: '', trim: true },           // e.g. 40 gallon, 48x24x24
     notes: { type: String, default: '', maxlength: 500 },
+    // Flexible cleaning/maintenance tasks for the enclosure (spot clean, full clean, bulb change, etc.)
+    cleaningTasks: [{
+        taskName: { type: String, required: true, trim: true },
+        lastDoneDate: { type: Date, default: null },
+        frequencyDays: { type: Number, default: null },
+    }],
 }, { timestamps: true });
 const Enclosure = mongoose.model('Enclosure', EnclosureSchema);
 
