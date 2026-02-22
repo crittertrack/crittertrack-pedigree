@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, PublicProfile, Animal, PublicAnimal, Species } = require('../database/models');
+const { User, PublicProfile, Animal, PublicAnimal, Species, FieldTemplate } = require('../database/models');
 
 // Migration endpoint to sync privacy settings to PublicProfile (DEPRECATED)
 router.post('/sync-privacy-settings', async (req, res) => {
@@ -493,6 +493,64 @@ router.post('/fix-animal-ownership', async (req, res) => {
             error: 'Migration failed', 
             details: error.message 
         });
+    }
+});
+
+// Migration: create dedicated field templates for Fancy Rat and Fancy Mouse
+// Disables phenotype, markings, eyeColor, nailColor, and all exercise/grooming fields
+router.post('/setup-rat-mouse-templates', async (req, res) => {
+    try {
+        const FIELDS_TO_DISABLE = [
+            'phenotype', 'markings', 'eyeColor', 'nailColor',
+            'exerciseRequirements', 'dailyExerciseMinutes',
+            'groomingNeeds', 'sheddingLevel',
+            'crateTrained', 'litterTrained', 'leashTrained'
+        ];
+
+        const baseTemplate = await FieldTemplate.findOne({ name: 'Small Mammal Template' });
+        if (!baseTemplate) {
+            return res.status(404).json({ success: false, error: 'Small Mammal Template not found. Run species seed first.' });
+        }
+
+        const results = [];
+
+        for (const speciesName of ['Fancy Rat', 'Fancy Mouse']) {
+            const templateName = `${speciesName} Template`;
+
+            // Remove old version if exists
+            await FieldTemplate.deleteOne({ name: templateName });
+
+            // Clone base template fields, override the fields to disable
+            const fieldsObj = baseTemplate.toObject().fields;
+            for (const field of FIELDS_TO_DISABLE) {
+                if (fieldsObj[field]) {
+                    fieldsObj[field].enabled = false;
+                }
+            }
+
+            const newTemplate = new FieldTemplate({
+                name: templateName,
+                description: `Custom template for ${speciesName} — disables phenotype, markings, eye/nail color, exercise & grooming`,
+                isDefault: false,
+                fields: fieldsObj
+            });
+            await newTemplate.save();
+
+            // Assign to Species
+            const species = await Species.findOne({ name: speciesName });
+            if (species) {
+                species.fieldTemplateId = newTemplate._id;
+                await species.save();
+                results.push({ speciesName, templateId: newTemplate._id, status: 'ok' });
+            } else {
+                results.push({ speciesName, templateId: newTemplate._id, status: 'template created but species not found' });
+            }
+        }
+
+        res.json({ success: true, results });
+    } catch (error) {
+        console.error('[Migration] setup-rat-mouse-templates error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
