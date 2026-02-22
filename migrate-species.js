@@ -14,7 +14,7 @@ require('dotenv').config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crittertrack';
 
-const { FieldTemplate, Species } = require('./database/models');
+const { FieldTemplate, Species, Animal, SpeciesConfig, GeneticsData } = require('./database/models');
 
 // ============================================================
 // SPECIES DEFINITIONS
@@ -38,6 +38,7 @@ const speciesList = [
     { name: 'Chinchilla',               latinName: 'Chinchilla lanigera',       category: 'Mammal', templateName: 'Small Mammal Template' },
     { name: 'African Pygmy Mouse',      latinName: 'Mus minutoides',            category: 'Mammal', templateName: 'Small Mammal Template' },
     { name: 'African Pygmy Dormouse',   latinName: 'Graphiurus murinus',        category: 'Mammal', templateName: 'Small Mammal Template' },
+    { name: 'Fat-tailed Gerbil',        latinName: 'Pachyuromys duprasi',       category: 'Mammal', templateName: 'Small Mammal Template' },
 
     // ── FULL MAMMAL TEMPLATE ─────────────────────────────────
     { name: 'Rabbit',                   latinName: 'Oryctolagus cuniculus',     category: 'Mammal', templateName: 'Full Mammal Template' },
@@ -62,7 +63,7 @@ const speciesList = [
     { name: 'Russian Tortoise',         latinName: 'Testudo horsfieldii',       category: 'Reptile', templateName: 'Reptile Template' },
 
     // ── BIRD TEMPLATE ────────────────────────────────────────
-    { name: 'Budgerigar',               latinName: 'Melopsittacus undulatus',   category: 'Bird', templateName: 'Bird Template' },
+    { name: 'Budgie',                   latinName: 'Melopsittacus undulatus',   category: 'Bird', templateName: 'Bird Template' },
     { name: 'Cockatiel',                latinName: 'Nymphicus hollandicus',     category: 'Bird', templateName: 'Bird Template' },
     { name: 'Lovebird',                 latinName: 'Agapornis sp.',             category: 'Bird', templateName: 'Bird Template' },
     { name: 'Canary',                   latinName: 'Serinus canaria',           category: 'Bird', templateName: 'Bird Template' },
@@ -117,6 +118,13 @@ const legacySpecies = [
     { name: 'Hamster', category: 'Mammal', templateName: 'Small Mammal Template' },
 ];
 
+// One-time renames: { from: oldName, to: newName }
+// Animals, species configs, and genetics data are all updated atomically.
+const renames = [
+    { from: 'Budgerigar',        to: 'Budgie' },
+    { from: 'Fat-tailed gerbil', to: 'Fat-tailed Gerbil' },
+];
+
 // ============================================================
 
 async function migrate() {
@@ -136,7 +144,46 @@ async function migrate() {
 
         const results = { created: [], updated: [], skipped: [], errors: [] };
 
-        // ── 2. Upsert main species list ───────────────────────
+        // ── 2. Process renames ────────────────────────────────
+        console.log('========================================');
+        console.log('PROCESSING RENAMES');
+        console.log('========================================\n');
+
+        for (const r of renames) {
+            try {
+                const existing = await Species.findOne({ name: r.from });
+                if (!existing) {
+                    console.log(`  ⏭️  Not in DB (skipping rename): ${r.from}`);
+                    continue;
+                }
+                // Check target doesn't already exist
+                const target = await Species.findOne({ name: r.to });
+                if (target) {
+                    console.log(`  ⏭️  Target already exists, removing old entry: ${r.from} → ${r.to}`);
+                    // Migrate animals to target name, then delete old species
+                    await Animal.updateMany({ species: r.from }, { $set: { species: r.to } });
+                    await SpeciesConfig.updateOne({ speciesName: r.from }, { $set: { speciesName: r.to } });
+                    await GeneticsData.updateMany({ speciesName: r.from }, { $set: { speciesName: r.to } });
+                    await Species.deleteOne({ _id: existing._id });
+                    console.log(`  ✅ Merged ${r.from} into ${r.to}`);
+                    results.updated.push(`${r.from} → ${r.to} (merged)`);
+                    continue;
+                }
+                // Rename: update all references
+                await Animal.updateMany({ species: r.from }, { $set: { species: r.to } });
+                await SpeciesConfig.updateOne({ speciesName: r.from }, { $set: { speciesName: r.to } });
+                await GeneticsData.updateMany({ speciesName: r.from }, { $set: { speciesName: r.to } });
+                existing.name = r.to;
+                await existing.save();
+                console.log(`  ✏️  Renamed: ${r.from} → ${r.to}`);
+                results.updated.push(`${r.from} → ${r.to}`);
+            } catch (err) {
+                console.error(`  ❌ Error renaming "${r.from}" → "${r.to}":`, err.message);
+                results.errors.push({ name: r.from, error: err.message });
+            }
+        }
+
+        // ── 3. Upsert main species list ───────────────────────
         console.log('========================================');
         console.log('SEEDING DEFAULT SPECIES');
         console.log('========================================\n');
