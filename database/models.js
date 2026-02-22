@@ -47,6 +47,7 @@ const UserSchema = new mongoose.Schema({
     },
     // User location
     country: { type: String, default: null },
+    state: { type: String, default: null }, // US state code when country === 'US'
     // Breeding status for species (for breeder directory)
     breedingStatus: { 
         type: Map, 
@@ -116,6 +117,7 @@ const PublicProfileSchema = new mongoose.Schema({
         default: 'none' 
     },
     country: { type: String, default: null },
+    state: { type: String, default: null }, // US state code when country === 'US'
     breedingStatus: { 
         type: Map, 
         of: String, // Values: 'breeder', 'retired', 'hobbyist', or null

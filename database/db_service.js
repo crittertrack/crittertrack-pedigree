@@ -52,6 +52,7 @@ const USER_TEXT_FIELDS = {
     personalName: 'personal name',
     breederName: 'breeder name',
     country: 'country',
+    state: 'state',
     bio: 'bio'
 };
 
@@ -238,6 +239,7 @@ const registerUser = async (userData) => {
         allowMessages: user.allowMessages,
         emailNotificationPreference: user.emailNotificationPreference,
         country: user.country,
+        state: user.state,
     };
     
     return { token, userProfile };
@@ -384,6 +386,7 @@ const getUserProfileById = async (appUserId_backend) => {
         allowMessages: user.allowMessages !== undefined ? user.allowMessages : true,
         emailNotificationPreference: user.emailNotificationPreference || 'none',
         country: user.country,
+        state: user.state,
         bio: user.bio,
         showBio: user.showBio !== undefined ? user.showBio : true,
         profileImage: user.profileImage,
@@ -495,6 +498,11 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         user.country = updates.country;
         // Update public profile as well
         await PublicProfile.updateOne({ id_public: user.id_public }, { country: updates.country });
+    }
+    if (updates.state !== undefined) {
+        user.state = updates.state;
+        // Update public profile as well
+        await PublicProfile.updateOne({ id_public: user.id_public }, { state: updates.state });
     }
     if (updates.bio !== undefined) {
         console.log('[updateUserProfile] Setting bio to:', updates.bio, 'Type:', typeof updates.bio);
