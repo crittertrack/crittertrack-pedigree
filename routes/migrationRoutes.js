@@ -637,21 +637,27 @@ router.post('/rename-breederyid-field', async (req, res) => {
 });
 
 // Update breederAssignedId label in all field templates to "Identification"
+// Also handles templates that still have the old breederyId key
 router.post('/fix-breederassignedid-label', async (req, res) => {
     try {
-        const { FieldTemplate } = require('../database/models');
-        const templates = await FieldTemplate.find({ 'fields.breederAssignedId': { $exists: true } });
-        let updated = 0;
-        for (const tmpl of templates) {
-            if (tmpl.fields?.breederAssignedId) {
-                tmpl.fields.breederAssignedId.label = 'Identification';
-                tmpl.markModified('fields');
-                await tmpl.save();
-                updated++;
-            }
-        }
-        console.log(`[Migration] fix-breederassignedid-label: ${updated} templates updated`);
-        res.json({ success: true, templatesUpdated: updated });
+        const mongoose = require('mongoose');
+        const db = mongoose.connection.db;
+        const col = db.collection('fieldtemplates');
+
+        // Step 1: rename fields.breederyId → fields.breederAssignedId for any docs still using old key
+        const renameResult = await col.updateMany(
+            { 'fields.breederyId': { $exists: true } },
+            { $rename: { 'fields.breederyId': 'fields.breederAssignedId' } }
+        );
+
+        // Step 2: set label to "Identification" on all templates that have breederAssignedId
+        const labelResult = await col.updateMany(
+            { 'fields.breederAssignedId': { $exists: true } },
+            { $set: { 'fields.breederAssignedId.label': 'Identification' } }
+        );
+
+        console.log(`[Migration] fix-breederassignedid-label: renamed=${renameResult.modifiedCount}, labelUpdated=${labelResult.modifiedCount}`);
+        res.json({ success: true, renamedFromOldKey: renameResult.modifiedCount, labelUpdated: labelResult.modifiedCount });
     } catch (error) {
         console.error('[Migration] fix-breederassignedid-label error:', error);
         res.status(500).json({ success: false, error: error.message });
