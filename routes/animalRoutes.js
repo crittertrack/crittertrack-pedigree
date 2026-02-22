@@ -975,18 +975,20 @@ router.delete('/:id_backend', async (req, res) => {
 
 
 // POST /api/animals/:id_public/feeding — record a feeding event, optionally deduct supply stock
+// Pass { skipped: true } to log a skip (advances next due date, no stock deduction)
 router.post('/:id_public/feeding', async (req, res) => {
     try {
         const animal = await Animal.findOne({ id_public: req.params.id_public, ownerId: req.user.id });
         if (!animal) return res.status(404).json({ message: 'Animal not found or access denied' });
-        const { supplyId, quantity, notes } = req.body;
+        const { supplyId, quantity, notes, skipped } = req.body;
         const now = new Date();
+        // Always advance lastFedDate so the next due date moves forward
         animal.lastFedDate = now;
         await animal.save();
 
-        // Deduct supply stock only when supplyId AND a positive quantity are provided
+        // Deduct supply stock only for real feedings (not skips)
         let supplyItem = null;
-        if (supplyId) {
+        if (!skipped && supplyId) {
             const { SupplyItem } = require('../database/models');
             const deductQty = quantity != null && Number(quantity) > 0 ? Number(quantity) : null;
             if (deductQty !== null) {
@@ -1001,31 +1003,46 @@ router.post('/:id_public/feeding', async (req, res) => {
             }
         }
 
-        // Create AnimalLog entry for feeding event
+        // Create AnimalLog entry for feeding event or skip
         const { AnimalLog } = require('../database/models');
-        await AnimalLog.create({
-            animalId: animal._id,
-            animalId_public: animal.id_public,
-            userId: req.user.id,
-            category: 'feeding',
-            changes: [{
-                field: 'feeding',
-                label: 'Feeding',
-                oldValue: null,
-                newValue: {
-                    supplyId: supplyId || null,
-                    supplyName: supplyItem?.name || null,
-                    feederType: supplyItem?.feederType || null,
-                    feederSize: supplyItem?.feederSize || null,
-                    unit: supplyItem?.unit || null,
-                    quantity: quantity != null ? Number(quantity) : null,
-                    notes: notes || null,
-                    date: now,
-                }
-            }]
-        });
+        if (skipped) {
+            await AnimalLog.create({
+                animalId: animal._id,
+                animalId_public: animal.id_public,
+                userId: req.user.id,
+                category: 'feeding',
+                changes: [{
+                    field: 'skipped',
+                    label: 'Feeding Skipped',
+                    oldValue: null,
+                    newValue: { skipped: true, date: now }
+                }]
+            });
+        } else {
+            await AnimalLog.create({
+                animalId: animal._id,
+                animalId_public: animal.id_public,
+                userId: req.user.id,
+                category: 'feeding',
+                changes: [{
+                    field: 'feeding',
+                    label: 'Feeding',
+                    oldValue: null,
+                    newValue: {
+                        supplyId: supplyId || null,
+                        supplyName: supplyItem?.name || null,
+                        feederType: supplyItem?.feederType || null,
+                        feederSize: supplyItem?.feederSize || null,
+                        unit: supplyItem?.unit || null,
+                        quantity: quantity != null ? Number(quantity) : null,
+                        notes: notes || null,
+                        date: now,
+                    }
+                }]
+            });
+        }
 
-        res.json({ animal: { lastFedDate: animal.lastFedDate }, supply: supplyItem });
+        res.json({ animal: { lastFedDate: animal.lastFedDate }, supply: supplyItem, skipped: !!skipped });
     } catch (err) {
         console.error('[POST feeding]', err.message);
         res.status(500).json({ message: err.message });
