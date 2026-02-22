@@ -1899,6 +1899,11 @@ const SupplyItemSchema = new mongoose.Schema({
     unit: { type: String, default: '', trim: true },
     reorderThreshold: { type: Number, default: null },
     notes: { type: String, default: '', trim: true },
+    // Feeder animal fields (Food category only)
+    isFeederAnimal: { type: Boolean, default: false },
+    feederType: { type: String, default: '', trim: true },  // e.g. Mice, Rats, Crickets
+    feederSize: { type: String, default: '', trim: true },  // e.g. Pinky, Fuzzy, Adult
+    costPerUnit: { type: Number, default: null },           // cost per individual animal
 }, { timestamps: true });
 const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
 

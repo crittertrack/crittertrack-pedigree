@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 // POST /api/supplies — create a new supply item
 router.post('/', async (req, res) => {
     try {
-        const { name, category, currentStock, unit, reorderThreshold, notes } = req.body;
+        const { name, category, currentStock, unit, reorderThreshold, notes, isFeederAnimal, feederType, feederSize, costPerUnit } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
         const item = new SupplyItem({
             userId: req.user.id,
@@ -25,6 +25,10 @@ router.post('/', async (req, res) => {
             unit: unit || '',
             reorderThreshold: reorderThreshold !== '' && reorderThreshold != null ? Number(reorderThreshold) : null,
             notes: notes || '',
+            isFeederAnimal: !!isFeederAnimal,
+            feederType: isFeederAnimal ? (feederType || '') : '',
+            feederSize: isFeederAnimal ? (feederSize || '') : '',
+            costPerUnit: isFeederAnimal && costPerUnit !== '' && costPerUnit != null ? Number(costPerUnit) : null,
         });
         await item.save();
         res.status(201).json(item);
@@ -38,13 +42,17 @@ router.patch('/:id', async (req, res) => {
     try {
         const item = await SupplyItem.findOne({ _id: req.params.id, userId: req.user.id });
         if (!item) return res.status(404).json({ message: 'Supply item not found' });
-        const { name, category, currentStock, unit, reorderThreshold, notes } = req.body;
+        const { name, category, currentStock, unit, reorderThreshold, notes, isFeederAnimal, feederType, feederSize, costPerUnit } = req.body;
         if (name !== undefined) item.name = name.trim();
         if (category !== undefined) item.category = category;
         if (currentStock !== undefined) item.currentStock = Number(currentStock);
         if (unit !== undefined) item.unit = unit;
         if (reorderThreshold !== undefined) item.reorderThreshold = reorderThreshold !== '' && reorderThreshold != null ? Number(reorderThreshold) : null;
         if (notes !== undefined) item.notes = notes;
+        if (isFeederAnimal !== undefined) item.isFeederAnimal = !!isFeederAnimal;
+        if (feederType !== undefined) item.feederType = feederType || '';
+        if (feederSize !== undefined) item.feederSize = feederSize || '';
+        if (costPerUnit !== undefined) item.costPerUnit = costPerUnit !== '' && costPerUnit != null ? Number(costPerUnit) : null;
         await item.save();
         res.json(item);
     } catch (err) {
