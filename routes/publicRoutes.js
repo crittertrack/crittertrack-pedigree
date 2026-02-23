@@ -147,32 +147,41 @@ router.get('/users/newest', async (req, res) => {
     }
 });
 
-// GET /api/public/users/active - Get users who were active recently (logged in)
+// GET /api/public/users/active - Get users who were active recently (via lastActive heartbeat)
 router.get('/users/active', async (req, res) => {
     try {
-        const minutes = Math.min(parseInt(req.query.minutes || '15', 10), 4320); // Max 3 days
+        const minutes = Math.min(parseInt(req.query.minutes || '30', 10), 4320); // Default 30 min, max 3 days
         const timeThreshold = new Date(Date.now() - minutes * 60 * 1000);
-        
-        // Find users who have logged in within the time threshold
-        const recentlyLoggedIn = await User.find({
-            last_login: { $gte: timeThreshold },
+
+        // Use lastActive (real-time activity) with fallback to last_login for users without lastActive yet
+        const recentlyActive = await User.find({
+            $or: [
+                { lastActive: { $gte: timeThreshold } },
+                { lastActive: null, last_login: { $gte: timeThreshold } }
+            ],
             accountStatus: { $ne: 'banned' }
         })
-        .select('id_public')
+        .select('id_public lastActive last_login')
         .lean();
-        
-        // Get unique user IDs
-        const userIds = recentlyLoggedIn.map(u => u.id_public).filter(Boolean);
-        
-        // Fetch public profiles for these users
+
+        const userIds = recentlyActive.map(u => u.id_public).filter(Boolean);
+        // Build a map of lastActive per user
+        const activeMap = {};
+        recentlyActive.forEach(u => { if (u.id_public) activeMap[u.id_public] = u.lastActive || u.last_login; });
+
         const activeUsers = await PublicProfile.find({
             id_public: { $in: userIds },
             accountStatus: { $ne: 'banned' }
         })
         .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus')
         .lean();
-        
-        res.status(200).json(activeUsers);
+
+        // Attach lastActive timestamp for frontend sorting and attach to each profile
+        const withTimestamp = activeUsers.map(u => ({ ...u, lastActive: activeMap[u.id_public] || null }));
+        // Sort most-recently-active first
+        withTimestamp.sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive));
+
+        res.status(200).json(withTimestamp);
     } catch (error) {
         console.error('Error fetching active users:', error);
         res.status(500).json({ message: 'Internal server error while fetching active users.' });

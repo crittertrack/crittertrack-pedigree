@@ -64,6 +64,7 @@ const UserSchema = new mongoose.Schema({
     adminPassword: { type: String, default: null, select: false }, // Hashed admin-only password
     last_login: { type: Date, default: null },
     last_login_ip: { type: String, default: null },
+    lastActive: { type: Date, default: null, index: true }, // Updated on authenticated requests (throttled)
     two_factor_enabled: { type: Boolean, default: true },
     
     // Moderation tracking fields
