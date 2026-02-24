@@ -6,6 +6,10 @@ leoProfanity.loadDictionary('en');
 // Allow internal prefixes/suffixes that might look like profanity tokens
 leoProfanity.remove(['ctc', 'ctu']);
 
+// Allow animal-specific terminology that may be flagged incorrectly
+// 'bareback' is a recognized rat coat/pattern type
+leoProfanity.remove(['bareback']);
+
 class ProfanityError extends Error {
     constructor(fieldLabel = 'field') {
         super(`The ${fieldLabel} contains inappropriate language.`);
