@@ -269,6 +269,7 @@ async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations 
     };
 }
 
+module.exports = {
     calculateInbreedingCoefficient,
     calculatePairingInbreeding,
     buildPedigree,
