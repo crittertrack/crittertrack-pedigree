@@ -14,11 +14,6 @@ router.post('/', async (req, res) => {
         const appUserId_backend = req.user.id; 
         const litterData = req.body;
 
-        // Basic validation for required fields
-        if (!litterData.birthDate || litterData.numberBorn === undefined) {
-             return res.status(400).json({ message: 'Missing required litter fields: birthDate, and numberBorn.' });
-        }
-
         const newLitter = await addLitter(appUserId_backend, litterData);
 
         // Log user activity
