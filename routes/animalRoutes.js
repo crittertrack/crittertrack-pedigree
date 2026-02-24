@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const { Notification, User, PublicProfile, PublicAnimal } = require('../database/models');
 const fs = require('fs');
-const { calculateInbreedingCoefficient, calculatePairingInbreeding } = require('../utils/inbreeding');
+const { calculateInbreedingCoefficient, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
 const { ProfanityError } = require('../utils/profanityFilter');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 // simple disk storage for images (adjust for S3 in production)
@@ -1252,7 +1252,38 @@ router.get('/inbreeding/pairing', async (req, res) => {
     }
 });
 
-// POST /api/animals/:id_public/hide
+// --- EXPLAIN COI BREAKDOWN FOR A PAIRING (diagnostic) ---
+// GET /api/animals/inbreeding/explain?sireId=X&damId=Y&generations=N
+router.get('/inbreeding/explain', async (req, res) => {
+    try {
+        const { sireId, damId, generations } = req.query;
+
+        if (!sireId || !damId) {
+            return res.status(400).json({ message: 'Both sireId and damId are required' });
+        }
+
+        const fetchAnimal = async (animalId) => {
+            let animal = await Animal.findOne({ id_public: animalId }).lean();
+            if (!animal) {
+                animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
+            }
+            return animal;
+        };
+
+        const result = await explainPairingInbreeding(
+            sireId,
+            damId,
+            fetchAnimal,
+            parseInt(generations) || 50
+        );
+
+        res.status(200).json({ sireId, damId, ...result });
+    } catch (error) {
+        console.error('Error explaining pairing inbreeding:', error);
+        res.status(500).json({ message: 'Internal server error while explaining pairing inbreeding.' });
+    }
+});
+
 // Hide a view-only animal from user's list
 router.post('/:id_public/hide', async (req, res) => {
     try {

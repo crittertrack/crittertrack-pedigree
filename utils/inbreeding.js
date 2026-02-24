@@ -202,8 +202,75 @@ async function calculatePairingInbreeding(sireId, damId, fetchAnimal, generation
     return parseFloat((coi * 100).toFixed(4));
 }
 
-module.exports = {
+/**
+ * Diagnostic version of calculatePairingInbreeding.
+ * Returns the total COI AND a per-ancestor breakdown showing exactly which
+ * common ancestors contribute, which paths they use, and how much each adds.
+ *
+ * @returns {{ total: Number, breakdown: Array }}
+ */
+async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations = 50) {
+    if (!sireId || !damId) return { total: 0, breakdown: [] };
+
+    const theoreticalPedigree = {
+        id: 'theoretical',
+        name: 'Theoretical Offspring',
+        sire: await buildPedigree(sireId, fetchAnimal, generations),
+        dam: await buildPedigree(damId, fetchAnimal, generations),
+        inbreeding: 0
+    };
+
+    const commonAncestors = findCommonAncestors(theoreticalPedigree);
+    if (commonAncestors.length === 0) return { total: 0, breakdown: [] };
+
+    let totalCoi = 0;
+    const breakdown = [];
+
+    for (const ancestor of commonAncestors) {
+        const pathsToSire = findPathsToAncestor(theoreticalPedigree.sire, ancestor.id, []);
+        const pathsToDam  = findPathsToAncestor(theoreticalPedigree.dam,  ancestor.id, []);
+        const fa = ancestor.inbreeding || 0;
+
+        let ancestorContribution = 0;
+        const pathPairs = [];
+
+        for (const sPath of pathsToSire) {
+            for (const dPath of pathsToDam) {
+                const n1 = sPath.length;
+                const n2 = dPath.length;
+                const term = Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
+                ancestorContribution += term;
+                pathPairs.push({
+                    sirePath: sPath,
+                    damPath: dPath,
+                    n1_links: n1 - 1,   // formula-n (steps, not nodes)
+                    n2_links: n2 - 1,
+                    contribution_pct: parseFloat((term * 100).toFixed(4))
+                });
+            }
+        }
+
+        totalCoi += ancestorContribution;
+        breakdown.push({
+            ancestorId:   ancestor.id,
+            ancestorName: ancestor.name,
+            fa_pct:       parseFloat((fa * 100).toFixed(4)),
+            contribution_pct: parseFloat((ancestorContribution * 100).toFixed(4)),
+            pathPairs
+        });
+    }
+
+    // Sort descending by contribution so biggest contributors show first
+    breakdown.sort((a, b) => b.contribution_pct - a.contribution_pct);
+
+    return {
+        total: parseFloat((totalCoi * 100).toFixed(4)),
+        breakdown
+    };
+}
+
     calculateInbreedingCoefficient,
     calculatePairingInbreeding,
-    buildPedigree
+    buildPedigree,
+    explainPairingInbreeding
 };
