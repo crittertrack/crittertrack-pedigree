@@ -1,37 +1,43 @@
 /**
  * Calculate the coefficient of inbreeding (COI) for an animal
- * Uses Wright's method to calculate inbreeding based on common ancestors
- * 
+ * Uses Wright's path coefficient method.
+ *
+ * Wright's formula: F = Σ (½)^(n1+n2+1) × (1+F_A)
+ *   where n1/n2 = number of parent→child LINKS (steps) from each parent to
+ *   the common ancestor, and F_A = inbreeding coefficient of that ancestor.
+ *
+ * Implementation note on path lengths:
+ *   findPathsToAncestor() returns arrays that include BOTH the starting node
+ *   AND the ancestor node, so path.length = (formula_n) + 1.
+ *   Substituting: exponent = (n1_code-1) + (n2_code-1) + 1 = n1_code + n2_code - 1.
+ *
  * @param {Number} animalId - The public ID of the animal
  * @param {Function} fetchAnimal - Function to fetch animal data by public ID
- * @param {Number} generations - Number of generations to trace back (default: 50, traces all available)
+ * @param {Number} generations - Number of generations to trace back (default: 50)
  * @returns {Number} Inbreeding coefficient as a percentage (0-100)
  */
 async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations = 50) {
     if (!animalId) return 0;
 
-    // Build pedigree tree
     const pedigree = await buildPedigree(animalId, fetchAnimal, generations);
-    
-    // Find common ancestors
     const commonAncestors = findCommonAncestors(pedigree);
-    
+
     if (commonAncestors.length === 0) return 0;
 
-    // Calculate COI using Wright's formula
     let coi = 0;
     for (const ancestor of commonAncestors) {
         const pathsToSire = findPathsToAncestor(pedigree.sire, ancestor.id, []);
         const pathsToDam = findPathsToAncestor(pedigree.dam, ancestor.id, []);
-        
+
         for (const sPath of pathsToSire) {
             for (const dPath of pathsToDam) {
                 const n1 = sPath.length;
                 const n2 = dPath.length;
                 const fa = ancestor.inbreeding || 0;
-                
-                // Wright's formula: (1/2)^(n1+n2+1) * (1 + fa)
-                coi += Math.pow(0.5, n1 + n2 + 1) * (1 + fa);
+
+                // Corrected exponent: n1 + n2 - 1 (accounts for path arrays
+                // including the starting node, making each length = formula_n + 1)
+                coi += Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
             }
         }
     }
@@ -80,7 +86,15 @@ async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set()) 
 }
 
 /**
- * Find all common ancestors in sire and dam lineages
+ * Find all UNIQUE common ancestors between a pedigree's sire and dam lineages.
+ *
+ * Deduplication is required: if an ancestor appears via multiple paths in the
+ * sire's lineage, getAllAncestors() returns it multiple times. Without dedup,
+ * findCommonAncestors() would push the same ancestor N times, causing path
+ * pairs to be summed N times (double/triple-counting).
+ *
+ * findPathsToAncestor() already returns ALL paths to a given ancestor ID, so
+ * each unique ancestor only needs to be processed once.
  */
 function findCommonAncestors(pedigree) {
     if (!pedigree || !pedigree.sire || !pedigree.dam) return [];
@@ -88,11 +102,23 @@ function findCommonAncestors(pedigree) {
     const sireAncestors = getAllAncestors(pedigree.sire);
     const damAncestors = getAllAncestors(pedigree.dam);
 
+    // Deduplicate sire ancestors by ID (an inbred sire has repeated entries)
+    const seenSire = new Set();
+    const uniqueSireAncestors = [];
+    for (const anc of sireAncestors) {
+        if (!seenSire.has(anc.id)) {
+            seenSire.add(anc.id);
+            uniqueSireAncestors.push(anc);
+        }
+    }
+
+    // Build a Set of dam ancestor IDs for O(1) lookup
+    const damAncestorIds = new Set(damAncestors.map(a => a.id));
+
     const common = [];
-    for (const sireAnc of sireAncestors) {
-        const damAnc = damAncestors.find(d => d.id === sireAnc.id);
-        if (damAnc) {
-            common.push(sireAnc);
+    for (const anc of uniqueSireAncestors) {
+        if (damAncestorIds.has(anc.id)) {
+            common.push(anc);
         }
     }
 
@@ -168,7 +194,7 @@ async function calculatePairingInbreeding(sireId, damId, fetchAnimal, generation
                 const n2 = dPath.length;
                 const fa = ancestor.inbreeding || 0;
                 
-                coi += Math.pow(0.5, n1 + n2 + 1) * (1 + fa);
+                coi += Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
             }
         }
     }
