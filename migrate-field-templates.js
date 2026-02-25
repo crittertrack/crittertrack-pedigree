@@ -62,8 +62,8 @@ const templates = [
             pedigreeRegistrationId: createFieldConfig(true, 'Pedigree Registration #', false),
             breed: createFieldConfig(true, 'Breed', false),
             strain: createFieldConfig(true, 'Strain', false), // KEY FIELD for lab rodents
-            licenseNumber: createFieldConfig(false, 'License Number', false),
-            licenseJurisdiction: createFieldConfig(false, 'License Jurisdiction', false),
+            licenseNumber: createFieldConfig(true, 'License Number', false),
+            licenseJurisdiction: createFieldConfig(true, 'License Jurisdiction', false),
             rabiesTagNumber: createFieldConfig(false, 'Rabies Tag #', false),
             tattooId: createFieldConfig(false, 'Tattoo ID', false),
             akcRegistrationNumber: createFieldConfig(false, 'AKC Registration #', false),
@@ -175,13 +175,13 @@ const templates = [
             // End of Life & Legal
             causeOfDeath: createFieldConfig(true, 'Cause of Death', false),
             necropsyResults: createFieldConfig(true, 'Necropsy Results', false),
-            insurance: createFieldConfig(false, 'Insurance', false),
-            legalStatus: createFieldConfig(false, 'Legal Status', false),
+            insurance: createFieldConfig(true, 'Insurance', false),
+            legalStatus: createFieldConfig(true, 'Legal Status', false),
             endOfLifeCareNotes: createFieldConfig(true, 'End of Life Care Notes', false),
             coOwnership: createFieldConfig(false, 'Co-Ownership', false),
             transferHistory: createFieldConfig(true, 'Transfer History', false),
-            breedingRestrictions: createFieldConfig(false, 'Breeding Restrictions', false),
-            exportRestrictions: createFieldConfig(false, 'Export Restrictions', false),
+            breedingRestrictions: createFieldConfig(true, 'Breeding Restrictions', false),
+            exportRestrictions: createFieldConfig(true, 'Export Restrictions', false),
             
             // Genetics & Notes
             geneticCode: createFieldConfig(true, 'Genetic Code', false),
