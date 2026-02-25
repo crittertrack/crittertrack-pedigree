@@ -753,16 +753,24 @@ router.get('/reports', async (req, res) => {
 router.post('/reports/:type/:reportId/status', requireModerator, validateModerationInput, async (req, res) => {
     try {
         const { type, reportId } = req.params;
-        const { status, adminNotes } = req.body;
+        let { status, adminNotes } = req.body;
         const config = reportModelMap[type];
 
         if (!config) {
             return res.status(400).json({ message: 'Invalid report type.' });
         }
 
+        // Sanitize status: trim whitespace, remove HTML tags, convert to lowercase
+        if (status) {
+            status = String(status).trim().replace(/<[^>]*>/g, '').toLowerCase();
+        }
+
         const allowedStatuses = ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'];
         if (status && !allowedStatuses.includes(status)) {
-            return res.status(400).json({ message: 'Invalid report status.' });
+            console.error(`[MODERATION] Invalid status value received: "${status}" (type: ${typeof status})`);
+            return res.status(400).json({ 
+                message: `Invalid report status. Received: "${status}". Allowed values: ${allowedStatuses.join(', ')}`
+            });
         }
 
         const report = await config.model.findById(reportId);
