@@ -664,4 +664,33 @@ router.post('/fix-breederassignedid-label', async (req, res) => {
     }
 });
 
+// Enable microchipNumber field for Small Mammal templates
+router.post('/enable-microchip-field', async (req, res) => {
+    try {
+        const templates = await FieldTemplate.find({});
+        const smallMammalNames = ['Small Mammal Template', 'Fancy Rat Template', 'Fancy Mouse Template'];
+        const results = [];
+
+        for (const tmpl of templates) {
+            // Enable microchipNumber for small mammal templates
+            if (smallMammalNames.includes(tmpl.name) && tmpl.fields?.microchipNumber) {
+                if (tmpl.fields.microchipNumber.enabled !== true) {
+                    tmpl.fields.microchipNumber.enabled = true;
+                    tmpl.markModified('fields');
+                    await tmpl.save();
+                    results.push({ name: tmpl.name, updated: true });
+                } else {
+                    results.push({ name: tmpl.name, updated: false, reason: 'already enabled' });
+                }
+            }
+        }
+
+        console.log(`[Migration] enable-microchip-field: updated ${results.filter(r => r.updated).length} templates`);
+        res.json({ success: true, results });
+    } catch (error) {
+        console.error('[Migration] enable-microchip-field error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
