@@ -731,6 +731,17 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     if (!animal) {
         throw new Error('Animal not found or does not belong to user.');
     }
+    // Debug: Log appearance fields being returned
+    console.log(`[getAnimalByIdAndUser] Returning animal ${animal.id_public} with appearance fields:`, {
+        size: animal.size,
+        phenotype: animal.phenotype,
+        morph: animal.morph,
+        markings: animal.markings,
+        eyeColor: animal.eyeColor,
+        nailColor: animal.nailColor,
+        weight: animal.weight,
+        length: animal.length
+    });
     // Backwards-compatible alias fields for older frontend keys
     animal.fatherId_public = animal.sireId_public || null;
     animal.motherId_public = animal.damId_public || null;
