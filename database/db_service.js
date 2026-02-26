@@ -882,6 +882,14 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         weight: updates.weight,
         length: updates.length
     }));
+    
+    console.log('[updateAnimal] Full updates object keys:', Object.keys(updates));
+    console.log('[updateAnimal] Size field specifically:', { 
+        hasSize: 'size' in updates, 
+        sizeValue: updates.size,
+        sizeType: typeof updates.size 
+    });
+    
     const updatedAnimal = await Animal.findOneAndUpdate(
         { _id: animalId_backend, ownerId: appUserId_backend },
         { $set: updates },
@@ -891,6 +899,8 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     if (!updatedAnimal) {
         throw new Error('Animal not found or user does not own this animal.');
     }
+    
+    console.log('[updateAnimal] MongoDB returned document with size:', updatedAnimal.size);
     
     // Debug log the saved record
     console.log('[updateAnimal] ✅ Health records SAVED to database:', {
