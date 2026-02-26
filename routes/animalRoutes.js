@@ -722,7 +722,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
 
         // Get original animal data to compare for changes before sending notifications
         const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend })
-            .select('breederId_public sireId_public damId_public name prefix suffix species status gender birthDate deceasedDate color coat earset coatPattern morph phenotype markings eyeColor nailColor weight length remarks geneticCode isQuarantine isOwned isPregnant isNursing isInMating enclosureId lastFedDate feedingFrequencyDays lastMaintenanceDate maintenanceFrequencyDays careTasks')
+            .select('breederId_public sireId_public damId_public name prefix suffix species status gender birthDate deceasedDate color coat earset coatPattern morph phenotype markings eyeColor nailColor size weight length remarks geneticCode isQuarantine isOwned isPregnant isNursing isInMating enclosureId lastFedDate feedingFrequencyDays lastMaintenanceDate maintenanceFrequencyDays careTasks')
             .lean();
         
         // IMPORTANT: Animal is saved with breeder/parent links immediately.

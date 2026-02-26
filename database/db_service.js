@@ -851,7 +851,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         vaccinations: updates.vaccinations ? updates.vaccinations.substring(0, 50) : 'null',
         dewormingRecords: updates.dewormingRecords ? updates.dewormingRecords.substring(0, 50) : 'null',
         parasiteControl: updates.parasiteControl ? updates.parasiteControl.substring(0, 50) : 'null',
-        sectionPrivacy: updates.sectionPrivacy,
         isDisplay: updates.isDisplay
     }));
     const updatedAnimal = await Animal.findOneAndUpdate(
@@ -876,12 +875,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
     // If the animal is public, update or create the corresponding PublicAnimal record
     if (updatedAnimal.showOnPublicProfile || updatedAnimal.isDisplay) {
-        // Use animal's sectionPrivacy settings (per-animal privacy control)
-        const sectionPrivacy = updatedAnimal.sectionPrivacy || {};
-        const showGeneticCode = sectionPrivacy.geneticCode !== false; // Default to true if not set
-        const showRemarks = sectionPrivacy.remarks !== false; // Default to true if not set
-
-        // Prepare public updates
+        // Prepare public updates - all fields are included when public
         const publicUpdates = {
             ownerId_public: updatedAnimal.ownerId_public,
             id_public: updatedAnimal.id_public,
@@ -897,6 +891,17 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             earset: updatedAnimal.earset || null,
             status: updatedAnimal.status || null,
             lifeStage: updatedAnimal.lifeStage || null,
+            carrierTraits: updatedAnimal.carrierTraits || null,
+            // Universal animal appearance fields
+            phenotype: updatedAnimal.phenotype || null,
+            morph: updatedAnimal.morph || null,
+            markings: updatedAnimal.markings || null,
+            eyeColor: updatedAnimal.eyeColor || null,
+            nailColor: updatedAnimal.nailColor || null,
+            size: updatedAnimal.size || null,
+            // Current measurements
+            weight: updatedAnimal.weight || null,
+            length: updatedAnimal.length || null,
             breederId_public: updatedAnimal.breederId_public || null,
             // Ensure public record includes image URLs if present
             imageUrl: updatedAnimal.imageUrl || null,
@@ -908,12 +913,11 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             isOwned: updatedAnimal.isOwned || false,
             isPregnant: updatedAnimal.isPregnant || false,
             isNursing: updatedAnimal.isNursing || false,
-            // Include remarks/genetic code based on animal's sectionPrivacy settings
-            remarks: showRemarks ? (updatedAnimal.remarks || '') : '',
-            geneticCode: showGeneticCode ? (updatedAnimal.geneticCode || null) : null,
-            // Sync section privacy and display settings to public record
+            // Include remarks/genetic code
+            remarks: updatedAnimal.remarks || '',
+            geneticCode: updatedAnimal.geneticCode || null,
+            // Sync display settings to public record
             isDisplay: updatedAnimal.isDisplay || false,
-            sectionPrivacy: updatedAnimal.sectionPrivacy || {},
             // Include Identification fields
             microchipNumber: updatedAnimal.microchipNumber || null,
             pedigreeRegistrationId: updatedAnimal.pedigreeRegistrationId || null,
@@ -1033,9 +1037,8 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             // Store toggle settings on the public record for update purposes
             includeRemarks: toggleData.includeRemarks,
             includeGeneticCode: toggleData.includeGeneticCode,
-            // Sync section privacy and display settings
+            // Sync display settings
             isDisplay: animal.isDisplay || false,
-            sectionPrivacy: animal.sectionPrivacy || {},
         };
 
         // Use upsert to create or replace the record

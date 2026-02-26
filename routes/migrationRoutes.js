@@ -4,15 +4,14 @@ const { User, PublicProfile, Animal, PublicAnimal, Species, FieldTemplate } = re
 
 // Migration endpoint to sync privacy settings to PublicProfile (DEPRECATED)
 router.post('/sync-privacy-settings', async (req, res) => {
-    // This endpoint is deprecated - showGeneticCodePublic and showRemarksPublic have been removed
-    // Privacy is now controlled per-animal via sectionPrivacy
+    // This endpoint is deprecated - using single privacy toggle now
     res.json({
         success: false,
-        message: 'This endpoint is deprecated. Privacy settings are now controlled per-animal via sectionPrivacy.'
+        message: 'This endpoint is deprecated. Privacy is now controlled with a single showOnPublicProfile/isDisplay toggle.'
     });
 });
 
-// Migration endpoint to sync animal data to PublicAnimal based on sectionPrivacy settings
+// Migration endpoint to sync animal data to PublicAnimal (simplified sync)
 router.post('/sync-animal-privacy', async (req, res) => {
     try {
         // Get all public animals
@@ -33,16 +32,10 @@ router.post('/sync-animal-privacy', async (req, res) => {
                     continue;
                 }
 
-                // Use animal's sectionPrivacy settings (per-animal privacy control)
-                const sectionPrivacy = privateAnimal.sectionPrivacy || {};
-                const showRemarks = sectionPrivacy.remarks !== false; // Default to true if not set
-                const showGeneticCode = sectionPrivacy.geneticCode !== false; // Default to true if not set
-
-                // Update public animal with privacy-respecting data
+                // With single privacy toggle, sync all data when public
                 const updateData = {
-                    remarks: showRemarks ? (privateAnimal.remarks || '') : '',
-                    geneticCode: showGeneticCode ? (privateAnimal.geneticCode || null) : null,
-                    sectionPrivacy: privateAnimal.sectionPrivacy || {},
+                    remarks: privateAnimal.remarks || '',
+                    geneticCode: privateAnimal.geneticCode || null,
                 };
 
                 await PublicAnimal.updateOne(

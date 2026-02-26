@@ -410,34 +410,6 @@ const AnimalSchema = new mongoose.Schema({
     availableForBreeding: { type: Boolean, default: false },
     studFeeCurrency: { type: String, default: 'USD' },
     studFeeAmount: { type: Number, default: null },
-    
-    // Section-level privacy settings (true = public, false = private)
-    sectionPrivacy: {
-        geneticCode: { type: Boolean, default: true },
-        lifeStage: { type: Boolean, default: true },
-        currentMeasurements: { type: Boolean, default: true },
-        growthHistory: { type: Boolean, default: true },
-        origin: { type: Boolean, default: true },
-        estrusCycle: { type: Boolean, default: true },
-        mating: { type: Boolean, default: true },
-        studInformation: { type: Boolean, default: true },
-        damInformation: { type: Boolean, default: true },
-        preventiveCare: { type: Boolean, default: true },
-        proceduresAndDiagnostics: { type: Boolean, default: true },
-        activeMedicalRecords: { type: Boolean, default: true },
-        veterinaryCare: { type: Boolean, default: true },
-        nutrition: { type: Boolean, default: true },
-        husbandry: { type: Boolean, default: true },
-        environment: { type: Boolean, default: true },
-        behavior: { type: Boolean, default: true },
-        activity: { type: Boolean, default: true },
-        remarks: { type: Boolean, default: true },
-        endOfLife: { type: Boolean, default: true },
-        legalAdministrative: { type: Boolean, default: true },
-        breedingHistory: { type: Boolean, default: true },
-        currentOwner: { type: Boolean, default: true },
-        showTab: { type: Boolean, default: true } // Show titles, ratings, performance
-    },
 
 }, { timestamps: true });
 const Animal = mongoose.model('Animal', AnimalSchema);
@@ -589,31 +561,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     
     // Public display settings
     isDisplay: { type: Boolean, default: false }, // Main public visibility toggle
-    sectionPrivacy: {
-        geneticCode: { type: Boolean, default: true },
-        lifeStage: { type: Boolean, default: true },
-        currentMeasurements: { type: Boolean, default: true },
-        growthHistory: { type: Boolean, default: true },
-        origin: { type: Boolean, default: true },
-        estrusCycle: { type: Boolean, default: true },
-        mating: { type: Boolean, default: true },
-        studInformation: { type: Boolean, default: true },
-        damInformation: { type: Boolean, default: true },
-        preventiveCare: { type: Boolean, default: true },
-        proceduresAndDiagnostics: { type: Boolean, default: true },
-        activeMedicalRecords: { type: Boolean, default: true },
-        veterinaryCare: { type: Boolean, default: true },
-        nutrition: { type: Boolean, default: true },
-        husbandry: { type: Boolean, default: true },
-        environment: { type: Boolean, default: true },
-        behavior: { type: Boolean, default: true },
-        activity: { type: Boolean, default: true },
-        remarks: { type: Boolean, default: true },
-        endOfLife: { type: Boolean, default: true },
-        legalAdministrative: { type: Boolean, default: true },
-        breedingHistory: { type: Boolean, default: true },
-        currentOwner: { type: Boolean, default: true }
-    },
     
     // Inbreeding coefficient (cached value)
     inbreedingCoefficient: { type: Number, default: null },
