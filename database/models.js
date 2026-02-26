@@ -636,7 +636,7 @@ const LitterSchema = new mongoose.Schema({
     damPrefixName: { type: String, default: null }, // Denormalized for display
     
     pairingDate: { type: Date, default: null },
-    birthDate: { type: Date, required: true },
+    birthDate: { type: Date, default: null },
     numberBorn: { type: Number, required: true, min: 0 },
     
     // Optional administrative breakdown of males/females
