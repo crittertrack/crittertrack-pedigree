@@ -225,6 +225,7 @@ const AnimalSchema = new mongoose.Schema({
     markings: { type: String, default: null }, // Body markings/patterns
     eyeColor: { type: String, default: null }, // Eye color
     nailColor: { type: String, default: null }, // Nail/claw color (mammals)
+    size: { type: String, default: null }, // General size description (Small, Medium, Large, etc.)
     // Current measurements (snapshot - growth records track history)
     weight: { type: String, default: null }, // Current weight
     length: { type: String, default: null }, // Current length/wingspan/snout-vent length
@@ -469,6 +470,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     markings: { type: String, default: null },
     eyeColor: { type: String, default: null },
     nailColor: { type: String, default: null },
+    size: { type: String, default: null }, // General size description (Small, Medium, Large, etc.)
     // Current measurements
     weight: { type: String, default: null },
     length: { type: String, default: null },
