@@ -109,7 +109,17 @@ const ANIMAL_TEXT_FIELDS = {
     vetVisits: 'veterinary visits',
     primaryVet: 'primary veterinarian',
     heatStatus: 'heat status',
-    matingDates: 'mating dates'
+    matingDates: 'mating dates',
+    // Universal appearance fields
+    phenotype: 'phenotype',
+    morph: 'morph',
+    markings: 'markings',
+    eyeColor: 'eye color',
+    nailColor: 'nail color',
+    size: 'size',
+    weight: 'weight',
+    length: 'length',
+    carrierTraits: 'carrier traits'
 };
 
 const enforceCleanAnimalText = (animalData = {}) => {
