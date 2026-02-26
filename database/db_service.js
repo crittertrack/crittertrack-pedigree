@@ -861,7 +861,15 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         vaccinations: updates.vaccinations ? updates.vaccinations.substring(0, 50) : 'null',
         dewormingRecords: updates.dewormingRecords ? updates.dewormingRecords.substring(0, 50) : 'null',
         parasiteControl: updates.parasiteControl ? updates.parasiteControl.substring(0, 50) : 'null',
-        isDisplay: updates.isDisplay
+        isDisplay: updates.isDisplay,
+        size: updates.size,
+        phenotype: updates.phenotype,
+        morph: updates.morph,
+        markings: updates.markings,
+        eyeColor: updates.eyeColor,
+        nailColor: updates.nailColor,
+        weight: updates.weight,
+        length: updates.length
     }));
     const updatedAnimal = await Animal.findOneAndUpdate(
         { _id: animalId_backend, ownerId: appUserId_backend },
@@ -881,6 +889,16 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         hasVaccinations: !!updatedAnimal.vaccinations,
         hasDewormingRecords: !!updatedAnimal.dewormingRecords,
         hasParasiteControl: !!updatedAnimal.parasiteControl
+    });
+    console.log('[updateAnimal] ✅ Appearance fields SAVED to database:', {
+        size: updatedAnimal.size,
+        phenotype: updatedAnimal.phenotype,
+        morph: updatedAnimal.morph,
+        markings: updatedAnimal.markings,
+        eyeColor: updatedAnimal.eyeColor,
+        nailColor: updatedAnimal.nailColor,
+        weight: updatedAnimal.weight,
+        length: updatedAnimal.length
     });
 
     // If the animal is public, update or create the corresponding PublicAnimal record
