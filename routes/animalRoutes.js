@@ -1163,6 +1163,7 @@ router.get('/:id_public/offspring', async (req, res) => {
 
                 return {
                     litterId: litterRecord?._id || null,
+                    litter_id_public: litterRecord?.litter_id_public || null,
                     litterName: litterRecord?.breedingPairCodeName || null,
                     birthDate: group.birthDate,
                     sireId_public: group.otherParentType === 'dam' ? animalIdPublic : group.otherParentId,
