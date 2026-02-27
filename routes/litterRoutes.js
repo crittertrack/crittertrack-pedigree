@@ -30,7 +30,8 @@ router.post('/', async (req, res) => {
 
         res.status(201).json({
             message: 'Litter registered successfully!',
-            litterId_backend: newLitter._id
+            litterId_backend: newLitter._id,
+            litter_id_public: newLitter.litter_id_public
         });
     } catch (error) {
         console.error('Error registering litter:', error);

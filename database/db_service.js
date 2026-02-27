@@ -141,7 +141,9 @@ const getNextSequence = async (name) => {
         { new: true, upsert: true, setDefaultsOnInsert: true }
     );
     // If we inserted (upsert: true), the first ID will be 1001, which is correct (default seq is 1000).
-    const prefix = name === 'userId' ? 'CTU' : 'CTC';
+    let prefix = 'CTC'; // Default for animals
+    if (name === 'userId') prefix = 'CTU';
+    if (name === 'litterId') prefix = 'CTL';
     return prefix + ret.seq;
 };
 
@@ -1121,8 +1123,12 @@ const addLitter = async (appUserId_backend, litterData) => {
         }
     }
     
+    // Auto-assign CTL-ID if not already provided
+    const litter_id_public = litterData.litter_id_public || await getNextSequence('litterId');
+    
     const newLitter = new Litter({
         ownerId: appUserId_backend,
+        litter_id_public,
         ...litterData,
     });
     await newLitter.save();

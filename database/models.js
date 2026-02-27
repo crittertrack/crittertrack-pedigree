@@ -318,7 +318,7 @@ const AnimalSchema = new mongoose.Schema({
         stillbornCount: { type: Number, default: null },
         
         // Link to created litter (if this breeding record resulted in a litter)
-        litterId: { type: String, default: null }, // Reference to Litter._id (as string for JSON)
+        litterId: { type: String, default: null }, // Reference to Litter.litter_id_public (CTL-ID)
     }],
     
     // Sale fields
@@ -598,7 +598,11 @@ const PublicAnimal = mongoose.model('PublicAnimal', PublicAnimalSchema, 'publica
 // --- 6. LITTER SCHEMA ---
 const LitterSchema = new mongoose.Schema({
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    // Code name for the breeding pair (optional for display)
+    
+    // System-assigned litter ID (e.g., CTL1001) - used for system linkage to breeding records
+    litter_id_public: { type: String, unique: true, sparse: true, index: true, default: null },
+    
+    // User-friendly breeding pair code name (optional, e.g., "Disney's Hakuna Matata", "Breeding Project A")
     breedingPairCodeName: { type: String, default: null }, 
     
     // Sire/Dam data links to PublicAnimal records for lineage
