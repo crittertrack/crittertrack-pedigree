@@ -618,7 +618,8 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             dewormingRecords: updates.dewormingRecords,
             parasiteControl: updates.parasiteControl,
             medicalProcedures: updates.medicalProcedures,
-            labResults: updates.labResults
+            labResults: updates.labResults,
+            breedingRecords: updates.breedingRecords ? `${Array.isArray(updates.breedingRecords) ? updates.breedingRecords.length : 'invalid format'} record(s)` : 'none'
         });
         console.log('[PUT /api/animals/:id] Updates:', JSON.stringify({ 
             breederId_public: updates.breederId_public,

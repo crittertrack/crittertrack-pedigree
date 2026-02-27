@@ -874,6 +874,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         vaccinations: updates.vaccinations ? updates.vaccinations.substring(0, 50) : 'null',
         dewormingRecords: updates.dewormingRecords ? updates.dewormingRecords.substring(0, 50) : 'null',
         parasiteControl: updates.parasiteControl ? updates.parasiteControl.substring(0, 50) : 'null',
+        breedingRecords: updates.breedingRecords ? `${Array.isArray(updates.breedingRecords) ? updates.breedingRecords.length : 'invalid format'} record(s)` : 'none',
         isDisplay: updates.isDisplay,
         size: updates.size,
         phenotype: updates.phenotype,
