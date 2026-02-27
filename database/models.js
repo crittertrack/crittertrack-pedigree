@@ -313,6 +313,7 @@ const AnimalSchema = new mongoose.Schema({
         
         // Litter/Offspring fields (applicable based on gender and outcome)
         birthEventDate: { type: Date, default: null }, // Blank if no birth occurred
+        birthMethod: { type: String, enum: ['Natural', 'C-Section', 'Assisted', 'Induced', 'Unknown'], default: null },
         litterSizeBorn: { type: Number, default: null },
         litterSizeWeaned: { type: Number, default: null },
         stillbornCount: { type: Number, default: null },

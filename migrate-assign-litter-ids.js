@@ -7,10 +7,21 @@
  * Run with: node migrate-assign-litter-ids.js
  */
 
-require('dotenv').config();
+require('dotenv').config({ path: './.env' });
 const mongoose = require('mongoose');
 const { Litter } = require('./database/models');
-const { getNextSequence, connectDB } = require('./database/db_service');
+const { getNextSequence } = require('./database/db_service');
+
+const connectDB = async () => {
+    try {
+        const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crittertrack';
+        await mongoose.connect(MONGODB_URI);
+        console.log('✓ MongoDB connected');
+    } catch (error) {
+        console.error('✗ MongoDB connection failed:', error.message);
+        process.exit(1);
+    }
+};
 
 const migrateLitterIds = async () => {
     try {
