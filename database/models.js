@@ -308,6 +308,8 @@ const AnimalSchema = new mongoose.Schema({
         breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
         breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
         matingDates: { type: String, default: null }, // Single date or range, user-entered
+        mate: { type: String, default: null }, // Manual text entry or selected animal name
+        mateAnimalId: { type: String, default: null }, // Reference to selected animal ID if chosen from modal
         outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
         notes: { type: String, default: null },
         
