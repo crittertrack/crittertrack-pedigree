@@ -298,6 +298,29 @@ const AnimalSchema = new mongoose.Schema({
     reproductiveComplications: { type: String, default: null },
     reproductiveClearances: { type: String, default: null },
     
+    // Breeding Records Array (Stacking/Historical Records by Sex)
+    breedingRecords: [{
+        // ID and metadata
+        id: { type: String, default: () => Date.now().toString() },
+        recordDate: { type: Date, default: Date.now },
+        
+        // Common fields for all genders
+        breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
+        breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
+        matingDates: { type: String, default: null }, // Single date or range, user-entered
+        outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
+        notes: { type: String, default: null },
+        
+        // Litter/Offspring fields (applicable based on gender and outcome)
+        birthEventDate: { type: Date, default: null }, // Blank if no birth occurred
+        litterSizeBorn: { type: Number, default: null },
+        litterSizeWeaned: { type: Number, default: null },
+        stillbornCount: { type: Number, default: null },
+        
+        // Link to created litter (if this breeding record resulted in a litter)
+        litterId: { type: String, default: null }, // Reference to Litter._id (as string for JSON)
+    }],
+    
     // Sale fields
     isForSale: { type: Boolean, default: false },
     salePriceCurrency: { type: String, default: 'USD' },

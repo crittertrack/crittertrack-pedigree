@@ -2,7 +2,7 @@
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { Notification, User, PublicProfile, PublicAnimal } = require('../database/models');
+const { Notification, User, PublicProfile, PublicAnimal, Animal } = require('../database/models');
 const fs = require('fs');
 const { calculateInbreedingCoefficient, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
 const { ProfanityError } = require('../utils/profanityFilter');
@@ -1674,6 +1674,184 @@ router.post('/family-tree-expand', async (req, res) => {
     } catch (error) {
         console.error('Error expanding family tree:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// --- BREEDING RECORDS ROUTES ---
+
+/**
+ * POST /animals/:animalId/breeding-records
+ * Add a new breeding record to an animal
+ */
+router.post('/:animalId/breeding-records', async (req, res) => {
+    try {
+        const { animalId } = req.params;
+        const userId = req.user?._id;
+        
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        
+        const animal = await Animal.findOne({ _id: animalId, ownerId: userId });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found' });
+        }
+        
+        const {
+            breedingMethod,
+            breedingConditionAtTime,
+            matingDates,
+            outcome,
+            birthEventDate,
+            litterSizeBorn,
+            litterSizeWeaned,
+            stillbornCount,
+            notes
+        } = req.body;
+        
+        // Validate required fields
+        if (!breedingMethod || !outcome) {
+            return res.status(400).json({ message: 'Breeding Method and Outcome are required' });
+        }
+        
+        // Create new breeding record
+        const newRecord = {
+            id: Date.now().toString(),
+            recordDate: new Date(),
+            breedingMethod,
+            breedingConditionAtTime: breedingConditionAtTime || null,
+            matingDates: matingDates || null,
+            outcome,
+            birthEventDate: birthEventDate || null,
+            litterSizeBorn: litterSizeBorn || null,
+            litterSizeWeaned: litterSizeWeaned || null,
+            stillbornCount: stillbornCount || null,
+            notes: notes || null
+        };
+        
+        // Add record to breeding records array
+        if (!animal.breedingRecords) {
+            animal.breedingRecords = [];
+        }
+        animal.breedingRecords.push(newRecord);
+        
+        await animal.save();
+        
+        // Log activity
+        await logUserActivity(userId, USER_ACTIONS.animal_record_create, `Added breeding record for ${animal.name}`);
+        
+        res.status(201).json({ 
+            message: 'Breeding record added successfully',
+            record: newRecord,
+            animal
+        });
+    } catch (error) {
+        console.error('Error adding breeding record:', error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+});
+
+/**
+ * PUT /animals/:animalId/breeding-records/:recordId
+ * Update an existing breeding record
+ */
+router.put('/:animalId/breeding-records/:recordId', async (req, res) => {
+    try {
+        const { animalId, recordId } = req.params;
+        const userId = req.user?._id;
+        
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        
+        const animal = await Animal.findOne({ _id: animalId, ownerId: userId });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found' });
+        }
+        
+        // Find and update the record
+        const record = animal.breedingRecords.find(r => r.id === recordId);
+        if (!record) {
+            return res.status(404).json({ message: 'Breeding record not found' });
+        }
+        
+        const {
+            breedingMethod,
+            breedingConditionAtTime,
+            matingDates,
+            outcome,
+            birthEventDate,
+            litterSizeBorn,
+            litterSizeWeaned,
+            stillbornCount,
+            notes
+        } = req.body;
+        
+        // Validate required fields
+        if (breedingMethod) record.breedingMethod = breedingMethod;
+        if (outcome) record.outcome = outcome;
+        if (breedingConditionAtTime) record.breedingConditionAtTime = breedingConditionAtTime;
+        if (matingDates !== undefined) record.matingDates = matingDates;
+        if (birthEventDate !== undefined) record.birthEventDate = birthEventDate;
+        if (litterSizeBorn !== undefined) record.litterSizeBorn = litterSizeBorn;
+        if (litterSizeWeaned !== undefined) record.litterSizeWeaned = litterSizeWeaned;
+        if (stillbornCount !== undefined) record.stillbornCount = stillbornCount;
+        if (notes !== undefined) record.notes = notes;
+        
+        await animal.save();
+        
+        // Log activity
+        await logUserActivity(userId, USER_ACTIONS.animal_record_update, `Updated breeding record for ${animal.name}`);
+        
+        res.json({ 
+            message: 'Breeding record updated successfully',
+            record,
+            animal
+        });
+    } catch (error) {
+        console.error('Error updating breeding record:', error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+});
+
+/**
+ * DELETE /animals/:animalId/breeding-records/:recordId
+ * Delete a breeding record
+ */
+router.delete('/:animalId/breeding-records/:recordId', async (req, res) => {
+    try {
+        const { animalId, recordId } = req.params;
+        const userId = req.user?._id;
+        
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        
+        const animal = await Animal.findOne({ _id: animalId, ownerId: userId });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found' });
+        }
+        
+        // Find and remove the record
+        const originalLength = animal.breedingRecords.length;
+        animal.breedingRecords = animal.breedingRecords.filter(r => r.id !== recordId);
+        
+        if (animal.breedingRecords.length === originalLength) {
+            return res.status(404).json({ message: 'Breeding record not found' });
+        }
+        
+        await animal.save();
+        
+        // Log activity
+        await logUserActivity(userId, USER_ACTIONS.animal_record_delete, `Deleted breeding record for ${animal.name}`);
+        
+        res.json({ 
+            message: 'Breeding record deleted successfully',
+            animal
+        });
+    } catch (error) {
+        console.error('Error deleting breeding record:', error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 });
 
