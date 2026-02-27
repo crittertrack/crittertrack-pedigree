@@ -52,7 +52,6 @@ const {
 // Resolve internal Animal _id when routes receive either a backend ObjectId
 // or a numeric public id (id_public). This avoids Mongoose CastError when
 // the client passes a public id like "4" instead of the 24-char ObjectId.
-const { Animal } = require('../database/models');
 
 router.param('id_backend', async (req, res, next, value) => {
     try {
