@@ -124,7 +124,7 @@ const ANIMAL_TEXT_FIELDS = {
 const enforceCleanAnimalText = (animalData = {}) => {
     enforceCleanFields(animalData, ANIMAL_TEXT_FIELDS);
     enforceCleanArrayFields(animalData.tags, 'animal tag');
-    enforceCleanNestedArrayFields(animalData.ownershipHistory, 'name', 'ownership entry');
+    enforceCleanNestedArrayFields(animalData.keeperHistory, 'name', 'ownership entry');
     enforceCleanNestedArrayFields(animalData.growthRecords, 'notes', 'growth record note');
 };
 

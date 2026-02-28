@@ -380,7 +380,7 @@ const CORE_UNIVERSAL_FIELDS = {
     'color',             // Base color (universal across all species)
     'currentOwnerDisplay', // Owner display name
     'remarks',           // General notes/remarks
-    'ownershipHistory',  // Ownership history
+    'keeperHistory',  // Ownership history
     'breederAssignedId', // Breeder ID
     'pedigreeRegistrationId', // Registration #
     

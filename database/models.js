@@ -215,7 +215,7 @@ const AnimalSchema = new mongoose.Schema({
     // Tab 2: Status & Privacy Fields
     keeperName: { type: String, default: null }, // Free-text keeper/custodian name
     groupRole: { type: String, default: null }, // Role in group/colony (e.g., alpha, beta, omega)
-    ownershipHistory: [{
+    keeperHistory: [{
         name: { type: String },
         userId_public: { type: String, default: null }, // Linked CritterTrack user (optional)
         country: { type: String, default: null }
@@ -965,7 +965,7 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Keeper Name' },
             required: { type: Boolean, default: false }
         },
-        ownershipHistory: { 
+        keeperHistory: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Keeper History' },
             required: { type: Boolean, default: false }

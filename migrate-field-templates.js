@@ -38,7 +38,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
@@ -210,7 +210,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
@@ -382,7 +382,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
@@ -556,7 +556,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
@@ -730,7 +730,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
@@ -905,7 +905,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
@@ -1079,7 +1079,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
@@ -1253,7 +1253,7 @@ const templates = [
             
             // Ownership
             currentOwner: createFieldConfig(true, 'Current Owner', false),
-            ownershipHistory: createFieldConfig(true, 'Ownership History', false),
+            keeperHistory: createFieldConfig(true, 'Keeper History', false),
             isOwned: createFieldConfig(true, 'Currently Owned', false),
             manualBreederName: createFieldConfig(true, 'Breeder Name (Manual)', false),
             currentOwnerDisplay: createFieldConfig(true, 'Current Owner', false),
