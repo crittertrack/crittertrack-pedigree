@@ -208,6 +208,8 @@ const registerUser = async (userData) => {
         allowMessages: true, // Enable messages by default
         emailNotificationPreference: 'none', // Disable email notifications by default
         role: 'user', // All new users start as regular users
+        monthlyDonationActive: false, // New users start without donation badges
+        lastDonationDate: null, // New users have no donation history
     });
     await user.save();
 
@@ -227,6 +229,8 @@ const registerUser = async (userData) => {
         showWebsiteURL: user.showWebsiteURL || false,
         allowMessages: true, // Enable messages by default
         emailNotificationPreference: 'none', // Disable email notifications by default
+        monthlyDonationActive: false, // New users start without donation badges
+        lastDonationDate: null, // New users have no donation history
     });
     await publicProfile.save();
 
@@ -529,6 +533,18 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         // Update public profile as well
         const showBioUpdateResult = await PublicProfile.updateOne({ id_public: user.id_public }, { showBio: updates.showBio });
         console.log('[updateUserProfile] PublicProfile showBio update result:', showBioUpdateResult);
+    }
+    
+    // Handle donation badge field updates
+    if (updates.monthlyDonationActive !== undefined) {
+        user.monthlyDonationActive = updates.monthlyDonationActive;
+        // Update public profile as well
+        await PublicProfile.updateOne({ id_public: user.id_public }, { monthlyDonationActive: updates.monthlyDonationActive });
+    }
+    if (updates.lastDonationDate !== undefined) {
+        user.lastDonationDate = updates.lastDonationDate;
+        // Update public profile as well
+        await PublicProfile.updateOne({ id_public: user.id_public }, { lastDonationDate: updates.lastDonationDate });
     }
 
     // Note: Password update would require a separate, secure endpoint that handles current password verification.
@@ -1690,6 +1706,8 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
         showBreederName: user.showBreederName,
         profileImage: user.profileImage,
         createdAt: user.creationDate || new Date(),
+        monthlyDonationActive: user.monthlyDonationActive || false,
+        lastDonationDate: user.lastDonationDate || null,
     });
     await publicProfile.save();
 

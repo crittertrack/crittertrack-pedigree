@@ -91,6 +91,10 @@ const UserSchema = new mongoose.Schema({
     banType: { type: String, enum: ['banned', 'ip-ban'], default: null },
     bannedIP: { type: String, default: null },
     moderatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    
+    // Donation badge fields
+    monthlyDonationActive: { type: Boolean, default: false },  // Monthly supporter badge (diamond)
+    lastDonationDate: { type: Date, default: null },           // Last one-time donation (gift badge, 31 days)
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -130,6 +134,10 @@ const PublicProfileSchema = new mongoose.Schema({
     hasSeenWelcomeBanner: { type: Boolean, default: false }, // Track if user has dismissed the welcome banner
     hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
     speciesOrder: { type: [String], default: [] }, // User's custom order for species display
+    
+    // Donation badge fields
+    monthlyDonationActive: { type: Boolean, default: false },  // Monthly supporter badge (diamond)
+    lastDonationDate: { type: Date, default: null },           // Last one-time donation (gift badge, 31 days)
 }, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
 
@@ -307,7 +315,8 @@ const AnimalSchema = new mongoose.Schema({
         // Common fields for all genders
         breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
         breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
-        matingDates: { type: String, default: null }, // Single date or range, user-entered
+        matingDate: { type: Date, default: null }, // Unified mating date field (replaces matingDates)
+        matingDates: { type: String, default: null }, // DEPRECATED: Use matingDate instead (kept for backward compatibility)
         mate: { type: String, default: null }, // Manual text entry or selected animal name
         mateAnimalId: { type: String, default: null }, // Reference to selected animal ID if chosen from modal
         outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
@@ -617,11 +626,12 @@ const LitterSchema = new mongoose.Schema({
     // Enhanced breeding information (aligned with breeding records)
     breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
     breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
-    matingDates: { type: String, default: null }, // Single date or range, user-entered
+    matingDate: { type: Date, default: null }, // Unified mating date field (replaces pairingDate and matingDates)
     outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
     
     // Birth and offspring details
-    pairingDate: { type: Date, default: null },
+    pairingDate: { type: Date, default: null }, // DEPRECATED: Use matingDate instead (kept for backward compatibility)
+    matingDates: { type: String, default: null }, // DEPRECATED: Use matingDate instead (kept for backward compatibility)
     birthDate: { type: Date, default: null },
     birthMethod: { type: String, enum: ['Natural', 'C-Section', 'Assisted', 'Induced', 'Unknown'], default: null },
     

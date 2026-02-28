@@ -238,6 +238,89 @@ router.patch('/users/:userId/role', async (req, res) => {
     }
 });
 
+// PATCH /api/admin/users/:userId/donation-badge - Manage user donation badges
+router.patch('/users/:userId/donation-badge', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { type, monthlyDonationActive, lastDonationDate } = req.body;
+
+        if (!type || !['gift', 'monthly', 'clear'].includes(type)) {
+            return res.status(400).json({ error: 'Invalid badge type. Use: gift, monthly, or clear' });
+        }
+
+        let updateData = {};
+
+        switch (type) {
+            case 'gift':
+                // Grant gift badge (set lastDonationDate to now)
+                updateData.lastDonationDate = lastDonationDate || new Date();
+                break;
+                
+            case 'monthly':
+                // Toggle monthly supporter badge
+                updateData.monthlyDonationActive = monthlyDonationActive;
+                break;
+                
+            case 'clear':
+                // Remove all donation badges
+                updateData.monthlyDonationActive = false;
+                updateData.lastDonationDate = null;
+                break;
+        }
+
+        // Update the user
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.userId, 
+            updateData, 
+            { new: true, select: 'email personalName monthlyDonationActive lastDonationDate id_public' }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Create audit log
+        let auditDetails = {};
+        let auditReason = '';
+
+        switch (type) {
+            case 'gift':
+                auditDetails = { lastDonationDate: updateData.lastDonationDate };
+                auditReason = 'Gift donation badge granted (31 days)';
+                break;
+            case 'monthly':
+                auditDetails = { monthlyDonationActive: updateData.monthlyDonationActive };
+                auditReason = monthlyDonationActive ? 'Monthly supporter badge granted' : 'Monthly supporter badge removed';
+                break;
+            case 'clear':
+                auditDetails = { monthlyDonationActive: false, lastDonationDate: null };
+                auditReason = 'All donation badges cleared';
+                break;
+        }
+
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'donation_badge_managed',
+            targetType: 'user',
+            targetId: updatedUser._id,
+            targetName: `${updatedUser.email} (${updatedUser.id_public || 'No ID'})`,
+            details: auditDetails,
+            reason: auditReason,
+            ipAddress: req.ip || req.connection.remoteAddress
+        });
+
+        res.json({ 
+            message: `Donation badge ${type} operation completed successfully`,
+            user: updatedUser 
+        });
+    } catch (error) {
+        console.error('Error managing donation badge:', error);
+        res.status(500).json({ error: 'Failed to manage donation badge' });
+    }
+});
+
 // POST /api/admin/users/:userId/warn - Issue warning to user
 router.post('/users/:userId/warn', async (req, res) => {
     try {
