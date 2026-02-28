@@ -171,7 +171,6 @@ const AnimalSchema = new mongoose.Schema({
     // Breeder and owner info
     breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder (user)
     manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
-    ownerName: { type: String, default: null }, // Custom owner name (only for local view)
     
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
@@ -214,8 +213,7 @@ const AnimalSchema = new mongoose.Schema({
     geneticCode: { type: String, default: null },
     
     // Tab 2: Status & Privacy Fields
-    currentOwner: { type: String, default: null },
-    currentOwnerDisplay: { type: String, default: null }, // Display name for current owner
+    keeperName: { type: String, default: null }, // Free-text keeper/custodian name
     groupRole: { type: String, default: null }, // Role in group/colony (e.g., alpha, beta, omega)
     ownershipHistory: [{
         name: { type: String },
@@ -488,7 +486,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
     
     // Ownership and breeding status
-    currentOwnerDisplay: { type: String, default: null }, // Display name for current owner
+    keeperName: { type: String, default: null }, // Free-text keeper/custodian name
     groupRole: { type: String, default: null }, // Role in group/colony
     isOwned: { type: Boolean, default: true },
     isPregnant: { type: Boolean, default: false },
@@ -962,9 +960,9 @@ const FieldTemplateSchema = new mongoose.Schema({
         },
         
         // ===== TAB 2: OWNERSHIP =====
-        currentOwner: { 
+        keeperName: { 
             enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Current Owner' },
+            label: { type: String, default: 'Keeper Name' },
             required: { type: Boolean, default: false }
         },
         ownershipHistory: { 
@@ -982,11 +980,7 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Breeder Name (Manual)' },
             required: { type: Boolean, default: false }
         },
-        currentOwnerDisplay: { 
-            enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Current Owner Display' },
-            required: { type: Boolean, default: false }
-        },
+
         
         // ===== TAB 3: PHYSICAL PROFILE =====
         color: { 
