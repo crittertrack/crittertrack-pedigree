@@ -836,3 +836,5 @@ setInterval(broadcastCronJob, 60000);
 
 // Also run once on startup after a short delay
 setTimeout(broadcastCronJob, 5000);
+
+// Updated for mate data debug logging
