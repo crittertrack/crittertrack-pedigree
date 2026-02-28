@@ -893,6 +893,20 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         sizeType: typeof updates.size 
     });
     
+    // Debug breeding records specifically
+    console.log('[updateAnimal] Breeding records debug:', {
+        hasBreedingRecords: 'breedingRecords' in updates,
+        breedingRecordsValue: updates.breedingRecords,
+        breedingRecordsLength: Array.isArray(updates.breedingRecords) ? updates.breedingRecords.length : 'not array'
+    });
+    if (Array.isArray(updates.breedingRecords) && updates.breedingRecords.length > 0) {
+        console.log('[updateAnimal] First breeding record mate data:', {
+            mate: updates.breedingRecords[0].mate,
+            mateAnimalId: updates.breedingRecords[0].mateAnimalId,
+            id: updates.breedingRecords[0].id
+        });
+    }
+    
     const updatedAnimal = await Animal.findOneAndUpdate(
         { _id: animalId_backend, ownerId: appUserId_backend },
         { $set: updates },
@@ -904,6 +918,20 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
     
     console.log('[updateAnimal] MongoDB returned document with size:', updatedAnimal.size);
+    
+    // Debug breeding records that were saved
+    console.log('[updateAnimal] 🔍 Breeding records SAVED to database:', {
+        hasBreedingRecords: !!updatedAnimal.breedingRecords,
+        breedingRecordsLength: Array.isArray(updatedAnimal.breedingRecords) ? updatedAnimal.breedingRecords.length : 'not array',
+        breedingRecordsValue: updatedAnimal.breedingRecords
+    });
+    if (Array.isArray(updatedAnimal.breedingRecords) && updatedAnimal.breedingRecords.length > 0) {
+        console.log('[updateAnimal] 🔍 First saved breeding record mate data:', {
+            mate: updatedAnimal.breedingRecords[0].mate,
+            mateAnimalId: updatedAnimal.breedingRecords[0].mateAnimalId,
+            id: updatedAnimal.breedingRecords[0].id
+        });
+    }
     
     // Debug log the saved record
     console.log('[updateAnimal] ✅ Health records SAVED to database:', {
