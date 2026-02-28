@@ -217,8 +217,8 @@ const AnimalSchema = new mongoose.Schema({
     groupRole: { type: String, default: null }, // Role in group/colony (e.g., alpha, beta, omega)
     ownershipHistory: [{
         name: { type: String },
-        startDate: { type: String },
-        endDate: { type: String, default: null }
+        userId_public: { type: String, default: null }, // Linked CritterTrack user (optional)
+        country: { type: String, default: null }
     }],
     
     // Tab 3: Physical Profile Fields
@@ -967,7 +967,7 @@ const FieldTemplateSchema = new mongoose.Schema({
         },
         ownershipHistory: { 
             enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Ownership History' },
+            label: { type: String, default: 'Keeper History' },
             required: { type: Boolean, default: false }
         },
         isOwned: { 
