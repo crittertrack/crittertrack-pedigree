@@ -641,9 +641,10 @@ const LitterSchema = new mongoose.Schema({
     litterSizeWeaned: { type: Number, default: null }, // Total number weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn
     
-    // Optional administrative breakdown of males/females  
+    // Optional administrative breakdown of males/females/unknown  
     maleCount: { type: Number, default: null },
     femaleCount: { type: Number, default: null },
+    unknownCount: { type: Number, default: null },
     
     // Public IDs of offspring animals that came from this litter
     offspringIds_public: { type: [String], default: [] }, 
