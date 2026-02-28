@@ -614,11 +614,24 @@ const LitterSchema = new mongoose.Schema({
     damId_public: { type: String, default: null },
     damPrefixName: { type: String, default: null }, // Denormalized for display
     
+    // Enhanced breeding information (aligned with breeding records)
+    breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
+    breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
+    matingDates: { type: String, default: null }, // Single date or range, user-entered
+    outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
+    
+    // Birth and offspring details
     pairingDate: { type: Date, default: null },
     birthDate: { type: Date, default: null },
-    numberBorn: { type: Number, required: true, min: 0 },
+    birthMethod: { type: String, enum: ['Natural', 'C-Section', 'Assisted', 'Induced', 'Unknown'], default: null },
     
-    // Optional administrative breakdown of males/females
+    // Comprehensive offspring counts
+    litterSizeBorn: { type: Number, default: null }, // Total number born (replaces numberBorn)
+    numberBorn: { type: Number, required: false, min: 0, default: null }, // Legacy field (will sync with litterSizeBorn)
+    litterSizeWeaned: { type: Number, default: null }, // Total number weaned
+    stillbornCount: { type: Number, default: null }, // Number of stillborn
+    
+    // Optional administrative breakdown of males/females  
     maleCount: { type: Number, default: null },
     femaleCount: { type: Number, default: null },
     
