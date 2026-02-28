@@ -641,7 +641,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Check if user wants only owned animals (not view-only)
     const onlyOwned = filters.isOwned === 'true' || filters.isOwned === true;
     
-    console.log('[getUsersAnimals] User:', appUserId_backend, 'onlyOwned:', onlyOwned, 'filters:', filters);
+
     
     // Start with base query
     let baseQuery;
@@ -652,7 +652,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
             ownerId: appUserId_backend,
             isOwned: true
         };
-        console.log('[getUsersAnimals] onlyOwned baseQuery:', JSON.stringify(baseQuery));
+
     } else {
         // "All Animals" filter: All animals the user created OR received as view-only
         baseQuery = {
@@ -720,16 +720,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
 
     // Sort by birth date descending (most recent first)
     const docs = await Animal.find(query).sort({ birthDate: -1 }).lean();
-    console.log('[getUsersAnimals] Query:', JSON.stringify(query));
-    console.log('[getUsersAnimals] Found', docs.length, 'animals');
-    if (docs.length > 0) {
-        console.log('[getUsersAnimals] Sample results:', docs.slice(0, 3).map(d => ({
-            id: d.id_public,
-            isOwned: d.isOwned,
-            ownerId: d.ownerId.toString(),
-            userId: appUserId_backend.toString()
-        })));
-    }
+
     // Provide backward-compatible alias fields expected by the frontend
     // Also add isViewOnly flag to identify view-only animals
     return docs.map(d => ({
