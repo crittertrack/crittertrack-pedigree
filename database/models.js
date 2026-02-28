@@ -329,6 +329,7 @@ const AnimalSchema = new mongoose.Schema({
         
         // Link to created litter (if this breeding record resulted in a litter)
         litterId: { type: String, default: null }, // Reference to Litter.litter_id_public (CTL-ID)
+        litterName: { type: String, default: null }, // User-assigned litter name (cached from breedingPairCodeName)
     }],
     
     // Sale fields
