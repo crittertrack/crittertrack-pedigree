@@ -40,6 +40,21 @@ router.post('/', async (req, res) => {
 });
 
 
+// GET /api/litters/:id_public
+// Gets a single litter by its public ID (must belong to the logged-in user).
+router.get('/:id_public', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const { Litter } = require('../database/models');
+        const litter = await Litter.findOne({ litter_id_public: req.params.id_public, ownerId: appUserId_backend });
+        if (!litter) return res.status(404).json({ message: 'Litter not found.' });
+        res.status(200).json(litter);
+    } catch (error) {
+        console.error('Error fetching litter by id_public:', error);
+        res.status(500).json({ message: 'Internal server error while fetching litter.' });
+    }
+});
+
 // GET /api/litters
 // 2. Gets all litters for the logged-in user (private list).
 router.get('/', async (req, res) => {
