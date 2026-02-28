@@ -602,4 +602,87 @@ router.get('/status', protect, async (req, res) => {
     }
 });
 
+// PUT /api/auth/change-email
+// Changes the user's email address
+router.put('/change-email', protect, async (req, res) => {
+    try {
+        const { newEmail } = req.body;
+        const userId = req.user._id;
+
+        // Validate input
+        if (!newEmail) {
+            return res.status(400).json({ message: 'New email address is required.' });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            return res.status(400).json({ message: 'Invalid email format.' });
+        }
+
+        const normalizedEmail = newEmail.toLowerCase().trim();
+
+        // Check if the new email is the same as current
+        if (normalizedEmail === req.user.email) {
+            return res.status(400).json({ message: 'New email must be different from current email.' });
+        }
+
+        // Check if email is already in use by another user
+        const existingUser = await User.findOne({ 
+            email: normalizedEmail, 
+            _id: { $ne: userId } 
+        });
+
+        if (existingUser) {
+            return res.status(409).json({ message: 'Email address is already in use by another account.' });
+        }
+
+        // Update the user's email
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { email: normalizedEmail },
+            { new: true, runValidators: true }
+        ).select('email id_public personalName');
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Log the email change activity
+        logUserActivity({
+            userId: updatedUser._id,
+            id_public: updatedUser.id_public,
+            action: USER_ACTIONS.EMAIL_CHANGE,
+            details: { 
+                oldEmail: req.user.email,
+                newEmail: normalizedEmail 
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
+
+        console.log(`[AUTH] Email changed for user ${updatedUser.id_public}: ${req.user.email} → ${normalizedEmail}`);
+
+        res.status(200).json({ 
+            message: 'Email address updated successfully.',
+            newEmail: normalizedEmail
+        });
+
+    } catch (error) {
+        console.error('Error changing email:', error);
+        
+        // Handle unique constraint violation (race condition)
+        if (error.code === 11000 && error.keyPattern?.email) {
+            return res.status(409).json({ message: 'Email address is already in use.' });
+        }
+        
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: 'Invalid email format.' });
+        }
+        
+        res.status(500).json({ message: 'Failed to update email address.' });
+    }
+});
+
 module.exports = router;

@@ -163,6 +163,7 @@ const USER_ACTIONS = {
     LOGIN: 'login',
     LOGOUT: 'logout',
     PASSWORD_CHANGE: 'password_change',
+    EMAIL_CHANGE: 'email_change',
     
     // Profile
     PROFILE_UPDATE: 'profile_update',
