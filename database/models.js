@@ -381,6 +381,7 @@ const AnimalSchema = new mongoose.Schema({
     crateTrained: { type: Boolean, default: null },
     litterTrained: { type: Boolean, default: null },
     leashTrained: { type: Boolean, default: null },
+    freeFlightTrained: { type: Boolean, default: null },
     
     // Tab 9: Behavior & Welfare Fields
     temperament: { type: String, default: null },
