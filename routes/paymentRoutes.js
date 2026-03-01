@@ -64,8 +64,8 @@ router.post('/paypal/order/create', async (req, res) => {
                 application_context: {
                     brand_name: 'CritterTrack',
                     user_action: 'PAY_NOW',
-                    return_url: 'https://crittertrack.app/donation?donated=1',
-                    cancel_url: 'https://crittertrack.app/donation?cancelled=1'
+                    return_url: 'https://crittertrack.net/donation?donated=1',
+                    cancel_url: 'https://crittertrack.net/donation?cancelled=1'
                 }
             },
             {
@@ -140,8 +140,8 @@ router.post('/paypal/subscription/create', async (req, res) => {
                     payer_selected: 'PAYPAL',
                     payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED'
                 },
-                return_url: 'https://crittertrack.app/donation?subscribed=1',
-                cancel_url: 'https://crittertrack.app/donation?cancelled=1'
+                return_url: 'https://crittertrack.net/donation?subscribed=1',
+                cancel_url: 'https://crittertrack.net/donation?cancelled=1'
             }
         };
         if (idPublic) subscriptionBody.custom_id = idPublic;
