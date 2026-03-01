@@ -259,6 +259,10 @@ router.post('/paypal/webhook', async (req, res) => {
                 await setMonthlyBadge(customId, true);
                 break;
 
+            case 'BILLING.SUBSCRIPTION.RE-ACTIVATED':
+                await setMonthlyBadge(customId, true);
+                break;
+
             case 'BILLING.SUBSCRIPTION.CANCELLED':
             case 'BILLING.SUBSCRIPTION.SUSPENDED':
             case 'BILLING.SUBSCRIPTION.EXPIRED':
