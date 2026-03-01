@@ -106,18 +106,27 @@ router.get('/moderator-conversations', async (req, res) => {
                     lastMessage: msg.message,
                     lastMessageAt: msg.createdAt,
                     messageCount: 0,
+                    unreadByUser: 0,      // mod-sent messages not yet read by user
+                    lastSenderIsUser: false, // whether the latest message was from the user
                     initiatedBy: null // Will be set from first message
                 });
             }
             
             const conversation = conversationsMap.get(msg.conversationId);
             conversation.messageCount++;
+
+            // Count mod-sent messages the user hasn't read yet
+            if (msg.isModeratorMessage && !msg.read) {
+                conversation.unreadByUser++;
+            }
             
             // Update to the most recent message (allMessages is sorted by createdAt desc)
             if (!conversation.lastMessageUpdated) {
                 conversation.lastMessage = msg.message;
                 conversation.lastMessageAt = msg.createdAt;
                 conversation.lastMessageUpdated = true;
+                // Not a moderator message = sent by the regular user
+                conversation.lastSenderIsUser = !msg.isModeratorMessage;
             }
             
             // Set initiatedBy from moderator messages
