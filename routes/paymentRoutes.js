@@ -39,6 +39,89 @@ async function setMonthlyBadge(idPublic, active) {
     return user;
 }
 
+// ── POST /api/payments/paypal/order/create ───────────────────────────────────
+// Creates a one-time PayPal order and returns the approval URL.
+router.post('/paypal/order/create', async (req, res) => {
+    try {
+        const idPublic = req.user?.id_public;
+        if (!idPublic) return res.status(401).json({ error: 'Cannot identify user from token' });
+
+        const amount = parseFloat(req.body.amount);
+        if (!amount || amount < 1 || amount > 10000) {
+            return res.status(400).json({ error: 'Amount must be between $1 and $10,000' });
+        }
+
+        const token = await getPayPalToken();
+        const response = await axios.post(
+            `${PAYPAL_BASE}/v2/checkout/orders`,
+            {
+                intent: 'CAPTURE',
+                purchase_units: [{
+                    amount: { currency_code: 'USD', value: amount.toFixed(2) },
+                    description: 'CritterTrack One-Time Donation',
+                    custom_id: idPublic
+                }],
+                application_context: {
+                    brand_name: 'CritterTrack',
+                    user_action: 'PAY_NOW',
+                    return_url: 'https://crittertrack.app/donation?donated=1',
+                    cancel_url: 'https://crittertrack.app/donation?cancelled=1'
+                }
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'PayPal-Request-Id': `order-${idPublic}-${Date.now()}`
+                }
+            }
+        );
+
+        const approvalLink = response.data.links?.find(l => l.rel === 'approve');
+        if (!approvalLink) return res.status(500).json({ error: 'No approval URL from PayPal' });
+
+        res.json({ approvalUrl: approvalLink.href, orderId: response.data.id });
+    } catch (err) {
+        console.error('[PayPal] Create order error:', err.response?.data || err.message);
+        res.status(500).json({ error: 'Failed to create order' });
+    }
+});
+
+// ── POST /api/payments/paypal/order/capture ───────────────────────────────────
+// Captures an approved order and grants the gift badge.
+router.post('/paypal/order/capture', async (req, res) => {
+    try {
+        const { orderID } = req.body;
+        if (!orderID) return res.status(400).json({ error: 'orderID is required' });
+
+        const idPublic = req.user?.id_public;
+        if (!idPublic) return res.status(401).json({ error: 'Cannot identify user from token' });
+
+        const token = await getPayPalToken();
+        const response = await axios.post(
+            `${PAYPAL_BASE}/v2/checkout/orders/${orderID}/capture`,
+            {},
+            { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        );
+
+        if (!['COMPLETED'].includes(response.data.status)) {
+            return res.status(400).json({ error: `Order status is '${response.data.status}'` });
+        }
+
+        // Grant gift badge
+        const { PublicProfile } = require('../database/models');
+        const now = new Date();
+        await User.findOneAndUpdate({ id_public: idPublic }, { lastDonationDate: now });
+        await PublicProfile.updateOne({ id_public: idPublic }, { lastDonationDate: now });
+
+        console.log(`[PayPal] Gift badge granted for ${idPublic}`);
+        res.json({ success: true, message: '🎁 Thank you! Your gift badge has been activated.' });
+    } catch (err) {
+        console.error('[PayPal] Capture order error:', err.response?.data || err.message);
+        res.status(500).json({ error: 'Failed to capture order' });
+    }
+});
+
 // ── POST /api/payments/paypal/subscription/create ────────────────────────────
 // Creates a PayPal subscription and returns the approval URL for redirect.
 router.post('/paypal/subscription/create', async (req, res) => {
