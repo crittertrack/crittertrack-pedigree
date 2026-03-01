@@ -77,8 +77,7 @@ router.get('/:id_public/offspring', async (req, res) => {
             { litterId: litter._id },
             { id_public: 1, name: 1, prefix: 1, suffix: 1, gender: 1, birthDate: 1, species: 1, imageUrl: 1, photoUrl: 1, status: 1, isDisplay: 1 }
         ).lean();
-        const result = animals.map(a => ({ ...a, isPrivate: !a.isDisplay }));
-        res.status(200).json(result);
+        res.status(200).json(animals);
     } catch (error) {
         console.error('Error fetching litter offspring:', error);
         res.status(500).json({ message: 'Internal server error.' });
