@@ -1,4 +1,4 @@
-/**
+﻿/**
  * One-time migration: recalculate and cache inbreedingCoefficient for ALL animals.
  *
  * Run with:  node recalculate-all-coi.js
@@ -10,12 +10,20 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
+const fs = require('fs');
 
 const DRY_RUN = process.argv.includes('--dry-run');
+const LOG_FILE = process.argv.find(a => a.startsWith('--log='))?.split('=')[1] || null;
+
+// Write to both stdout and optional log file, always flushed
+function log(msg) {
+    process.stdout.write(msg + '\n');
+    if (LOG_FILE) fs.appendFileSync(LOG_FILE, msg + '\n');
+}
 
 async function main() {
     await mongoose.connect(process.env.MONGODB_URI || process.env.DB_URI);
-    console.log('Connected to MongoDB');
+    log('Connected to MongoDB');
 
     const { Animal, PublicAnimal } = require('./database/models');
     const { calculateInbreedingCoefficient } = require('./utils/inbreeding');
@@ -28,7 +36,7 @@ async function main() {
 
     // Load all animals (only the fields we need for topo sort + recalc)
     const all = await Animal.find({}).lean().select('id_public sireId_public damId_public fatherId_public motherId_public inbreedingCoefficient');
-    console.log(`Found ${all.length} animals`);
+    log(`Found ${all.length} animals`);
 
     // Build adjacency: child -> parents, and in-degree map for topological sort
     const byId = new Map(all.map(a => [a.id_public, a]));
@@ -50,7 +58,7 @@ async function main() {
         }
     }
 
-    // Kahn's algorithm — roots first, then children
+    // Kahn's algorithm â€” roots first, then children
     const queue = [];
     for (const [id, deg] of inDegree) {
         if (deg === 0) queue.push(id);
@@ -75,23 +83,26 @@ async function main() {
         if (!inOrder.has(a.id_public)) order.push(a.id_public);
     }
 
-    console.log(`Processing ${order.length} animals in topological order…\n`);
+    log(`Processing ${order.length} animals in topological orderâ€¦\n`);
 
     for (const id_public of order) {
         processed++;
         try {
-            const coeff = await calculateInbreedingCoefficient(id_public, fetchAnimal, 50);
+            const coeff = await Promise.race([
+                calculateInbreedingCoefficient(id_public, fetchAnimal, 50),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 30000))
+            ]);
             const current = byId.get(id_public)?.inbreedingCoefficient;
             const changed = current !== coeff;
 
             if (DRY_RUN) {
-                if (changed) console.log(`[DRY] ${id_public}: ${current ?? 'null'} → ${coeff}`);
+                if (changed) log(`[DRY] ${id_public}: ${current ?? 'null'} â†’ ${coeff}`);
             } else {
                 await Animal.updateOne({ id_public }, { inbreedingCoefficient: coeff });
                 await PublicAnimal.updateOne({ id_public }, { inbreedingCoefficient: coeff });
                 if (changed) {
                     updated++;
-                    console.log(`[UPDATED] ${id_public}: ${current ?? 'null'} → ${coeff}`);
+                    log(`[UPDATED] ${id_public}: ${current ?? 'null'} â†’ ${coeff}`);
                 }
             }
         } catch (err) {
@@ -100,12 +111,12 @@ async function main() {
         }
 
         if (processed % 50 === 0) {
-            console.log(`  … ${processed}/${order.length} processed, ${updated} updated, ${errors} errors`);
+            log(`  â€¦ ${processed}/${order.length} processed, ${updated} updated, ${errors} errors`);
         }
     }
 
-    console.log(`\nDone. Processed: ${processed}, Updated: ${updated}, Errors: ${errors}`);
-    if (DRY_RUN) console.log('(dry-run — no changes saved)');
+    log(`\nDone. Processed: ${processed}, Updated: ${updated}, Errors: ${errors}`);
+    if (DRY_RUN) log('(dry-run â€” no changes saved)');
     await mongoose.disconnect();
 }
 
@@ -113,3 +124,4 @@ main().catch(err => {
     console.error('Fatal:', err);
     process.exit(1);
 });
+
