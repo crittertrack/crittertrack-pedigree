@@ -406,13 +406,21 @@ router.get('/unread-count', async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const count = await Message.countDocuments({
-            receiverId: userId,
-            read: false,
-            deletedBy: { $ne: userId }
-        });
+        const [count, adminCount] = await Promise.all([
+            Message.countDocuments({
+                receiverId: userId,
+                read: false,
+                deletedBy: { $ne: userId }
+            }),
+            Message.countDocuments({
+                receiverId: userId,
+                read: false,
+                deletedBy: { $ne: userId },
+                isModeratorMessage: true
+            })
+        ]);
 
-        res.json({ count });
+        res.json({ count, adminCount });
     } catch (error) {
         console.error('Error fetching unread count:', error);
         res.status(500).json({ error: 'Failed to fetch unread count' });
