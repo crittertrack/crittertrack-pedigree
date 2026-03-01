@@ -129,7 +129,7 @@ router.post('/paypal/subscription/create', async (req, res) => {
         const idPublic = req.user?.id_public;
 
         const token = await getPayPalToken();
-        const planId = process.env.PAYPAL_PLAN_ID || 'P-5GN69118E7167320YNGR5A7Q';
+        const planId = process.env.PAYPAL_PLAN_ID || 'P-2KK54241433399439NGR5YFQ';
 
         const subscriptionBody = {
             plan_id: planId,
