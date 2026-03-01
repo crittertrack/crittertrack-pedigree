@@ -127,32 +127,34 @@ router.post('/paypal/order/capture', async (req, res) => {
 router.post('/paypal/subscription/create', async (req, res) => {
     try {
         const idPublic = req.user?.id_public;
-        if (!idPublic) return res.status(401).json({ error: 'Cannot identify user from token' });
 
         const token = await getPayPalToken();
         const planId = process.env.PAYPAL_PLAN_ID || 'P-5GN69118E7167320YNGR5A7Q';
 
+        const subscriptionBody = {
+            plan_id: planId,
+            application_context: {
+                brand_name: 'CritterTrack',
+                user_action: 'SUBSCRIBE_NOW',
+                payment_method: {
+                    payer_selected: 'PAYPAL',
+                    payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED'
+                },
+                return_url: 'https://crittertrack.app/donation?subscribed=1',
+                cancel_url: 'https://crittertrack.app/donation?cancelled=1'
+            }
+        };
+        if (idPublic) subscriptionBody.custom_id = idPublic;
+
+        const requestId = idPublic ? `${idPublic}-${Date.now()}` : `anon-${Date.now()}`;
         const response = await axios.post(
             `${PAYPAL_BASE}/v1/billing/subscriptions`,
-            {
-                plan_id: planId,
-                custom_id: idPublic,
-                application_context: {
-                    brand_name: 'CritterTrack',
-                    user_action: 'SUBSCRIBE_NOW',
-                    payment_method: {
-                        payer_selected: 'PAYPAL',
-                        payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED'
-                    },
-                    return_url: 'https://crittertrack.app/donation?subscribed=1',
-                    cancel_url: 'https://crittertrack.app/donation?cancelled=1'
-                }
-            },
+            subscriptionBody,
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
-                    'PayPal-Request-Id': `${idPublic}-${Date.now()}`
+                    'PayPal-Request-Id': requestId
                 }
             }
         );
