@@ -100,7 +100,7 @@ app.use(cors({
 
 // PayPal webhook must receive raw body for signature verification — register BEFORE bodyParser.json()
 const paymentRoutes = require('./routes/paymentRoutes');
-app.use('/api/payments/paypal/webhook', express.raw({ type: '*/*' }), paymentRoutes);
+app.use('/api/payments/paypal/webhook', express.raw({ type: '*/*' }));
 
 app.use(bodyParser.json({ limit: '10mb' })); // Increase limit for base64 images
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
@@ -117,6 +117,9 @@ const fs = require('fs');
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
+
+// Payment routes (subscription/create works unauth; webhook raw body handled above)
+app.use('/api/payments', paymentRoutes);
 
 // Admin routes (protected by authMiddleware and restricted by ADMIN_USER_ID)
 const legacyAdminRoutes = require('./routes/admin');
