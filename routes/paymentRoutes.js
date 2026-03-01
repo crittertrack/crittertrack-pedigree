@@ -130,7 +130,7 @@ router.post('/paypal/subscription/create', async (req, res) => {
         if (!idPublic) return res.status(401).json({ error: 'Cannot identify user from token' });
 
         const token = await getPayPalToken();
-        const planId = process.env.PAYPAL_PLAN_ID || 'P-14K35458G1459960TNGR3DAA';
+        const planId = process.env.PAYPAL_PLAN_ID || 'P-5GN69118E7167320YNGR5A7Q';
 
         const response = await axios.post(
             `${PAYPAL_BASE}/v1/billing/subscriptions`,
