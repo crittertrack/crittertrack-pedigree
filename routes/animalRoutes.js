@@ -891,6 +891,60 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
         await syncAnimalToPublic(updatedAnimal);
 
+        // Recalculate COI when parents/ancestors change (fire-and-forget, non-blocking)
+        const parentOrAncestorChanged = sireChanged || damChanged;
+        if (parentOrAncestorChanged) {
+            setImmediate(async () => {
+                try {
+                    const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
+                    const { PublicAnimal } = require('../database/models');
+
+                    const fetchAnimal = async (id) => {
+                        let a = await Animal.findOne({ id_public: id }).lean();
+                        if (!a) a = await PublicAnimal.findOne({ id_public: id }).lean();
+                        return a;
+                    };
+
+                    const recalcCOI = async (id_public) => {
+                        try {
+                            const coeff = await calculateInbreedingCoefficient(id_public, fetchAnimal, 50);
+                            await Animal.updateOne({ id_public }, { inbreedingCoefficient: coeff });
+                            await PublicAnimal.updateOne({ id_public }, { inbreedingCoefficient: coeff });
+                        } catch (e) {
+                            console.error(`[COI] Failed to recalculate for ${id_public}:`, e.message);
+                        }
+                    };
+
+                    // Recalculate for the updated animal itself, then BFS all descendants
+                    await recalcCOI(updatedAnimal.id_public);
+
+                    const visited = new Set([updatedAnimal.id_public]);
+                    const queue = [updatedAnimal.id_public];
+                    while (queue.length > 0) {
+                        const currentId = queue.shift();
+                        const children = await Animal.find({
+                            $or: [
+                                { sireId_public: currentId },
+                                { damId_public: currentId },
+                                { fatherId_public: currentId },
+                                { motherId_public: currentId }
+                            ]
+                        }).lean().select('id_public');
+                        for (const child of children) {
+                            if (!visited.has(child.id_public)) {
+                                visited.add(child.id_public);
+                                queue.push(child.id_public);
+                                await recalcCOI(child.id_public);
+                            }
+                        }
+                    }
+                    console.log(`[COI] Recalculated COI for ${visited.size} animal(s) after parent update on ${updatedAnimal.id_public}`);
+                } catch (err) {
+                    console.error('[COI] Background recalculation error:', err.message);
+                }
+            });
+        }
+
         // Log user activity
         logUserActivity({
             userId: appUserId_backend,
