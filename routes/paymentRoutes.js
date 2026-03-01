@@ -39,6 +39,51 @@ async function setMonthlyBadge(idPublic, active) {
     return user;
 }
 
+// ── POST /api/payments/paypal/subscription/create ────────────────────────────
+// Creates a PayPal subscription and returns the approval URL for redirect.
+router.post('/paypal/subscription/create', async (req, res) => {
+    try {
+        const idPublic = req.user?.id_public;
+        if (!idPublic) return res.status(401).json({ error: 'Cannot identify user from token' });
+
+        const token = await getPayPalToken();
+        const planId = process.env.PAYPAL_PLAN_ID || 'P-14K35458G1459960TNGR3DAA';
+
+        const response = await axios.post(
+            `${PAYPAL_BASE}/v1/billing/subscriptions`,
+            {
+                plan_id: planId,
+                custom_id: idPublic,
+                application_context: {
+                    brand_name: 'CritterTrack',
+                    user_action: 'SUBSCRIBE_NOW',
+                    payment_method: {
+                        payer_selected: 'PAYPAL',
+                        payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED'
+                    },
+                    return_url: 'https://crittertrack.app/donation?subscribed=1',
+                    cancel_url: 'https://crittertrack.app/donation?cancelled=1'
+                }
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'PayPal-Request-Id': `${idPublic}-${Date.now()}`
+                }
+            }
+        );
+
+        const approvalLink = response.data.links?.find(l => l.rel === 'approve');
+        if (!approvalLink) return res.status(500).json({ error: 'No approval URL returned from PayPal' });
+
+        res.json({ approvalUrl: approvalLink.href, subscriptionId: response.data.id });
+    } catch (err) {
+        console.error('[PayPal] Create subscription error:', err.response?.data || err.message);
+        res.status(500).json({ error: 'Failed to create subscription' });
+    }
+});
+
 // ── POST /api/payments/paypal/subscription/activate ───────────────────────────
 // Called from the frontend after the user approves a subscription.
 // Requires authentication.
