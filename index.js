@@ -94,9 +94,14 @@ const authMiddleware = async (req, res, next) => {
 app.use(helmet());
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// PayPal webhook must receive raw body for signature verification — register BEFORE bodyParser.json()
+const paymentRoutes = require('./routes/paymentRoutes');
+app.use('/api/payments/paypal/webhook', express.raw({ type: '*/*' }), paymentRoutes);
+
 app.use(bodyParser.json({ limit: '10mb' })); // Increase limit for base64 images
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 // Set Cross-Origin-Resource-Policy to allow cross-origin embedding of uploaded assets
@@ -717,6 +722,9 @@ app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
 // Supplies / Inventory Routes (Require authMiddleware)
 const suppliesRoutes = require('./routes/suppliesRoutes');
 app.use('/api/supplies', authMiddleware, suppliesRoutes);
+
+// Payment Routes (PayPal subscription activate — requires auth; webhook registered above before bodyParser)
+app.use('/api/payments', authMiddleware, paymentRoutes);
 
 // Species Routes (GET is public, POST requires auth except migration)
 const speciesRoutes = require('./routes/speciesRoutes');
