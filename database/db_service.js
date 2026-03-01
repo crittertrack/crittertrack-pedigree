@@ -1247,7 +1247,24 @@ const getUsersLitters = async (appUserId_backend) => {
         })
     );
     
-    return littersWithParents;
+    // Populate offspringIds_public from the Animal collection (litterId stored on animal, not litter)
+    const litterIds = litters.map(l => l._id);
+    const offspringDocs = await Animal.find(
+        { litterId: { $in: litterIds } },
+        { id_public: 1, litterId: 1 }
+    ).lean();
+    const offspringByLitter = {};
+    offspringDocs.forEach(a => {
+        const key = a.litterId.toString();
+        if (!offspringByLitter[key]) offspringByLitter[key] = [];
+        offspringByLitter[key].push(a.id_public);
+    });
+    const littersWithOffspring = littersWithParents.map(l => ({
+        ...l,
+        offspringIds_public: offspringByLitter[l._id.toString()] || []
+    }));
+    
+    return littersWithOffspring;
 };
 
 /**

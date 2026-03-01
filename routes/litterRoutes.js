@@ -73,16 +73,11 @@ router.get('/:id_public/offspring', async (req, res) => {
         const { Litter, Animal } = require('../database/models');
         const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).lean();
         if (!litter) return res.status(404).json({ message: 'Litter not found.' });
-        if (!litter.offspringIds_public?.length) return res.status(200).json([]);
         const animals = await Animal.find(
-            { id_public: { $in: litter.offspringIds_public } },
+            { litterId: litter._id },
             { id_public: 1, name: 1, prefix: 1, suffix: 1, gender: 1, birthDate: 1, species: 1, imageUrl: 1, photoUrl: 1, status: 1, isDisplay: 1 }
         ).lean();
-        const result = litter.offspringIds_public.map(id => {
-            const a = animals.find(x => x.id_public === id);
-            if (!a) return { id_public: id, isPrivate: true, notFound: true };
-            return { ...a, isPrivate: !a.isDisplay };
-        });
+        const result = animals.map(a => ({ ...a, isPrivate: !a.isDisplay }));
         res.status(200).json(result);
     } catch (error) {
         console.error('Error fetching litter offspring:', error);
