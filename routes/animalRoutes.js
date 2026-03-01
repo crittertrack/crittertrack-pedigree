@@ -1800,7 +1800,26 @@ router.put('/:animalId/breeding-records/:recordId', async (req, res) => {
         if (notes !== undefined) record.notes = notes;
         
         await animal.save();
-        
+
+        // Sync count fields back to the linked litter
+        if (record.litterId) {
+            try {
+                const { Litter } = require('../database/models');
+                const syncToLitter = {};
+                if (record.litterSizeBorn !== undefined) { syncToLitter.litterSizeBorn = record.litterSizeBorn; syncToLitter.numberBorn = record.litterSizeBorn; }
+                if (record.litterSizeWeaned !== undefined) syncToLitter.litterSizeWeaned = record.litterSizeWeaned;
+                if (record.stillbornCount !== undefined) syncToLitter.stillbornCount = record.stillbornCount;
+                if (Object.keys(syncToLitter).length) {
+                    await Litter.findOneAndUpdate(
+                        { litter_id_public: record.litterId },
+                        { $set: syncToLitter }
+                    );
+                }
+            } catch (syncErr) {
+                console.error('Warning: failed to sync breeding record counts to litter:', syncErr);
+            }
+        }
+
         // Log activity
         await logUserActivity(userId, USER_ACTIONS.animal_record_update, `Updated breeding record for ${animal.name}`);
         

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
+const { Animal } = require('../database/models');
 // This router requires authMiddleware to be applied in index.js
 
 // --- Litter Route Controllers (PROTECTED) ---
@@ -27,6 +28,30 @@ router.post('/', async (req, res) => {
             ipAddress: req.ip,
             userAgent: req.get('User-Agent')
         });
+
+        // Sync count fields to any breeding records already referencing this CTL ID
+        try {
+            const ctlId = newLitter.litter_id_public;
+            const syncFields = {
+                litterSizeBorn: newLitter.litterSizeBorn ?? newLitter.numberBorn ?? null,
+                litterSizeWeaned: newLitter.litterSizeWeaned ?? null,
+                stillbornCount: newLitter.stillbornCount ?? null,
+            };
+            const parentIds = [newLitter.sireId_public, newLitter.damId_public].filter(Boolean);
+            if (ctlId && parentIds.length) {
+                await Animal.updateMany(
+                    { id_public: { $in: parentIds }, 'breedingRecords.litterId': ctlId },
+                    { $set: {
+                        'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
+                        'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
+                        'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
+                    }},
+                    { arrayFilters: [{ 'rec.litterId': ctlId }] }
+                );
+            }
+        } catch (syncErr) {
+            console.error('Warning: failed to sync new litter counts to breeding records:', syncErr);
+        }
 
         res.status(201).json({
             message: 'Litter registered successfully!',
@@ -92,6 +117,30 @@ router.put('/:id_backend', async (req, res) => {
             ipAddress: req.ip,
             userAgent: req.get('User-Agent')
         });
+
+        // Sync count fields back to breeding records on sire and dam
+        try {
+            const ctlId = updatedLitter.litter_id_public;
+            const syncFields = {
+                litterSizeBorn: updatedLitter.litterSizeBorn ?? updatedLitter.numberBorn ?? null,
+                litterSizeWeaned: updatedLitter.litterSizeWeaned ?? null,
+                stillbornCount: updatedLitter.stillbornCount ?? null,
+            };
+            const parentIds = [updatedLitter.sireId_public, updatedLitter.damId_public].filter(Boolean);
+            if (ctlId && parentIds.length) {
+                await Animal.updateMany(
+                    { id_public: { $in: parentIds }, 'breedingRecords.litterId': ctlId },
+                    { $set: {
+                        'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
+                        'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
+                        'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
+                    }},
+                    { arrayFilters: [{ 'rec.litterId': ctlId }] }
+                );
+            }
+        } catch (syncErr) {
+            console.error('Warning: failed to sync litter counts to breeding records:', syncErr);
+        }
 
         res.status(200).json({
             message: 'Litter updated successfully!',
