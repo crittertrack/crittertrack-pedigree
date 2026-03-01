@@ -73,8 +73,10 @@ router.get('/:id_public/offspring', async (req, res) => {
         const { Litter, Animal } = require('../database/models');
         const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).lean();
         if (!litter) return res.status(404).json({ message: 'Litter not found.' });
+        const ids = litter.offspringIds_public || [];
+        if (!ids.length) return res.status(200).json([]);
         const animals = await Animal.find(
-            { litterId: litter._id },
+            { id_public: { $in: ids } },
             { id_public: 1, name: 1, prefix: 1, suffix: 1, gender: 1, birthDate: 1, species: 1, imageUrl: 1, photoUrl: 1, status: 1, isDisplay: 1 }
         ).lean();
         res.status(200).json(animals);
