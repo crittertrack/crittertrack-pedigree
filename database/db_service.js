@@ -1069,6 +1069,30 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         await PublicAnimal.deleteOne({ id_public: updatedAnimal.id_public });
     }
 
+    // If the animal's gender changed and it belongs to a litter, re-derive the
+    // litter's gender counts from all linked offspring so both directions of the
+    // change (increment new gender, decrement old gender) are captured at once.
+    if (updates.gender !== undefined && updates.gender !== originalAnimal.gender && originalAnimal.litterId) {
+        try {
+            const litter = await Litter.findById(originalAnimal.litterId).select('offspringIds_public maleCount femaleCount unknownCount').lean();
+            if (litter && Array.isArray(litter.offspringIds_public) && litter.offspringIds_public.length > 0) {
+                const offspringAnimals = await Animal.find(
+                    { id_public: { $in: litter.offspringIds_public } },
+                    { gender: 1 }
+                ).lean();
+                const newMaleCount    = offspringAnimals.filter(a => a.gender === 'Male').length;
+                const newFemaleCount  = offspringAnimals.filter(a => a.gender === 'Female').length;
+                const newUnknownCount = offspringAnimals.filter(a => a.gender !== 'Male' && a.gender !== 'Female').length;
+                await Litter.findByIdAndUpdate(originalAnimal.litterId, {
+                    $set: { maleCount: newMaleCount, femaleCount: newFemaleCount, unknownCount: newUnknownCount }
+                });
+                console.log(`[updateAnimal] Synced litter ${originalAnimal.litterId} gender counts: ${newMaleCount}M/${newFemaleCount}F/${newUnknownCount}U`);
+            }
+        } catch (litterSyncErr) {
+            console.warn('[updateAnimal] Failed to sync litter gender counts:', litterSyncErr && litterSyncErr.message ? litterSyncErr.message : litterSyncErr);
+        }
+    }
+
     // Add backward-compatible alias fields before returning
     updatedAnimal.fatherId_public = updatedAnimal.sireId_public || null;
     updatedAnimal.motherId_public = updatedAnimal.damId_public || null;
