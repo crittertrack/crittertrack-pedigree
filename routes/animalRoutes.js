@@ -1329,14 +1329,15 @@ router.get('/inbreeding/pairing', async (req, res) => {
         }
 
         const _fetchCache = new Map();
-        const fetchAnimal = async (animalId) => {
-            if (_fetchCache.has(animalId)) return _fetchCache.get(animalId);
-            let animal = await Animal.findOne({ id_public: animalId }).lean();
-            if (!animal) {
-                animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
-            }
-            _fetchCache.set(animalId, animal);
-            return animal;
+        const _pending = new Map();
+        const fetchAnimal = (animalId) => {
+            if (_fetchCache.has(animalId)) return Promise.resolve(_fetchCache.get(animalId));
+            if (_pending.has(animalId)) return _pending.get(animalId);
+            const promise = Animal.findOne({ id_public: animalId }).lean()
+                .then(a => a || PublicAnimal.findOne({ id_public: animalId }).lean())
+                .then(a => { _fetchCache.set(animalId, a); _pending.delete(animalId); return a; });
+            _pending.set(animalId, promise);
+            return promise;
         };
 
         const coefficient = await calculatePairingInbreeding(
@@ -1368,14 +1369,15 @@ router.get('/inbreeding/explain', async (req, res) => {
         }
 
         const _fetchCache = new Map();
-        const fetchAnimal = async (animalId) => {
-            if (_fetchCache.has(animalId)) return _fetchCache.get(animalId);
-            let animal = await Animal.findOne({ id_public: animalId }).lean();
-            if (!animal) {
-                animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
-            }
-            _fetchCache.set(animalId, animal);
-            return animal;
+        const _pending = new Map();
+        const fetchAnimal = (animalId) => {
+            if (_fetchCache.has(animalId)) return Promise.resolve(_fetchCache.get(animalId));
+            if (_pending.has(animalId)) return _pending.get(animalId);
+            const promise = Animal.findOne({ id_public: animalId }).lean()
+                .then(a => a || PublicAnimal.findOne({ id_public: animalId }).lean())
+                .then(a => { _fetchCache.set(animalId, a); _pending.delete(animalId); return a; });
+            _pending.set(animalId, promise);
+            return promise;
         };
 
         const result = await explainPairingInbreeding(

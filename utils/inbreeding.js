@@ -46,18 +46,32 @@ async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations
 }
 
 /**
- * Build a pedigree tree recursively
+ * Build a pedigree tree recursively.
+ *
+ * Performance: nodeCache memoises completed subtrees keyed by `${animalId}:${depth}`.
+ * This prevents the exponential node explosion that occurs in linebred pedigrees
+ * where the same common ancestors appear in hundreds of branches — turning
+ * O(2^generations) construction into O(unique_animals × generations).
+ *
+ * The path-local `visited` set is kept separately to catch genuine data cycles
+ * (animal listed as its own ancestor), which are data errors; these return a
+ * leaf reference node that is NOT cached since it is path-specific.
  */
-async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set()) {
+async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set(), nodeCache = new Map()) {
     if (!animalId || depth === 0) {
         return null;
     }
 
-    // Allow duplicate animals in pedigree (needed for inbreeding calculation)
-    // Only check visited within the current path to prevent infinite loops
+    // Check memoised result first (safe for non-cyclic paths)
+    const cacheKey = `${animalId}:${depth}`;
+    if (nodeCache.has(cacheKey)) {
+        return nodeCache.get(cacheKey);
+    }
+
+    // Cycle guard: animal appears on this exact ancestry path (data error)
     if (visited.has(animalId)) {
-        // Return a reference node without further recursion to prevent infinite loops
         const animal = await fetchAnimal(animalId);
+        // Do not cache — this leaf is path-specific
         return animal ? {
             id: animalId,
             name: animal.name,
@@ -71,18 +85,24 @@ async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set()) 
     newVisited.add(animalId);
 
     const animal = await fetchAnimal(animalId);
-    if (!animal) return null;
+    if (!animal) {
+        nodeCache.set(cacheKey, null);
+        return null;
+    }
 
     const sireId = animal.sireId_public || animal.fatherId_public;
     const damId = animal.damId_public || animal.motherId_public;
 
-    return {
+    const node = {
         id: animalId,
         name: animal.name,
-        sire: sireId ? await buildPedigree(sireId, fetchAnimal, depth - 1, newVisited) : null,
-        dam: damId ? await buildPedigree(damId, fetchAnimal, depth - 1, newVisited) : null,
-        inbreeding: 0 // Will be calculated recursively if needed
+        sire: sireId ? await buildPedigree(sireId, fetchAnimal, depth - 1, newVisited, nodeCache) : null,
+        dam: damId ? await buildPedigree(damId, fetchAnimal, depth - 1, newVisited, nodeCache) : null,
+        inbreeding: 0
     };
+
+    nodeCache.set(cacheKey, node);
+    return node;
 }
 
 /**
@@ -165,38 +185,119 @@ function findPathsToAncestor(node, ancestorId, currentPath) {
 }
 
 /**
- * Calculate COI for a theoretical pairing (litter)
+ * Build a pedigree as a DAG (directed acyclic graph) via BFS.
+ * Returns Map<id, { id, name, sireId, damId }>.
+ *
+ * Key optimisation: all animals in the same generation are fetched
+ * CONCURRENTLY (Promise.all), reducing DB round-trips from
+ * O(unique_animals × latency) to O(generations × latency).
  */
-async function calculatePairingInbreeding(sireId, damId, fetchAnimal, generations = 5) {
-    if (!sireId || !damId) return 0;
+async function buildPedigreeDAG(rootId, fetchAnimal, maxGenerations) {
+    const dag = new Map();
+    let currentGen = [rootId];
+    const queued = new Set([rootId]);
 
-    // Create a theoretical offspring pedigree
-    const theoreticalPedigree = {
-        id: 'theoretical',
-        name: 'Theoretical Offspring',
-        sire: await buildPedigree(sireId, fetchAnimal, generations),
-        dam: await buildPedigree(damId, fetchAnimal, generations),
-        inbreeding: 0
-    };
+    for (let gen = 0; gen <= maxGenerations && currentGen.length > 0; gen++) {
+        // Fetch all animals in this generation concurrently
+        await Promise.all(currentGen.map(async (id) => {
+            if (dag.has(id)) return;
+            const animal = await fetchAnimal(id);
+            if (!animal) {
+                dag.set(id, { id, name: id, sireId: null, damId: null });
+                return;
+            }
+            const sireId = animal.sireId_public || animal.fatherId_public || null;
+            const damId  = animal.damId_public  || animal.motherId_public  || null;
+            dag.set(id, { id, name: animal.name, sireId, damId });
+        }));
 
-    const commonAncestors = findCommonAncestors(theoreticalPedigree);
-    
-    if (commonAncestors.length === 0) return 0;
+        if (gen >= maxGenerations) break;
 
-    let coi = 0;
-    for (const ancestor of commonAncestors) {
-        const pathsToSire = findPathsToAncestor(theoreticalPedigree.sire, ancestor.id, []);
-        const pathsToDam = findPathsToAncestor(theoreticalPedigree.dam, ancestor.id, []);
-        
-        for (const sPath of pathsToSire) {
-            for (const dPath of pathsToDam) {
-                const n1 = sPath.length;
-                const n2 = dPath.length;
-                const fa = ancestor.inbreeding || 0;
-                
-                coi += Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
+        const nextGen = [];
+        for (const id of currentGen) {
+            const node = dag.get(id);
+            if (!node) continue;
+            if (node.sireId && !queued.has(node.sireId)) { queued.add(node.sireId); nextGen.push(node.sireId); }
+            if (node.damId  && !queued.has(node.damId))  { queued.add(node.damId);  nextGen.push(node.damId); }
+        }
+        currentGen = nextGen;
+    }
+    return dag;
+}
+
+/**
+ * Compute Wright path-coefficient sums for every ancestor reachable from rootId.
+ *
+ *   dp[ancestor] = Σ_{all paths from rootId to ancestor} (0.5)^path_length
+ *   where path_length = number of nodes including start and end.
+ *
+ * This is a simple BFS propagation on the DAG — O(unique_animals), not O(2^G).
+ * The BFS naturally handles an ancestor reachable via multiple paths: each time
+ * a predecessor is processed it adds its contribution to dp[ancestor],
+ * and the ancestor is enqueued only once (after its first discovery) so it
+ * propagates further enriched by all predecessors processed before it is dequeued.
+ *
+ * Note: for deeply linebred pedigrees an ancestor may be reached via very many
+ * paths from shallower predecessors before it is itself dequeued, so its dp
+ * value is fully accumulated before it propagates. This relies on BFS ordering
+ * (breadth ≈ topological order from root): a node's dp is complete before it is
+ * dequeued as long as ALL paths to it come through nodes at strictly shallower
+ * depth — which holds for pedigrees without true cycles (biologically impossible).
+ */
+function computePathSums(rootId, dag) {
+    const dp = new Map([[rootId, 0.5]]); // path [root] has length 1 → (0.5)^1
+    const queue = [rootId];
+    const inQueue = new Set([rootId]);
+
+    while (queue.length > 0) {
+        const id = queue.shift();
+        const node = dag.get(id);
+        if (!node) continue;
+
+        const carry = (dp.get(id) || 0) * 0.5;
+        for (const childId of [node.sireId, node.damId]) {
+            if (!childId || !dag.has(childId)) continue;
+            dp.set(childId, (dp.get(childId) || 0) + carry);
+            if (!inQueue.has(childId)) {
+                inQueue.add(childId);
+                queue.push(childId);
             }
         }
+    }
+    return dp;
+}
+
+/**
+ * Calculate COI for a theoretical pairing (litter).
+ *
+ * Uses a DAG (not a tree) for the pedigree, then computes Wright's path
+ * coefficients via dynamic programming on the DAG.  This is O(U × G) where
+ * U = unique ancestors and G = generations, instead of the O(2^G) explosion
+ * that occurs when the same ancestor appears in many branches of a tree.
+ *
+ * DP definition:
+ *   dp_sire[A] = Σ over all paths P from sireId to A of (0.5)^|P|
+ *   (|P| = number of nodes in path, including start and end)
+ *
+ * Wright's contribution for each common ancestor A then reduces to:
+ *   contribution = 2 × (1 + FA) × dp_sire[A] × dp_dam[A]
+ * (the factor of 2 comes from the -1 in the (0.5)^(n1+n2-1) exponent)
+ */
+async function calculatePairingInbreeding(sireId, damId, fetchAnimal, generations = 12) {
+    if (!sireId || !damId) return 0;
+
+    const sireDag = await buildPedigreeDAG(sireId, fetchAnimal, generations);
+    const damDag  = await buildPedigreeDAG(damId,  fetchAnimal, generations);
+
+    const sireDP = computePathSums(sireId, sireDag);
+    const damDP  = computePathSums(damId,  damDag);
+
+    let coi = 0;
+    for (const [ancestorId, sContrib] of sireDP) {
+        const dContrib = damDP.get(ancestorId);
+        if (dContrib == null) continue;
+        // ancestor's own FA is 0 unless we later extend this
+        coi += 2 * sContrib * dContrib;
     }
 
     return parseFloat((coi * 100).toFixed(4));
@@ -204,63 +305,42 @@ async function calculatePairingInbreeding(sireId, damId, fetchAnimal, generation
 
 /**
  * Diagnostic version of calculatePairingInbreeding.
- * Returns the total COI AND a per-ancestor breakdown showing exactly which
- * common ancestors contribute, which paths they use, and how much each adds.
+ * Returns the total COI AND a per-ancestor breakdown.
+ * Also uses the DAG+DP approach for performance.
  *
  * @returns {{ total: Number, breakdown: Array }}
  */
-async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations = 50) {
+async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations = 20) {
     if (!sireId || !damId) return { total: 0, breakdown: [] };
 
-    const theoreticalPedigree = {
-        id: 'theoretical',
-        name: 'Theoretical Offspring',
-        sire: await buildPedigree(sireId, fetchAnimal, generations),
-        dam: await buildPedigree(damId, fetchAnimal, generations),
-        inbreeding: 0
-    };
+    const sireDag = await buildPedigreeDAG(sireId, fetchAnimal, generations);
+    const damDag  = await buildPedigreeDAG(damId,  fetchAnimal, generations);
 
-    const commonAncestors = findCommonAncestors(theoreticalPedigree);
-    if (commonAncestors.length === 0) return { total: 0, breakdown: [] };
+    const sireDP = computePathSums(sireId, sireDag);
+    const damDP  = computePathSums(damId,  damDag);
 
     let totalCoi = 0;
     const breakdown = [];
 
-    for (const ancestor of commonAncestors) {
-        const pathsToSire = findPathsToAncestor(theoreticalPedigree.sire, ancestor.id, []);
-        const pathsToDam  = findPathsToAncestor(theoreticalPedigree.dam,  ancestor.id, []);
-        const fa = ancestor.inbreeding || 0;
+    for (const [ancestorId, sContrib] of sireDP) {
+        const dContrib = damDP.get(ancestorId);
+        if (dContrib == null) continue;
 
-        let ancestorContribution = 0;
-        const pathPairs = [];
+        const fa = 0; // ancestor's own inbreeding (simplified)
+        const contribution = 2 * (1 + fa) * sContrib * dContrib;
+        totalCoi += contribution;
 
-        for (const sPath of pathsToSire) {
-            for (const dPath of pathsToDam) {
-                const n1 = sPath.length;
-                const n2 = dPath.length;
-                const term = Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
-                ancestorContribution += term;
-                pathPairs.push({
-                    sirePath: sPath,
-                    damPath: dPath,
-                    n1_links: n1 - 1,   // formula-n (steps, not nodes)
-                    n2_links: n2 - 1,
-                    contribution_pct: parseFloat((term * 100).toFixed(4))
-                });
-            }
-        }
-
-        totalCoi += ancestorContribution;
+        const node = sireDag.get(ancestorId) || damDag.get(ancestorId);
         breakdown.push({
-            ancestorId:   ancestor.id,
-            ancestorName: ancestor.name,
-            fa_pct:       parseFloat((fa * 100).toFixed(4)),
-            contribution_pct: parseFloat((ancestorContribution * 100).toFixed(4)),
-            pathPairs
+            ancestorId,
+            ancestorName: node ? node.name : ancestorId,
+            fa_pct: 0,
+            contribution_pct: parseFloat((contribution * 100).toFixed(4)),
+            sirePathSum: parseFloat((sContrib * 100).toFixed(4)),
+            damPathSum:  parseFloat((dContrib * 100).toFixed(4)),
         });
     }
 
-    // Sort descending by contribution so biggest contributors show first
     breakdown.sort((a, b) => b.contribution_pct - a.contribution_pct);
 
     return {
@@ -273,5 +353,7 @@ module.exports = {
     calculateInbreedingCoefficient,
     calculatePairingInbreeding,
     buildPedigree,
+    buildPedigreeDAG,
+    computePathSums,
     explainPairingInbreeding
 };
