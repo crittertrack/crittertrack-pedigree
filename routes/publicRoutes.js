@@ -275,8 +275,8 @@ router.get('/global/animals', async (req, res) => {
 
         console.log('Global animals search - Model:', Model.modelName, 'Query params:', query);
 
-        // Safety filter: only return animals explicitly set as public (showOnPublicProfile:true)
-        q.showOnPublicProfile = true;
+        // Note: PublicAnimal collection only contains public animals by design (syncAnimalToPublic
+        // only adds animals with showOnPublicProfile === true), so no extra filter needed here.
 
         if (query.name) {
             q.name = { $regex: query.name, $options: 'i' };
