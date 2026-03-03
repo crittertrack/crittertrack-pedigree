@@ -474,8 +474,8 @@ router.get('/any/:id_public', async (req, res) => {
             return res.status(200).json(animal);
         }
         
-        // Not owned by user, check if it's public (and not marked private)
-        animal = await PublicAnimal.findOne({ id_public, isPrivate: { $ne: true } }).lean();
+        // Not owned by user, check if it's in the public collection (only public animals are synced there)
+        animal = await PublicAnimal.findOne({ id_public }).lean();
         
         if (animal) {
             return res.status(200).json(animal);
@@ -1179,7 +1179,7 @@ router.get('/:id_public/offspring', async (req, res) => {
                     },
                     {
                         $or: [
-                            { isPrivate: { $ne: true } },
+                            { showOnPublicProfile: true },
                             { ownerId: authenticatedUserId }
                         ]
                     }

@@ -12,8 +12,8 @@ async function syncAnimalToPublic(animal) {
             return;
         }
         
-        // If animal should be public AND not private, upsert to publicanimals
-        if (animal.showOnPublicProfile === true && animal.isPrivate !== true) {
+        // If animal should be public, upsert to publicanimals
+        if (animal.showOnPublicProfile === true) {
             // Remove _id to avoid immutable field error
             const { _id, ...animalWithoutId } = animal.toObject ? animal.toObject() : animal;
             

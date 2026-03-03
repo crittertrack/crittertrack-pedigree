@@ -275,8 +275,8 @@ router.get('/global/animals', async (req, res) => {
 
         console.log('Global animals search - Model:', Model.modelName, 'Query params:', query);
 
-        // Safety filter: exclude any private animals that may have slipped into PublicAnimal due to stale sync
-        q.isPrivate = { $ne: true };
+        // Safety filter: only return animals explicitly set as public (showOnPublicProfile:true)
+        q.showOnPublicProfile = true;
 
         if (query.name) {
             q.name = { $regex: query.name, $options: 'i' };
