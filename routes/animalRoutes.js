@@ -892,9 +892,12 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                     const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
                     const { PublicAnimal } = require('../database/models');
 
+                    const _fetchCache = new Map();
                     const fetchAnimal = async (id) => {
+                        if (_fetchCache.has(id)) return _fetchCache.get(id);
                         let a = await Animal.findOne({ id_public: id }).lean();
                         if (!a) a = await PublicAnimal.findOne({ id_public: id }).lean();
+                        _fetchCache.set(id, a);
                         return a;
                     };
 
@@ -1274,12 +1277,15 @@ router.get('/:id_public/inbreeding', async (req, res) => {
         const { id_public } = req.params;
         const generations = parseInt(req.query.generations) || 50;
 
-        // Fetch animal function that works with both owned and public animals
+        // Fetch animal with per-request cache to avoid redundant DB queries for repeated ancestors
+        const _fetchCache = new Map();
         const fetchAnimal = async (animalId) => {
+            if (_fetchCache.has(animalId)) return _fetchCache.get(animalId);
             let animal = await Animal.findOne({ id_public: animalId }).lean();
             if (!animal) {
                 animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
             }
+            _fetchCache.set(animalId, animal);
             return animal;
         };
 
@@ -1322,11 +1328,14 @@ router.get('/inbreeding/pairing', async (req, res) => {
             return res.status(400).json({ message: 'Both sireId and damId are required' });
         }
 
+        const _fetchCache = new Map();
         const fetchAnimal = async (animalId) => {
+            if (_fetchCache.has(animalId)) return _fetchCache.get(animalId);
             let animal = await Animal.findOne({ id_public: animalId }).lean();
             if (!animal) {
                 animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
             }
+            _fetchCache.set(animalId, animal);
             return animal;
         };
 
@@ -1334,7 +1343,7 @@ router.get('/inbreeding/pairing', async (req, res) => {
             sireId,
             damId,
             fetchAnimal,
-            parseInt(generations) || 50
+            Math.min(parseInt(generations) || 12, 20)
         );
 
         res.status(200).json({ 
@@ -1358,11 +1367,14 @@ router.get('/inbreeding/explain', async (req, res) => {
             return res.status(400).json({ message: 'Both sireId and damId are required' });
         }
 
+        const _fetchCache = new Map();
         const fetchAnimal = async (animalId) => {
+            if (_fetchCache.has(animalId)) return _fetchCache.get(animalId);
             let animal = await Animal.findOne({ id_public: animalId }).lean();
             if (!animal) {
                 animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
             }
+            _fetchCache.set(animalId, animal);
             return animal;
         };
 
@@ -1370,7 +1382,7 @@ router.get('/inbreeding/explain', async (req, res) => {
             sireId,
             damId,
             fetchAnimal,
-            parseInt(generations) || 50
+            Math.min(parseInt(generations) || 12, 20)
         );
 
         res.status(200).json({ sireId, damId, ...result });
