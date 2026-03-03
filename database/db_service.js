@@ -731,13 +731,13 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     let ownerIdPublicMap = {}; // ownerId (string) -> id_public
     if (viewOnlyOwnerIds.length > 0) {
         const owners = await User.find({ _id: { $in: viewOnlyOwnerIds } })
-            .select('_id id_public personalName breederName showBreederName profileImage')
+            .select('_id id_public personalName breederName showBreederName profileImage profileImageUrl')
             .lean();
         owners.forEach(u => {
             ownerNameMap[u._id.toString()] = u.showBreederName && u.breederName
                 ? u.breederName
                 : u.personalName || 'Unknown';
-            ownerAvatarMap[u._id.toString()] = u.profileImage || null;
+            ownerAvatarMap[u._id.toString()] = u.profileImage || u.profileImageUrl || null;
             ownerIdPublicMap[u._id.toString()] = u.id_public || null;
         });
     }
