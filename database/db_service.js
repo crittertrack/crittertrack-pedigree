@@ -385,6 +385,9 @@ const getUserProfileById = async (appUserId_backend) => {
         throw new Error('User profile not found.');
     }
 
+    // Also fetch PublicProfile for flags that live there (e.g. hasSeenProfileSetupGuide)
+    const publicProfile = await PublicProfile.findOne({ userId_backend: appUserId_backend }).lean();
+
     // Return a clean, non-sensitive object
     return {
         _id: user._id, // Include internal ID for activity logging
@@ -411,6 +414,8 @@ const getUserProfileById = async (appUserId_backend) => {
         accountStatus: user.accountStatus || 'normal',
         ownedAnimals: user.ownedAnimals, // Array of internal animal IDs
         ownedLitters: user.ownedLitters, // Array of internal litter IDs
+        // Flags stored on PublicProfile
+        hasSeenProfileSetupGuide: publicProfile?.hasSeenProfileSetupGuide || false,
     };
 };
 
