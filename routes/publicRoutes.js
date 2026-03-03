@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
 const { PublicAnimal, Animal, PublicProfile, User, GeneticsData } = require('../database/models');
+const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
 
@@ -841,6 +842,30 @@ router.get('/genetics/:speciesName', async (req, res) => {
     } catch (error) {
         console.error('Error fetching genetics data:', error);
         res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// --- Calculate COI for a public animal (no auth required) ---
+// GET /api/public/animal/:id_public/inbreeding
+router.get('/animal/:id_public/inbreeding', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const generations = parseInt(req.query.generations) || 50;
+
+        const fetchAnimal = async (animalId) => {
+            let animal = await Animal.findOne({ id_public: animalId }).lean();
+            if (!animal) {
+                animal = await PublicAnimal.findOne({ id_public: animalId }).lean();
+            }
+            return animal;
+        };
+
+        const coefficient = await calculateInbreedingCoefficient(id_public, fetchAnimal, generations);
+
+        res.status(200).json({ id_public, inbreedingCoefficient: coefficient });
+    } catch (error) {
+        console.error('Error calculating public inbreeding:', error);
+        res.status(500).json({ message: 'Internal server error while calculating inbreeding.' });
     }
 });
 
