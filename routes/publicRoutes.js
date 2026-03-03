@@ -275,8 +275,8 @@ router.get('/global/animals', async (req, res) => {
 
         console.log('Global animals search - Model:', Model.modelName, 'Query params:', query);
 
-        // Note: PublicAnimal collection only contains public animals, so we don't need to filter by isDisplay
-        // The display parameter is kept for API compatibility but not used when querying PublicAnimal
+        // Safety filter: exclude any private animals that may have slipped into PublicAnimal due to stale sync
+        q.isPrivate = { $ne: true };
 
         if (query.name) {
             q.name = { $regex: query.name, $options: 'i' };

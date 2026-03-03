@@ -474,8 +474,8 @@ router.get('/any/:id_public', async (req, res) => {
             return res.status(200).json(animal);
         }
         
-        // Not owned by user, check if it's public
-        animal = await PublicAnimal.findOne({ id_public }).lean();
+        // Not owned by user, check if it's public (and not marked private)
+        animal = await PublicAnimal.findOne({ id_public, isPrivate: { $ne: true } }).lean();
         
         if (animal) {
             return res.status(200).json(animal);
@@ -1146,16 +1146,46 @@ router.get('/:id_public/offspring', async (req, res) => {
         const { Litter } = require('../database/models');
         const authenticatedUserId = req.user.id;
 
-        // For authenticated users: get ALL offspring across entire database (not just owned)
-        const allOffspring = await Animal.find({
-            $or: [
-                { sireId_public: animalIdPublic },
-                { damId_public: animalIdPublic },
-                { fatherId_public: animalIdPublic },
-                { motherId_public: animalIdPublic }
-            ]
-            // Removed ownerId filter - search ALL animals globally
+        // Check if the requesting user owns this parent animal
+        // Owners (and breeders) of the parent see ALL offspring (including private).
+        // Everyone else only sees public offspring + their own private offspring.
+        const userOwnsParent = await Animal.findOne({
+            id_public: animalIdPublic,
+            ownerId: authenticatedUserId
         }).lean();
+
+        let allOffspring;
+        if (userOwnsParent) {
+            // Owner of the parent sees ALL offspring globally
+            allOffspring = await Animal.find({
+                $or: [
+                    { sireId_public: animalIdPublic },
+                    { damId_public: animalIdPublic },
+                    { fatherId_public: animalIdPublic },
+                    { motherId_public: animalIdPublic }
+                ]
+            }).lean();
+        } else {
+            // Non-owner: public offspring + user's own private offspring
+            allOffspring = await Animal.find({
+                $and: [
+                    {
+                        $or: [
+                            { sireId_public: animalIdPublic },
+                            { damId_public: animalIdPublic },
+                            { fatherId_public: animalIdPublic },
+                            { motherId_public: animalIdPublic }
+                        ]
+                    },
+                    {
+                        $or: [
+                            { isPrivate: { $ne: true } },
+                            { ownerId: authenticatedUserId }
+                        ]
+                    }
+                ]
+            }).lean();
+        }
 
         // Group offspring by litter (based on birthDate and other parent)
         const litterGroups = new Map();
