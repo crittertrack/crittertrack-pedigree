@@ -720,14 +720,35 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Sort by birth date descending (most recent first)
     const docs = await Animal.find(query).sort({ birthDate: -1 }).lean();
 
+    // Bulk-resolve owner display names for view-only animals (single DB call)
+    const viewOnlyOwnerIds = [...new Set(
+        docs
+            .filter(d => d.ownerId.toString() !== appUserId_backend.toString())
+            .map(d => d.ownerId.toString())
+    )];
+    let ownerNameMap = {}; // ownerId (string) -> display name
+    if (viewOnlyOwnerIds.length > 0) {
+        const owners = await User.find({ _id: { $in: viewOnlyOwnerIds } })
+            .select('_id id_public personalName breederName showBreederName')
+            .lean();
+        owners.forEach(u => {
+            ownerNameMap[u._id.toString()] = u.showBreederName && u.breederName
+                ? u.breederName
+                : u.personalName || 'Unknown';
+        });
+    }
+
     // Provide backward-compatible alias fields expected by the frontend
-    // Also add isViewOnly flag to identify view-only animals
+    // Also add isViewOnly flag and ownerName to identify view-only animals
     return docs.map(d => ({
         ...d,
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
         isDisplay: d.showOnPublicProfile ?? false,
         isViewOnly: d.ownerId.toString() !== appUserId_backend.toString(),
+        ownerName: d.ownerId.toString() !== appUserId_backend.toString()
+            ? (ownerNameMap[d.ownerId.toString()] || 'Unknown')
+            : null,
     }));
 };
 
