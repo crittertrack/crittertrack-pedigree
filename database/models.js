@@ -627,6 +627,7 @@ const LitterSchema = new mongoose.Schema({
     breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
     breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
     matingDate: { type: Date, default: null }, // Unified mating date field (replaces pairingDate and matingDates)
+    expectedDueDate: { type: Date, default: null },
     outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
     
     // Birth and offspring details
@@ -640,6 +641,7 @@ const LitterSchema = new mongoose.Schema({
     numberBorn: { type: Number, required: false, min: 0, default: null }, // Legacy field (will sync with litterSizeBorn)
     litterSizeWeaned: { type: Number, default: null }, // Total number weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn
+    weaningDate: { type: Date, default: null },
     
     // Optional administrative breakdown of males/females/unknown  
     maleCount: { type: Number, default: null },
