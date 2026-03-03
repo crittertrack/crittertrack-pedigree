@@ -727,14 +727,18 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
             .map(d => d.ownerId.toString())
     )];
     let ownerNameMap = {}; // ownerId (string) -> display name
+    let ownerAvatarMap = {}; // ownerId (string) -> profileImage URL
+    let ownerIdPublicMap = {}; // ownerId (string) -> id_public
     if (viewOnlyOwnerIds.length > 0) {
         const owners = await User.find({ _id: { $in: viewOnlyOwnerIds } })
-            .select('_id id_public personalName breederName showBreederName')
+            .select('_id id_public personalName breederName showBreederName profileImage')
             .lean();
         owners.forEach(u => {
             ownerNameMap[u._id.toString()] = u.showBreederName && u.breederName
                 ? u.breederName
                 : u.personalName || 'Unknown';
+            ownerAvatarMap[u._id.toString()] = u.profileImage || null;
+            ownerIdPublicMap[u._id.toString()] = u.id_public || null;
         });
     }
 
@@ -748,6 +752,12 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         isViewOnly: d.ownerId.toString() !== appUserId_backend.toString(),
         ownerName: d.ownerId.toString() !== appUserId_backend.toString()
             ? (ownerNameMap[d.ownerId.toString()] || 'Unknown')
+            : null,
+        ownerAvatar: d.ownerId.toString() !== appUserId_backend.toString()
+            ? (ownerAvatarMap[d.ownerId.toString()] || null)
+            : null,
+        ownerIdPublic: d.ownerId.toString() !== appUserId_backend.toString()
+            ? (ownerIdPublicMap[d.ownerId.toString()] || null)
             : null,
     }));
 };
