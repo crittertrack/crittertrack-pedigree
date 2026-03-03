@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Message, MessageReport, User, PublicProfile } = require('../database/models');
 const { assertCleanText, ProfanityError } = require('../utils/profanityFilter');
+const { sendModConversationReplyNotification } = require('../utils/emailService');
 
 // Helper function to generate conversation ID (consistent ordering)
 const getConversationId = (userId1, userId2) => {
@@ -89,6 +90,17 @@ router.post('/send', async (req, res) => {
         const newMessage = new Message(messageData);
 
         await newMessage.save();
+
+        // Email CTU1 when a non-mod user replies to a mod conversation
+        if (isReplyToModConversation && !isAdminOrMod) {
+            const senderPublicProfile = await PublicProfile.findOne({ userId_backend: senderId }).select('id_public').lean();
+            sendModConversationReplyNotification({
+                adminEmail: receiver.email,
+                userIdPublic: senderPublicProfile?.id_public || sender.id_public || 'Unknown',
+                userName: sender.personalName || sender.breederName || null,
+                messagePreview: normalizedMessage.length > 500 ? normalizedMessage.slice(0, 500) + '…' : normalizedMessage
+            }); // fire-and-forget — no await so it doesn't delay the response
+        }
 
         res.status(201).json({ 
             message: 'Message sent successfully',

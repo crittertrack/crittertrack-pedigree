@@ -201,11 +201,43 @@ const sendFeedbackNotification = async (feedbackData) => {
     }
 };
 
+/**
+ * Notify admin when a user replies to a moderation conversation
+ */
+const sendModConversationReplyNotification = async ({ adminEmail, userIdPublic, userName, messagePreview }) => {
+    try {
+        await resend.emails.send({
+            from: fromEmail,
+            to: adminEmail,
+            subject: `[CritterTrack] Mod conversation reply from ${userIdPublic}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #ec4899;">New Reply in Moderation Conversation</h2>
+                    <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <p><strong>From:</strong> ${userName || userIdPublic} (${userIdPublic})</p>
+                        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                    <h3>Message:</h3>
+                    <p style="background-color: #f9fafb; padding: 15px; border-left: 3px solid #ec4899;">${messagePreview}</p>
+                    <p><a href="https://www.crittertrack.net" style="color: #ec4899;">Log in to CritterTrack</a> to view and respond to this conversation.</p>
+                    <hr style="margin-top: 30px; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 12px;">CritterTrack Admin Notification</p>
+                </div>
+            `
+        });
+        console.log('[MOD REPLY EMAIL] Notification sent to:', adminEmail);
+    } catch (error) {
+        console.error('[MOD REPLY EMAIL] Failed to send notification:', error);
+        // Don't throw — email failure shouldn't block the message from being saved
+    }
+};
+
 module.exports = {
     sendEmail,
     sendVerificationEmail,
     sendPasswordResetEmail,
     sendBugReportNotification,
     sendGeneticsFeedbackNotification,
-    sendFeedbackNotification
+    sendFeedbackNotification,
+    sendModConversationReplyNotification
 };
