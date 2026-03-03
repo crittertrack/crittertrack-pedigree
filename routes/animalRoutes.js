@@ -517,28 +517,21 @@ router.get('/any/:id_public', async (req, res) => {
             
             // Check if this animal is the OTHER PARENT of an offspring that has user's animal as parent
             // (e.g., user owns the father, this is the mother of the same offspring)
+            // NOTE: JS objects can't have duplicate keys — use $and to combine both conditions
             const isOtherParentOfSharedOffspring = await Animal.findOne({
                 $or: [
-                    // This animal is sire/father, user's animal is dam/mother
-                    { 
-                        $or: [
-                            { sireId_public: id_public },
-                            { fatherId_public: id_public }
-                        ],
-                        $or: [
-                            { damId_public: { $in: userAnimalIds } },
-                            { motherId_public: { $in: userAnimalIds } }
+                    // This animal is sire/father AND user's animal is dam/mother of the same offspring
+                    {
+                        $and: [
+                            { $or: [{ sireId_public: id_public }, { fatherId_public: id_public }] },
+                            { $or: [{ damId_public: { $in: userAnimalIds } }, { motherId_public: { $in: userAnimalIds } }] }
                         ]
                     },
-                    // This animal is dam/mother, user's animal is sire/father
-                    { 
-                        $or: [
-                            { damId_public: id_public },
-                            { motherId_public: id_public }
-                        ],
-                        $or: [
-                            { sireId_public: { $in: userAnimalIds } },
-                            { fatherId_public: { $in: userAnimalIds } }
+                    // This animal is dam/mother AND user's animal is sire/father of the same offspring
+                    {
+                        $and: [
+                            { $or: [{ damId_public: id_public }, { motherId_public: id_public }] },
+                            { $or: [{ sireId_public: { $in: userAnimalIds } }, { fatherId_public: { $in: userAnimalIds } }] }
                         ]
                     }
                 ]
