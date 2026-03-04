@@ -38,7 +38,9 @@ router.post('/transactions', async (req, res) => {
             return res.status(400).json({ message: 'Invalid transaction type. Must be "sale", "purchase", "expense", or "income".' });
         }
         
-        if (price === undefined || price === null || price === '' || isNaN(price) || parseFloat(price) < 0) {
+        const isNotifySellerMode = type === 'purchase' && req.body.mode === 'transfer';
+        const effectivePrice = (price === undefined || price === null || price === '') ? 0 : price;
+        if (isNaN(effectivePrice) || parseFloat(effectivePrice) < 0) {
             return res.status(400).json({ message: 'Invalid price. Must be 0 or greater.' });
         }
         
@@ -51,7 +53,7 @@ router.post('/transactions', async (req, res) => {
             type,
             animalId: animalId || null,
             animalName: animalName || null,
-            price: parseFloat(price),
+            price: parseFloat(effectivePrice),
             date: new Date(date),
             buyer: type === 'sale' ? (buyer || null) : null,
             seller: type === 'purchase' ? (seller || null) : null,
