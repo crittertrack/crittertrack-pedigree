@@ -1966,4 +1966,85 @@ router.delete('/:animalId/breeding-records/:recordId', async (req, res) => {
     }
 });
 
+// POST /api/animals/:id_public/return
+// Current owner returns an animal to its original creator (reverses a transfer)
+router.post('/:id_public/return', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id_public } = req.params;
+
+        const animal = await Animal.findOne({ id_public });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found.' });
+        }
+
+        // Must be current owner
+        if (String(animal.ownerId) !== String(userId)) {
+            return res.status(403).json({ message: 'You do not own this animal.' });
+        }
+
+        // Must have an original owner to return to
+        if (!animal.originalOwnerId) {
+            return res.status(400).json({ message: 'This animal was not transferred — nothing to return.' });
+        }
+
+        const originalOwnerId = animal.originalOwnerId;
+        const originalOwner = await User.findById(originalOwnerId).select('_id id_public');
+        if (!originalOwner) {
+            return res.status(404).json({ message: 'Original owner account not found.' });
+        }
+
+        // Reverse ownership
+        animal.ownerId = originalOwnerId;
+        animal.ownerId_public = originalOwner.id_public;
+        animal.originalOwnerId = null;
+        animal.soldStatus = null;
+
+        // Remove original owner from viewOnlyForUsers (they now own it again)
+        animal.viewOnlyForUsers = (animal.viewOnlyForUsers || []).filter(
+            id => String(id) !== String(originalOwnerId)
+        );
+
+        await animal.save();
+
+        // Update ownedAnimals arrays
+        await User.findByIdAndUpdate(userId, { $pull: { ownedAnimals: animal._id } });
+        await User.findByIdAndUpdate(originalOwnerId, { $addToSet: { ownedAnimals: animal._id } });
+
+        // Update PublicAnimal if public
+        if (animal.showOnPublicProfile) {
+            const { PublicAnimal } = require('../database/models');
+            await PublicAnimal.updateOne(
+                { id_public: animal.id_public },
+                { $set: { ownerId_public: originalOwner.id_public } }
+            );
+        }
+
+        // Notify original owner
+        try {
+            const { Notification, PublicProfile } = require('../database/models');
+            const returnerProfile = await PublicProfile.findOne({ userId_backend: userId });
+            const origProfile = await PublicProfile.findOne({ userId_backend: originalOwnerId });
+            const returnerName = returnerProfile?.breederName || returnerProfile?.personalName || 'Someone';
+            await Notification.create({
+                userId: originalOwnerId,
+                userId_public: origProfile?.id_public || '',
+                type: 'transfer_returned',
+                status: 'approved',
+                animalId_public: animal.id_public,
+                animalName: animal.name,
+                animalImageUrl: animal.imageUrl || '',
+                message: `${returnerName} has returned ${animal.name} (${animal.id_public}) to you.`,
+            });
+        } catch (notifErr) {
+            console.error('[Return] Failed to create notification:', notifErr.message);
+        }
+
+        res.status(200).json({ message: `${animal.name} has been returned successfully.` });
+    } catch (error) {
+        console.error('[Return] Error:', error);
+        res.status(500).json({ message: 'Internal server error while returning animal.', error: error.message });
+    }
+});
+
 module.exports = router;
