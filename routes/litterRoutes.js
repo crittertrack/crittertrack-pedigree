@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
-const { Animal } = require('../database/models');
+const { Animal, User, Notification } = require('../database/models');
 // This router requires authMiddleware to be applied in index.js
 
 // --- Litter Route Controllers (PROTECTED) ---
@@ -58,6 +58,49 @@ router.post('/', async (req, res) => {
             litterId_backend: newLitter._id,
             litter_id_public: newLitter.litter_id_public
         });
+
+        // Notify owners of sire/dam if they are a different user (fire-and-forget)
+        (async () => {
+            try {
+                const currentUserId = appUserId_backend.toString();
+                const creatorName = req.user.breederName || req.user.displayName || req.user.username || `CTC${req.user.id_public}`;
+                const parentRoles = [
+                    { id_public: litterData.sireId_public, role: 'sire' },
+                    { id_public: litterData.damId_public, role: 'dam' }
+                ];
+                for (const { id_public, role } of parentRoles) {
+                    if (!id_public) continue;
+                    const animal = await Animal.findOne({ id_public }).select('ownerId ownerId_public name species imageUrl photoUrl').lean();
+                    if (!animal || !animal.ownerId) continue;
+                    if (animal.ownerId.toString() === currentUserId) continue; // it's the creator's own animal
+                    const ownerUser = await User.findById(animal.ownerId).select('_id id_public').lean();
+                    if (!ownerUser) continue;
+                    await Notification.create({
+                        userId: ownerUser._id,
+                        userId_public: ownerUser.id_public,
+                        type: 'litter_assignment',
+                        status: 'pending',
+                        read: false,
+                        requestedBy_id: appUserId_backend,
+                        requestedBy_public: req.user.id_public,
+                        requestedBy_name: creatorName,
+                        animalId_public: id_public,
+                        animalName: animal.name,
+                        animalImageUrl: animal.imageUrl || animal.photoUrl || '',
+                        parentType: role,
+                        message: `Your ${role === 'sire' ? 'male' : 'female'} "${animal.name}" (${id_public}) was assigned as a ${role} in a new litter (${newLitter.litter_id_public}) created by ${creatorName}.`,
+                        metadata: {
+                            litterId_public: newLitter.litter_id_public,
+                            role,
+                            creatorId_public: req.user.id_public,
+                            creatorName,
+                        }
+                    });
+                }
+            } catch (notifErr) {
+                console.error('Warning: failed to send litter assignment notifications:', notifErr);
+            }
+        })();
     } catch (error) {
         console.error('Error registering litter:', error);
         res.status(500).json({ message: 'Internal server error during litter registration.' });
