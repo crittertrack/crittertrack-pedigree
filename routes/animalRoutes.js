@@ -2054,14 +2054,14 @@ router.post('/:id_public/return', async (req, res) => {
 // Add an image URL to the animal's extraImages array (max 20).
 router.post('/:id_public/gallery', async (req, res) => {
     try {
-        const userId = req.user.id;
-        const idPublic = Number(req.params.id_public);
+        const userIdPublic = String(req.user.id_public);
+        const idPublic = String(req.params.id_public);
         const { url } = req.body;
         if (!url || typeof url !== 'string') {
             return res.status(400).json({ message: 'url is required.' });
         }
 
-        const animal = await Animal.findOne({ id_public: idPublic, ownerId: userId });
+        const animal = await Animal.findOne({ id_public: idPublic, ownerId_public: userIdPublic });
         if (!animal) return res.status(404).json({ message: 'Animal not found.' });
 
         if ((animal.extraImages || []).length >= 20) {
@@ -2083,14 +2083,14 @@ router.post('/:id_public/gallery', async (req, res) => {
 // Body: { url: 'https://...' }
 router.delete('/:id_public/gallery', async (req, res) => {
     try {
-        const userId = req.user.id;
-        const idPublic = Number(req.params.id_public);
+        const userIdPublic = String(req.user.id_public);
+        const idPublic = String(req.params.id_public);
         const { url } = req.body;
         if (!url || typeof url !== 'string') {
             return res.status(400).json({ message: 'url is required.' });
         }
 
-        const animal = await Animal.findOne({ id_public: idPublic, ownerId: userId });
+        const animal = await Animal.findOne({ id_public: idPublic, ownerId_public: userIdPublic });
         if (!animal) return res.status(404).json({ message: 'Animal not found.' });
 
         animal.extraImages = (animal.extraImages || []).filter(u => u !== url);
