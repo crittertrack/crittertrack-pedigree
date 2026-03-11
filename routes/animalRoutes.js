@@ -2048,4 +2048,59 @@ router.post('/:id_public/return', async (req, res) => {
     }
 });
 
+// ─── Gallery routes ────────────────────────────────────────────────────────────
+
+// POST /api/animals/:id_public/gallery
+// Add an image URL to the animal's extraImages array (max 20).
+router.post('/:id_public/gallery', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const idPublic = Number(req.params.id_public);
+        const { url } = req.body;
+        if (!url || typeof url !== 'string') {
+            return res.status(400).json({ message: 'url is required.' });
+        }
+
+        const animal = await Animal.findOne({ id_public: idPublic, ownerId: userId });
+        if (!animal) return res.status(404).json({ message: 'Animal not found.' });
+
+        if ((animal.extraImages || []).length >= 20) {
+            return res.status(400).json({ message: 'Gallery limit reached (20 images max).' });
+        }
+
+        animal.extraImages = [...(animal.extraImages || []), url];
+        await animal.save();
+
+        res.status(200).json({ extraImages: animal.extraImages });
+    } catch (error) {
+        console.error('[Gallery POST] Error:', error);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
+// DELETE /api/animals/:id_public/gallery
+// Remove an image URL from the animal's extraImages array.
+// Body: { url: 'https://...' }
+router.delete('/:id_public/gallery', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const idPublic = Number(req.params.id_public);
+        const { url } = req.body;
+        if (!url || typeof url !== 'string') {
+            return res.status(400).json({ message: 'url is required.' });
+        }
+
+        const animal = await Animal.findOne({ id_public: idPublic, ownerId: userId });
+        if (!animal) return res.status(404).json({ message: 'Animal not found.' });
+
+        animal.extraImages = (animal.extraImages || []).filter(u => u !== url);
+        await animal.save();
+
+        res.status(200).json({ extraImages: animal.extraImages });
+    } catch (error) {
+        console.error('[Gallery DELETE] Error:', error);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
 module.exports = router;

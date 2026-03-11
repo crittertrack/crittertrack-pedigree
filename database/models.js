@@ -200,6 +200,7 @@ const AnimalSchema = new mongoose.Schema({
     // Image URLs (optional)
     imageUrl: { type: String, default: null },
     photoUrl: { type: String, default: null },
+    extraImages: { type: [String], default: [] },
 
     // Lineage linking (Links to the public ID of the ancestor)
     sireId_public: { type: String, default: null },
