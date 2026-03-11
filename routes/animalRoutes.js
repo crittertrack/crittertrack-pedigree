@@ -1543,23 +1543,23 @@ router.get('/:id_public/relationships', async (req, res) => {
         if (sire) relationships.parents.push(sire);
         if (dam) relationships.parents.push(dam);
         
-        // 2. SIBLINGS (same sire or dam)
-        const siblingQuery = {
-            $and: [
-                { id_public: { $ne: id_public } }, // Not the same animal
-                {
-                    $or: [
-                        { sireId_public: animal.sireId_public, sireId_public: { $ne: null } },
-                        { damId_public: animal.damId_public, damId_public: { $ne: null } }
-                    ]
-                }
-            ]
-        };
-        
-        const siblings = await Animal.find(siblingQuery)
+        // 2. SIBLINGS (same sire or dam, same species)
+        const siblingOrConditions = [];
+        if (animal.sireId_public) siblingOrConditions.push({ sireId_public: animal.sireId_public });
+        if (animal.damId_public)  siblingOrConditions.push({ damId_public: animal.damId_public });
+
+        const siblings = siblingOrConditions.length > 0
+            ? await Animal.find({
+                $and: [
+                    { id_public: { $ne: id_public } },
+                    { species: animal.species },
+                    { $or: siblingOrConditions }
+                ]
+            })
             .select('id_public name species sex birthDate geneticCode images sireId_public damId_public ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
-            .lean();
-        
+            .lean()
+            : [];
+
         relationships.siblings = siblings.filter(hasViewAccess);
         
         // 3. GRANDPARENTS
@@ -1594,19 +1594,19 @@ router.get('/:id_public/relationships', async (req, res) => {
             const parent = await fetchAnimal(parentId);
             if (!parent) continue;
             
-            const auntsUnclesQuery = {
+            const auOrConditions = [];
+            if (parent.sireId_public) auOrConditions.push({ sireId_public: parent.sireId_public });
+            if (parent.damId_public)  auOrConditions.push({ damId_public: parent.damId_public });
+            if (auOrConditions.length === 0) continue;
+
+            const auntsUncles = await Animal.find({
                 $and: [
-                    { id_public: { $ne: parentId } }, // Not the parent itself
-                    {
-                        $or: [
-                            { sireId_public: parent.sireId_public, sireId_public: { $ne: null } },
-                            { damId_public: parent.damId_public, damId_public: { $ne: null } }
-                        ]
-                    }
+                    { id_public: { $ne: parentId } },
+                    { id_public: { $ne: id_public } },
+                    { species: animal.species },
+                    { $or: auOrConditions }
                 ]
-            };
-            
-            const auntsUncles = await Animal.find(auntsUnclesQuery)
+            })
                 .select('id_public name species sex birthDate geneticCode images ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
                 .lean();
             
