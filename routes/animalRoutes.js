@@ -1566,14 +1566,14 @@ router.get('/:id_public/relationships', async (req, res) => {
         if (sire) {
             const siresSire = await fetchAnimal(sire.sireId_public);
             const siresDam = await fetchAnimal(sire.damId_public);
-            if (siresSire) relationships.grandparents.push(siresSire);
-            if (siresDam) relationships.grandparents.push(siresDam);
+            if (siresSire) relationships.grandparents.push({ ...siresSire, _side: 'paternal' });
+            if (siresDam) relationships.grandparents.push({ ...siresDam, _side: 'paternal' });
         }
         if (dam) {
             const damsSire = await fetchAnimal(dam.sireId_public);
             const damsDam = await fetchAnimal(dam.damId_public);
-            if (damsSire) relationships.grandparents.push(damsSire);
-            if (damsDam) relationships.grandparents.push(damsDam);
+            if (damsSire) relationships.grandparents.push({ ...damsSire, _side: 'maternal' });
+            if (damsDam) relationships.grandparents.push({ ...damsDam, _side: 'maternal' });
         }
         
         // 4. GREAT-GRANDPARENTS
@@ -1581,19 +1581,20 @@ router.get('/:id_public/relationships', async (req, res) => {
             const ggSire = await fetchAnimal(grandparent.sireId_public);
             const ggDam = await fetchAnimal(grandparent.damId_public);
             if (ggSire && !relationships.greatGrandparents.some(a => a.id_public === ggSire.id_public)) {
-                relationships.greatGrandparents.push(ggSire);
+                relationships.greatGrandparents.push({ ...ggSire, _side: grandparent._side });
             }
             if (ggDam && !relationships.greatGrandparents.some(a => a.id_public === ggDam.id_public)) {
-                relationships.greatGrandparents.push(ggDam);
+                relationships.greatGrandparents.push({ ...ggDam, _side: grandparent._side });
             }
         }
         
         // 5. AUNTS/UNCLES (siblings of parents)
         const parentIds = [animal.sireId_public, animal.damId_public].filter(Boolean);
         for (const parentId of parentIds) {
+            const side = parentId === animal.sireId_public ? 'paternal' : 'maternal';
             const parent = await fetchAnimal(parentId);
             if (!parent) continue;
-            
+
             const auOrConditions = [];
             if (parent.sireId_public) auOrConditions.push({ sireId_public: parent.sireId_public });
             if (parent.damId_public)  auOrConditions.push({ damId_public: parent.damId_public });
@@ -1612,7 +1613,7 @@ router.get('/:id_public/relationships', async (req, res) => {
             
             auntsUncles.filter(hasViewAccess).forEach(au => {
                 if (!relationships.auntsUncles.some(a => a.id_public === au.id_public)) {
-                    relationships.auntsUncles.push(au);
+                    relationships.auntsUncles.push({ ...au, _side: side });
                 }
             });
         }
