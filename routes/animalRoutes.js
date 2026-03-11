@@ -1508,7 +1508,7 @@ router.get('/:id_public/relationships', async (req, res) => {
         const fetchAnimal = async (animalId_public) => {
             if (!animalId_public) return null;
             const a = await Animal.findOne({ id_public: animalId_public })
-                .select('id_public name species sex dateOfBirth geneticCode images sireId_public damId_public ownerId')
+                .select('id_public name species sex birthDate geneticCode images sireId_public damId_public ownerId ownerId_public')
                 .lean();
             return a;
         };
@@ -1557,7 +1557,7 @@ router.get('/:id_public/relationships', async (req, res) => {
         };
         
         const siblings = await Animal.find(siblingQuery)
-            .select('id_public name species sex dateOfBirth geneticCode images sireId_public damId_public ownerId showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name species sex birthDate geneticCode images sireId_public damId_public ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
             .lean();
         
         relationships.siblings = siblings.filter(hasViewAccess);
@@ -1607,7 +1607,7 @@ router.get('/:id_public/relationships', async (req, res) => {
             };
             
             const auntsUncles = await Animal.find(auntsUnclesQuery)
-                .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+                .select('id_public name species sex birthDate geneticCode images ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
                 .lean();
             
             auntsUncles.filter(hasViewAccess).forEach(au => {
@@ -1626,7 +1626,7 @@ router.get('/:id_public/relationships', async (req, res) => {
         };
         
         const children = await Animal.find(childrenQuery)
-            .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name species sex birthDate geneticCode images ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
             .lean();
         
         relationships.children = children.filter(hasViewAccess);
@@ -1639,7 +1639,7 @@ router.get('/:id_public/relationships', async (req, res) => {
                     { damId_public: sibling.id_public }
                 ]
             })
-            .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name species sex birthDate geneticCode images ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
             .lean();
             
             niblings.filter(hasViewAccess).forEach(n => {
@@ -1657,7 +1657,7 @@ router.get('/:id_public/relationships', async (req, res) => {
                     { damId_public: auntUncle.id_public }
                 ]
             })
-            .select('id_public name species sex dateOfBirth geneticCode images ownerId showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name species sex birthDate geneticCode images ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
             .lean();
             
             cousins.filter(hasViewAccess).forEach(c => {
