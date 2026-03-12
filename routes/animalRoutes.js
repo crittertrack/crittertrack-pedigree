@@ -2134,14 +2134,30 @@ function similarityPercent(a, b) {
 // Find potential duplicate animals across user's account
 router.get('/duplicates', async (req, res) => {
     try {
+        console.log('[Duplicates] Request received');
+        console.log('[Duplicates] User:', req.user);
+        
+        if (!req.user || !req.user.id_public) {
+            console.error('[Duplicates] Missing user or id_public');
+            return res.status(400).json({ message: 'User authentication required.' });
+        }
+        
         const userId = req.user.id_public;
+        console.log('[Duplicates] User ID:', userId);
         
         // Get user to access dismissed pairs
         const user = await User.findOne({ id_public: userId });
+        if (!user) {
+            console.error('[Duplicates] User not found:', userId);
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        console.log('[Duplicates] User found, dismissed pairs:', user.dismissedDuplicatePairs?.length || 0);
+        
         const dismissedPairs = new Set(user?.dismissedDuplicatePairs || []);
         
         // Get all user's animals (including sold/deceased)
         const animals = await Animal.find({ ownerId_public: userId }).lean();
+        console.log('[Duplicates] Found animals:', animals.length);
         
         const duplicateGroups = [];
         const processed = new Set();
@@ -2214,9 +2230,11 @@ router.get('/duplicates', async (req, res) => {
             }
         });
         
+        console.log('[Duplicates] Returning groups:', duplicateGroups.length);
         res.status(200).json({ groups: duplicateGroups });
     } catch (error) {
         console.error('[Duplicates] Error:', error);
+        console.error('[Duplicates] Error stack:', error.stack);
         res.status(500).json({ message: 'Internal server error.', error: error.message });
     }
 });
