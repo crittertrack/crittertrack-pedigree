@@ -858,6 +858,7 @@ router.post('/:id_public/archive', async (req, res) => {
         }
         
         animal.archived = true;
+        animal.isOwned = false;
         await animal.save();
         
         await logUserActivity(req.user.id_public, USER_ACTIONS.animal_edit, {
@@ -886,6 +887,7 @@ router.post('/:id_public/unarchive', async (req, res) => {
         }
         
         animal.archived = false;
+        animal.isOwned = true;
         await animal.save();
         
         await logUserActivity(req.user.id_public, USER_ACTIONS.animal_edit, {
