@@ -177,6 +177,7 @@ const AnimalSchema = new mongoose.Schema({
     
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
+    archived: { type: Boolean, default: false, index: true }, // Hide from main lists but keep in pedigrees
     isPregnant: { type: Boolean, default: false },
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },

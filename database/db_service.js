@@ -644,18 +644,21 @@ const addAnimal = async (appUserId_backend, animalData) => {
 const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Check if user wants only owned animals (not view-only)
     const onlyOwned = filters.isOwned === 'true' || filters.isOwned === true;
-    
-
+    // Check if user wants archived animals (default: exclude archived)
+    const includeArchived = filters.includeArchived === 'true' || filters.includeArchived === true;
     
     // Start with base query
     let baseQuery;
     if (onlyOwned) {
         // "My Animals" filter: Only animals the user created AND marked as owned (isOwned: true)
-        // Excludes view-only animals (transferred animals)
+        // Excludes view-only animals (transferred animals) and archived animals
         baseQuery = {
             ownerId: appUserId_backend,
             isOwned: true
         };
+        if (!includeArchived) {
+            baseQuery.archived = { $ne: true };
+        }
 
     } else {
         // "All Animals" filter: All animals the user created OR received as view-only
@@ -668,6 +671,9 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
                 }
             ]
         };
+        if (!includeArchived) {
+            baseQuery.archived = { $ne: true };
+        }
     }
 
     const query = { ...baseQuery };

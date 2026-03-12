@@ -814,6 +814,93 @@ router.post('/duplicates/merge', async (req, res) => {
     }
 });
 
+// ─── Archive Management ────────────────────────────────────────────────────────
+
+// GET /api/animals/archived
+// Returns archived animals + sold/transferred animals (for the Archive page)
+router.get('/archived', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userIdPublic = req.user.id_public;
+        
+        // Get archived animals (owned by user and archived)
+        const archivedAnimals = await Animal.find({
+            ownerId: userId,
+            archived: true
+        }).lean();
+        
+        // Get sold/transferred animals (view-only animals that user sees)
+        const soldTransferredAnimals = await Animal.find({
+            viewOnlyForUsers: userId,
+            hiddenForUsers: { $ne: userId }
+        }).lean();
+        
+        res.status(200).json({
+            archived: archivedAnimals,
+            soldTransferred: soldTransferredAnimals
+        });
+    } catch (error) {
+        console.error('[Archived Animals] Error:', error);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
+// POST /api/animals/:id_public/archive
+// Archive an animal (hide from main lists but keep in pedigrees)
+router.post('/:id_public/archive', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id_public } = req.params;
+        
+        const animal = await Animal.findOne({ id_public, ownerId: userId });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found or not owned by you.' });
+        }
+        
+        animal.archived = true;
+        await animal.save();
+        
+        await logUserActivity(req.user.id_public, USER_ACTIONS.animal_edit, {
+            animal_id: id_public,
+            animal_name: animal.name,
+            action: 'archived'
+        });
+        
+        res.status(200).json({ message: 'Animal archived successfully.', animal });
+    } catch (error) {
+        console.error('[Archive Animal] Error:', error);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
+// POST /api/animals/:id_public/unarchive
+// Unarchive an animal (restore to main lists)
+router.post('/:id_public/unarchive', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id_public } = req.params;
+        
+        const animal = await Animal.findOne({ id_public, ownerId: userId });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found or not owned by you.' });
+        }
+        
+        animal.archived = false;
+        await animal.save();
+        
+        await logUserActivity(req.user.id_public, USER_ACTIONS.animal_edit, {
+            animal_id: id_public,
+            animal_name: animal.name,
+            action: 'unarchived'
+        });
+        
+        res.status(200).json({ message: 'Animal unarchived successfully.', animal });
+    } catch (error) {
+        console.error('[Unarchive Animal] Error:', error);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
 // GET /api/animals/:id_backend
 // 3. Gets a single animal's private details.
 // If viewFromNotification=true and animal exists, return it regardless of ownership (for notification recipients to view animals mentioned in breeder/parent notifications)
