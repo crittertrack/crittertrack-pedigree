@@ -551,6 +551,259 @@ router.get('/any/:id_public', async (req, res) => {
     }
 });
 
+// ─── Duplicate Detection ───────────────────────────────────────────────────────
+// NOTE: These routes must come BEFORE /:id_backend to avoid "duplicates" being treated as an id
+
+// Levenshtein distance for fuzzy string matching
+function levenshteinDistance(a, b) {
+    const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+    for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+    for (let j = 1; j <= b.length; j++) {
+        for (let i = 1; i <= a.length; i++) {
+            const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[j][i] = Math.min(
+                matrix[j][i - 1] + 1,
+                matrix[j - 1][i] + 1,
+                matrix[j - 1][i - 1] + indicator
+            );
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+function similarityPercent(a, b) {
+    if (!a || !b) return 0;
+    const distance = levenshteinDistance(a.toLowerCase(), b.toLowerCase());
+    const maxLen = Math.max(a.length, b.length);
+    return ((maxLen - distance) / maxLen) * 100;
+}
+
+// GET /api/animals/duplicates
+// Find potential duplicate animals across user's account
+router.get('/duplicates', async (req, res) => {
+    try {
+        console.log('[Duplicates] Request received');
+        console.log('[Duplicates] User:', req.user);
+        
+        if (!req.user || !req.user.id_public) {
+            console.error('[Duplicates] Missing user or id_public');
+            return res.status(400).json({ message: 'User authentication required.' });
+        }
+        
+        const userId = req.user.id_public;
+        console.log('[Duplicates] User ID:', userId);
+        
+        // Get user to access dismissed pairs
+        const user = await User.findOne({ id_public: userId });
+        if (!user) {
+            console.error('[Duplicates] User not found:', userId);
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        console.log('[Duplicates] User found, dismissed pairs:', user.dismissedDuplicatePairs?.length || 0);
+        
+        const dismissedPairs = new Set(user?.dismissedDuplicatePairs || []);
+        
+        // Get all user's animals (including sold/deceased)
+        const animals = await Animal.find({ ownerId_public: userId }).lean();
+        console.log('[Duplicates] Found animals:', animals.length);
+        
+        const duplicateGroups = [];
+        const processed = new Set();
+        
+        animals.forEach((animal, idx) => {
+            if (processed.has(animal.id_public)) return;
+            
+            const duplicates = [];
+            const fullName = [animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ').trim();
+            
+            // Check against all other animals
+            animals.forEach((other, otherIdx) => {
+                if (idx === otherIdx || processed.has(other.id_public)) return;
+                
+                // Skip if this pair has been dismissed
+                const pair = [animal.id_public, other.id_public].sort().join('|');
+                if (dismissedPairs.has(pair)) return;
+                
+                const otherFullName = [other.prefix, other.name, other.suffix].filter(Boolean).join(' ').trim();
+                
+                let reasons = [];
+                
+                // 1. Exact name match (case-insensitive)
+                if (fullName.toLowerCase() === otherFullName.toLowerCase()) {
+                    reasons.push('exact_name');
+                }
+                
+                // 2. Fuzzy name match (85%+ similarity)
+                const similarity = similarityPercent(fullName, otherFullName);
+                if (similarity >= 85 && similarity < 100) {
+                    reasons.push(`similar_name_${Math.round(similarity)}%`);
+                }
+                
+                // 3. Same birthdate + species
+                if (animal.birthDate && other.birthDate && animal.species === other.species) {
+                    const date1 = new Date(animal.birthDate).toISOString().split('T')[0];
+                    const date2 = new Date(other.birthDate).toISOString().split('T')[0];
+                    if (date1 === date2) {
+                        reasons.push('same_birthdate_species');
+                    }
+                }
+                
+                // 4. Same parent combination (sire + dam)
+                const sire1 = animal.fatherId_public || animal.sireId_public;
+                const dam1 = animal.motherId_public || animal.damId_public;
+                const sire2 = other.fatherId_public || other.sireId_public;
+                const dam2 = other.motherId_public || other.damId_public;
+                
+                if (sire1 && dam1 && sire2 && dam2 && sire1 === sire2 && dam1 === dam2) {
+                    reasons.push('same_parents');
+                }
+                
+                if (reasons.length > 0) {
+                    duplicates.push({
+                        animal: other,
+                        reasons
+                    });
+                }
+            });
+            
+            // Only add to groups if we found duplicates
+            if (duplicates.length > 0) {
+                duplicateGroups.push({
+                    primary: animal,
+                    duplicates
+                });
+                
+                processed.add(animal.id_public);
+                duplicates.forEach(d => processed.add(d.animal.id_public));
+            }
+        });
+        
+        console.log('[Duplicates] Returning groups:', duplicateGroups.length);
+        res.status(200).json({ groups: duplicateGroups });
+    } catch (error) {
+        console.error('[Duplicates] Error:', error);
+        console.error('[Duplicates] Error stack:', error.stack);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
+// POST /api/animals/duplicates/dismiss
+// Mark a pair of animals as "not duplicates" so they won't show in future scans
+// Body: { id1: 'abc123', id2: 'def456' }
+router.post('/duplicates/dismiss', async (req, res) => {
+    try {
+        const userId = req.user.id_public;
+        const { id1, id2 } = req.body;
+        
+        if (!id1 || !id2) {
+            return res.status(400).json({ message: 'Both id1 and id2 are required.' });
+        }
+        
+        // Store dismissed pairs in user profile (we'll add this field to User model)
+        const user = await User.findOne({ id_public: userId });
+        if (!user) return res.status(404).json({ message: 'User not found.' });
+        
+        if (!user.dismissedDuplicatePairs) user.dismissedDuplicatePairs = [];
+        
+        // Store as sorted pair to avoid duplicates
+        const pair = [id1, id2].sort().join('|');
+        if (!user.dismissedDuplicatePairs.includes(pair)) {
+            user.dismissedDuplicatePairs.push(pair);
+            await user.save();
+        }
+        
+        res.status(200).json({ message: 'Duplicate dismissed.' });
+    } catch (error) {
+        console.error('[Duplicates Dismiss] Error:', error);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
+// POST /api/animals/duplicates/merge
+// Merge two duplicate animals: keep one, transfer data from the other, delete the duplicate
+// Body: { keepId: 'abc123', deleteId: 'def456' }
+router.post('/duplicates/merge', async (req, res) => {
+    try {
+        const userId = req.user.id_public;
+        const { keepId, deleteId } = req.body;
+        
+        if (!keepId || !deleteId) {
+            return res.status(400).json({ message: 'Both keepId and deleteId are required.' });
+        }
+        
+        if (keepId === deleteId) {
+            return res.status(400).json({ message: 'Cannot merge an animal with itself.' });
+        }
+        
+        // Verify both animals belong to the user
+        const keepAnimal = await Animal.findOne({ id_public: keepId, ownerId_public: userId });
+        const deleteAnimal = await Animal.findOne({ id_public: deleteId, ownerId_public: userId });
+        
+        if (!keepAnimal || !deleteAnimal) {
+            return res.status(404).json({ message: 'One or both animals not found or not owned by you.' });
+        }
+        
+        // Import ActivityLog and Litter models
+        const { ActivityLog } = require('../database/models');
+        const Litter = require('../database/models').Litter;
+        
+        // 1. Transfer activity logs
+        await ActivityLog.updateMany(
+            { animalId_public: deleteId },
+            { $set: { animalId_public: keepId } }
+        );
+        
+        // 2. Update litter references (sire/dam)
+        await Litter.updateMany(
+            { sireId_public: deleteId },
+            { $set: { sireId_public: keepId } }
+        );
+        await Litter.updateMany(
+            { damId_public: deleteId },
+            { $set: { damId_public: keepId } }
+        );
+        
+        // 3. Update parent references in other animals
+        await Animal.updateMany(
+            { $or: [{ fatherId_public: deleteId }, { sireId_public: deleteId }] },
+            { $set: { fatherId_public: keepId, sireId_public: keepId } }
+        );
+        await Animal.updateMany(
+            { $or: [{ motherId_public: deleteId }, { damId_public: deleteId }] },
+            { $set: { motherId_public: keepId, damId_public: keepId } }
+        );
+        
+        // 4. Transfer gallery images if keep animal has space
+        if (deleteAnimal.extraImages && deleteAnimal.extraImages.length > 0) {
+            const keepGallery = keepAnimal.extraImages || [];
+            const available = 20 - keepGallery.length;
+            if (available > 0) {
+                const toAdd = deleteAnimal.extraImages.slice(0, available);
+                keepAnimal.extraImages = [...keepGallery, ...toAdd];
+                await keepAnimal.save();
+            }
+        }
+        
+        // 5. Delete the duplicate animal
+        await Animal.deleteOne({ id_public: deleteId, ownerId_public: userId });
+        
+        // Log the merge
+        await logUserActivity(userId, USER_ACTIONS.animal_delete, {
+            animal_name: `${deleteAnimal.prefix || ''} ${deleteAnimal.name} ${deleteAnimal.suffix || ''}`.trim(),
+            reason: `Merged into ${keepAnimal.name} (duplicate)`
+        });
+        
+        res.status(200).json({ 
+            message: `Successfully merged "${deleteAnimal.name}" into "${keepAnimal.name}".`,
+            keptAnimal: keepAnimal
+        });
+    } catch (error) {
+        console.error('[Duplicates Merge] Error:', error);
+        res.status(500).json({ message: 'Internal server error.', error: error.message });
+    }
+});
+
 // GET /api/animals/:id_backend
 // 3. Gets a single animal's private details.
 // If viewFromNotification=true and animal exists, return it regardless of ownership (for notification recipients to view animals mentioned in breeder/parent notifications)
@@ -2099,258 +2352,6 @@ router.delete('/:id_public/gallery', async (req, res) => {
         res.status(200).json({ extraImages: animal.extraImages });
     } catch (error) {
         console.error('[Gallery DELETE] Error:', error);
-        res.status(500).json({ message: 'Internal server error.', error: error.message });
-    }
-});
-
-// ─── Duplicate Detection ───────────────────────────────────────────────────────
-
-// Levenshtein distance for fuzzy string matching
-function levenshteinDistance(a, b) {
-    const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
-    for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
-    for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
-    for (let j = 1; j <= b.length; j++) {
-        for (let i = 1; i <= a.length; i++) {
-            const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
-            matrix[j][i] = Math.min(
-                matrix[j][i - 1] + 1,
-                matrix[j - 1][i] + 1,
-                matrix[j - 1][i - 1] + indicator
-            );
-        }
-    }
-    return matrix[b.length][a.length];
-}
-
-function similarityPercent(a, b) {
-    if (!a || !b) return 0;
-    const distance = levenshteinDistance(a.toLowerCase(), b.toLowerCase());
-    const maxLen = Math.max(a.length, b.length);
-    return ((maxLen - distance) / maxLen) * 100;
-}
-
-// GET /api/animals/duplicates
-// Find potential duplicate animals across user's account
-router.get('/duplicates', async (req, res) => {
-    try {
-        console.log('[Duplicates] Request received');
-        console.log('[Duplicates] User:', req.user);
-        
-        if (!req.user || !req.user.id_public) {
-            console.error('[Duplicates] Missing user or id_public');
-            return res.status(400).json({ message: 'User authentication required.' });
-        }
-        
-        const userId = req.user.id_public;
-        console.log('[Duplicates] User ID:', userId);
-        
-        // Get user to access dismissed pairs
-        const user = await User.findOne({ id_public: userId });
-        if (!user) {
-            console.error('[Duplicates] User not found:', userId);
-            return res.status(404).json({ message: 'User not found.' });
-        }
-        console.log('[Duplicates] User found, dismissed pairs:', user.dismissedDuplicatePairs?.length || 0);
-        
-        const dismissedPairs = new Set(user?.dismissedDuplicatePairs || []);
-        
-        // Get all user's animals (including sold/deceased)
-        const animals = await Animal.find({ ownerId_public: userId }).lean();
-        console.log('[Duplicates] Found animals:', animals.length);
-        
-        const duplicateGroups = [];
-        const processed = new Set();
-        
-        animals.forEach((animal, idx) => {
-            if (processed.has(animal.id_public)) return;
-            
-            const duplicates = [];
-            const fullName = [animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ').trim();
-            
-            // Check against all other animals
-            animals.forEach((other, otherIdx) => {
-                if (idx === otherIdx || processed.has(other.id_public)) return;
-                
-                // Skip if this pair has been dismissed
-                const pair = [animal.id_public, other.id_public].sort().join('|');
-                if (dismissedPairs.has(pair)) return;
-                
-                const otherFullName = [other.prefix, other.name, other.suffix].filter(Boolean).join(' ').trim();
-                
-                let reasons = [];
-                
-                // 1. Exact name match (case-insensitive)
-                if (fullName.toLowerCase() === otherFullName.toLowerCase()) {
-                    reasons.push('exact_name');
-                }
-                
-                // 2. Fuzzy name match (85%+ similarity)
-                const similarity = similarityPercent(fullName, otherFullName);
-                if (similarity >= 85 && similarity < 100) {
-                    reasons.push(`similar_name_${Math.round(similarity)}%`);
-                }
-                
-                // 3. Same birthdate + species
-                if (animal.birthDate && other.birthDate && animal.species === other.species) {
-                    const date1 = new Date(animal.birthDate).toISOString().split('T')[0];
-                    const date2 = new Date(other.birthDate).toISOString().split('T')[0];
-                    if (date1 === date2) {
-                        reasons.push('same_birthdate_species');
-                    }
-                }
-                
-                // 4. Same parent combination (sire + dam)
-                const sire1 = animal.fatherId_public || animal.sireId_public;
-                const dam1 = animal.motherId_public || animal.damId_public;
-                const sire2 = other.fatherId_public || other.sireId_public;
-                const dam2 = other.motherId_public || other.damId_public;
-                
-                if (sire1 && dam1 && sire2 && dam2 && sire1 === sire2 && dam1 === dam2) {
-                    reasons.push('same_parents');
-                }
-                
-                if (reasons.length > 0) {
-                    duplicates.push({
-                        animal: other,
-                        reasons
-                    });
-                }
-            });
-            
-            // Only add to groups if we found duplicates
-            if (duplicates.length > 0) {
-                duplicateGroups.push({
-                    primary: animal,
-                    duplicates
-                });
-                
-                processed.add(animal.id_public);
-                duplicates.forEach(d => processed.add(d.animal.id_public));
-            }
-        });
-        
-        console.log('[Duplicates] Returning groups:', duplicateGroups.length);
-        res.status(200).json({ groups: duplicateGroups });
-    } catch (error) {
-        console.error('[Duplicates] Error:', error);
-        console.error('[Duplicates] Error stack:', error.stack);
-        res.status(500).json({ message: 'Internal server error.', error: error.message });
-    }
-});
-
-// POST /api/animals/duplicates/dismiss
-// Mark a pair of animals as "not duplicates" so they won't show in future scans
-// Body: { id1: 'abc123', id2: 'def456' }
-router.post('/duplicates/dismiss', async (req, res) => {
-    try {
-        const userId = req.user.id_public;
-        const { id1, id2 } = req.body;
-        
-        if (!id1 || !id2) {
-            return res.status(400).json({ message: 'Both id1 and id2 are required.' });
-        }
-        
-        // Store dismissed pairs in user profile (we'll add this field to User model)
-        const user = await User.findOne({ id_public: userId });
-        if (!user) return res.status(404).json({ message: 'User not found.' });
-        
-        if (!user.dismissedDuplicatePairs) user.dismissedDuplicatePairs = [];
-        
-        // Store as sorted pair to avoid duplicates
-        const pair = [id1, id2].sort().join('|');
-        if (!user.dismissedDuplicatePairs.includes(pair)) {
-            user.dismissedDuplicatePairs.push(pair);
-            await user.save();
-        }
-        
-        res.status(200).json({ message: 'Duplicate dismissed.' });
-    } catch (error) {
-        console.error('[Duplicates Dismiss] Error:', error);
-        res.status(500).json({ message: 'Internal server error.', error: error.message });
-    }
-});
-
-// POST /api/animals/duplicates/merge
-// Merge two duplicate animals: keep one, transfer data from the other, delete the duplicate
-// Body: { keepId: 'abc123', deleteId: 'def456' }
-router.post('/duplicates/merge', async (req, res) => {
-    try {
-        const userId = req.user.id_public;
-        const { keepId, deleteId } = req.body;
-        
-        if (!keepId || !deleteId) {
-            return res.status(400).json({ message: 'Both keepId and deleteId are required.' });
-        }
-        
-        if (keepId === deleteId) {
-            return res.status(400).json({ message: 'Cannot merge an animal with itself.' });
-        }
-        
-        // Verify both animals belong to the user
-        const keepAnimal = await Animal.findOne({ id_public: keepId, ownerId_public: userId });
-        const deleteAnimal = await Animal.findOne({ id_public: deleteId, ownerId_public: userId });
-        
-        if (!keepAnimal || !deleteAnimal) {
-            return res.status(404).json({ message: 'One or both animals not found or not owned by you.' });
-        }
-        
-        // Import ActivityLog and Litter models
-        const { ActivityLog } = require('../database/models');
-        const Litter = require('../database/models').Litter;
-        
-        // 1. Transfer activity logs
-        await ActivityLog.updateMany(
-            { animalId_public: deleteId },
-            { $set: { animalId_public: keepId } }
-        );
-        
-        // 2. Update litter references (sire/dam)
-        await Litter.updateMany(
-            { sireId_public: deleteId },
-            { $set: { sireId_public: keepId } }
-        );
-        await Litter.updateMany(
-            { damId_public: deleteId },
-            { $set: { damId_public: keepId } }
-        );
-        
-        // 3. Update parent references in other animals
-        await Animal.updateMany(
-            { $or: [{ fatherId_public: deleteId }, { sireId_public: deleteId }] },
-            { $set: { fatherId_public: keepId, sireId_public: keepId } }
-        );
-        await Animal.updateMany(
-            { $or: [{ motherId_public: deleteId }, { damId_public: deleteId }] },
-            { $set: { motherId_public: keepId, damId_public: keepId } }
-        );
-        
-        // 4. Transfer gallery images if keep animal has space
-        if (deleteAnimal.extraImages && deleteAnimal.extraImages.length > 0) {
-            const keepGallery = keepAnimal.extraImages || [];
-            const available = 20 - keepGallery.length;
-            if (available > 0) {
-                const toAdd = deleteAnimal.extraImages.slice(0, available);
-                keepAnimal.extraImages = [...keepGallery, ...toAdd];
-                await keepAnimal.save();
-            }
-        }
-        
-        // 5. Delete the duplicate animal
-        await Animal.deleteOne({ id_public: deleteId, ownerId_public: userId });
-        
-        // Log the merge
-        await logUserActivity(userId, USER_ACTIONS.animal_delete, {
-            animal_name: `${deleteAnimal.prefix || ''} ${deleteAnimal.name} ${deleteAnimal.suffix || ''}`.trim(),
-            reason: `Merged into ${keepAnimal.name} (duplicate)`
-        });
-        
-        res.status(200).json({ 
-            message: `Successfully merged "${deleteAnimal.name}" into "${keepAnimal.name}".`,
-            keptAnimal: keepAnimal
-        });
-    } catch (error) {
-        console.error('[Duplicates Merge] Error:', error);
         res.status(500).json({ message: 'Internal server error.', error: error.message });
     }
 });
