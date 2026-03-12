@@ -629,6 +629,7 @@ router.get('/duplicates', async (req, res) => {
                 
                 let reasons = [];
                 let hasNameMatch = false;
+                let hasBirthdateMatch = false;
                 
                 // 1. Exact name match (case-insensitive)
                 if (fullName.toLowerCase() === otherFullName.toLowerCase()) {
@@ -637,23 +638,26 @@ router.get('/duplicates', async (req, res) => {
                 }
                 
                 // 2. Fuzzy name match (85%+ similarity)
-                const similarity = similarityPercent(fullName, otherFullName);
-                if (similarity >= 85 && similarity < 100) {
-                    reasons.push(`similar_name_${Math.round(similarity)}%`);
-                    hasNameMatch = true;
+                if (!hasNameMatch) {
+                    const similarity = similarityPercent(fullName, otherFullName);
+                    if (similarity >= 85) {
+                        reasons.push(`similar_name_${Math.round(similarity)}%`);
+                        hasNameMatch = true;
+                    }
                 }
                 
-                // Only proceed if we have a name match (to avoid flagging siblings as duplicates)
-                if (!hasNameMatch) return;
-                
-                // 3. Same birthdate + species (supporting evidence)
+                // 3. Check birthdate match
                 if (animal.birthDate && other.birthDate && animal.species === other.species) {
                     const date1 = new Date(animal.birthDate).toISOString().split('T')[0];
                     const date2 = new Date(other.birthDate).toISOString().split('T')[0];
                     if (date1 === date2) {
                         reasons.push('same_birthdate_species');
+                        hasBirthdateMatch = true;
                     }
                 }
+                
+                // MUST have both name match AND birthdate match to be considered a duplicate
+                if (!hasNameMatch || !hasBirthdateMatch) return;
                 
                 // 4. Same parent combination (supporting evidence)
                 const sire1 = animal.fatherId_public || animal.sireId_public;
