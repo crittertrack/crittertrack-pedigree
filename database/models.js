@@ -95,6 +95,9 @@ const UserSchema = new mongoose.Schema({
     // Donation badge fields
     monthlyDonationActive: { type: Boolean, default: false },  // Monthly supporter badge (diamond)
     lastDonationDate: { type: Date, default: null },           // Last one-time donation (gift badge, 31 days)
+    
+    // Duplicate detection dismissed pairs (to avoid showing same duplicates repeatedly)
+    dismissedDuplicatePairs: { type: [String], default: [] }  // Array of '{id1}|{id2}' sorted pairs
 });
 const User = mongoose.model('User', UserSchema);
 
