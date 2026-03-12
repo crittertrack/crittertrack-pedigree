@@ -628,19 +628,25 @@ router.get('/duplicates', async (req, res) => {
                 const otherFullName = [other.prefix, other.name, other.suffix].filter(Boolean).join(' ').trim();
                 
                 let reasons = [];
+                let hasNameMatch = false;
                 
                 // 1. Exact name match (case-insensitive)
                 if (fullName.toLowerCase() === otherFullName.toLowerCase()) {
                     reasons.push('exact_name');
+                    hasNameMatch = true;
                 }
                 
                 // 2. Fuzzy name match (85%+ similarity)
                 const similarity = similarityPercent(fullName, otherFullName);
                 if (similarity >= 85 && similarity < 100) {
                     reasons.push(`similar_name_${Math.round(similarity)}%`);
+                    hasNameMatch = true;
                 }
                 
-                // 3. Same birthdate + species
+                // Only proceed if we have a name match (to avoid flagging siblings as duplicates)
+                if (!hasNameMatch) return;
+                
+                // 3. Same birthdate + species (supporting evidence)
                 if (animal.birthDate && other.birthDate && animal.species === other.species) {
                     const date1 = new Date(animal.birthDate).toISOString().split('T')[0];
                     const date2 = new Date(other.birthDate).toISOString().split('T')[0];
@@ -649,7 +655,7 @@ router.get('/duplicates', async (req, res) => {
                     }
                 }
                 
-                // 4. Same parent combination (sire + dam)
+                // 4. Same parent combination (supporting evidence)
                 const sire1 = animal.fatherId_public || animal.sireId_public;
                 const dam1 = animal.motherId_public || animal.damId_public;
                 const sire2 = other.fatherId_public || other.sireId_public;
