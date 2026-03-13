@@ -9,7 +9,6 @@ const r2 = require('../storage/r2_client');
 // This router requires authMiddleware to be applied in index.js
 
 // --- Multer setup for litter image uploads ---
-const useR2 = (process.env.STORAGE_PROVIDER || '').toUpperCase() === 'R2';
 const imageFileFilter = (req, file, cb) => {
     if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg') {
         cb(null, true);
@@ -293,12 +292,7 @@ router.post('/:id_backend/images', litterUpload.single('image'), async (req, res
         const ext = req.file.mimetype === 'image/png' ? '.png' : '.jpg';
         const key = `litters/${litter._id}/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
 
-        let imageUrl;
-        if (useR2) {
-            imageUrl = await r2.uploadBuffer(key, req.file.buffer, req.file.mimetype);
-        } else {
-            return res.status(500).json({ message: 'R2 storage not configured' });
-        }
+        const imageUrl = await r2.uploadBuffer(key, req.file.buffer, req.file.mimetype);
 
         litter.images.push({ url: imageUrl, r2Key: key });
         await litter.save();
