@@ -677,6 +677,8 @@ const LitterSchema = new mongoose.Schema({
 
     // Planned mating flag — true until a birthDate is set
     isPlanned: { type: Boolean, default: false, index: true },
+    // Tracks whether the mating-day reminder notification has already been sent
+    matingReminderSent: { type: Boolean, default: false },
     
 }, { timestamps: true });
 const Litter = mongoose.model('Litter', LitterSchema);
@@ -686,7 +688,7 @@ const Litter = mongoose.model('Litter', LitterSchema);
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     userId_public: { type: String, index: true },
-    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'view_only_offer', 'transfer_accepted', 'transfer_declined', 'animal_returned', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment'] },
+    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'view_only_offer', 'transfer_accepted', 'transfer_declined', 'animal_returned', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder'] },
     status: { type: String, enum: ['pending', 'approved', 'rejected', 'read'], default: 'pending', index: true },
     
     // Request details

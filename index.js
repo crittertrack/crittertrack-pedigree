@@ -849,4 +849,57 @@ setInterval(broadcastCronJob, 60000);
 // Also run once on startup after a short delay
 setTimeout(broadcastCronJob, 5000);
 
+// --- Planned Mating Reminder Cron ---
+// Runs every hour. Finds planned matings whose matingDate is today and sends
+// a one-time in-app notification to the litter owner.
+const matingReminderCronJob = async () => {
+    try {
+        const { Litter, Notification } = require('./database/models');
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const endOfDay   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        const dueTodayLitters = await Litter.find({
+            isPlanned: true,
+            matingReminderSent: { $ne: true },
+            matingDate: { $gte: startOfDay, $lte: endOfDay },
+        });
+
+        if (dueTodayLitters.length > 0) {
+            console.log(`[MATING REMINDER] ${dueTodayLitters.length} planned mating(s) due today`);
+        }
+
+        for (const litter of dueTodayLitters) {
+            try {
+                const sireName  = litter.sirePrefixName  || litter.sireId_public  || 'Unknown sire';
+                const damName   = litter.damPrefixName   || litter.damId_public   || 'Unknown dam';
+                const ctlId     = litter.litter_id_public ? `(${litter.litter_id_public}) ` : '';
+
+                await Notification.create({
+                    userId: litter.ownerId,
+                    type: 'mating_reminder',
+                    status: 'pending',
+                    title: '🐾 Planned mating today',
+                    message: `Your planned mating ${ctlId}between ${sireName} and ${damName} is scheduled for today. Don't forget to record the outcome!`,
+                    metadata: { litterId: litter._id, litter_id_public: litter.litter_id_public },
+                    read: false,
+                });
+
+                litter.matingReminderSent = true;
+                await litter.save();
+
+                console.log(`[MATING REMINDER] Sent reminder for litter ${litter.litter_id_public || litter._id}`);
+            } catch (err) {
+                console.error(`[MATING REMINDER] Error for litter ${litter._id}:`, err);
+            }
+        }
+    } catch (err) {
+        console.error('[MATING REMINDER] Cron error:', err);
+    }
+};
+
+// Run hourly, and once 10 s after startup
+setInterval(matingReminderCronJob, 60 * 60 * 1000);
+setTimeout(matingReminderCronJob, 10000);
+
 // Updated for mate data debug logging
