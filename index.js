@@ -871,8 +871,12 @@ const matingReminderCronJob = async () => {
 
         for (const litter of dueTodayLitters) {
             try {
-                const sireName  = litter.sirePrefixName  || litter.sireId_public  || 'Unknown sire';
-                const damName   = litter.damPrefixName   || litter.damId_public   || 'Unknown dam';
+                const { Animal } = require('./database/models');
+                const sireDoc = litter.sireId_public ? await Animal.findOne({ id_public: litter.sireId_public }).select('name prefix suffix').lean() : null;
+                const damDoc  = litter.damId_public  ? await Animal.findOne({ id_public: litter.damId_public  }).select('name prefix suffix').lean() : null;
+                const fmtAnimal = (doc, fallback) => doc ? [doc.prefix, doc.name, doc.suffix].filter(Boolean).join(' ') : (fallback || 'Unknown');
+                const sireName = fmtAnimal(sireDoc, litter.sireId_public);
+                const damName  = fmtAnimal(damDoc,  litter.damId_public);
                 const ctlId     = litter.litter_id_public ? `(${litter.litter_id_public}) ` : '';
 
                 await Notification.create({
