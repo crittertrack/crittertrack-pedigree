@@ -1,9 +1,27 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
-const { Animal, User, Notification } = require('../database/models');
+const { Animal, User, Notification, Litter } = require('../database/models');
+const r2 = require('../storage/r2_client');
 // This router requires authMiddleware to be applied in index.js
+
+// --- Multer setup for litter image uploads ---
+const useR2 = (process.env.STORAGE_PROVIDER || '').toUpperCase() === 'R2';
+const imageFileFilter = (req, file, cb) => {
+    if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg') {
+        cb(null, true);
+    } else {
+        cb(new Error('Only PNG and JPEG images are allowed'), false);
+    }
+};
+const litterUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 500 * 1024 },
+    fileFilter: imageFileFilter,
+});
 
 // --- Litter Route Controllers (PROTECTED) ---
 
@@ -254,5 +272,66 @@ router.delete('/:id_backend', async (req, res) => {
     }
 });
 
+
+// POST /api/litters/:id_backend/images
+// Upload one image to a born litter (max 5). Only works on non-planned litters.
+router.post('/:id_backend/images', litterUpload.single('image'), async (req, res) => {
+    try {
+        const litter = await Litter.findById(req.params.id_backend);
+        if (!litter) return res.status(404).json({ message: 'Litter not found' });
+        if (String(litter.ownerId) !== String(req.user.id)) {
+            return res.status(403).json({ message: 'Not your litter' });
+        }
+        if (litter.isPlanned) {
+            return res.status(400).json({ message: 'Images can only be added to born litters' });
+        }
+        if ((litter.images || []).length >= 5) {
+            return res.status(400).json({ message: 'Maximum of 5 images per litter' });
+        }
+        if (!req.file) return res.status(400).json({ message: 'No image file provided' });
+
+        const ext = req.file.mimetype === 'image/png' ? '.png' : '.jpg';
+        const key = `litters/${litter._id}/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+
+        let imageUrl;
+        if (useR2) {
+            imageUrl = await r2.uploadBuffer(key, req.file.buffer, req.file.mimetype);
+        } else {
+            return res.status(500).json({ message: 'R2 storage not configured' });
+        }
+
+        litter.images.push({ url: imageUrl, r2Key: key });
+        await litter.save();
+
+        res.json({ url: imageUrl, r2Key: key, images: litter.images });
+    } catch (err) {
+        console.error('Error uploading litter image:', err);
+        res.status(500).json({ message: 'Failed to upload image' });
+    }
+});
+
+// DELETE /api/litters/:id_backend/images/:r2Key
+// Remove one image from a litter by its R2 key (URL-encoded).
+router.delete('/:id_backend/images/:r2Key', async (req, res) => {
+    try {
+        const litter = await Litter.findById(req.params.id_backend);
+        if (!litter) return res.status(404).json({ message: 'Litter not found' });
+        if (String(litter.ownerId) !== String(req.user.id)) {
+            return res.status(403).json({ message: 'Not your litter' });
+        }
+
+        const r2Key = decodeURIComponent(req.params.r2Key);
+        const before = litter.images.length;
+        litter.images = litter.images.filter(img => img.r2Key !== r2Key);
+        if (litter.images.length === before) {
+            return res.status(404).json({ message: 'Image not found' });
+        }
+        await litter.save();
+        res.json({ message: 'Image removed', images: litter.images });
+    } catch (err) {
+        console.error('Error deleting litter image:', err);
+        res.status(500).json({ message: 'Failed to delete image' });
+    }
+});
 
 module.exports = router;
