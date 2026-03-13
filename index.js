@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); // <-- REQUIRED for inlined Auth Middleware
+// Deployment trigger: 2026-03-13 — isPlanned schema field active
 require('dotenv').config();
 const { ProfanityError } = require('./utils/profanityFilter');
 
