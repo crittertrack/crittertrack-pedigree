@@ -854,14 +854,13 @@ setTimeout(broadcastCronJob, 5000);
 // a one-time in-app notification to the litter owner.
 const matingReminderCronJob = async () => {
     try {
-        const { Litter, Notification } = require('./database/models');
+        const { Litter } = require('./database/models');
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
         const endOfDay   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
         const dueTodayLitters = await Litter.find({
             isPlanned: true,
-            matingReminderSent: { $ne: true },
             matingDate: { $gte: startOfDay, $lte: endOfDay },
         });
 
@@ -877,22 +876,8 @@ const matingReminderCronJob = async () => {
                 const fmtAnimal = (doc, fallback) => doc ? [doc.prefix, doc.name, doc.suffix].filter(Boolean).join(' ') : (fallback || 'Unknown');
                 const sireName = fmtAnimal(sireDoc, litter.sireId_public);
                 const damName  = fmtAnimal(damDoc,  litter.damId_public);
-                const ctlId     = litter.litter_id_public ? `(${litter.litter_id_public}) ` : '';
 
-                await Notification.create({
-                    userId: litter.ownerId,
-                    type: 'mating_reminder',
-                    status: 'pending',
-                    title: '🐾 Planned mating today',
-                    message: `Your planned mating ${ctlId}between ${sireName} and ${damName} is scheduled for today. Don't forget to record the outcome!`,
-                    metadata: { litterId: litter._id, litter_id_public: litter.litter_id_public },
-                    read: false,
-                });
-
-                litter.matingReminderSent = true;
-                await litter.save();
-
-                console.log(`[MATING REMINDER] Sent reminder for litter ${litter.litter_id_public || litter._id}`);
+                console.log(`[MATING REMINDER] Due today: ${litter.litter_id_public || litter._id} — ${sireName} × ${damName}`);
             } catch (err) {
                 console.error(`[MATING REMINDER] Error for litter ${litter._id}:`, err);
             }
