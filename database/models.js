@@ -141,6 +141,17 @@ const PublicProfileSchema = new mongoose.Schema({
     // Donation badge fields
     monthlyDonationActive: { type: Boolean, default: false },  // Monthly supporter badge (diamond)
     lastDonationDate: { type: Date, default: null },           // Last one-time donation (gift badge, 31 days)
+
+    // Breeder Info & Adoption Rules (public-facing program info)
+    breederInfo: {
+        aboutProgram:       { type: String, default: '' },
+        adoptionRules:      { type: String, default: '' },
+        careRequirements:   { type: String, default: '' },
+        healthGuarantee:    { type: String, default: '' },
+        waitlistInfo:       { type: String, default: '' },
+        pricingNotes:       { type: String, default: '' },
+        contactPreferences: { type: String, default: '' },
+    },
 }, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
 

@@ -539,6 +539,22 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         console.log('[updateUserProfile] PublicProfile showBio update result:', showBioUpdateResult);
     }
     
+    if (updates.breederInfo !== undefined && typeof updates.breederInfo === 'object') {
+        const BREEDER_INFO_KEYS = ['aboutProgram', 'adoptionRules', 'careRequirements', 'healthGuarantee', 'waitlistInfo', 'pricingNotes', 'contactPreferences'];
+        const MAX_LEN = 2000;
+        const sanitized = {};
+        for (const key of BREEDER_INFO_KEYS) {
+            const val = updates.breederInfo[key];
+            if (typeof val === 'string') {
+                if (val.length > MAX_LEN) throw new Error(`Breeder info field '${key}' exceeds 2000 character limit.`);
+                sanitized[key] = val.trim();
+            } else {
+                sanitized[key] = '';
+            }
+        }
+        await PublicProfile.updateOne({ id_public: user.id_public }, { breederInfo: sanitized });
+    }
+
     // Handle donation badge field updates
     if (updates.monthlyDonationActive !== undefined) {
         user.monthlyDonationActive = updates.monthlyDonationActive;
@@ -1244,8 +1260,8 @@ const addLitter = async (appUserId_backend, litterData) => {
  * Gets a list of litters owned by the logged-in user.
  */
 const getUsersLitters = async (appUserId_backend) => {
-    // Sort by birth date descending (most recent first)
-    const litters = await Litter.find({ ownerId: appUserId_backend }).sort({ birthDate: -1 }).lean();
+    // Sort: planned matings (no birthDate) first, then by birthDate descending
+    const litters = await Litter.find({ ownerId: appUserId_backend }).sort({ isPlanned: -1, birthDate: -1 }).lean();
     
     // Populate parent data for each litter (including hidden/transferred animals)
     const littersWithParents = await Promise.all(
