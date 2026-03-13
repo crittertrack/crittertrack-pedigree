@@ -226,6 +226,8 @@ const registerUser = async (userData) => {
         showEmailPublic: user.showEmailPublic || false,
         websiteURL: user.websiteURL || null,
         showWebsiteURL: user.showWebsiteURL || false,
+        socialMediaURL: user.socialMediaURL || null,
+        showSocialMediaURL: user.showSocialMediaURL || false,
         allowMessages: true, // Enable messages by default
         emailNotificationPreference: 'none', // Disable email notifications by default
         monthlyDonationActive: false, // New users start without donation badges
@@ -248,6 +250,8 @@ const registerUser = async (userData) => {
         showBreederName: user.showBreederName,
         websiteURL: user.websiteURL,
         showWebsiteURL: user.showWebsiteURL,
+        socialMediaURL: user.socialMediaURL,
+        showSocialMediaURL: user.showSocialMediaURL,
         showEmailPublic: user.showEmailPublic,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
@@ -400,6 +404,8 @@ const getUserProfileById = async (appUserId_backend) => {
         showBreederName: user.showBreederName,
         websiteURL: user.websiteURL,
         showWebsiteURL: user.showWebsiteURL,
+        socialMediaURL: user.socialMediaURL,
+        showSocialMediaURL: user.showSocialMediaURL,
         showEmailPublic: user.showEmailPublic,
         allowMessages: user.allowMessages !== undefined ? user.allowMessages : true,
         emailNotificationPreference: user.emailNotificationPreference || 'none',
@@ -471,6 +477,15 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         user.showWebsiteURL = updates.showWebsiteURL;
         // Update public profile showWebsiteURL simultaneously
         await PublicProfile.updateOne({ id_public: user.id_public }, { showWebsiteURL: updates.showWebsiteURL });
+    }
+    if (updates.socialMediaURL !== undefined) {
+        if (updates.socialMediaURL && updates.socialMediaURL.length > 500) throw new Error('Social media URL too long');
+        user.socialMediaURL = updates.socialMediaURL;
+        await PublicProfile.updateOne({ id_public: user.id_public }, { socialMediaURL: updates.socialMediaURL });
+    }
+    if (updates.showSocialMediaURL !== undefined) {
+        user.showSocialMediaURL = updates.showSocialMediaURL;
+        await PublicProfile.updateOne({ id_public: user.id_public }, { showSocialMediaURL: updates.showSocialMediaURL });
     }
     if (updates.showEmailPublic !== undefined) {
         user.showEmailPublic = updates.showEmailPublic;
@@ -1802,6 +1817,8 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
         showBreederName: user.showBreederName,
         websiteURL: user.websiteURL,
         showWebsiteURL: user.showWebsiteURL,
+        socialMediaURL: user.socialMediaURL,
+        showSocialMediaURL: user.showSocialMediaURL,
         showEmailPublic: user.showEmailPublic,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
