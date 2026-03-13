@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); // <-- REQUIRED for inlined Auth Middleware
+// Deployment trigger: 2026-03-13 — isPlanned schema field active
 require('dotenv').config();
 const { ProfanityError } = require('./utils/profanityFilter');
 
@@ -835,6 +836,8 @@ const broadcastCronJob = async () => {
 setInterval(broadcastCronJob, 60000);
 
 // Also run once on startup after a short delay
-setTimeout(broadcastCronJob, 5000);/ /   F o r c e   R a i l w a y   d e p l o y m e n t  
- / /   F o r c e   R a i l w a y   d e p l o y m e n t  
+setTimeout(broadcastCronJob, 5000);/ /   F o r c e   R a i l w a y   d e p l o y m e n t 
+ 
+ / /   F o r c e   R a i l w a y   d e p l o y m e n t 
+ 
  
