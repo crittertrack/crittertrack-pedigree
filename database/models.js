@@ -630,6 +630,22 @@ const LitterSchema = new mongoose.Schema({
     
     // Remarks specific to the litter
     notes: { type: String, default: '' },
+
+    // Enhanced breeding record fields
+    matingDate: { type: Date, default: null },
+    expectedDueDate: { type: Date, default: null },
+    breedingMethod: { type: String, default: null },
+    breedingConditionAtTime: { type: String, default: null },
+    outcome: { type: String, default: null },
+    birthMethod: { type: String, default: null },
+    litterSizeBorn: { type: Number, default: null },
+    litterSizeWeaned: { type: Number, default: null },
+    stillbornCount: { type: Number, default: null },
+    unknownCount: { type: Number, default: null },
+    weaningDate: { type: Date, default: null },
+
+    // Planned mating flag — true until a birthDate is set
+    isPlanned: { type: Boolean, default: false, index: true },
     
 }, { timestamps: true });
 const Litter = mongoose.model('Litter', LitterSchema);

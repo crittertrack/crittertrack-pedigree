@@ -1259,6 +1259,11 @@ const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
         sanitizedUpdates.femaleCount = updates.femaleCount === '' ? null : updates.femaleCount;
     }
 
+    // Auto-clear isPlanned when a birth date is recorded
+    if (updates.birthDate) {
+        sanitizedUpdates.isPlanned = false;
+    }
+
     const updatedLitter = await Litter.findOneAndUpdate(
         { _id: litterId_backend, ownerId: appUserId_backend },
         { $set: sanitizedUpdates },
