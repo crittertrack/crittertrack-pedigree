@@ -881,37 +881,34 @@ router.get('/litters/user/:id_public', async (req, res) => {
             .sort({ isPlanned: -1, birthDate: -1 })
             .lean();
 
-        // Enrich each litter with sire/dam prefix, name, suffix
+        // Enrich each litter with parent data; only include litters where both parents are public
         const parentIds = [...new Set(
             litters.flatMap(l => [l.sireId_public, l.damId_public].filter(Boolean))
         )];
+        let enrichedLitters = litters;
         if (parentIds.length) {
-            const parentFields = { id_public: 1, prefix: 1, name: 1, suffix: 1 };
+            const parentFields = { id_public: 1, prefix: 1, name: 1, suffix: 1, imageUrl: 1, photoUrl: 1, gender: 1, color: 1, species: 1 };
             const [publicAnimals, privateAnimals] = await Promise.all([
                 PublicAnimal.find({ id_public: { $in: parentIds } }, parentFields).lean(),
                 Animal.find({ id_public: { $in: parentIds } }, parentFields).lean(),
             ]);
+            // Build map (publicAnimals overwrite private if both exist)
             const parentMap = {};
-            for (const a of [...privateAnimals, ...publicAnimals]) {
-                parentMap[a.id_public] = a; // publicAnimals overwrite privateAnimals if both exist
-            }
-            for (const l of litters) {
-                if (l.sireId_public && parentMap[l.sireId_public]) {
-                    const s = parentMap[l.sireId_public];
-                    l.sirePrefix = s.prefix || null;
-                    l.sireName   = s.name   || null;
-                    l.sireSuffix = s.suffix || null;
-                }
-                if (l.damId_public && parentMap[l.damId_public]) {
-                    const d = parentMap[l.damId_public];
-                    l.damPrefix = d.prefix || null;
-                    l.damName   = d.name   || null;
-                    l.damSuffix = d.suffix || null;
-                }
+            for (const a of [...privateAnimals, ...publicAnimals]) parentMap[a.id_public] = a;
+            const publicParentSet = new Set(publicAnimals.map(a => a.id_public));
+            // Only surface litters where both parents are in the public collection
+            enrichedLitters = litters.filter(l =>
+                l.sireId_public && l.damId_public &&
+                publicParentSet.has(l.sireId_public) &&
+                publicParentSet.has(l.damId_public)
+            );
+            for (const l of enrichedLitters) {
+                if (parentMap[l.sireId_public]) l.sireAnimal = parentMap[l.sireId_public];
+                if (parentMap[l.damId_public])  l.damAnimal  = parentMap[l.damId_public];
             }
         }
 
-        res.status(200).json(litters);
+        res.status(200).json(enrichedLitters);
     } catch (error) {
         console.error('Error fetching public litters:', error);
         res.status(500).json({ message: 'Internal server error.' });
