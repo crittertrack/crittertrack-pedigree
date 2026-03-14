@@ -2010,6 +2010,34 @@ const BreederRatingSchema = new mongoose.Schema({
 BreederRatingSchema.index({ raterId_backend: 1, targetId_public: 1 }, { unique: true });
 const BreederRating = mongoose.model('BreederRating', BreederRatingSchema);
 
+// --- RATING REPORT SCHEMA ---
+const RatingReportSchema = new mongoose.Schema({
+    reporterId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    ratingId:      { type: mongoose.Schema.Types.ObjectId, ref: 'BreederRating', required: true, index: true },
+    targetId_public: { type: String, required: true, index: true }, // breeder whose profile was rated
+    reason:        { type: String, required: true },
+    status: {
+        type: String,
+        enum: ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'],
+        default: 'pending',
+        index: true
+    },
+    assignedTo:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    assignedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    assignedAt:  { type: Date, default: null },
+    adminNotes:  { type: String, default: null },
+    discussionNotes: [{
+        text:       { type: String, required: true },
+        authorId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        authorName: { type: String, required: true },
+        createdAt:  { type: Date, default: Date.now },
+        editedAt:   { type: Date, default: null }
+    }],
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
+}, { timestamps: true });
+const RatingReport = mongoose.model('RatingReport', RatingReportSchema);
+
 // --- EXPORTS ---
 module.exports = {
     Counter,
@@ -2040,4 +2068,5 @@ module.exports = {
     SupplyItem,
     AnimalLog,
     BreederRating,
+    RatingReport,
 };
