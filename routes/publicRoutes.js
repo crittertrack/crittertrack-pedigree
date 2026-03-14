@@ -880,6 +880,37 @@ router.get('/litters/user/:id_public', async (req, res) => {
             .select('litter_id_public breedingPairCodeName sireId_public sirePrefixName damId_public damPrefixName isPlanned birthDate expectedDueDate matingDate litterSizeBorn maleCount femaleCount unknownCount notes images inbreedingCoefficient')
             .sort({ isPlanned: -1, birthDate: -1 })
             .lean();
+
+        // Enrich each litter with sire/dam prefix, name, suffix
+        const parentIds = [...new Set(
+            litters.flatMap(l => [l.sireId_public, l.damId_public].filter(Boolean))
+        )];
+        if (parentIds.length) {
+            const parentFields = { id_public: 1, prefix: 1, name: 1, suffix: 1 };
+            const [publicAnimals, privateAnimals] = await Promise.all([
+                PublicAnimal.find({ id_public: { $in: parentIds } }, parentFields).lean(),
+                Animal.find({ id_public: { $in: parentIds } }, parentFields).lean(),
+            ]);
+            const parentMap = {};
+            for (const a of [...privateAnimals, ...publicAnimals]) {
+                parentMap[a.id_public] = a; // publicAnimals overwrite privateAnimals if both exist
+            }
+            for (const l of litters) {
+                if (l.sireId_public && parentMap[l.sireId_public]) {
+                    const s = parentMap[l.sireId_public];
+                    l.sirePrefix = s.prefix || null;
+                    l.sireName   = s.name   || null;
+                    l.sireSuffix = s.suffix || null;
+                }
+                if (l.damId_public && parentMap[l.damId_public]) {
+                    const d = parentMap[l.damId_public];
+                    l.damPrefix = d.prefix || null;
+                    l.damName   = d.name   || null;
+                    l.damSuffix = d.suffix || null;
+                }
+            }
+        }
+
         res.status(200).json(litters);
     } catch (error) {
         console.error('Error fetching public litters:', error);
