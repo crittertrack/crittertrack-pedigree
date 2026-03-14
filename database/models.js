@@ -26,6 +26,7 @@ const UserSchema = new mongoose.Schema({
     showSocialMediaURL: { type: Boolean, default: false },
     bio: { type: String, default: null, trim: true },
     showBio: { type: Boolean, default: true },
+    showStatsTab: { type: Boolean, default: true },
     showEmailPublic: { type: Boolean, default: false },
     creationDate: { type: Date, default: Date.now },
     // Email verification
@@ -122,6 +123,7 @@ const PublicProfileSchema = new mongoose.Schema({
     showSocialMediaURL: { type: Boolean, default: false },
     bio: { type: String, default: null, trim: true },
     showBio: { type: Boolean, default: true },
+    showStatsTab: { type: Boolean, default: true },
     allowMessages: { type: Boolean, default: true },
     emailNotificationPreference: { 
         type: String, 
