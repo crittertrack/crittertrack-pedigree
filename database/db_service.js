@@ -1499,8 +1499,11 @@ const getPublicProfile = async (id_public) => {
  * Only returns animals actually owned by the user (not borrowed/bred to).
  */
 const getPublicAnimalsByOwner = async (ownerId_public) => { 
-    // Only show animals marked as owned on the user's public profile
-    return PublicAnimal.find({ ownerId_public, isOwned: true }).sort({ birthDate: -1 }).lean();
+    // Show owned animals, plus any marked for sale or stud regardless of isOwned status
+    return PublicAnimal.find({
+        ownerId_public,
+        $or: [{ isOwned: true }, { isForSale: true }, { availableForBreeding: true }]
+    }).sort({ birthDate: -1 }).lean();
 };
 
 
