@@ -26,6 +26,7 @@ const UserSchema = new mongoose.Schema({
     showSocialMediaURL: { type: Boolean, default: false },
     bio: { type: String, default: null, trim: true },
     showBio: { type: Boolean, default: true },
+    showStatsTab: { type: Boolean, default: true },
     showEmailPublic: { type: Boolean, default: false },
     creationDate: { type: Date, default: Date.now },
     // Email verification
@@ -122,6 +123,7 @@ const PublicProfileSchema = new mongoose.Schema({
     showSocialMediaURL: { type: Boolean, default: false },
     bio: { type: String, default: null, trim: true },
     showBio: { type: Boolean, default: true },
+    showStatsTab: { type: Boolean, default: true },
     allowMessages: { type: Boolean, default: true },
     emailNotificationPreference: { 
         type: String, 
@@ -1995,6 +1997,47 @@ const EnclosureSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Enclosure = mongoose.model('Enclosure', EnclosureSchema);
 
+// --- BREEDER RATING SCHEMA ---
+const BreederRatingSchema = new mongoose.Schema({
+    raterId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    raterId_public:  { type: String, required: true, index: true },
+    raterName:       { type: String, default: '' }, // display name snapshot
+    targetId_public: { type: String, required: true, index: true },
+    score:           { type: Number, required: true, min: 1, max: 5 },
+    comment:         { type: String, default: '', maxlength: 1000, trim: true },
+}, { timestamps: true });
+// One rating per rater per target
+BreederRatingSchema.index({ raterId_backend: 1, targetId_public: 1 }, { unique: true });
+const BreederRating = mongoose.model('BreederRating', BreederRatingSchema);
+
+// --- RATING REPORT SCHEMA ---
+const RatingReportSchema = new mongoose.Schema({
+    reporterId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    ratingId:      { type: mongoose.Schema.Types.ObjectId, ref: 'BreederRating', required: true, index: true },
+    targetId_public: { type: String, required: true, index: true }, // breeder whose profile was rated
+    reason:        { type: String, required: true },
+    status: {
+        type: String,
+        enum: ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'],
+        default: 'pending',
+        index: true
+    },
+    assignedTo:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    assignedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    assignedAt:  { type: Date, default: null },
+    adminNotes:  { type: String, default: null },
+    discussionNotes: [{
+        text:       { type: String, required: true },
+        authorId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        authorName: { type: String, required: true },
+        createdAt:  { type: Date, default: Date.now },
+        editedAt:   { type: Date, default: null }
+    }],
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
+}, { timestamps: true });
+const RatingReport = mongoose.model('RatingReport', RatingReportSchema);
+
 // --- EXPORTS ---
 module.exports = {
     Counter,
@@ -2024,4 +2067,6 @@ module.exports = {
     Enclosure,
     SupplyItem,
     AnimalLog,
+    BreederRating,
+    RatingReport,
 };

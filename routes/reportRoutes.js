@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { ProfileReport, AnimalReport, MessageReport, User, Animal, Message } = require('../database/models');
+const { ProfileReport, AnimalReport, MessageReport, RatingReport, User, Animal, Message } = require('../database/models');
 const { protect } = require('../middleware/authMiddleware');
 const { sanitizeText } = require('../utils/profanityFilter');
 const { createAuditLog } = require('../utils/auditLogger');
@@ -244,6 +244,41 @@ router.post('/message', protect, async (req, res) => {
     } catch (error) {
         console.error('[REPORT MESSAGE] Error reporting message:', error);
         res.status(500).json({ error: 'Failed to submit message report' });
+    }
+});
+
+// POST /api/reports/rating - Report a breeder rating
+router.post('/rating', protect, async (req, res) => {
+    try {
+        const reporterId = req.user.id;
+        const { ratingId, targetId_public, reason } = req.body;
+        const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+
+        if (!ratingId || !targetId_public || !trimmedReason) {
+            return res.status(400).json({ error: 'ratingId, targetId_public, and reason are required' });
+        }
+
+        if (!isObjectId(ratingId)) {
+            return res.status(400).json({ error: 'Invalid ratingId' });
+        }
+
+        const cleanReason = sanitizeText(trimmedReason);
+
+        const report = new RatingReport({
+            reporterId,
+            ratingId,
+            targetId_public,
+            reason: cleanReason
+        });
+
+        await report.save();
+
+        console.log('[REPORT RATING] Rating report saved:', { reportId: report._id, reporterId, ratingId, targetId_public });
+
+        res.status(201).json({ message: 'Rating report submitted successfully' });
+    } catch (error) {
+        console.error('[REPORT RATING] Error reporting rating:', error);
+        res.status(500).json({ error: 'Failed to submit rating report' });
     }
 });
 

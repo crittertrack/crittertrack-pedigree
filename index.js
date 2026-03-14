@@ -684,6 +684,10 @@ app.delete('/api/users/account', authMiddleware, async (req, res) => {
 app.use('/api/animals', authMiddleware, animalRoutes);
 app.use('/api/litters', authMiddleware, litterRoutes);
 
+// Rating Routes (Require authMiddleware for submit/delete)
+const ratingRoutes = require('./routes/ratingRoutes');
+app.use('/api/ratings', authMiddleware, ratingRoutes);
+
 // Enclosure Routes (private management)
 const enclosureRoutes = require('./routes/enclosureRoutes');
 app.use('/api/enclosures', authMiddleware, enclosureRoutes);

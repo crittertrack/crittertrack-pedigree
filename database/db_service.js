@@ -413,6 +413,7 @@ const getUserProfileById = async (appUserId_backend) => {
         state: user.state,
         bio: user.bio,
         showBio: user.showBio !== undefined ? user.showBio : true,
+        showStatsTab: user.showStatsTab !== undefined ? user.showStatsTab : true,
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         warningCount: user.warningCount || 0,
@@ -554,6 +555,10 @@ const updateUserProfile = async (appUserId_backend, updates) => {
         // Update public profile as well
         const showBioUpdateResult = await PublicProfile.updateOne({ id_public: user.id_public }, { showBio: updates.showBio });
         console.log('[updateUserProfile] PublicProfile showBio update result:', showBioUpdateResult);
+    }
+    if (updates.showStatsTab !== undefined) {
+        user.showStatsTab = updates.showStatsTab;
+        await PublicProfile.updateOne({ id_public: user.id_public }, { showStatsTab: updates.showStatsTab });
     }
     
     if (updates.breederInfo !== undefined && typeof updates.breederInfo === 'object') {

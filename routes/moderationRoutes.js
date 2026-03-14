@@ -9,6 +9,8 @@ const {
     ProfileReport,
     AnimalReport,
     MessageReport,
+    RatingReport,
+    BreederRating,
     Animal,
     PublicProfile,
     PublicAnimal,
@@ -193,14 +195,16 @@ router.get('/debug/reports-count', async (req, res) => {
         const profileCount = await ProfileReport.countDocuments();
         const animalCount = await AnimalReport.countDocuments();
         const messageCount = await MessageReport.countDocuments();
+        const ratingCount = await RatingReport.countDocuments();
 
-        console.log('[MODERATION DEBUG] Report counts:', { profileCount, animalCount, messageCount });
+        console.log('[MODERATION DEBUG] Report counts:', { profileCount, animalCount, messageCount, ratingCount });
 
         res.json({
             profileReports: profileCount,
             animalReports: animalCount,
             messageReports: messageCount,
-            total: profileCount + animalCount + messageCount
+            ratingReports: ratingCount,
+            total: profileCount + animalCount + messageCount + ratingCount
         });
     } catch (error) {
         console.error('[MODERATION DEBUG] Error getting report counts:', error);
@@ -642,6 +646,15 @@ const reportModelMap = {
             { path: 'assignedTo', select: 'personalName breederName email id_public' },
             { path: 'assignedBy', select: 'personalName breederName email id_public' }
         ]
+    },
+    rating: {
+        model: RatingReport,
+        populate: [
+            { path: 'reporterId', select: 'personalName breederName email id_public' },
+            { path: 'ratingId', select: 'score comment raterName raterId_public targetId_public createdAt' },
+            { path: 'assignedTo', select: 'personalName breederName email id_public' },
+            { path: 'assignedBy', select: 'personalName breederName email id_public' }
+        ]
     }
 };
 
@@ -661,8 +674,8 @@ router.get('/reports', async (req, res) => {
         if (!type || type === 'all') {
             console.log('[MODERATION REPORTS] Fetching all report types with filter:', filter);
 
-            // Fetch from all three report models
-            const [profileReports, animalReports, messageReports] = await Promise.all([
+            // Fetch from all four report models
+            const [profileReports, animalReports, messageReports, ratingReports] = await Promise.all([
                 ProfileReport.find(filter)
                     .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
                     .populate({ path: 'reportedUserId', select: 'personalName breederName email id_public profileImage bio websiteUrl showPersonalName showBreederName' })
@@ -688,6 +701,12 @@ router.get('/reports', async (req, res) => {
                     .populate({ path: 'messageId', select: 'message senderId receiverId createdAt' })
                     .populate({ path: 'assignedTo', select: 'personalName breederName email id_public' })
                     .populate({ path: 'assignedBy', select: 'personalName breederName email id_public' })
+                    .lean(),
+                RatingReport.find(filter)
+                    .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'ratingId', select: 'score comment raterName raterId_public targetId_public createdAt' })
+                    .populate({ path: 'assignedTo', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'assignedBy', select: 'personalName breederName email id_public' })
                     .lean()
             ]);
 
@@ -695,16 +714,17 @@ router.get('/reports', async (req, res) => {
             const markedProfileReports = profileReports.map(r => ({ ...r, _reportType: 'profile' }));
             const markedAnimalReports = animalReports.map(r => ({ ...r, _reportType: 'animal' }));
             const markedMessageReports = messageReports.map(r => ({ ...r, _reportType: 'message' }));
+            const markedRatingReports = ratingReports.map(r => ({ ...r, _reportType: 'rating' }));
 
             // Combine and sort by createdAt descending
-            const allReports = [...markedProfileReports, ...markedAnimalReports, ...markedMessageReports]
+            const allReports = [...markedProfileReports, ...markedAnimalReports, ...markedMessageReports, ...markedRatingReports]
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             // Apply pagination
             const paginatedReports = allReports.slice(parseInt(skip, 10), parseInt(skip, 10) + parseInt(limit, 10));
             const total = allReports.length;
 
-            console.log(`[MODERATION REPORTS] Found ${total} total reports (profile: ${profileReports.length}, animal: ${animalReports.length}, message: ${messageReports.length})`);
+            console.log(`[MODERATION REPORTS] Found ${total} total reports (profile: ${profileReports.length}, animal: ${animalReports.length}, message: ${messageReports.length}, rating: ${ratingReports.length})`);
 
             return res.json({
                 reports: paginatedReports,
@@ -2517,6 +2537,39 @@ router.get('/analytics/resolution-time', requireModerator, async (req, res) => {
     } catch (error) {
         console.error('Failed to fetch resolution time analytics:', error);
         res.status(500).json({ error: 'Failed to fetch resolution time data' });
+    }
+});
+
+// DELETE /api/moderation/ratings/:ratingId - moderator/admin removes a rating
+router.delete('/ratings/:ratingId', requireModerator, async (req, res) => {
+    try {
+        const { ratingId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(ratingId)) {
+            return res.status(400).json({ message: 'Invalid ratingId.' });
+        }
+
+        const rating = await BreederRating.findByIdAndDelete(ratingId);
+        if (!rating) {
+            return res.status(404).json({ message: 'Rating not found.' });
+        }
+
+        await createAuditLog({
+            moderatorId: req.user.id,
+            moderatorEmail: req.user.email,
+            action: 'rating_removed',
+            targetType: 'BreederRating',
+            targetId: rating._id,
+            targetName: `Rating by ${rating.raterName || rating.raterId_public} for ${rating.targetId_public}`,
+            reason: 'Removed by moderator',
+            details: { score: rating.score, comment: rating.comment, targetId_public: rating.targetId_public },
+            ipAddress: req.ip || req.headers['x-forwarded-for']
+        });
+
+        res.json({ message: 'Rating removed successfully.' });
+    } catch (error) {
+        console.error('[MODERATION] Error removing rating:', error);
+        res.status(500).json({ message: 'Failed to remove rating.' });
     }
 });
 

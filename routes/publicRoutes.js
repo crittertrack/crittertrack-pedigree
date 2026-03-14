@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
-const { PublicAnimal, Animal, PublicProfile, User, GeneticsData, Litter } = require('../database/models');
+const { PublicAnimal, Animal, PublicProfile, User, GeneticsData, Litter, BreederRating } = require('../database/models');
 const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
@@ -911,6 +911,39 @@ router.get('/litters/user/:id_public', async (req, res) => {
         res.status(200).json(enrichedLitters);
     } catch (error) {
         console.error('Error fetching public litters:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// GET /api/public/ratings/:id_public
+// Returns aggregate rating + recent reviews for a breeder (public, no auth required)
+router.get('/ratings/:id_public', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const [agg, ratings] = await Promise.all([
+            BreederRating.aggregate([
+                { $match: { targetId_public: id_public } },
+                { $group: { _id: null, average: { $avg: '$score' }, count: { $sum: 1 },
+                    dist: { $push: '$score' } } }
+            ]),
+            BreederRating.find({ targetId_public: id_public })
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .select('raterId_public raterName score comment createdAt')
+                .lean()
+        ]);
+        const summary = agg[0] || { average: 0, count: 0, dist: [] };
+        // Build score distribution 1-5
+        const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        for (const s of summary.dist) distribution[s] = (distribution[s] || 0) + 1;
+        res.status(200).json({
+            average: summary.count ? Math.round(summary.average * 10) / 10 : 0,
+            count: summary.count,
+            distribution,
+            ratings,
+        });
+    } catch (err) {
+        console.error('Error fetching public ratings:', err);
         res.status(500).json({ message: 'Internal server error.' });
     }
 });
