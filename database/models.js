@@ -1995,6 +1995,19 @@ const EnclosureSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Enclosure = mongoose.model('Enclosure', EnclosureSchema);
 
+// --- BREEDER RATING SCHEMA ---
+const BreederRatingSchema = new mongoose.Schema({
+    raterId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    raterId_public:  { type: String, required: true, index: true },
+    raterName:       { type: String, default: '' }, // display name snapshot
+    targetId_public: { type: String, required: true, index: true },
+    score:           { type: Number, required: true, min: 1, max: 5 },
+    comment:         { type: String, default: '', maxlength: 1000, trim: true },
+}, { timestamps: true });
+// One rating per rater per target
+BreederRatingSchema.index({ raterId_backend: 1, targetId_public: 1 }, { unique: true });
+const BreederRating = mongoose.model('BreederRating', BreederRatingSchema);
+
 // --- EXPORTS ---
 module.exports = {
     Counter,
@@ -2024,4 +2037,5 @@ module.exports = {
     Enclosure,
     SupplyItem,
     AnimalLog,
+    BreederRating,
 };
