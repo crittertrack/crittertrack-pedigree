@@ -422,6 +422,8 @@ const getUserProfileById = async (appUserId_backend) => {
         ownedLitters: user.ownedLitters, // Array of internal litter IDs
         // Flags stored on PublicProfile
         hasSeenProfileSetupGuide: publicProfile?.hasSeenProfileSetupGuide || false,
+        // Breeder info (stored on PublicProfile)
+        breederInfo: publicProfile?.breederInfo || {},
     };
 };
 
