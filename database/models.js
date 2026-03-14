@@ -699,6 +699,8 @@ const LitterSchema = new mongoose.Schema({
 
     // Planned mating flag — true until a birthDate is set
     isPlanned: { type: Boolean, default: false, index: true },
+    // Whether this litter is shown on the breeder's public profile
+    showOnPublicProfile: { type: Boolean, default: false, index: true },
     // Tracks whether the mating-day reminder notification has already been sent
     matingReminderSent: { type: Boolean, default: false },
 

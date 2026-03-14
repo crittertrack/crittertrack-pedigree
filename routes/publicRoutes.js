@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
-const { PublicAnimal, Animal, PublicProfile, User, GeneticsData } = require('../database/models');
+const { PublicAnimal, Animal, PublicProfile, User, GeneticsData, Litter } = require('../database/models');
 const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
@@ -866,6 +866,24 @@ router.get('/animal/:id_public/inbreeding', async (req, res) => {
     } catch (error) {
         console.error('Error calculating public inbreeding:', error);
         res.status(500).json({ message: 'Internal server error while calculating inbreeding.' });
+    }
+});
+
+// GET /api/public/litters/user/:id_public
+// Returns litters marked showOnPublicProfile for a given user.
+router.get('/litters/user/:id_public', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const profile = await PublicProfile.findOne({ id_public }).select('userId_backend').lean();
+        if (!profile) return res.status(404).json({ message: 'User not found.' });
+        const litters = await Litter.find({ ownerId: profile.userId_backend, showOnPublicProfile: true })
+            .select('litter_id_public breedingPairCodeName sireId_public sirePrefixName damId_public damPrefixName isPlanned birthDate expectedDueDate matingDate litterSizeBorn maleCount femaleCount unknownCount notes images inbreedingCoefficient')
+            .sort({ isPlanned: -1, birthDate: -1 })
+            .lean();
+        res.status(200).json(litters);
+    } catch (error) {
+        console.error('Error fetching public litters:', error);
+        res.status(500).json({ message: 'Internal server error.' });
     }
 });
 
