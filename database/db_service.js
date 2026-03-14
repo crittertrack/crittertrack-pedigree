@@ -557,6 +557,8 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     if (updates.breederInfo !== undefined && typeof updates.breederInfo === 'object') {
         const BREEDER_INFO_KEYS = ['aboutProgram', 'adoptionRules', 'careRequirements', 'healthGuarantee', 'waitlistInfo', 'pricingNotes', 'contactPreferences'];
         const MAX_LEN = 2000;
+        const MAX_TITLE_LEN = 100;
+        const MAX_CUSTOM_FIELDS = 10;
         const sanitized = {};
         for (const key of BREEDER_INFO_KEYS) {
             const val = updates.breederInfo[key];
@@ -566,6 +568,23 @@ const updateUserProfile = async (appUserId_backend, updates) => {
             } else {
                 sanitized[key] = '';
             }
+        }
+        // Process custom fields
+        if (Array.isArray(updates.breederInfo.customFields)) {
+            if (updates.breederInfo.customFields.length > MAX_CUSTOM_FIELDS) {
+                throw new Error(`Cannot have more than ${MAX_CUSTOM_FIELDS} custom fields.`);
+            }
+            sanitized.customFields = updates.breederInfo.customFields
+                .filter(f => f && typeof f.title === 'string' && f.title.trim())
+                .map(f => {
+                    const title = f.title.trim();
+                    const value = typeof f.value === 'string' ? f.value.trim() : '';
+                    if (title.length > MAX_TITLE_LEN) throw new Error(`Custom field title '${title}' exceeds 100 character limit.`);
+                    if (value.length > MAX_LEN) throw new Error(`Custom field '${title}' value exceeds 2000 character limit.`);
+                    return { title, value };
+                });
+        } else {
+            sanitized.customFields = [];
         }
         await PublicProfile.updateOne({ id_public: user.id_public }, { breederInfo: sanitized });
     }

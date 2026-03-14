@@ -155,6 +155,11 @@ const PublicProfileSchema = new mongoose.Schema({
         waitlistInfo:       { type: String, default: '' },
         pricingNotes:       { type: String, default: '' },
         contactPreferences: { type: String, default: '' },
+        // User-defined custom fields (title + value pairs); titles are mined to inform future default fields
+        customFields: [{
+            title: { type: String, default: '' },
+            value: { type: String, default: '' },
+        }],
     },
 }, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
