@@ -929,7 +929,7 @@ router.get('/ratings/:id_public', async (req, res) => {
             BreederRating.find({ targetId_public: id_public })
                 .sort({ createdAt: -1 })
                 .limit(50)
-                .select('raterId_public raterName score comment createdAt')
+                .select('_id raterId_public raterName score comment createdAt')
                 .lean()
         ]);
         const summary = agg[0] || { average: 0, count: 0, dist: [] };
