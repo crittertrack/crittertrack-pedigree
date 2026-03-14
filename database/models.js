@@ -150,7 +150,9 @@ const PublicProfileSchema = new mongoose.Schema({
     breederInfo: {
         aboutProgram:       { type: String, default: '' },
         adoptionRules:      { type: String, default: '' },
-        careRequirements:   { type: String, default: '' },
+        careRequirements:   { type: String, default: '' }, // legacy — kept for backward compat, replaced by two fields below
+        enclosureCare:      { type: String, default: '' },
+        routineCare:        { type: String, default: '' },
         healthGuarantee:    { type: String, default: '' },
         waitlistInfo:       { type: String, default: '' },
         pricingNotes:       { type: String, default: '' },

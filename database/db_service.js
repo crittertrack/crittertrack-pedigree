@@ -555,7 +555,7 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     }
     
     if (updates.breederInfo !== undefined && typeof updates.breederInfo === 'object') {
-        const BREEDER_INFO_KEYS = ['aboutProgram', 'adoptionRules', 'careRequirements', 'healthGuarantee', 'waitlistInfo', 'pricingNotes', 'contactPreferences'];
+        const BREEDER_INFO_KEYS = ['aboutProgram', 'adoptionRules', 'careRequirements', 'enclosureCare', 'routineCare', 'healthGuarantee', 'waitlistInfo', 'pricingNotes', 'contactPreferences'];
         const MAX_LEN = 2000;
         const MAX_TITLE_LEN = 100;
         const MAX_CUSTOM_FIELDS = 10;
