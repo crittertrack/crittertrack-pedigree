@@ -80,7 +80,7 @@ router.post('/', async (req, res) => {
         (async () => {
             try {
                 const currentUserId = appUserId_backend.toString();
-                const creatorName = req.user.breederName || req.user.displayName || req.user.username || `CTC${req.user.id_public}`;
+                const creatorName = req.user.breederName || req.user.displayName || req.user.username || req.user.id_public;
                 const parentRoles = [
                     { id_public: litterData.sireId_public, role: 'sire' },
                     { id_public: litterData.damId_public, role: 'dam' }
