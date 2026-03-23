@@ -143,6 +143,8 @@ const PublicProfileSchema = new mongoose.Schema({
     hasSeenWelcomeBanner: { type: Boolean, default: false }, // Track if user has dismissed the welcome banner
     hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
     speciesOrder: { type: [String], default: [] }, // User's custom order for species display
+    breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
+    animalBreedingLines: { type: mongoose.Schema.Types.Mixed, default: {} }, // { animalId_public: [lineIds] }
     
     // Donation badge fields
     monthlyDonationActive: { type: Boolean, default: false },  // Monthly supporter badge (diamond)
