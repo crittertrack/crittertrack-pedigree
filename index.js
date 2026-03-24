@@ -325,6 +325,43 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
     }
 });
 
+// Breeding lines persistence
+app.get('/api/users/breeding-lines', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        const profile = await PublicProfile.findOne({ userId_backend: req.user.id }).lean();
+        res.json({
+            breedingLineDefs: profile?.breedingLineDefs || [],
+            animalBreedingLines: profile?.animalBreedingLines || {}
+        });
+    } catch (error) {
+        console.error('Error fetching breeding lines:', error);
+        res.status(500).json({ message: 'Failed to fetch breeding lines' });
+    }
+});
+
+app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        const { breedingLineDefs, animalBreedingLines } = req.body;
+        if (!Array.isArray(breedingLineDefs) || typeof animalBreedingLines !== 'object' || animalBreedingLines === null) {
+            return res.status(400).json({ message: 'Invalid data format' });
+        }
+        // Enforce size limits to prevent abuse
+        if (breedingLineDefs.length > 10) {
+            return res.status(400).json({ message: 'Maximum 10 breeding lines allowed' });
+        }
+        await PublicProfile.findOneAndUpdate(
+            { userId_backend: req.user.id },
+            { $set: { breedingLineDefs, animalBreedingLines } }
+        );
+        res.json({ message: 'Breeding lines saved' });
+    } catch (error) {
+        console.error('Error saving breeding lines:', error);
+        res.status(500).json({ message: 'Failed to save breeding lines' });
+    }
+});
+
 // Tutorial completion tracking
 app.post('/api/users/tutorial-complete', authMiddleware, async (req, res) => {
     try {
