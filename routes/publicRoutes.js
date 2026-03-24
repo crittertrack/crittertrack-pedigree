@@ -310,7 +310,10 @@ router.get('/global/animals', async (req, res) => {
         console.log('Global animals search - Query filter:', q, 'Limit:', limit === 0 ? 'unlimited' : limit);
         const docs = limit > 0 ? await Model.find(q).limit(limit).lean() : await Model.find(q).lean();
         console.log('Global animals search - Results count:', docs.length);
-        return res.status(200).json(docs);
+        // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
+        // collection are public by definition. Inject the field so frontend privacy checks work.
+        const publicDocs = docs.map(doc => ({ ...doc, showOnPublicProfile: true }));
+        return res.status(200).json(publicDocs);
     } catch (error) {
         console.error('Error fetching global animals:', error && (error.stack || error));
         return res.status(500).json({ message: 'Internal server error while fetching global animals.' });

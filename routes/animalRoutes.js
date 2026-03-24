@@ -478,7 +478,9 @@ router.get('/any/:id_public', async (req, res) => {
         animal = await PublicAnimal.findOne({ id_public }).lean();
         
         if (animal) {
-            return res.status(200).json(animal);
+            // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
+            // collection are public by definition. Inject the field so frontend privacy checks work.
+            return res.status(200).json({ ...animal, showOnPublicProfile: true });
         }
 
         // Not public either, check if animal is related to user's animals
