@@ -2069,6 +2069,7 @@ router.post('/family-tree-batch', async (req, res) => {
 
 // POST /api/animals/family-tree-expand
 // Given a list of animal IDs, return ALL related animals (parents, children, siblings, etc.)
+// Only returns animals that are public OR owned by the requesting user.
 router.post('/family-tree-expand', async (req, res) => {
     try {
         const { Animal } = require('../database/models');
@@ -2077,17 +2078,30 @@ router.post('/family-tree-expand', async (req, res) => {
         if (!ids || !Array.isArray(ids)) {
             return res.status(400).json({ message: 'ids array is required' });
         }
+
+        const userId = req.user?._id?.toString();
+        const visibilityFilter = {
+            $or: [
+                { showOnPublicProfile: true },
+                { ownerId: req.user?._id }
+            ]
+        };
         
         const relatedAnimals = new Set();
         
         // Find all animals where sireId_public or damId_public is in our list (children & siblings)
         const childrenAndSiblings = await Animal.find({
-            $or: [
-                { sireId_public: { $in: ids } },
-                { damId_public: { $in: ids } }
+            $and: [
+                {
+                    $or: [
+                        { sireId_public: { $in: ids } },
+                        { damId_public: { $in: ids } }
+                    ]
+                },
+                visibilityFilter
             ]
         })
-        .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned ownerId ownerId_public')
+        .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned ownerId ownerId_public showOnPublicProfile')
         .lean();
         
         childrenAndSiblings.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
@@ -2103,11 +2117,16 @@ router.post('/family-tree-expand', async (req, res) => {
             if (animal.damId_public) parentIds.add(animal.damId_public);
         });
         
-        // Fetch all parents
+        // Fetch all parents — only public ones or owned by the user
         if (parentIds.size > 0) {
-            const parents = await Animal.find({ id_public: { $in: Array.from(parentIds) } })
-                .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned ownerId ownerId_public')
-                .lean();
+            const parents = await Animal.find({
+                $and: [
+                    { id_public: { $in: Array.from(parentIds) } },
+                    visibilityFilter
+                ]
+            })
+            .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned ownerId ownerId_public showOnPublicProfile')
+            .lean();
             
             parents.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
         }
