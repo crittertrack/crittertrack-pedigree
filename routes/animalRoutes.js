@@ -538,7 +538,11 @@ router.get('/any/:id_public', async (req, res) => {
             }).lean();
             
             if (hasUserParent || isOffspringOfUser || isOtherParentOfSharedOffspring) {
-                // User has relationship to this animal, allow access
+                // User has a relationship to this animal, but only expose it if it's public.
+                // Private animals from other breeders must not leak through relationship checks.
+                if (!animal.showOnPublicProfile) {
+                    return res.status(404).json({ message: 'Animal not found or not accessible.' });
+                }
                 return res.status(200).json(animal);
             }
         }
