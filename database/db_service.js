@@ -1304,73 +1304,48 @@ const getUsersLitters = async (appUserId_backend) => {
     // Sort: planned matings (no birthDate) first, then by birthDate descending
     const litters = await Litter.find({ ownerId: appUserId_backend }).sort({ isPlanned: -1, birthDate: -1 }).lean();
     
-    // Populate parent data for each litter (including hidden/transferred animals)
-    const littersWithParents = await Promise.all(
-        litters.map(async (litter) => {
-            let sire = null;
-            let dam = null;
-            
-            // Fetch sire data
-            if (litter.sireId_public) {
-                // Try user's own animals first
-                sire = await Animal.findOne({ 
-                    id_public: litter.sireId_public,
-                    ownerId: appUserId_backend 
-                }).select('id_public name prefix suffix gender imageUrl photoUrl species').lean();
-                
-                // If not found in own animals, check any Animal (including transferred/hidden)
-                if (!sire) {
-                    sire = await Animal.findOne({ id_public: litter.sireId_public })
-                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
-                        .lean();
-                    if (sire) {
-                        sire.isTransferred = true; // Flag as not owned
-                    }
-                }
-                
-                // Last resort: check PublicAnimal
-                if (!sire) {
-                    sire = await PublicAnimal.findOne({ id_public: litter.sireId_public })
-                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
-                        .lean();
-                }
+    if (!litters.length) return [];
+
+    // Collect all unique parent IDs in one pass — avoids N×6 parallel queries
+    const parentIdSet = new Set();
+    litters.forEach(l => {
+        if (l.sireId_public) parentIdSet.add(l.sireId_public);
+        if (l.damId_public) parentIdSet.add(l.damId_public);
+    });
+    const parentIds = [...parentIdSet];
+
+    // Two bulk queries: owned animals first, then any Animal, then PublicAnimal
+    const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species ownerId';
+    const [ownedAnimals, anyAnimals, publicAnimals] = await Promise.all([
+        Animal.find({ id_public: { $in: parentIds }, ownerId: appUserId_backend }).select(SELECT).lean(),
+        Animal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
+        PublicAnimal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
+    ]);
+
+    // Build lookup maps — owned preferred → any Animal → PublicAnimal
+    const ownedMap = new Map(ownedAnimals.map(a => [a.id_public, a]));
+    const anyMap = new Map(anyAnimals.map(a => [a.id_public, a]));
+    const publicMap = new Map(publicAnimals.map(a => [a.id_public, a]));
+
+    const getParent = (id_public) => {
+        if (!id_public) return null;
+        if (ownedMap.has(id_public)) return ownedMap.get(id_public);
+        if (anyMap.has(id_public)) {
+            const a = { ...anyMap.get(id_public) };
+            // Flag as transferred if not owned by this user
+            if (a.ownerId && a.ownerId.toString() !== appUserId_backend.toString()) {
+                a.isTransferred = true;
             }
-            
-            // Fetch dam data
-            if (litter.damId_public) {
-                // Try user's own animals first
-                dam = await Animal.findOne({ 
-                    id_public: litter.damId_public,
-                    ownerId: appUserId_backend 
-                }).select('id_public name prefix suffix gender imageUrl photoUrl species').lean();
-                
-                // If not found in own animals, check any Animal (including transferred/hidden)
-                if (!dam) {
-                    dam = await Animal.findOne({ id_public: litter.damId_public })
-                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
-                        .lean();
-                    if (dam) {
-                        dam.isTransferred = true; // Flag as not owned
-                    }
-                }
-                
-                // Last resort: check PublicAnimal
-                if (!dam) {
-                    dam = await PublicAnimal.findOne({ id_public: litter.damId_public })
-                        .select('id_public name prefix suffix gender imageUrl photoUrl species')
-                        .lean();
-                }
-            }
-            
-            return {
-                ...litter,
-                sire,
-                dam
-            };
-        })
-    );
-    
-    return littersWithParents;
+            return a;
+        }
+        return publicMap.get(id_public) || null;
+    };
+
+    return litters.map(litter => ({
+        ...litter,
+        sire: getParent(litter.sireId_public),
+        dam:  getParent(litter.damId_public),
+    }));
 };
 
 /**
