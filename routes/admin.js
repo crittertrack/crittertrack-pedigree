@@ -239,9 +239,11 @@ router.patch('/users/:userId/role', async (req, res) => {
 });
 
 // PATCH /api/admin/users/:userId/donation-badge - Manage user donation badges
+
+// PATCH /api/admin/users/:userId/donation-badge - Manage user donation badges
 router.patch('/users/:userId/donation-badge', async (req, res) => {
     try {
-        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
         const { type, monthlyDonationActive, lastDonationDate } = req.body;
 
@@ -279,6 +281,12 @@ router.patch('/users/:userId/donation-badge', async (req, res) => {
         if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
         }
+
+        // Sync badge fields to PublicProfile so public pages reflect the change
+        await PublicProfile.findOneAndUpdate(
+            { userId_backend: req.params.userId },
+            updateData
+        );
 
         // Create audit log
         let auditDetails = {};

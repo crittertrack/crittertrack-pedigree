@@ -572,7 +572,7 @@ app.get('/api/users/breeder-directory', async (req, res) => {
             $or: [
                 { 'breedingStatus': { $exists: true } }
             ]
-        }).select('id_public personalName showPersonalName breederName showBreederName bio profileImage breedingStatus country state')
+        }).select('id_public personalName showPersonalName breederName showBreederName bio profileImage breedingStatus country state monthlyDonationActive lastDonationDate')
           .lean();
 
         // Filter to only include users with at least one 'breeder' or 'retired' status

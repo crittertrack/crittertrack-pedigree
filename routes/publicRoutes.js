@@ -135,7 +135,7 @@ router.get('/users/newest', async (req, res) => {
         })
             .sort({ createdAt: -1 })
             .limit(limit)
-            .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus')
+            .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus monthlyDonationActive lastDonationDate')
             .lean();
         
         // Filter out banned users
@@ -174,7 +174,7 @@ router.get('/users/active', async (req, res) => {
             id_public: { $in: userIds },
             accountStatus: { $ne: 'banned' }
         })
-        .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus')
+        .select('id_public personalName breederName showPersonalName showBreederName profileImage createdAt accountStatus monthlyDonationActive lastDonationDate')
         .lean();
 
         // Attach lastActive timestamp for frontend sorting and attach to each profile
