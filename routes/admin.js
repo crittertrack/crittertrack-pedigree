@@ -40,7 +40,7 @@ router.get('/users/moderation-overview', async (req, res) => {
 
         // Get all users with relevant fields including login info
         const users = await User.find({})
-            .select('id_public email personalName breederName accountStatus role warningCount warnings suspensionReason suspensionDate suspensionExpiry banReason banDate banType bannedIP moderatedBy creationDate last_login last_login_ip')
+            .select('id_public email personalName breederName accountStatus role warningCount warnings suspensionReason suspensionDate suspensionExpiry banReason banDate banType bannedIP moderatedBy creationDate last_login last_login_ip monthlyDonationActive lastDonationDate')
             .lean();
 
         // Get Animal and Message models for counts
