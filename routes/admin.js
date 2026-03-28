@@ -2037,10 +2037,10 @@ router.patch('/animals/:animalId/hide', async (req, res) => {
     }
 });
 
-// DELETE /api/admin/animals/:animalId - Force delete animal (admin only)
+// DELETE /api/admin/animals/:animalId - Force delete animal (moderator/admin)
 router.delete('/animals/:animalId', async (req, res) => {
     try {
-        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator access required' });
 
         const { reason } = req.body;
         const animal = await Animal.findById(req.params.animalId);
