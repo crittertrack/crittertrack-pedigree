@@ -528,6 +528,48 @@ app.post('/api/users/species-order', authMiddleware, async (req, res) => {
     }
 });
 
+// Get user's species favorites
+app.get('/api/users/species-favorites', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        res.json({ speciesFavorites: userProfile.speciesFavorites || [] });
+    } catch (error) {
+        console.error('[SPECIES FAVORITES] Error fetching:', error);
+        res.status(500).json({ message: 'Failed to fetch species favorites' });
+    }
+});
+
+// Save user's species favorites
+app.post('/api/users/species-favorites', authMiddleware, async (req, res) => {
+    try {
+        const { PublicProfile } = require('./database/models');
+        const { speciesFavorites } = req.body;
+
+        if (!Array.isArray(speciesFavorites)) {
+            return res.status(400).json({ message: 'speciesFavorites must be an array' });
+        }
+
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
+        if (!userProfile) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        userProfile.speciesFavorites = speciesFavorites;
+        await userProfile.save();
+
+        res.json({ success: true, speciesFavorites });
+    } catch (error) {
+        console.error('[SPECIES FAVORITES] Error saving:', error);
+        res.status(500).json({ message: 'Failed to save species favorites' });
+    }
+});
+
 // Reset profile setup guide for testing (admin/moderator only)
 app.post('/api/users/reset-profile-setup-guide/:userIdPublic', authMiddleware, async (req, res) => {
     try {
