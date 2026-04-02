@@ -959,10 +959,11 @@ router.get('/animals/recent-available', async (req, res) => {
                 { availableForBreeding: true }
             ]
         })
-        .sort({ createdAt: -1 })
+        .sort({ _id: -1 })
         .limit(limit)
         .lean();
 
+        console.log(`[recent-available] found ${animals.length} animals`);
         res.status(200).json(animals);
     } catch (error) {
         console.error('Error fetching recent available animals:', error);
