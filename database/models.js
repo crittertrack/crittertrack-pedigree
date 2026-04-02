@@ -634,7 +634,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     // Settings used by db_service to know which fields to copy during update
     includeRemarks: { type: Boolean, default: false },
     includeGeneticCode: { type: Boolean, default: false },
-});
+}, { timestamps: true });
 const PublicAnimal = mongoose.model('PublicAnimal', PublicAnimalSchema, 'publicanimals');
 
 
