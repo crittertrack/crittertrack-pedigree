@@ -951,4 +951,56 @@ router.get('/ratings/:id_public', async (req, res) => {
     }
 });
 
+// GET /api/public/animals/recent-available - Get recently added available animals
+router.get('/animals/recent-available', async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit || '10', 10), 50);
+
+        const animals = await PublicAnimal.find({
+            $or: [
+                { forSale: true },
+                { forStud: true }
+            ]
+        })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+        res.status(200).json(animals);
+    } catch (error) {
+        console.error('Error fetching recent available animals:', error);
+        res.status(500).json({ message: 'Failed to fetch recent available animals' });
+    }
+});
+
+// GET /api/public/animals/recent-edits - Get recently edited animals (filtered by IDs)
+router.get('/animals/recent-edits', async (req, res) => {
+    try {
+        const { ids } = req.query;
+        
+        if (!ids) {
+            return res.status(400).json({ message: 'ids query parameter required' });
+        }
+
+        const idArray = ids.split(',').filter(id => id.trim());
+        
+        if (idArray.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // Get animals sorted by most recently updated
+        const animals = await PublicAnimal.find({
+            id_public: { $in: idArray }
+        })
+        .sort({ updatedAt: -1 })
+        .limit(20)
+        .lean();
+
+        res.status(200).json(animals);
+    } catch (error) {
+        console.error('Error fetching recently edited animals:', error);
+        res.status(500).json({ message: 'Failed to fetch recently edited animals' });
+    }
+});
+
 module.exports = router;

@@ -2040,6 +2040,24 @@ const RatingReportSchema = new mongoose.Schema({
 }, { timestamps: true });
 const RatingReport = mongoose.model('RatingReport', RatingReportSchema);
 
+// --- FAVORITE SCHEMA ---
+const FavoriteSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    itemType: { 
+        type: String, 
+        enum: ['animal', 'user'], 
+        required: true, 
+        index: true 
+    },
+    itemId: { type: String, required: true, index: true }, // id_public of animal or user
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+
+// Compound index to ensure a user can favorite an item only once
+FavoriteSchema.index({ userId: 1, itemType: 1, itemId: 1 }, { unique: true });
+
+const Favorite = mongoose.model('Favorite', FavoriteSchema);
+
 // --- EXPORTS ---
 module.exports = {
     Counter,
@@ -2071,4 +2089,5 @@ module.exports = {
     AnimalLog,
     BreederRating,
     RatingReport,
+    Favorite,
 };

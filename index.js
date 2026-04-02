@@ -725,6 +725,10 @@ app.use('/api/litters', authMiddleware, litterRoutes);
 const ratingRoutes = require('./routes/ratingRoutes');
 app.use('/api/ratings', authMiddleware, ratingRoutes);
 
+// Favorites Routes (Require authMiddleware)
+const favoritesRoutes = require('./routes/favoritesRoutes');
+app.use('/api/favorites', authMiddleware, favoritesRoutes);
+
 // Enclosure Routes (private management)
 const enclosureRoutes = require('./routes/enclosureRoutes');
 app.use('/api/enclosures', authMiddleware, enclosureRoutes);
