@@ -955,8 +955,8 @@ router.get('/animals/recent-available', async (req, res) => {
 
         const animals = await PublicAnimal.find({
             $or: [
-                { forSale: true },
-                { forStud: true }
+                { isForSale: true },
+                { availableForBreeding: true }
             ]
         })
         .sort({ createdAt: -1 })
