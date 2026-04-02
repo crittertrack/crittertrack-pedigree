@@ -1649,7 +1649,7 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
 // POST /api/moderation/broadcast - Send system-wide broadcast message (Admin only)
 router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res) => {
     try {
-        const { title, message, type, scheduledFor, pollQuestion, pollOptions, pollEndsAt, allowMultipleChoices, isAnonymous } = req.body;
+        const { title, message, type, scheduledFor, pollQuestion, pollOptions, pollEndsAt, allowMultipleChoices, isAnonymous, targetUserIds } = req.body;
 
         // Validate input
         if (!title) {
@@ -1695,11 +1695,17 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
             }
         }
 
-        // Get all users
+        // Get target users — optionally limited to specific CTU IDs for test broadcasts
         const allUsers = await User.find({}).select('_id email accountStatus id_public').lean();
-        
-        // Filter out banned/suspended users unless it's an alert for them
         let activeUsers = allUsers.filter(u => u.accountStatus === 'normal');
+
+        if (targetUserIds && Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+            const ids = targetUserIds.map(id => id.trim().toUpperCase()).filter(Boolean);
+            activeUsers = activeUsers.filter(u => ids.includes((u.id_public || '').toUpperCase()));
+            if (activeUsers.length === 0) {
+                return res.status(400).json({ error: `None of the specified user IDs were found: ${ids.join(', ')}` });
+            }
+        }
 
         // Prepare poll options if this is a poll
         let pollOptionsFormatted = null;
@@ -1747,7 +1753,9 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
                 recipientCount: activeUsers.length,
                 type: type || 'info',
                 scheduled: sendAt > new Date(),
-                scheduledFor: sendAt.toISOString()
+                scheduledFor: sendAt.toISOString(),
+                testMode: !!(targetUserIds && targetUserIds.length > 0),
+                targetUserIds: targetUserIds || null
             },
             reason: `Broadcast: ${title}`,
             ipAddress: req.ip || req.connection?.remoteAddress,
