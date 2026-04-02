@@ -143,6 +143,7 @@ const PublicProfileSchema = new mongoose.Schema({
     hasSeenWelcomeBanner: { type: Boolean, default: false }, // Track if user has dismissed the welcome banner
     hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
     speciesOrder: { type: [String], default: [] }, // User's custom order for species display
+    speciesFavorites: { type: [String], default: [] }, // User's favorite species (starred)
     breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
     animalBreedingLines: { type: mongoose.Schema.Types.Mixed, default: {} }, // { animalId_public: [lineIds] }
     
