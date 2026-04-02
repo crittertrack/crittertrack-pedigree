@@ -1098,6 +1098,13 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             isOwned: updatedAnimal.isOwned || false,
             isPregnant: updatedAnimal.isPregnant || false,
             isNursing: updatedAnimal.isNursing || false,
+            // Include availability/sale fields
+            isForSale: updatedAnimal.isForSale || false,
+            availableForBreeding: updatedAnimal.availableForBreeding || false,
+            salePriceAmount: updatedAnimal.salePriceAmount || null,
+            salePriceCurrency: updatedAnimal.salePriceCurrency || null,
+            studFeeAmount: updatedAnimal.studFeeAmount || null,
+            studFeeCurrency: updatedAnimal.studFeeCurrency || null,
             // Include remarks/genetic code
             remarks: updatedAnimal.remarks || '',
             geneticCode: updatedAnimal.geneticCode || null,
