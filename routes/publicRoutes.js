@@ -951,19 +951,29 @@ router.get('/ratings/:id_public', async (req, res) => {
 // GET /api/public/animals/recent-available - Get recently added available animals
 router.get('/animals/recent-available', async (req, res) => {
     try {
-        const limit = Math.min(parseInt(req.query.limit || '10', 10), 50);
+        const limit = Math.min(parseInt(req.query.limit || '50', 10), 100);
+        const { ownerIds } = req.query;
 
-        const animals = await PublicAnimal.find({
+        const query = {
             $or: [
                 { isForSale: true },
                 { availableForBreeding: true }
             ]
-        })
+        };
+
+        // Filter by owner IDs if provided
+        if (ownerIds) {
+            const ownerIdArray = ownerIds.split(',').map(id => id.trim()).filter(Boolean);
+            if (ownerIdArray.length > 0) {
+                query.ownerId_public = { $in: ownerIdArray };
+            }
+        }
+
+        const animals = await PublicAnimal.find(query)
         .sort({ _id: -1 })
         .limit(limit)
         .lean();
 
-        console.log(`[recent-available] found ${animals.length} animals`);
         res.status(200).json(animals);
     } catch (error) {
         console.error('Error fetching recent available animals:', error);
