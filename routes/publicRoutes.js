@@ -955,6 +955,7 @@ router.get('/animals/recent-available', async (req, res) => {
         const { ownerIds } = req.query;
 
         const query = {
+            isDisplay: true,
             $or: [
                 { isForSale: true },
                 { availableForBreeding: true }
@@ -969,6 +970,7 @@ router.get('/animals/recent-available', async (req, res) => {
             }
         }
 
+        console.log('[recent-available] query:', JSON.stringify(query));
         const animals = await PublicAnimal.find(query)
         .sort({ _id: -1 })
         .limit(limit)
