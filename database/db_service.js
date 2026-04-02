@@ -1155,6 +1155,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Include Growth and measurement data
             growthRecords: updatedAnimal.growthRecords || null,
             measurementUnits: updatedAnimal.measurementUnits || null,
+            updatedAt: new Date(),
         };
 
         // Use upsert to create if doesn't exist, update if it does
