@@ -224,6 +224,13 @@ const AnimalSchema = new mongoose.Schema({
         lastDoneDate: { type: Date, default: null },
         frequencyDays: { type: Number, default: null },
     }],
+
+    // Animal-specific care tasks (weigh, nail trim, health check, handling, etc.)
+    animalCareTasks: [{
+        taskName: { type: String, required: true, trim: true },
+        lastDoneDate: { type: Date, default: null },
+        frequencyDays: { type: Number, default: null },
+    }],
     
     // Tags for local organization (lines, enclosures, etc)
     tags: [{ type: String, trim: true }],

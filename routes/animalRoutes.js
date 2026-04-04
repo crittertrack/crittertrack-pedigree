@@ -1083,7 +1083,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
 
         // Get original animal data to compare for changes before sending notifications
         const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend })
-            .select('breederId_public sireId_public damId_public name prefix suffix species status gender birthDate deceasedDate color coat earset coatPattern morph phenotype markings eyeColor nailColor size weight length remarks geneticCode isQuarantine isOwned isPregnant isNursing isInMating enclosureId lastFedDate feedingFrequencyDays lastMaintenanceDate maintenanceFrequencyDays careTasks')
+            .select('breederId_public sireId_public damId_public name prefix suffix species status gender birthDate deceasedDate color coat earset coatPattern morph phenotype markings eyeColor nailColor size weight length remarks geneticCode isQuarantine isOwned isPregnant isNursing isInMating enclosureId lastFedDate feedingFrequencyDays lastMaintenanceDate maintenanceFrequencyDays careTasks animalCareTasks')
             .lean();
         
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
@@ -1094,7 +1094,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         // --- Animal Changelog ---
         try {
             const { AnimalLog } = require('../database/models');
-            const CARE_FIELDS = new Set(['lastFedDate', 'feedingFrequencyDays', 'lastMaintenanceDate', 'maintenanceFrequencyDays', 'careTasks']);
+            const CARE_FIELDS = new Set(['lastFedDate', 'feedingFrequencyDays', 'lastMaintenanceDate', 'maintenanceFrequencyDays', 'careTasks', 'animalCareTasks']);
             const FIELD_LABELS = {
                 name: 'Name', prefix: 'Prefix', suffix: 'Suffix', species: 'Species', status: 'Status',
                 gender: 'Gender', birthDate: 'Date of Birth', deceasedDate: 'Date of Death',
@@ -1106,13 +1106,14 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                 lastFedDate: 'Last Fed', feedingFrequencyDays: 'Feeding Frequency (days)',
                 lastMaintenanceDate: 'Last Maintenance', maintenanceFrequencyDays: 'Maintenance Frequency (days)',
                 careTasks: 'Care Tasks',
+                animalCareTasks: 'Animal Care Tasks',
             };
             const toString = v => v === null || v === undefined ? '' : v instanceof Date ? v.toISOString() : String(v);
             const careChanges = [], fieldChanges = [];
             for (const [key, label] of Object.entries(FIELD_LABELS)) {
-                if (key === 'careTasks') {
-                    const oldTasks = (originalAnimal?.careTasks || []);
-                    const newTasks = (updatedAnimal?.careTasks || []);
+                if (key === 'careTasks' || key === 'animalCareTasks') {
+                    const oldTasks = (originalAnimal?.[key] || []);
+                    const newTasks = (updatedAnimal?.[key] || []);
                     const oldDef = JSON.stringify(oldTasks.map(t => ({ n: t.taskName, f: t.frequencyDays })));
                     const newDef = JSON.stringify(newTasks.map(t => ({ n: t.taskName, f: t.frequencyDays })));
                     if (oldDef !== newDef) {
