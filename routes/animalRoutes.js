@@ -1076,6 +1076,17 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             updates.showOnPublicProfile = updates.isDisplay;
         }
 
+        // Normalize boolean string values sent from multipart/form-data
+        // (FormData always serialises booleans as strings "true"/"false")
+        const BOOL_FIELDS = [
+            'isForSale', 'availableForBreeding', 'isOwned', 'isPregnant', 'isNursing',
+            'isInMating', 'isQuarantine', 'showOnPublicProfile', 'isDisplay',
+        ];
+        for (const field of BOOL_FIELDS) {
+            if (updates[field] === 'true')  updates[field] = true;
+            if (updates[field] === 'false') updates[field] = false;
+        }
+
         // Reject attempts to explicitly clear birthDate on update
         if ('birthDate' in updates && (updates.birthDate === null || updates.birthDate === '' || updates.birthDate === undefined)) {
             return res.status(400).json({ message: 'birthDate (Date of Birth) cannot be removed. Every animal must have a birth date.' });
