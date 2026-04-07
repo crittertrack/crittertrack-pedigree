@@ -140,6 +140,9 @@ router.get('/:id_public/offspring', async (req, res) => {
             { id_public: { $in: ids } },
             { id_public: 1, name: 1, prefix: 1, suffix: 1, gender: 1, birthDate: 1, species: 1, imageUrl: 1, photoUrl: 1, status: 1, isDisplay: 1 }
         ).lean();
+        // Preserve the order animals were added to the litter (offspringIds_public order)
+        const idIndex = new Map(ids.map((id, i) => [id, i]));
+        animals.sort((a, b) => (idIndex.get(a.id_public) ?? Infinity) - (idIndex.get(b.id_public) ?? Infinity));
         res.status(200).json(animals);
     } catch (error) {
         console.error('Error fetching litter offspring:', error);
