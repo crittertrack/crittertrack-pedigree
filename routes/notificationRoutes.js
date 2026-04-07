@@ -8,19 +8,33 @@ router.get('/', async (req, res) => {
         const userId = req.user.id;
         const now = new Date();
         
-        // Filter out scheduled broadcasts that haven't reached their send time yet
-        const notifications = await Notification.find({ 
-            userId,
+        const sendAtFilter = {
             $or: [
-                { isPending: { $ne: true } },  // Not pending
-                { sendAt: { $lte: now } },      // Or send time has passed
-                { type: { $nin: ['broadcast', 'announcement'] } }  // Or not a broadcast type
+                { isPending: { $ne: true } },
+                { sendAt: { $lte: now } },
             ]
-        })
-            .sort({ createdAt: -1 })
-            .limit(50)
-            .lean();
-        
+        };
+
+        // Broadcasts/announcements are always fetched without a count limit so they
+        // never get pushed off the list by high volumes of regular notifications.
+        const broadcasts = await Notification.find({
+            userId,
+            type: { $in: ['broadcast', 'announcement'] },
+            ...sendAtFilter,
+        }).sort({ createdAt: -1 }).lean();
+
+        // All other notification types — capped at 50 most recent
+        const others = await Notification.find({
+            userId,
+            type: { $nin: ['broadcast', 'announcement'] },
+            ...sendAtFilter,
+        }).sort({ createdAt: -1 }).limit(50).lean();
+
+        // Merge and re-sort by newest first
+        const notifications = [...broadcasts, ...others].sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
         return res.status(200).json(notifications);
     } catch (error) {
         console.error('Error fetching notifications:', error);
