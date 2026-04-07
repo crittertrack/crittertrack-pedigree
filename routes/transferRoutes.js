@@ -95,6 +95,8 @@ router.post('/:id/accept', async (req, res) => {
         animal.ownerId_public = newOwner.id_public;
         animal.soldStatus = transfer.transferType === 'sale' ? 'sold' : 'purchased';
         animal.isOwned = true; // Mark animal as owned by new owner (not view-only)
+        animal.isForSale = false; // Clear for-sale flag on transfer
+        animal.availableForBreeding = false; // Clear stud flag on transfer
         
         // Add previous owner to viewOnlyForUsers if not already there
         if (!animal.viewOnlyForUsers.includes(previousOwner)) {
@@ -112,7 +114,9 @@ router.post('/:id/accept', async (req, res) => {
                 { 
                     $set: { 
                         ownerId_public: animal.ownerId_public,
-                        status: animal.status
+                        status: animal.status,
+                        isForSale: false,
+                        availableForBreeding: false,
                     } 
                 }
             );
