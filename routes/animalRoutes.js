@@ -496,7 +496,11 @@ router.get('/any/:id_public', async (req, res) => {
         if (animal) {
             // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
             // collection are public by definition. Inject the field so frontend privacy checks work.
-            return res.status(200).json(await withBreederName({ ...animal, showOnPublicProfile: true }));
+            // Also attach manualPedigree from the private Animal record (not in PublicAnimalSchema)
+            // so the Beta Pedigree tab can display the ancestor tree.
+            const privateForPedigree = await Animal.findOne({ id_public }).select('manualPedigree').lean();
+            const manualPedigree = privateForPedigree?.manualPedigree ?? null;
+            return res.status(200).json(await withBreederName({ ...animal, showOnPublicProfile: true, manualPedigree }));
         }
 
         // Not public either, check if animal is related to user's animals
