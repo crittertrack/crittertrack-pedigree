@@ -470,6 +470,9 @@ const AnimalSchema = new mongoose.Schema({
     
     // Inbreeding coefficient (cached value)
     inbreedingCoefficient: { type: Number, default: null },
+
+    // Manual Pedigree (Beta) — free-text ancestor entries not linked to registered animals
+    manualPedigree: { type: mongoose.Schema.Types.Mixed, default: null },
     
     // Public visibility toggles
     showOnPublicProfile: { type: Boolean, default: false, index: true },
