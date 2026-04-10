@@ -460,6 +460,20 @@ router.get('/', async (req, res) => {
 // This is for displaying parents/offspring that user doesn't own
 // If viewFromNotification=true, allows access to animals mentioned in breeder/parent notifications
 // Returns: owned animals OR public animals OR animals related to user's animals (as parent/offspring) OR animals from notifications
+// Helper: enrich animal response with resolved breeder display name
+async function withBreederName(animal) {
+    if (!animal) return animal;
+    if (animal.manualBreederName) return { ...animal, breederName: animal.manualBreederName };
+    if (!animal.breederId_public) return animal;
+    try {
+        const profile = await User.findOne({ id_public: animal.breederId_public })
+            .select('breederName personalName').lean();
+        const name = (profile && (profile.breederName || profile.personalName)) || null;
+        if (name) return { ...animal, breederName: name };
+    } catch { /* non-critical */ }
+    return animal;
+}
+
 router.get('/any/:id_public', async (req, res) => {
     try {
         const id_public = req.params.id_public; // Keep as string (supports CTC format)
@@ -471,7 +485,7 @@ router.get('/any/:id_public', async (req, res) => {
         
         if (animal) {
             // User owns it, return full data
-            return res.status(200).json(animal);
+            return res.status(200).json(await withBreederName(animal));
         }
         
         // Not owned by user, check if it's in the public collection (only public animals are synced there)
@@ -480,7 +494,7 @@ router.get('/any/:id_public', async (req, res) => {
         if (animal) {
             // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
             // collection are public by definition. Inject the field so frontend privacy checks work.
-            return res.status(200).json({ ...animal, showOnPublicProfile: true });
+            return res.status(200).json(await withBreederName({ ...animal, showOnPublicProfile: true }));
         }
 
         // Not public either, check if animal is related to user's animals
@@ -491,7 +505,7 @@ router.get('/any/:id_public', async (req, res) => {
             // If viewing from notification, always allow access to the animal details
             if (viewFromNotification) {
                 console.log(`[viewFromNotification] Allowing user to view animal ${id_public} from notification`);
-                return res.status(200).json(animal);
+                return res.status(200).json(await withBreederName(animal));
             }
 
             // Check if any of the user's animals are parents of this animal
@@ -545,7 +559,7 @@ router.get('/any/:id_public', async (req, res) => {
                 if (!animal.showOnPublicProfile) {
                     return res.status(404).json({ message: 'Animal not found or not accessible.' });
                 }
-                return res.status(200).json(animal);
+                return res.status(200).json(await withBreederName(animal));
             }
         }
         
