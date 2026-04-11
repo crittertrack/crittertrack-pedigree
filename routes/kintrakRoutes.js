@@ -513,7 +513,7 @@ router.post('/', upload.fields([
                     });
                 }
             }
-            const conflictRegs = new Set(conflicts.map(c => c.registration));
+            const conflictKeys = new Set(conflicts.map(c => c.registration || c.kintrakId).filter(Boolean));
             preview.animals = {
                 total: transformedAnimals.length,
                 new:   transformedAnimals.length - conflicts.length,
@@ -530,7 +530,7 @@ router.post('/', upload.fields([
                     coat:        a.coat,
                     sireKintrakId: a._fatherKintrakId || null,
                     damKintrakId:  a._motherKintrakId || null,
-                    isDuplicate: conflictRegs.has(a._registration),
+                    isDuplicate: conflictKeys.has(a._registration || a._kintrakId),
                 })),
             };
         }
@@ -657,8 +657,9 @@ router.post('/', upload.fields([
         const { _kintrakId, _fatherKintrakId, _motherKintrakId, _registration, ...rec } = animal;
         try {
             // Deselected — skip, but honour map_to for lineage
-            if (selectedSet && !selectedSet.has(_registration)) {
-                const res_ = conflictResolutions[_registration] || '';
+            const _aKey = _registration || _kintrakId;
+            if (selectedSet && !selectedSet.has(_aKey)) {
+                const res_ = conflictResolutions[_aKey] || '';
                 if (res_.startsWith('map_to:')) {
                     if (_kintrakId) kintrakIdToIdPublic.set(_kintrakId, res_.slice(7));
                 }
@@ -667,7 +668,7 @@ router.post('/', upload.fields([
             }
 
             // Manual map_to: skip creation, register CT ID for lineage
-            const preRes = conflictResolutions[_registration] || '';
+            const preRes = conflictResolutions[_aKey] || '';
             if (preRes.startsWith('map_to:')) {
                 skipped.animals++;
                 if (_kintrakId) kintrakIdToIdPublic.set(_kintrakId, preRes.slice(7));
@@ -697,7 +698,7 @@ router.post('/', upload.fields([
             }
 
             if (hit) {
-                const resolution = conflictResolutions[_registration] || 'use_existing';
+                const resolution = conflictResolutions[_aKey] || 'use_existing';
                 if (resolution === 'skip' || resolution === 'use_existing') {
                     skipped.animals++;
                     if (_kintrakId) kintrakIdToIdPublic.set(_kintrakId, hit.match.id_public);
