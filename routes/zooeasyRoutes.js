@@ -402,7 +402,7 @@ router.post('/', upload.fields([
             // Build a name map for sire/dam reg#s: import batch first, then DB lookup
             const regNumToName = new Map();
             for (const a of transformedAnimals) {
-                if (a._zooEasyRegNum) regNumToName.set(a._zooEasyRegNum, a.name);
+                if (a._zooEasyRegNum) regNumToName.set(a._zooEasyRegNum, [a.prefix, a.name, a.suffix].filter(Boolean).join(' '));
             }
             // Collect reg#s not already resolved from the import batch
             const unknownRegNums = [...new Set(
