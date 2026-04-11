@@ -216,10 +216,15 @@ function transformLitterRow(row) {
     const counts = parseLitterCounts(row['Nestinformatie Aantal jongen']);
     const inbreedingRaw = parseFloat(row['RelationshipPercentage']);
 
+    const maleName  = [(row['MaleRegistrationNumber']||'').trim(), (row['MaleName']||'').trim(), (row['MaleGivenName']||'').trim()].filter(Boolean).join(' ') || null;
+    const femaleName = [(row['FemaleRegistrationNumber']||'').trim(), (row['FemaleName']||'').trim(), (row['FemaleGivenName']||'').trim()].filter(Boolean).join(' ') || null;
+
     return {
         // Private: used only for sire/dam resolution
         _maleRegNum: (row['MaleRegistrationNumber'] || '').trim(),
         _femaleRegNum: (row['FemaleRegistrationNumber'] || '').trim(),
+        _maleName: maleName,
+        _femaleName: femaleName,
 
         // CritterTrack Litter fields
         matingDate: matingDate || null,
@@ -399,36 +404,49 @@ router.post('/', upload.fields([
         }
 
         if (transformedLitters.length) {
-            // Build a name map for sire/dam reg#s: import batch first, then DB lookup
-            const regNumToName = new Map();
+            // Build a CT match map: reg# → { id_public, displayName } for animals already in DB
+            const regNumToName = new Map(); // reg# → display name (from import batch)
+            const regNumToCT   = new Map(); // reg# → { id_public, name } (from DB)
             for (const a of transformedAnimals) {
                 if (a._zooEasyRegNum) regNumToName.set(a._zooEasyRegNum, [a.prefix, a.name, a.suffix].filter(Boolean).join(' '));
             }
-            // Collect reg#s not already resolved from the import batch
-            const unknownRegNums = [...new Set(
+            // All reg#s referenced by litters
+            const allLitterRegNums = [...new Set(
                 transformedLitters.flatMap(l => [l._maleRegNum, l._femaleRegNum].filter(Boolean))
-            )].filter(r => !regNumToName.has(r));
-            if (unknownRegNums.length) {
-                const dbAnimals = await Animal.find({ breederAssignedId: { $in: unknownRegNums } })
-                    .select('breederAssignedId name prefix suffix').lean();
+            )];
+            // DB lookup for any reg# not already in the import batch
+            const toLookup = allLitterRegNums.filter(r => r);
+            if (toLookup.length) {
+                const dbAnimals = await Animal.find({ breederAssignedId: { $in: toLookup } })
+                    .select('breederAssignedId id_public name prefix suffix').lean();
                 for (const a of dbAnimals) {
                     const displayName = [a.prefix, a.name, a.suffix].filter(Boolean).join(' ');
-                    regNumToName.set(a.breederAssignedId, displayName);
+                    regNumToCT.set(a.breederAssignedId, { id_public: a.id_public, name: displayName });
+                    if (!regNumToName.has(a.breederAssignedId)) regNumToName.set(a.breederAssignedId, displayName);
                 }
             }
 
             preview.litters = {
                 total: transformedLitters.length,
-                items: transformedLitters.map(l => ({
-                    maleRegNum: l._maleRegNum,
-                    femaleRegNum: l._femaleRegNum,
-                    maleName: l._maleRegNum ? (regNumToName.get(l._maleRegNum) || null) : null,
-                    femaleName: l._femaleRegNum ? (regNumToName.get(l._femaleRegNum) || null) : null,
-                    birthDate: l.birthDate,
-                    matingDate: l.matingDate,
-                    nestLetter: l.breedingPairCodeName,
-                    litterSizeBorn: l.litterSizeBorn,
-                })),
+                items: transformedLitters.map(l => {
+                    const maleCtMatch   = l._maleRegNum   ? (regNumToCT.get(l._maleRegNum)   || null) : null;
+                    const femaleCtMatch = l._femaleRegNum ? (regNumToCT.get(l._femaleRegNum) || null) : null;
+                    // Name: from CSV directly, then DB match, then reg# fallback
+                    const maleName   = l._maleName   || (maleCtMatch   ? maleCtMatch.name   : null) || l._maleRegNum   || null;
+                    const femaleName = l._femaleName || (femaleCtMatch ? femaleCtMatch.name : null) || l._femaleRegNum || null;
+                    return {
+                        maleRegNum:     l._maleRegNum,
+                        femaleRegNum:   l._femaleRegNum,
+                        maleName,
+                        femaleName,
+                        maleCtId:       maleCtMatch   ? maleCtMatch.id_public   : null,
+                        femaleCtId:     femaleCtMatch ? femaleCtMatch.id_public : null,
+                        birthDate:      l.birthDate,
+                        matingDate:     l.matingDate,
+                        nestLetter:     l.breedingPairCodeName,
+                        litterSizeBorn: l.litterSizeBorn,
+                    };
+                }),
             };
         }
 
