@@ -606,26 +606,39 @@ router.post('/', upload.fields([
         rec.sireId_public = sireIdPublic;
         rec.damId_public  = damIdPublic;
 
-        // Duplicate detection: same owner + sire + dam + birthDate
-        // Fallback if parents unknown: same owner + nest letter + birthDate
+        // Duplicate detection against existing litters owned by this user.
+        // Tries strategies in order; first match wins.
         try {
             let isDupe = false;
-            if (sireIdPublic && damIdPublic && rec.birthDate) {
-                const existing = await Litter.findOne({
-                    ownerId: userId,
-                    sireId_public: sireIdPublic,
-                    damId_public: damIdPublic,
-                    birthDate: rec.birthDate,
-                }).lean();
-                if (existing) isDupe = true;
-            } else if (rec.breedingPairCodeName && rec.birthDate) {
-                const existing = await Litter.findOne({
-                    ownerId: userId,
-                    breedingPairCodeName: rec.breedingPairCodeName,
-                    birthDate: rec.birthDate,
-                }).lean();
-                if (existing) isDupe = true;
+
+            // Helper: build a ±1 day date range to handle timezone offsets
+            const dateRange = (d) => {
+                const start = new Date(d); start.setHours(0, 0, 0, 0);
+                const end   = new Date(d); end.setHours(23, 59, 59, 999);
+                return { $gte: start, $lte: end };
+            };
+
+            // Strategy 1: sire + dam + birthDate
+            if (!isDupe && sireIdPublic && damIdPublic && rec.birthDate) {
+                const e = await Litter.findOne({ ownerId: userId, sireId_public: sireIdPublic, damId_public: damIdPublic, birthDate: dateRange(rec.birthDate) }).lean();
+                if (e) isDupe = true;
             }
+            // Strategy 2: sire + dam + matingDate (catches planned matings without birthDate)
+            if (!isDupe && sireIdPublic && damIdPublic && rec.matingDate) {
+                const e = await Litter.findOne({ ownerId: userId, sireId_public: sireIdPublic, damId_public: damIdPublic, matingDate: dateRange(rec.matingDate) }).lean();
+                if (e) isDupe = true;
+            }
+            // Strategy 3: nest letter + birthDate
+            if (!isDupe && rec.breedingPairCodeName && rec.birthDate) {
+                const e = await Litter.findOne({ ownerId: userId, breedingPairCodeName: rec.breedingPairCodeName, birthDate: dateRange(rec.birthDate) }).lean();
+                if (e) isDupe = true;
+            }
+            // Strategy 4: nest letter + matingDate
+            if (!isDupe && rec.breedingPairCodeName && rec.matingDate) {
+                const e = await Litter.findOne({ ownerId: userId, breedingPairCodeName: rec.breedingPairCodeName, matingDate: dateRange(rec.matingDate) }).lean();
+                if (e) isDupe = true;
+            }
+
             if (isDupe) { skipped.litters++; continue; }
 
             rec.litter_id_public = await getNextSequence('litterId');
