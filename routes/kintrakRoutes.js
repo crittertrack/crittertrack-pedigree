@@ -409,6 +409,12 @@ router.post('/', upload.fields([
         catch { return res.status(400).json({ message: 'conflictResolutions is not valid JSON.' }); }
     }
 
+    let litterMappingsParam = {};
+    if (req.body.litterMappings) {
+        try { litterMappingsParam = JSON.parse(req.body.litterMappings); }
+        catch { /* ignore malformed, just use auto */ }
+    }
+
     let animalRows = [];
     let litterRows = [];
     try {
@@ -751,15 +757,25 @@ router.post('/', upload.fields([
 
         if (selectedLitterSet && !selectedLitterSet.has(litterIndex)) { skipped.litters++; continue; }
 
-        // Resolve sire by name variants
+        // Resolve sire by name variants (manual mapping takes precedence)
         let sireIdPublic = null;
-        const sireFound = await findParentCT(null, _sireNameVariants);
-        if (sireFound) sireIdPublic = sireFound.id_public;
+        const lmSire = litterMappingsParam[String(litterIndex)]?.sire;
+        if (lmSire?.id_public) {
+            sireIdPublic = lmSire.id_public;
+        } else {
+            const sireFound = await findParentCT(null, _sireNameVariants);
+            if (sireFound) sireIdPublic = sireFound.id_public;
+        }
 
-        // Resolve dam by name variants
+        // Resolve dam by name variants (manual mapping takes precedence)
         let damIdPublic = null;
-        const damFound = await findParentCT(null, _damNameVariants);
-        if (damFound) damIdPublic = damFound.id_public;
+        const lmDam = litterMappingsParam[String(litterIndex)]?.dam;
+        if (lmDam?.id_public) {
+            damIdPublic = lmDam.id_public;
+        } else {
+            const damFound = await findParentCT(null, _damNameVariants);
+            if (damFound) damIdPublic = damFound.id_public;
+        }
 
         rec.sireId_public = sireIdPublic;
         rec.damId_public  = damIdPublic;
