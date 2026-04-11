@@ -464,11 +464,9 @@ router.get('/', async (req, res) => {
 async function withBreederName(animal) {
     if (!animal) return animal;
     if (animal.manualBreederName) return { ...animal, breederName: animal.manualBreederName };
-    // Try explicit breederId_public first, then fall back to ownerId_public
-    const lookupId = animal.breederId_public || animal.ownerId_public;
-    if (!lookupId) return animal;
+    if (!animal.breederId_public) return animal;
     try {
-        const profile = await User.findOne({ id_public: lookupId })
+        const profile = await User.findOne({ id_public: animal.breederId_public })
             .select('breederName personalName').lean();
         const name = (profile && (profile.breederName || profile.personalName)) || null;
         if (name) return { ...animal, breederName: name };
