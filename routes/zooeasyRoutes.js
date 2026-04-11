@@ -216,15 +216,29 @@ function transformLitterRow(row) {
     const counts = parseLitterCounts(row['Nestinformatie Aantal jongen']);
     const inbreedingRaw = parseFloat(row['RelationshipPercentage']);
 
-    const maleName  = [(row['MaleRegistrationNumber']||'').trim(), (row['MaleName']||'').trim(), (row['MaleGivenName']||'').trim()].filter(Boolean).join(' ') || null;
-    const femaleName = [(row['FemaleRegistrationNumber']||'').trim(), (row['FemaleName']||'').trim(), (row['FemaleGivenName']||'').trim()].filter(Boolean).join(' ') || null;
+    const maleRegNum   = (row['MaleRegistrationNumber']  || '').trim();
+    const femaleRegNum  = (row['FemaleRegistrationNumber'] || '').trim();
+    const maleNameRaw   = (row['MaleName']    || '').trim();
+    const maleGiven     = (row['MaleGivenName']   || '').trim();
+    const femaleNameRaw = (row['FemaleName']   || '').trim();
+    const femaleGiven   = (row['FemaleGivenName'] || '').trim();
+
+    // Compound display names (reg# + name + givenname)
+    const maleName   = [maleRegNum,   maleNameRaw,   maleGiven  ].filter(Boolean).join(' ') || null;
+    const femaleName = [femaleRegNum, femaleNameRaw, femaleGiven].filter(Boolean).join(' ') || null;
+
+    // Individual variants for name-based CT lookup
+    const maleNameVariants   = [...new Set([maleNameRaw, maleGiven, [maleNameRaw, maleGiven].filter(Boolean).join(' '), maleName].filter(Boolean))];
+    const femaleNameVariants = [...new Set([femaleNameRaw, femaleGiven, [femaleNameRaw, femaleGiven].filter(Boolean).join(' '), femaleName].filter(Boolean))];
 
     return {
         // Private: used only for sire/dam resolution
-        _maleRegNum: (row['MaleRegistrationNumber'] || '').trim(),
-        _femaleRegNum: (row['FemaleRegistrationNumber'] || '').trim(),
-        _maleName: maleName,
-        _femaleName: femaleName,
+        _maleRegNum:          maleRegNum,
+        _femaleRegNum:        femaleRegNum,
+        _maleName:            maleName,
+        _femaleName:          femaleName,
+        _maleNameVariants:    maleNameVariants,
+        _femaleNameVariants:  femaleNameVariants,
 
         // CritterTrack Litter fields
         matingDate: matingDate || null,
@@ -299,6 +313,36 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
                 .select('id_public name ownerId_public breederAssignedId birthDate')
                 .lean();
             if (global) return { match: global, matchType: 'name_only', confidence: 'possible' };
+        }
+    }
+    return null;
+}
+
+// Find a CT animal for a litter parent by ZooEasy reg# and/or name variants.
+// Strategy: (1) breederAssignedId exact, (2) compound name exact match (how ZooEasy
+// animals are stored in CT after import), (3) name variant regex on name field.
+// Returns { id_public, name } or null.
+async function findParentCT(zeRegNum, nameVariants) {
+    // 1. Exact breederAssignedId match
+    if (zeRegNum) {
+        const byId = await Animal.findOne({ breederAssignedId: zeRegNum })
+            .select('id_public name prefix suffix').lean();
+        if (byId) return { id_public: byId.id_public, name: [byId.prefix, byId.name, byId.suffix].filter(Boolean).join(' ') };
+    }
+    // 2 & 3. Name variant matches (exact then case-insensitive)
+    if (nameVariants?.length) {
+        for (const n of nameVariants) {
+            if (!n) continue;
+            const byName = await Animal.findOne({ name: n })
+                .select('id_public name prefix suffix').lean();
+            if (byName) return { id_public: byName.id_public, name: [byName.prefix, byName.name, byName.suffix].filter(Boolean).join(' ') };
+        }
+        // Case-insensitive fallback on the longest variant (most specific)
+        const longest = [...nameVariants].sort((a, b) => b.length - a.length)[0];
+        if (longest) {
+            const byRegex = await Animal.findOne({ name: { $regex: `^${longest.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } })
+                .select('id_public name prefix suffix').lean();
+            if (byRegex) return { id_public: byRegex.id_public, name: [byRegex.prefix, byRegex.name, byRegex.suffix].filter(Boolean).join(' ') };
         }
     }
     return null;
@@ -404,50 +448,45 @@ router.post('/', upload.fields([
         }
 
         if (transformedLitters.length) {
-            // Build a CT match map: reg# → { id_public, displayName } for animals already in DB
-            const regNumToName = new Map(); // reg# → display name (from import batch)
-            const regNumToCT   = new Map(); // reg# → { id_public, name } (from DB)
+            // Seed cache from this import batch
+            const parentCache = new Map(); // zeRegNum → { id_public, name } or null
             for (const a of transformedAnimals) {
-                if (a._zooEasyRegNum) regNumToName.set(a._zooEasyRegNum, [a.prefix, a.name, a.suffix].filter(Boolean).join(' '));
-            }
-            // All reg#s referenced by litters
-            const allLitterRegNums = [...new Set(
-                transformedLitters.flatMap(l => [l._maleRegNum, l._femaleRegNum].filter(Boolean))
-            )];
-            // DB lookup for any reg# not already in the import batch
-            const toLookup = allLitterRegNums.filter(r => r);
-            if (toLookup.length) {
-                const dbAnimals = await Animal.find({ breederAssignedId: { $in: toLookup } })
-                    .select('breederAssignedId id_public name prefix suffix').lean();
-                for (const a of dbAnimals) {
-                    const displayName = [a.prefix, a.name, a.suffix].filter(Boolean).join(' ');
-                    regNumToCT.set(a.breederAssignedId, { id_public: a.id_public, name: displayName });
-                    if (!regNumToName.has(a.breederAssignedId)) regNumToName.set(a.breederAssignedId, displayName);
+                if (a._zooEasyRegNum) {
+                    parentCache.set(a._zooEasyRegNum, {
+                        id_public: null, // not yet created — no CT ID yet in preview
+                        name: [a.prefix, a.name, a.suffix].filter(Boolean).join(' '),
+                    });
                 }
             }
 
-            preview.litters = {
-                total: transformedLitters.length,
-                items: transformedLitters.map(l => {
-                    const maleCtMatch   = l._maleRegNum   ? (regNumToCT.get(l._maleRegNum)   || null) : null;
-                    const femaleCtMatch = l._femaleRegNum ? (regNumToCT.get(l._femaleRegNum) || null) : null;
-                    // Name: from CSV directly, then DB match, then reg# fallback
-                    const maleName   = l._maleName   || (maleCtMatch   ? maleCtMatch.name   : null) || l._maleRegNum   || null;
-                    const femaleName = l._femaleName || (femaleCtMatch ? femaleCtMatch.name : null) || l._femaleRegNum || null;
-                    return {
-                        maleRegNum:     l._maleRegNum,
-                        femaleRegNum:   l._femaleRegNum,
-                        maleName,
-                        femaleName,
-                        maleCtId:       maleCtMatch   ? maleCtMatch.id_public   : null,
-                        femaleCtId:     femaleCtMatch ? femaleCtMatch.id_public : null,
-                        birthDate:      l.birthDate,
-                        matingDate:     l.matingDate,
-                        nestLetter:     l.breedingPairCodeName,
-                        litterSizeBorn: l.litterSizeBorn,
-                    };
-                }),
-            };
+            const litterItems = [];
+            for (const l of transformedLitters) {
+                // Resolve sire
+                let maleCtMatch = parentCache.has(l._maleRegNum) ? parentCache.get(l._maleRegNum) : undefined;
+                if (maleCtMatch === undefined) {
+                    maleCtMatch = await findParentCT(l._maleRegNum, l._maleNameVariants);
+                    parentCache.set(l._maleRegNum, maleCtMatch);
+                }
+                // Resolve dam
+                let femaleCtMatch = parentCache.has(l._femaleRegNum) ? parentCache.get(l._femaleRegNum) : undefined;
+                if (femaleCtMatch === undefined) {
+                    femaleCtMatch = await findParentCT(l._femaleRegNum, l._femaleNameVariants);
+                    parentCache.set(l._femaleRegNum, femaleCtMatch);
+                }
+                litterItems.push({
+                    maleRegNum:     l._maleRegNum,
+                    femaleRegNum:   l._femaleRegNum,
+                    maleName:       l._maleName || (maleCtMatch?.name)   || l._maleRegNum   || null,
+                    femaleName:     l._femaleName || (femaleCtMatch?.name) || l._femaleRegNum || null,
+                    maleCtId:       maleCtMatch?.id_public   || null,
+                    femaleCtId:     femaleCtMatch?.id_public || null,
+                    birthDate:      l.birthDate,
+                    matingDate:     l.matingDate,
+                    nestLetter:     l.breedingPairCodeName,
+                    litterSizeBorn: l.litterSizeBorn,
+                });
+            }
+            preview.litters = { total: transformedLitters.length, items: litterItems };
         }
 
         return res.json({ preview, speciesUsed: species });
@@ -525,15 +564,15 @@ router.post('/', upload.fields([
         const myIdPublic = regNumToIdPublic.get(_zooEasyRegNum);
         if (!myIdPublic) continue;
 
-        // Resolve each parent: import batch first, then global DB lookup by breederAssignedId
+        // Resolve each parent: import batch first, then full multi-strategy CT lookup
         let sireIdPublic = _fatherRegNum ? (regNumToIdPublic.get(_fatherRegNum) || null) : null;
         let damIdPublic  = _motherRegNum ? (regNumToIdPublic.get(_motherRegNum) || null) : null;
         if (_fatherRegNum && !sireIdPublic) {
-            const found = await Animal.findOne({ breederAssignedId: _fatherRegNum }).select('id_public').lean();
+            const found = await findParentCT(_fatherRegNum, null);
             if (found) { sireIdPublic = found.id_public; regNumToIdPublic.set(_fatherRegNum, found.id_public); }
         }
         if (_motherRegNum && !damIdPublic) {
-            const found = await Animal.findOne({ breederAssignedId: _motherRegNum }).select('id_public').lean();
+            const found = await findParentCT(_motherRegNum, null);
             if (found) { damIdPublic = found.id_public; regNumToIdPublic.set(_motherRegNum, found.id_public); }
         }
         if (!sireIdPublic && !damIdPublic) continue;
@@ -553,16 +592,15 @@ router.post('/', upload.fields([
     for (const litter of transformedLitters) {
         const { _maleRegNum, _femaleRegNum, ...rec } = litter;
 
-        // Resolve sire/dam: check this import batch first, then fall back to
-        // any CT animal whose breederAssignedId matches the ZooEasy reg#.
+        // Resolve sire/dam: import batch first, then full multi-strategy CT lookup
         let sireIdPublic = _maleRegNum ? (regNumToIdPublic.get(_maleRegNum) || null) : null;
         let damIdPublic  = _femaleRegNum ? (regNumToIdPublic.get(_femaleRegNum) || null) : null;
         if (_maleRegNum && !sireIdPublic) {
-            const found = await Animal.findOne({ breederAssignedId: _maleRegNum }).select('id_public').lean();
+            const found = await findParentCT(_maleRegNum, litter._maleNameVariants);
             if (found) { sireIdPublic = found.id_public; regNumToIdPublic.set(_maleRegNum, found.id_public); }
         }
         if (_femaleRegNum && !damIdPublic) {
-            const found = await Animal.findOne({ breederAssignedId: _femaleRegNum }).select('id_public').lean();
+            const found = await findParentCT(_femaleRegNum, litter._femaleNameVariants);
             if (found) { damIdPublic = found.id_public; regNumToIdPublic.set(_femaleRegNum, found.id_public); }
         }
         rec.sireId_public = sireIdPublic;
