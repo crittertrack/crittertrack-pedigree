@@ -225,18 +225,18 @@ function transformLitterRow(row) {
 // ─── Duplicate detection helpers ─────────────────────────────────────────────
 
 // Primary match: breederAssignedId === ZooEasy RegistrationNumber (any owner).
-// Secondary match: same name + same birthDate (±0 days) across all animals,
-// catches animals manually entered in CT before this import.
-// Returns the matching CT animal doc or null.
-async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate) {
+// Secondary match: same name + same birthDate across all animals.
+// Tertiary match (name-only): same name in user's own animals, then globally.
+// Returns { match, matchType, confidence } or null.
+async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, species) {
     // Primary: exact breederAssignedId match
     if (zeRegNum) {
         const byId = await Animal.findOne({ breederAssignedId: zeRegNum })
             .select('id_public name ownerId_public breederAssignedId birthDate')
             .lean();
-        if (byId) return { match: byId, matchType: 'id' };
+        if (byId) return { match: byId, matchType: 'id', confidence: 'high' };
     }
-    // Secondary: try each name variant individually against name + birthDate
+    // Secondary: name + birthDate across all animals
     if (birthDate && nameVariants?.length) {
         const start = new Date(birthDate);
         start.setHours(0, 0, 0, 0);
@@ -246,7 +246,25 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate) {
             const byName = await Animal.findOne({ name: n, birthDate: { $gte: start, $lte: end } })
                 .select('id_public name ownerId_public breederAssignedId birthDate')
                 .lean();
-            if (byName) return { match: byName, matchType: 'name+birthDate' };
+            if (byName) return { match: byName, matchType: 'name+birthDate', confidence: 'high' };
+        }
+    }
+    // Tertiary: name-only — own animals first (high), then global (possible)
+    if (nameVariants?.length) {
+        const speciesFilter = species ? { species } : {};
+        // Check own animals first
+        for (const n of nameVariants) {
+            const own = await Animal.findOne({ name: n, ownerId: userId, ...speciesFilter })
+                .select('id_public name ownerId_public breederAssignedId birthDate')
+                .lean();
+            if (own) return { match: own, matchType: 'name_only', confidence: 'high' };
+        }
+        // Then global (any user) — flag as possible match
+        for (const n of nameVariants) {
+            const global = await Animal.findOne({ name: n, ...speciesFilter })
+                .select('id_public name ownerId_public breederAssignedId birthDate')
+                .lean();
+            if (global) return { match: global, matchType: 'name_only', confidence: 'possible' };
         }
     }
     return null;
@@ -315,14 +333,17 @@ router.post('/', upload.fields([
             // Run global duplicate detection for every animal in the import
             const conflicts = [];
             for (const a of transformedAnimals) {
-                const hit = await findGlobalDuplicate(a._zooEasyRegNum, a._nameVariants, a.birthDate);
+                const hit = await findGlobalDuplicate(a._zooEasyRegNum, a._nameVariants, a.birthDate, userId, species);
                 if (hit) {
                     conflicts.push({
                         zeRegNum: a._zooEasyRegNum,
                         name: a.name,
-                        matchType: hit.matchType,         // 'id' or 'name+birthDate'
-                        existingId: hit.match.id_public,  // CT id of the matching animal
-                        existingOwner: hit.match.ownerId_public, // who owns it in CT
+                        matchType: hit.matchType,
+                        confidence: hit.confidence,
+                        existingId: hit.match.id_public,
+                        existingOwner: hit.match.ownerId_public,
+                        existingName: hit.match.name,
+                        existingBirthDate: hit.match.birthDate ? String(hit.match.birthDate).slice(0,10) : null,
                         isOwnedByImporter: String(hit.match.ownerId_public) === String(req.user.id_public),
                     });
                 }
@@ -392,7 +413,7 @@ router.post('/', upload.fields([
                 continue;
             }
 
-            const hit = await findGlobalDuplicate(_zooEasyRegNum, animal._nameVariants, animal.birthDate);
+            const hit = await findGlobalDuplicate(_zooEasyRegNum, animal._nameVariants, animal.birthDate, userId, species);
 
             if (hit) {
                 const resolution = conflictResolutions[_zooEasyRegNum] || 'use_existing';
