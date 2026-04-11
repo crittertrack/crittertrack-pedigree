@@ -779,9 +779,25 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     }
     if (filters.birthdateBefore) {
         // Only show animals born before/on the specified date (for parent selection)
+        // Also include animals with no birthDate (unknown DOB — can't exclude them)
         const dt = new Date(filters.birthdateBefore);
         if (!isNaN(dt.getTime())) {
-            query.birthDate = { $lte: dt.toISOString().split('T')[0] };
+            const birthdateCondition = {
+                $or: [
+                    { birthDate: { $lte: dt.toISOString().split('T')[0] } },
+                    { birthDate: null },
+                    { birthDate: { $exists: false } }
+                ]
+            };
+            // Safely combine with existing $or (ownership filter) using $and
+            if (query.$or) {
+                query.$and = (query.$and || []).concat([{ $or: query.$or }, birthdateCondition]);
+                delete query.$or;
+            } else if (query.$and) {
+                query.$and.push(birthdateCondition);
+            } else {
+                query.$or = birthdateCondition.$or;
+            }
         }
     }
 

@@ -291,8 +291,12 @@ router.get('/global/animals', async (req, res) => {
         if (query.birthdateBefore) {
             const dt = new Date(query.birthdateBefore);
             if (!isNaN(dt.getTime())) {
-                // assume birthDate stored as ISO date string or Date — use <= filter
-                q.birthDate = { $lte: dt.toISOString().split('T')[0] };
+                // Show animals born before/on date, plus those with unknown DOB
+                q.$or = [
+                    { birthDate: { $lte: dt.toISOString().split('T')[0] } },
+                    { birthDate: null },
+                    { birthDate: { $exists: false } }
+                ];
             }
         }
 
