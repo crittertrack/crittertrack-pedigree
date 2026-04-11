@@ -447,7 +447,7 @@ router.post('/', upload.fields([
             const byRegMap = new Map(); // regNum → CT animal
             if (allRegNums.length) {
                 const byReg = await Animal.find({ breederAssignedId: { $in: allRegNums } })
-                    .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                    .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
                 for (const doc of byReg) byRegMap.set(doc.breederAssignedId, doc);
             }
 
@@ -456,7 +456,7 @@ router.post('/', upload.fields([
             const byNameMap = new Map(); // name → CT animal
             if (allNames.length) {
                 const byName = await Animal.find({ name: { $in: allNames } })
-                    .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                    .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
                 for (const doc of byName) {
                     if (!byNameMap.has(doc.name)) byNameMap.set(doc.name, doc);
                 }
@@ -507,6 +507,7 @@ router.post('/', upload.fields([
                         confidence:        hit.confidence,
                         existingId:        hit.match.id_public,
                         existingOwner:     hit.match.ownerId_public,
+                        existingPrefix:    hit.match.prefix || null,
                         existingName:      hit.match.name,
                         existingBirthDate: hit.match.birthDate ? String(hit.match.birthDate).slice(0, 10) : null,
                         isOwnedByImporter: String(hit.match.ownerId_public) === String(req.user.id_public),

@@ -265,7 +265,7 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
     // Primary: exact breederAssignedId match
     if (zeRegNum) {
         const byId = await Animal.findOne({ breederAssignedId: zeRegNum })
-            .select('id_public name ownerId_public breederAssignedId birthDate')
+            .select('id_public name prefix ownerId_public breederAssignedId birthDate')
             .lean();
         if (byId) return { match: byId, matchType: 'id', confidence: 'high' };
     }
@@ -277,7 +277,7 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
         end.setHours(23, 59, 59, 999);
         for (const n of nameVariants) {
             const byName = await Animal.findOne({ name: n, birthDate: { $gte: start, $lte: end } })
-                .select('id_public name ownerId_public breederAssignedId birthDate')
+                .select('id_public name prefix ownerId_public breederAssignedId birthDate')
                 .lean();
             if (byName) return { match: byName, matchType: 'name+birthDate', confidence: 'high' };
         }
@@ -286,7 +286,7 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
             const baseName = nameVariants[0];
             if (baseName) {
                 const byPrefixName = await Animal.findOne({ prefix: prefixForDupe, name: baseName, birthDate: { $gte: start, $lte: end } })
-                    .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                    .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
                 if (byPrefixName) return { match: byPrefixName, matchType: 'name+birthDate', confidence: 'high' };
             }
         }
@@ -297,20 +297,20 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
         // Check own animals first
         for (const n of nameVariants) {
             const own = await Animal.findOne({ name: n, ownerId: userId, ...speciesFilter })
-                .select('id_public name ownerId_public breederAssignedId birthDate')
+                .select('id_public name prefix ownerId_public breederAssignedId birthDate')
                 .lean();
             if (own) return { match: own, matchType: 'name_only', confidence: 'high' };
         }
         // prefix+name structural match against own animals
         if (prefixForDupe && nameVariants[0]) {
             const ownByPrefix = await Animal.findOne({ prefix: prefixForDupe, name: nameVariants[0], ownerId: userId })
-                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
             if (ownByPrefix) return { match: ownByPrefix, matchType: 'name_only', confidence: 'high' };
         }
         // Then global (any user) — flag as possible match
         for (const n of nameVariants) {
             const global = await Animal.findOne({ name: n, ...speciesFilter })
-                .select('id_public name ownerId_public breederAssignedId birthDate')
+                .select('id_public name prefix ownerId_public breederAssignedId birthDate')
                 .lean();
             if (global) return { match: global, matchType: 'name_only', confidence: 'possible' };
         }
@@ -420,6 +420,7 @@ router.post('/', upload.fields([
                         confidence: hit.confidence,
                         existingId: hit.match.id_public,
                         existingOwner: hit.match.ownerId_public,
+                        existingPrefix: hit.match.prefix || null,
                         existingName: hit.match.name,
                         existingBirthDate: hit.match.birthDate ? String(hit.match.birthDate).slice(0,10) : null,
                         isOwnedByImporter: String(hit.match.ownerId_public) === String(req.user.id_public),
