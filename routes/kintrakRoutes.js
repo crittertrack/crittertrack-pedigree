@@ -467,13 +467,8 @@ router.post('/', upload.fields([
             for (const a of transformedAnimals) {
                 let hit = null;
 
-                // Primary: registration number
-                if (a._registration && byRegMap.has(a._registration)) {
-                    hit = { match: byRegMap.get(a._registration), matchType: 'id', confidence: 'high' };
-                }
-
-                // Secondary: name + birthDate (only for animals without a registration number)
-                if (!hit && !a._registration && a.birthDate && a._nameVariants?.length) {
+                // Primary: name + birthDate → definitive duplicate
+                if (a.birthDate && a._nameVariants?.length) {
                     const ts = a.birthDate.getTime?.() ?? new Date(a.birthDate).getTime();
                     for (const n of a._nameVariants) {
                         const doc = byNameMap.get(n);
@@ -487,14 +482,17 @@ router.post('/', upload.fields([
                     }
                 }
 
-                // Tertiary: name-only (own animals first = high, global = possible)
-                // Skip for large imports to stay within timeout
-                if (!hit && a._nameVariants?.length && transformedAnimals.length <= 500) {
+                // Secondary: registration number → possible match
+                if (!hit && a._registration && byRegMap.has(a._registration)) {
+                    hit = { match: byRegMap.get(a._registration), matchType: 'id', confidence: 'possible' };
+                }
+
+                // Tertiary: name-only → possible match
+                if (!hit && a._nameVariants?.length) {
                     for (const n of a._nameVariants) {
                         const doc = byNameMap.get(n);
                         if (doc) {
-                            const isOwn = String(doc.ownerId_public || '') === String(req.user.id_public);
-                            hit = { match: doc, matchType: 'name_only', confidence: isOwn ? 'high' : 'possible' };
+                            hit = { match: doc, matchType: 'name_only', confidence: 'possible' };
                             break;
                         }
                     }
@@ -676,11 +674,9 @@ router.post('/', upload.fields([
                 continue;
             }
 
-            // Use pre-fetched batch maps instead of individual DB queries
+            // Use pre-fetched batch maps — name+DOB first (definitive), then reg#, then name-only
             let hit = null;
-            if (_registration && confirmByRegMap.has(_registration)) {
-                hit = { match: confirmByRegMap.get(_registration) };
-            } else if (!_registration && animal.birthDate && animal._nameVariants?.length) {
+            if (animal.birthDate && animal._nameVariants?.length) {
                 const ts = animal.birthDate.getTime?.() ?? new Date(animal.birthDate).getTime();
                 for (const n of animal._nameVariants) {
                     const doc = confirmByNameMap.get(n);
@@ -689,6 +685,9 @@ router.post('/', upload.fields([
                         break;
                     }
                 }
+            }
+            if (!hit && _registration && confirmByRegMap.has(_registration)) {
+                hit = { match: confirmByRegMap.get(_registration) };
             }
             if (!hit && animal._nameVariants?.length) {
                 for (const n of animal._nameVariants) {
