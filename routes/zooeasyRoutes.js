@@ -473,7 +473,35 @@ router.post('/', upload.fields([
                     femaleCtMatch = await findParentCT(l._femaleRegNum, l._femaleNameVariants);
                     parentCache.set(l._femaleRegNum, femaleCtMatch);
                 }
+                const sireIdForDupe   = maleCtMatch?.id_public   || null;
+                const damIdForDupe    = femaleCtMatch?.id_public || null;
+
+                // Dupe check (same logic as confirm pass)
+                let existingLitterId = null;
+                const dateRange = (d) => {
+                    const s = new Date(d); s.setHours(0,0,0,0);
+                    const e = new Date(d); e.setHours(23,59,59,999);
+                    return { $gte: s, $lte: e };
+                };
+                if (!existingLitterId && sireIdForDupe && damIdForDupe && l.birthDate) {
+                    const ex = await Litter.findOne({ ownerId: userId, sireId_public: sireIdForDupe, damId_public: damIdForDupe, birthDate: dateRange(l.birthDate) }).select('litter_id_public').lean();
+                    if (ex) existingLitterId = ex.litter_id_public;
+                }
+                if (!existingLitterId && sireIdForDupe && damIdForDupe && l.matingDate) {
+                    const ex = await Litter.findOne({ ownerId: userId, sireId_public: sireIdForDupe, damId_public: damIdForDupe, matingDate: dateRange(l.matingDate) }).select('litter_id_public').lean();
+                    if (ex) existingLitterId = ex.litter_id_public;
+                }
+                if (!existingLitterId && l.breedingPairCodeName && l.birthDate) {
+                    const ex = await Litter.findOne({ ownerId: userId, breedingPairCodeName: l.breedingPairCodeName, birthDate: dateRange(l.birthDate) }).select('litter_id_public').lean();
+                    if (ex) existingLitterId = ex.litter_id_public;
+                }
+                if (!existingLitterId && l.breedingPairCodeName && l.matingDate) {
+                    const ex = await Litter.findOne({ ownerId: userId, breedingPairCodeName: l.breedingPairCodeName, matingDate: dateRange(l.matingDate) }).select('litter_id_public').lean();
+                    if (ex) existingLitterId = ex.litter_id_public;
+                }
+
                 litterItems.push({
+                    litterIndex:    litterItems.length,
                     maleRegNum:     l._maleRegNum,
                     femaleRegNum:   l._femaleRegNum,
                     maleName:       l._maleName || (maleCtMatch?.name)   || l._maleRegNum   || null,
@@ -484,6 +512,8 @@ router.post('/', upload.fields([
                     matingDate:     l.matingDate,
                     nestLetter:     l.breedingPairCodeName,
                     litterSizeBorn: l.litterSizeBorn,
+                    isDuplicate:    !!existingLitterId,
+                    existingLitterId,
                 });
             }
             preview.litters = { total: transformedLitters.length, items: litterItems };
@@ -505,6 +535,11 @@ router.post('/', upload.fields([
     // Parse optional list of ZooEasy reg nums the user selected for import
     const selectedSet = req.body.selectedAnimals
         ? new Set(JSON.parse(req.body.selectedAnimals))
+        : null; // null = all selected
+
+    // Parse optional set of litter indices the user selected (0-based)
+    const selectedLitterSet = req.body.selectedLitters
+        ? new Set(JSON.parse(req.body.selectedLitters).map(Number))
         : null; // null = all selected
 
     // ── Pass 1: Create animals (with per-record conflict resolution) ──────────
@@ -589,8 +624,14 @@ router.post('/', upload.fields([
     }
 
     // ── Litters ───────────────────────────────────────────────────────────────
-    for (const litter of transformedLitters) {
+    for (const [litterIndex, litter] of transformedLitters.entries()) {
         const { _maleRegNum, _femaleRegNum, ...rec } = litter;
+
+        // If user deselected this litter, skip it
+        if (selectedLitterSet && !selectedLitterSet.has(litterIndex)) {
+            skipped.litters++;
+            continue;
+        }
 
         // Resolve sire/dam: import batch first, then full multi-strategy CT lookup
         let sireIdPublic = _maleRegNum ? (regNumToIdPublic.get(_maleRegNum) || null) : null;
