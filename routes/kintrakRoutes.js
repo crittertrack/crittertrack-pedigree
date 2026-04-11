@@ -145,16 +145,19 @@ function assembleKintrakGeneticCode(row) {
 function transformKintrakAnimalRow(row, species) {
     const rawName = cleanName((row['Name'] || '').trim());
     const rawCallName = cleanName((row['Call Name'] || '').trim());
+    const rawRegistration = (row['Registration'] || '').trim();
+    // Only use Call Name if it's non-empty, different from Name, and different from Registration
+    const effectiveCallName = (rawCallName && rawCallName !== rawName && rawCallName !== rawRegistration) ? rawCallName : '';
     const rawPrefix = (row['Prefix'] || '').trim();
     const rawSuffix = (row['Suffix'] || '').trim();
 
-    // Full name: Name + Call Name (if different from Name and non-empty)
-    const nameParts = [rawName, rawCallName && rawCallName !== rawName ? rawCallName : ''].filter(Boolean);
+    // Full name: Name + Call Name (if meaningful — not blank, not same as Name, not same as Registration)
+    const nameParts = [rawName, effectiveCallName].filter(Boolean);
     const name = nameParts.join(' ') || '(unnamed)';
 
     const nameVariants = [...new Set([
         rawName,
-        rawCallName,
+        effectiveCallName,
         name,
         [rawPrefix, rawName].filter(Boolean).join(' '),
         [rawName, rawSuffix].filter(Boolean).join(' '),
@@ -386,6 +389,7 @@ router.post('/', upload.fields([
     { name: 'animals', maxCount: 1 },
     { name: 'breedingrecords', maxCount: 1 },
 ]), async (req, res) => {
+  try {
     const files = req.files || {};
     if (!files.animals && !files.breedingrecords) {
         return res.status(400).json({ message: 'No files uploaded. Attach animals and/or breedingrecords CSV files.' });
@@ -703,6 +707,10 @@ router.post('/', upload.fields([
     }
 
     return res.json({ written, skipped, errors });
+  } catch (err) {
+    console.error('[kintrakRoutes] Unhandled error:', err);
+    return res.status(500).json({ message: err.message || 'Internal server error during Kintraks import.' });
+  }
 });
 
 module.exports = router;
