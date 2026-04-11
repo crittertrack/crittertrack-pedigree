@@ -144,12 +144,18 @@ function assembleKintrakGeneticCode(row) {
 
 function transformKintrakAnimalRow(row, species) {
     const rawName = cleanName((row['Name'] || '').trim());
+    const rawCallName = cleanName((row['Call Name'] || '').trim());
     const rawPrefix = (row['Prefix'] || '').trim();
     const rawSuffix = (row['Suffix'] || '').trim();
-    const name = rawName || '(unnamed)';
+
+    // Full name: Name + Call Name (if different from Name and non-empty)
+    const nameParts = [rawName, rawCallName && rawCallName !== rawName ? rawCallName : ''].filter(Boolean);
+    const name = nameParts.join(' ') || '(unnamed)';
 
     const nameVariants = [...new Set([
         rawName,
+        rawCallName,
+        name,
         [rawPrefix, rawName].filter(Boolean).join(' '),
         [rawName, rawSuffix].filter(Boolean).join(' '),
         [rawPrefix, rawName, rawSuffix].filter(Boolean).join(' '),
@@ -162,6 +168,23 @@ function transformKintrakAnimalRow(row, species) {
 
     const inbreedingRaw = parseFloat(row['Coi']);
     const geneticCode = assembleKintrakGeneticCode(row);
+
+    // manualBreederName: combine Breeder (col 13) and Breeder_3 (col 44) if both
+    // exist and differ. Breeder_2 is a True/False checkbox — ignored.
+    const breeder1 = (row['Breeder']   || '').trim();
+    const breeder3 = (row['Breeder_3'] || '').trim();
+    let manualBreederName = null;
+    if (breeder1 && breeder3 && breeder1 !== breeder3) {
+        manualBreederName = `${breeder1} / ${breeder3}`;
+    } else {
+        manualBreederName = breeder1 || breeder3 || null;
+    }
+
+    // Remarks: notes + owner info
+    const remarksParts = [];
+    if ((row['Notes'] || '').trim()) remarksParts.push(row['Notes'].trim());
+    const ownerStr = (row['Owner'] || '').trim();
+    if (ownerStr) remarksParts.push(`Owner: ${ownerStr}`);
 
     // Sire/dam names from the animals CSV (for parent lookup fallback)
     const sireName = cleanName((row['Sire'] || '').trim());
@@ -190,11 +213,13 @@ function transformKintrakAnimalRow(row, species) {
         coat: (row['Breed'] || '').trim() || null,
         birthDate,
         deceasedDate: deceasedDate || null,
+        causeOfDeath: (row['Deceased Reason'] || '').trim() || null,
         status: isDeceased ? 'Deceased' : 'Pet',
-        manualBreederName: (row['Breeder'] || '').trim() || null,
+        manualBreederName,
+        microchipNumber: (row['Microchip'] || '').trim() || null,
         inbreedingCoefficient: isNaN(inbreedingRaw) ? null : inbreedingRaw,
         geneticCode: geneticCode || null,
-        remarks: (row['Notes'] || '').trim() || null,
+        remarks: remarksParts.join('\n') || null,
         isOwned: true,
     };
 }
@@ -206,11 +231,22 @@ function transformKintrakLitterRow(row) {
     const rawSire = (row['Sire'] || '').trim();
     const rawDam = (row['Dam'] || '').trim();
 
-    // Clean sire/dam: strip ⭐/❤️ then strip "(XX)" kennel suffix
-    const cleanSire = stripKennel(cleanName(rawSire));
-    const cleanDam = stripKennel(cleanName(rawDam));
+    // Clean name: strip ⭐/❤️ markers
+    const cleanSireName = cleanName(rawSire);
+    const cleanDamName  = cleanName(rawDam);
 
-    const matingDate = parseKintrakDate(row['Mated'], 'DD/MM/YYYY');
+    // Extract kennel abbreviation from "(XX)" suffix and use it as prefix
+    const sireKennelMatch = cleanSireName.match(/\(([^)]+)\)\s*$/);
+    const damKennelMatch  = cleanDamName.match(/\(([^)]+)\)\s*$/);
+    const sirePrefix = sireKennelMatch ? sireKennelMatch[1] : null;
+    const damPrefix  = damKennelMatch  ? damKennelMatch[1]  : null;
+
+    // Clean name without kennel suffix
+    const cleanSire = stripKennel(cleanSireName);
+    const cleanDam  = stripKennel(cleanDamName);
+
+    const matingDate  = parseKintrakDate(row['Mated'], 'DD/MM/YYYY');
+    const weaningDate = parseKintrakDate(row['Wean'],  'DD/MM/YYYY');
 
     // Due column: "Born DD/MM/YYYY"
     let birthDate = null;
@@ -227,19 +263,31 @@ function transformKintrakLitterRow(row) {
     const nestLetter = cleanName((row['Notes'] || '')).trim() || null;
 
     // Name variants for parent CT lookup (most specific first)
-    const sireVariants = [...new Set([cleanSire, cleanName(rawSire)].filter(Boolean))];
-    const damVariants  = [...new Set([cleanDam,  cleanName(rawDam) ].filter(Boolean))];
+    // Include prefix-stripped name, full cleaned name, and prefix variant
+    const sireVariants = [...new Set([
+        cleanSire,
+        cleanSireName,
+        sirePrefix ? `${sirePrefix} ${cleanSire}` : null,
+    ].filter(Boolean))];
+    const damVariants = [...new Set([
+        cleanDam,
+        cleanDamName,
+        damPrefix ? `${damPrefix} ${cleanDam}` : null,
+    ].filter(Boolean))];
 
     return {
-        _sireRawName:       rawSire  || null,
-        _damRawName:        rawDam   || null,
-        _sireCleanName:     cleanSire || null,
-        _damCleanName:      cleanDam  || null,
+        _sireRawName:       rawSire    || null,
+        _damRawName:        rawDam     || null,
+        _sireCleanName:     cleanSire  || null,
+        _damCleanName:      cleanDam   || null,
+        _sirePrefix:        sirePrefix || null,
+        _damPrefix:         damPrefix  || null,
         _sireNameVariants:  sireVariants,
         _damNameVariants:   damVariants,
 
         matingDate:           matingDate  || null,
         birthDate:            birthDate   || null,
+        weaningDate:          weaningDate || null,
         isPlanned:            !birthDate,
         outcome:              birthDate ? 'Successful' : 'Unknown',
         breedingPairCodeName: nestLetter,
@@ -482,11 +530,14 @@ router.post('/', upload.fields([
                 litterItems.push({
                     litterIndex:    litterItems.length,
                     sireName:       l._sireCleanName || l._sireRawName || null,
+                    sirePrefix:     l._sirePrefix || null,
                     damName:        l._damCleanName  || l._damRawName  || null,
+                    damPrefix:      l._damPrefix  || null,
                     maleCtId:       maleCtMatch?.id_public  || null,
                     femaleCtId:     femaleCtMatch?.id_public || null,
                     birthDate:      l.birthDate,
                     matingDate:     l.matingDate,
+                    weaningDate:    l.weaningDate,
                     nestLetter:     l.breedingPairCodeName,
                     litterSizeBorn: l.litterSizeBorn,
                     isDuplicate:    !!existingLitterId,
@@ -598,7 +649,7 @@ router.post('/', upload.fields([
     // ── Litters ───────────────────────────────────────────────────────────────
     for (const [litterIndex, litter] of transformedLitters.entries()) {
         // eslint-disable-next-line no-unused-vars
-        const { _sireRawName, _damRawName, _sireCleanName, _damCleanName, _sireNameVariants, _damNameVariants, ...rec } = litter;
+        const { _sireRawName, _damRawName, _sireCleanName, _damCleanName, _sirePrefix, _damPrefix, _sireNameVariants, _damNameVariants, ...rec } = litter;
 
         if (selectedLitterSet && !selectedLitterSet.has(litterIndex)) { skipped.litters++; continue; }
 
