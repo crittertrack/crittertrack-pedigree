@@ -294,9 +294,6 @@ router.post('/', upload.single('file'), async (req, res) => {
         if (!animalData.name || !animalData.species) {
              return res.status(400).json({ message: 'Missing required animal fields: name and species.' });
         }
-        if (!animalData.birthDate) {
-            return res.status(400).json({ message: 'Missing required animal field: birthDate (Date of Birth).' });
-        }
         
         // Map frontend field names to backend schema
         if (animalData.isDisplay !== undefined) {
@@ -1103,11 +1100,6 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         for (const field of BOOL_FIELDS) {
             if (updates[field] === 'true')  updates[field] = true;
             if (updates[field] === 'false') updates[field] = false;
-        }
-
-        // Reject attempts to explicitly clear birthDate on update
-        if ('birthDate' in updates && (updates.birthDate === null || updates.birthDate === '' || updates.birthDate === undefined)) {
-            return res.status(400).json({ message: 'birthDate (Date of Birth) cannot be removed. Every animal must have a birth date.' });
         }
 
         // Get original animal data to compare for changes before sending notifications
