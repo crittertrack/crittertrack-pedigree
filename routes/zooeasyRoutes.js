@@ -385,6 +385,8 @@ router.post('/', upload.fields([
                 items: transformedAnimals.map(a => ({
                     zeRegNum: a._zooEasyRegNum,
                     name: a.name,
+                    prefix: a.prefix || null,
+                    suffix: a.suffix || null,
                     gender: a.gender,
                     birthDate: a.birthDate,
                     color: a.color,
