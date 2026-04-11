@@ -818,9 +818,11 @@ app.use('/api/supplies', authMiddleware, suppliesRoutes);
 const exportRoutes = require('./routes/exportRoutes');
 const importRoutes = require('./routes/importRoutes');
 const zooeasyRoutes = require('./routes/zooeasyRoutes');
+const kintrakRoutes = require('./routes/kintrakRoutes');
 app.use('/api/export', authMiddleware, exportRoutes);
 app.use('/api/import', authMiddleware, importRoutes);
 app.use('/api/import/zooeasy', authMiddleware, zooeasyRoutes);
+app.use('/api/import/kintraks', authMiddleware, kintrakRoutes);
 
 // Payment Routes (PayPal subscription activate — requires auth; webhook registered above before bodyParser)
 app.use('/api/payments', authMiddleware, paymentRoutes);
