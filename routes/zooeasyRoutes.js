@@ -444,6 +444,16 @@ router.post('/', upload.fields([
                 continue;
             }
 
+            // Check for manual map_to resolution BEFORE duplicate detection —
+            // the user may have mapped a "New" (green) animal that the backend
+            // didn't detect as a duplicate, so we must honour the mapping here.
+            const preResolution = conflictResolutions[_zooEasyRegNum] || '';
+            if (preResolution.startsWith('map_to:')) {
+                skipped.animals++;
+                if (_zooEasyRegNum) regNumToIdPublic.set(_zooEasyRegNum, preResolution.slice(7));
+                continue;
+            }
+
             const hit = await findGlobalDuplicate(_zooEasyRegNum, animal._nameVariants, animal.birthDate, userId, species, animal._prefixForDupe, animal._suffixForDupe);
 
             if (hit) {
@@ -452,11 +462,6 @@ router.post('/', upload.fields([
                     skipped.animals++;
                     // Register existing CT id so sire/dam links from other animals resolve correctly
                     if (_zooEasyRegNum) regNumToIdPublic.set(_zooEasyRegNum, hit.match.id_public);
-                    continue;
-                }
-                if (resolution.startsWith('map_to:')) {
-                    skipped.animals++;
-                    if (_zooEasyRegNum) regNumToIdPublic.set(_zooEasyRegNum, resolution.slice(7));
                     continue;
                 }
                 // 'import_anyway': fall through and create a new record
