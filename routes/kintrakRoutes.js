@@ -435,9 +435,65 @@ router.post('/', upload.fields([
         const preview = {};
 
         if (transformedAnimals.length) {
+            // ── Batched duplicate detection (avoids N individual queries) ──────
+            // Step 1: single $in query for all registration numbers
+            const allRegNums = transformedAnimals.map(a => a._registration).filter(Boolean);
+            const byRegMap = new Map(); // regNum → CT animal
+            if (allRegNums.length) {
+                const byReg = await Animal.find({ breederAssignedId: { $in: allRegNums } })
+                    .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                for (const doc of byReg) byRegMap.set(doc.breederAssignedId, doc);
+            }
+
+            // Step 2: single $in query for all unique cleaned names (covers name+birthDate and name-only)
+            const allNames = [...new Set(transformedAnimals.flatMap(a => a._nameVariants))].filter(Boolean);
+            const byNameMap = new Map(); // name → CT animal
+            if (allNames.length) {
+                const byName = await Animal.find({ name: { $in: allNames } })
+                    .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                for (const doc of byName) {
+                    if (!byNameMap.has(doc.name)) byNameMap.set(doc.name, doc);
+                }
+            }
+
+            // Step 3: resolve conflicts using pre-fetched maps
             const conflicts = [];
             for (const a of transformedAnimals) {
-                const hit = await findGlobalDuplicate(a._registration, a._nameVariants, a.birthDate, userId, species, a._prefixForDupe);
+                let hit = null;
+
+                // Primary: registration number
+                if (a._registration && byRegMap.has(a._registration)) {
+                    hit = { match: byRegMap.get(a._registration), matchType: 'id', confidence: 'high' };
+                }
+
+                // Secondary: name + birthDate
+                if (!hit && a.birthDate && a._nameVariants?.length) {
+                    const ts = a.birthDate.getTime?.() ?? new Date(a.birthDate).getTime();
+                    for (const n of a._nameVariants) {
+                        const doc = byNameMap.get(n);
+                        if (doc && doc.birthDate) {
+                            const dt = new Date(doc.birthDate).getTime();
+                            if (Math.abs(dt - ts) < 86400000) {
+                                hit = { match: doc, matchType: 'name+birthDate', confidence: 'high' };
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Tertiary: name-only (own animals first = high, global = possible)
+                // Skip for large imports to stay within timeout
+                if (!hit && a._nameVariants?.length && transformedAnimals.length <= 500) {
+                    for (const n of a._nameVariants) {
+                        const doc = byNameMap.get(n);
+                        if (doc) {
+                            const isOwn = String(doc.ownerId_public || '') === String(req.user.id_public);
+                            hit = { match: doc, matchType: 'name_only', confidence: isOwn ? 'high' : 'possible' };
+                            break;
+                        }
+                    }
+                }
+
                 if (hit) {
                     conflicts.push({
                         kintrakId:         a._kintrakId,
@@ -571,6 +627,24 @@ router.post('/', upload.fields([
         : null;
 
     // ── Pass 1: Create animals ─────────────────────────────────────────────────
+    // Batch pre-fetch to avoid N sequential duplicate-check queries
+    const confirmRegNums = transformedAnimals.map(a => a._registration).filter(Boolean);
+    const confirmByRegMap = new Map();
+    const confirmByNameMap = new Map();
+    if (confirmRegNums.length) {
+        const docs = await Animal.find({ breederAssignedId: { $in: confirmRegNums } })
+            .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+        for (const doc of docs) confirmByRegMap.set(doc.breederAssignedId, doc);
+    }
+    {
+        const allNames = [...new Set(transformedAnimals.flatMap(a => a._nameVariants || []))].filter(Boolean);
+        if (allNames.length) {
+            const docs = await Animal.find({ name: { $in: allNames } })
+                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+            for (const doc of docs) if (!confirmByNameMap.has(doc.name)) confirmByNameMap.set(doc.name, doc);
+        }
+    }
+
     for (const animal of transformedAnimals) {
         const { _kintrakId, _fatherKintrakId, _motherKintrakId, _registration, ...rec } = animal;
         try {
@@ -592,7 +666,27 @@ router.post('/', upload.fields([
                 continue;
             }
 
-            const hit = await findGlobalDuplicate(_registration, animal._nameVariants, animal.birthDate, userId, species, animal._prefixForDupe);
+            // Use pre-fetched batch maps instead of individual DB queries
+            let hit = null;
+            if (_registration && confirmByRegMap.has(_registration)) {
+                hit = { match: confirmByRegMap.get(_registration) };
+            } else if (animal.birthDate && animal._nameVariants?.length) {
+                const ts = animal.birthDate.getTime?.() ?? new Date(animal.birthDate).getTime();
+                for (const n of animal._nameVariants) {
+                    const doc = confirmByNameMap.get(n);
+                    if (doc && doc.birthDate && Math.abs(new Date(doc.birthDate).getTime() - ts) < 86400000) {
+                        hit = { match: doc };
+                        break;
+                    }
+                }
+            }
+            if (!hit && animal._nameVariants?.length) {
+                for (const n of animal._nameVariants) {
+                    const doc = confirmByNameMap.get(n);
+                    if (doc) { hit = { match: doc }; break; }
+                }
+            }
+
             if (hit) {
                 const resolution = conflictResolutions[_registration] || 'use_existing';
                 if (resolution === 'skip' || resolution === 'use_existing') {
