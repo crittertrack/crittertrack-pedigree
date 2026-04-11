@@ -472,8 +472,8 @@ router.post('/', upload.fields([
                     hit = { match: byRegMap.get(a._registration), matchType: 'id', confidence: 'high' };
                 }
 
-                // Secondary: name + birthDate
-                if (!hit && a.birthDate && a._nameVariants?.length) {
+                // Secondary: name + birthDate (only for animals without a registration number)
+                if (!hit && !a._registration && a.birthDate && a._nameVariants?.length) {
                     const ts = a.birthDate.getTime?.() ?? new Date(a.birthDate).getTime();
                     for (const n of a._nameVariants) {
                         const doc = byNameMap.get(n);
@@ -538,14 +538,16 @@ router.post('/', upload.fields([
         }
 
         if (transformedLitters.length) {
-            // Seed cache with animals from this batch (no CT id yet in preview)
+            // Seed cache with animals from this batch so preview can show "in this import"
             const parentCache = new Map();
             for (const a of transformedAnimals) {
                 if (a._kintrakId) {
-                    parentCache.set(`__kinid__${a._kintrakId}`, {
-                        id_public: null,
-                        name: [a.prefix, a.name, a.suffix].filter(Boolean).join(' '),
-                    });
+                    const entry = { id_public: null, name: [a.prefix, a.name, a.suffix].filter(Boolean).join(' '), _inThisImport: true };
+                    parentCache.set(`__kinid__${a._kintrakId}`, entry);
+                    // Also index by every name variant so litter name lookup hits the cache
+                    for (const variant of (a._nameVariants || [])) {
+                        if (variant) parentCache.set(`__name__${variant}`, entry);
+                    }
                 }
             }
 
@@ -594,19 +596,21 @@ router.post('/', upload.fields([
                 }
 
                 litterItems.push({
-                    litterIndex:    litterItems.length,
-                    sireName:       l._sireCleanName || l._sireRawName || null,
-                    sirePrefix:     l._sirePrefix || null,
-                    damName:        l._damCleanName  || l._damRawName  || null,
-                    damPrefix:      l._damPrefix  || null,
-                    maleCtId:       maleCtMatch?.id_public  || null,
-                    femaleCtId:     femaleCtMatch?.id_public || null,
-                    birthDate:      l.birthDate,
-                    matingDate:     l.matingDate,
-                    weaningDate:    l.weaningDate,
-                    nestLetter:     l.breedingPairCodeName,
-                    litterSizeBorn: l.litterSizeBorn,
-                    isDuplicate:    !!existingLitterId,
+                    litterIndex:       litterItems.length,
+                    sireName:          l._sireCleanName || l._sireRawName || null,
+                    sirePrefix:        l._sirePrefix || null,
+                    damName:           l._damCleanName  || l._damRawName  || null,
+                    damPrefix:         l._damPrefix  || null,
+                    maleCtId:          maleCtMatch?.id_public  || null,
+                    femaleCtId:        femaleCtMatch?.id_public || null,
+                    sireInThisImport:  maleCtMatch?._inThisImport   || false,
+                    damInThisImport:   femaleCtMatch?._inThisImport  || false,
+                    birthDate:         l.birthDate,
+                    matingDate:        l.matingDate,
+                    weaningDate:       l.weaningDate,
+                    nestLetter:        l.breedingPairCodeName,
+                    litterSizeBorn:    l.litterSizeBorn,
+                    isDuplicate:       !!existingLitterId,
                     existingLitterId,
                 });
             }
@@ -676,7 +680,7 @@ router.post('/', upload.fields([
             let hit = null;
             if (_registration && confirmByRegMap.has(_registration)) {
                 hit = { match: confirmByRegMap.get(_registration) };
-            } else if (animal.birthDate && animal._nameVariants?.length) {
+            } else if (!_registration && animal.birthDate && animal._nameVariants?.length) {
                 const ts = animal.birthDate.getTime?.() ?? new Date(animal.birthDate).getTime();
                 for (const n of animal._nameVariants) {
                     const doc = confirmByNameMap.get(n);
