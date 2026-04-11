@@ -453,12 +453,13 @@ router.post('/', upload.fields([
 
             // Step 2: single $in query for all unique cleaned names (covers name+birthDate and name-only)
             const allNames = [...new Set(transformedAnimals.flatMap(a => a._nameVariants))].filter(Boolean);
-            const byNameMap = new Map(); // name → CT animal
+            const byNameMap = new Map(); // name → [CT animals]
             if (allNames.length) {
                 const byName = await Animal.find({ name: { $in: allNames } })
                     .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
                 for (const doc of byName) {
-                    if (!byNameMap.has(doc.name)) byNameMap.set(doc.name, doc);
+                    if (!byNameMap.has(doc.name)) byNameMap.set(doc.name, []);
+                    byNameMap.get(doc.name).push(doc);
                 }
             }
 
@@ -471,14 +472,14 @@ router.post('/', upload.fields([
                 if (a.birthDate && a._nameVariants?.length) {
                     const ts = a.birthDate.getTime?.() ?? new Date(a.birthDate).getTime();
                     for (const n of a._nameVariants) {
-                        const doc = byNameMap.get(n);
-                        if (doc && doc.birthDate) {
-                            const dt = new Date(doc.birthDate).getTime();
-                            if (Math.abs(dt - ts) < 86400000) {
+                        const docs = byNameMap.get(n) || [];
+                        for (const doc of docs) {
+                            if (doc.birthDate && Math.abs(new Date(doc.birthDate).getTime() - ts) < 86400000) {
                                 hit = { match: doc, matchType: 'name+birthDate', confidence: 'high' };
                                 break;
                             }
                         }
+                        if (hit) break;
                     }
                 }
 
@@ -487,12 +488,14 @@ router.post('/', upload.fields([
                     hit = { match: byRegMap.get(a._registration), matchType: 'id', confidence: 'possible' };
                 }
 
-                // Tertiary: name-only → possible match
+                // Tertiary: name-only → possible match (prefer same prefix, then own animal)
                 if (!hit && a._nameVariants?.length) {
                     for (const n of a._nameVariants) {
-                        const doc = byNameMap.get(n);
-                        if (doc) {
-                            hit = { match: doc, matchType: 'name_only', confidence: 'possible' };
+                        const docs = byNameMap.get(n) || [];
+                        if (docs.length) {
+                            const samePrefix = a._prefixForDupe && docs.find(d => d.prefix === a._prefixForDupe);
+                            const own = docs.find(d => String(d.ownerId_public) === String(req.user.id_public));
+                            hit = { match: samePrefix || own || docs[0], matchType: 'name_only', confidence: 'possible' };
                             break;
                         }
                     }
@@ -649,8 +652,11 @@ router.post('/', upload.fields([
         const allNames = [...new Set(transformedAnimals.flatMap(a => a._nameVariants || []))].filter(Boolean);
         if (allNames.length) {
             const docs = await Animal.find({ name: { $in: allNames } })
-                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
-            for (const doc of docs) if (!confirmByNameMap.has(doc.name)) confirmByNameMap.set(doc.name, doc);
+                .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
+            for (const doc of docs) {
+                if (!confirmByNameMap.has(doc.name)) confirmByNameMap.set(doc.name, []);
+                confirmByNameMap.get(doc.name).push(doc);
+            }
         }
     }
 
@@ -681,11 +687,14 @@ router.post('/', upload.fields([
             if (animal.birthDate && animal._nameVariants?.length) {
                 const ts = animal.birthDate.getTime?.() ?? new Date(animal.birthDate).getTime();
                 for (const n of animal._nameVariants) {
-                    const doc = confirmByNameMap.get(n);
-                    if (doc && doc.birthDate && Math.abs(new Date(doc.birthDate).getTime() - ts) < 86400000) {
-                        hit = { match: doc };
-                        break;
+                    const docs = confirmByNameMap.get(n) || [];
+                    for (const doc of docs) {
+                        if (doc.birthDate && Math.abs(new Date(doc.birthDate).getTime() - ts) < 86400000) {
+                            hit = { match: doc };
+                            break;
+                        }
                     }
+                    if (hit) break;
                 }
             }
             if (!hit && _registration && confirmByRegMap.has(_registration)) {
@@ -693,8 +702,13 @@ router.post('/', upload.fields([
             }
             if (!hit && animal._nameVariants?.length) {
                 for (const n of animal._nameVariants) {
-                    const doc = confirmByNameMap.get(n);
-                    if (doc) { hit = { match: doc }; break; }
+                    const docs = confirmByNameMap.get(n) || [];
+                    if (docs.length) {
+                        const samePrefix = animal._prefixForDupe && docs.find(d => d.prefix === animal._prefixForDupe);
+                        const own = docs.find(d => String(d.ownerId_public) === String(req.user.id_public));
+                        hit = { match: samePrefix || own || docs[0] };
+                        break;
+                    }
                 }
             }
 
