@@ -313,16 +313,36 @@ router.post('/', upload.fields([
                     });
                 }
             }
+            const conflictRegNums = new Set(conflicts.map(c => c.zeRegNum));
             preview.animals = {
                 total: transformedAnimals.length,
                 new: transformedAnimals.length - conflicts.length,
                 conflicts,
+                items: transformedAnimals.map(a => ({
+                    zeRegNum: a._zooEasyRegNum,
+                    name: a.name,
+                    gender: a.gender,
+                    birthDate: a.birthDate,
+                    color: a.color,
+                    coat: a.coat,
+                    sireRegNum: a._fatherRegNum || null,
+                    damRegNum: a._motherRegNum || null,
+                    isDuplicate: conflictRegNums.has(a._zooEasyRegNum),
+                })),
             };
         }
 
         if (transformedLitters.length) {
             preview.litters = {
                 total: transformedLitters.length,
+                items: transformedLitters.map(l => ({
+                    maleRegNum: l._maleRegNum,
+                    femaleRegNum: l._femaleRegNum,
+                    birthDate: l.birthDate,
+                    matingDate: l.matingDate,
+                    nestLetter: l.breedingPairCodeName,
+                    litterSizeBorn: l.litterSizeBorn,
+                })),
             };
         }
 
@@ -339,18 +359,38 @@ router.post('/', upload.fields([
     // were skipped, so lineage links still resolve correctly.
     const regNumToIdPublic = new Map();
 
+    // Parse optional list of ZooEasy reg nums the user selected for import
+    const selectedSet = req.body.selectedAnimals
+        ? new Set(JSON.parse(req.body.selectedAnimals))
+        : null; // null = all selected
+
     // ── Pass 1: Create animals (with per-record conflict resolution) ──────────
     for (const animal of transformedAnimals) {
         const { _zooEasyRegNum, _fatherRegNum, _motherRegNum, ...rec } = animal;
         try {
+            // If user deselected this animal, skip — but still honour map_to for lineage
+            if (selectedSet && !selectedSet.has(_zooEasyRegNum)) {
+                const resolution = conflictResolutions[_zooEasyRegNum] || '';
+                if (resolution.startsWith('map_to:')) {
+                    if (_zooEasyRegNum) regNumToIdPublic.set(_zooEasyRegNum, resolution.slice(7));
+                }
+                skipped.animals++;
+                continue;
+            }
+
             const hit = await findGlobalDuplicate(_zooEasyRegNum, animal.name, animal.birthDate);
 
             if (hit) {
-                const resolution = conflictResolutions[_zooEasyRegNum] || 'skip';
-                if (resolution === 'skip') {
+                const resolution = conflictResolutions[_zooEasyRegNum] || 'use_existing';
+                if (resolution === 'skip' || resolution === 'use_existing') {
                     skipped.animals++;
-                    // Still register the existing CT id_public so sire/dam links work
+                    // Register existing CT id so sire/dam links from other animals resolve correctly
                     if (_zooEasyRegNum) regNumToIdPublic.set(_zooEasyRegNum, hit.match.id_public);
+                    continue;
+                }
+                if (resolution.startsWith('map_to:')) {
+                    skipped.animals++;
+                    if (_zooEasyRegNum) regNumToIdPublic.set(_zooEasyRegNum, resolution.slice(7));
                     continue;
                 }
                 // 'import_anyway': fall through and create a new record
