@@ -399,11 +399,31 @@ router.post('/', upload.fields([
         }
 
         if (transformedLitters.length) {
+            // Build a name map for sire/dam reg#s: import batch first, then DB lookup
+            const regNumToName = new Map();
+            for (const a of transformedAnimals) {
+                if (a._zooEasyRegNum) regNumToName.set(a._zooEasyRegNum, a.name);
+            }
+            // Collect reg#s not already resolved from the import batch
+            const unknownRegNums = [...new Set(
+                transformedLitters.flatMap(l => [l._maleRegNum, l._femaleRegNum].filter(Boolean))
+            )].filter(r => !regNumToName.has(r));
+            if (unknownRegNums.length) {
+                const dbAnimals = await Animal.find({ breederAssignedId: { $in: unknownRegNums } })
+                    .select('breederAssignedId name prefix suffix').lean();
+                for (const a of dbAnimals) {
+                    const displayName = [a.prefix, a.name, a.suffix].filter(Boolean).join(' ');
+                    regNumToName.set(a.breederAssignedId, displayName);
+                }
+            }
+
             preview.litters = {
                 total: transformedLitters.length,
                 items: transformedLitters.map(l => ({
                     maleRegNum: l._maleRegNum,
                     femaleRegNum: l._femaleRegNum,
+                    maleName: l._maleRegNum ? (regNumToName.get(l._maleRegNum) || null) : null,
+                    femaleName: l._femaleRegNum ? (regNumToName.get(l._femaleRegNum) || null) : null,
                     birthDate: l.birthDate,
                     matingDate: l.matingDate,
                     nestLetter: l.breedingPairCodeName,
@@ -417,7 +437,7 @@ router.post('/', upload.fields([
 
     // ── CONFIRM WRITE ─────────────────────────────────────────────────────────
     const written = { animals: 0, litters: 0 };
-    const skipped = { animals: 0 };
+    const skipped = { animals: 0, litters: 0 };
     const errors = [];
 
     // Map of ZooEasy RegistrationNumber → CT id_public (for sire/dam resolution).
@@ -487,8 +507,17 @@ router.post('/', upload.fields([
         const myIdPublic = regNumToIdPublic.get(_zooEasyRegNum);
         if (!myIdPublic) continue;
 
-        const sireIdPublic = _fatherRegNum ? regNumToIdPublic.get(_fatherRegNum) : null;
-        const damIdPublic = _motherRegNum ? regNumToIdPublic.get(_motherRegNum) : null;
+        // Resolve each parent: import batch first, then global DB lookup by breederAssignedId
+        let sireIdPublic = _fatherRegNum ? (regNumToIdPublic.get(_fatherRegNum) || null) : null;
+        let damIdPublic  = _motherRegNum ? (regNumToIdPublic.get(_motherRegNum) || null) : null;
+        if (_fatherRegNum && !sireIdPublic) {
+            const found = await Animal.findOne({ breederAssignedId: _fatherRegNum }).select('id_public').lean();
+            if (found) { sireIdPublic = found.id_public; regNumToIdPublic.set(_fatherRegNum, found.id_public); }
+        }
+        if (_motherRegNum && !damIdPublic) {
+            const found = await Animal.findOne({ breederAssignedId: _motherRegNum }).select('id_public').lean();
+            if (found) { damIdPublic = found.id_public; regNumToIdPublic.set(_motherRegNum, found.id_public); }
+        }
         if (!sireIdPublic && !damIdPublic) continue;
 
         try {
@@ -505,9 +534,44 @@ router.post('/', upload.fields([
     // ── Litters ───────────────────────────────────────────────────────────────
     for (const litter of transformedLitters) {
         const { _maleRegNum, _femaleRegNum, ...rec } = litter;
-        rec.sireId_public = _maleRegNum ? (regNumToIdPublic.get(_maleRegNum) || null) : null;
-        rec.damId_public = _femaleRegNum ? (regNumToIdPublic.get(_femaleRegNum) || null) : null;
+
+        // Resolve sire/dam: check this import batch first, then fall back to
+        // any CT animal whose breederAssignedId matches the ZooEasy reg#.
+        let sireIdPublic = _maleRegNum ? (regNumToIdPublic.get(_maleRegNum) || null) : null;
+        let damIdPublic  = _femaleRegNum ? (regNumToIdPublic.get(_femaleRegNum) || null) : null;
+        if (_maleRegNum && !sireIdPublic) {
+            const found = await Animal.findOne({ breederAssignedId: _maleRegNum }).select('id_public').lean();
+            if (found) { sireIdPublic = found.id_public; regNumToIdPublic.set(_maleRegNum, found.id_public); }
+        }
+        if (_femaleRegNum && !damIdPublic) {
+            const found = await Animal.findOne({ breederAssignedId: _femaleRegNum }).select('id_public').lean();
+            if (found) { damIdPublic = found.id_public; regNumToIdPublic.set(_femaleRegNum, found.id_public); }
+        }
+        rec.sireId_public = sireIdPublic;
+        rec.damId_public  = damIdPublic;
+
+        // Duplicate detection: same owner + sire + dam + birthDate
+        // Fallback if parents unknown: same owner + nest letter + birthDate
         try {
+            let isDupe = false;
+            if (sireIdPublic && damIdPublic && rec.birthDate) {
+                const existing = await Litter.findOne({
+                    ownerId: userId,
+                    sireId_public: sireIdPublic,
+                    damId_public: damIdPublic,
+                    birthDate: rec.birthDate,
+                }).lean();
+                if (existing) isDupe = true;
+            } else if (rec.breedingPairCodeName && rec.birthDate) {
+                const existing = await Litter.findOne({
+                    ownerId: userId,
+                    breedingPairCodeName: rec.breedingPairCodeName,
+                    birthDate: rec.birthDate,
+                }).lean();
+                if (existing) isDupe = true;
+            }
+            if (isDupe) { skipped.litters++; continue; }
+
             rec.litter_id_public = await getNextSequence('litterId');
             rec.ownerId = userId;
             await Litter.create(rec);
