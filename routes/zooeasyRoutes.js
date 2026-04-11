@@ -140,12 +140,24 @@ function transformAnimalRow(row, species) {
     // ordered from most-likely-to-match to least
     const rawName = (row['Name'] || '').trim();
     const rawGiven = (row['GivenName'] || '').trim();
+    const rawPrefix = (row['TitleInFrontOfName'] || '').trim();
+    const rawSuffix = (row['TitleBehindName'] || '').trim();
+
     const nameVariants = [...new Set([
-        rawName,                                   // just Name field
-        rawGiven,                                  // just GivenName field
-        [rawName, rawGiven].filter(Boolean).join(' '), // Name + GivenName
-        name,                                      // full: RegNum + Name + GivenName
+        rawName,                                                          // just Name
+        rawGiven,                                                         // just GivenName
+        [rawName, rawGiven].filter(Boolean).join(' '),                    // Name + GivenName
+        [rawPrefix, rawName].filter(Boolean).join(' '),                   // Title + Name
+        [rawName, rawSuffix].filter(Boolean).join(' '),                   // Name + Suffix
+        [rawPrefix, rawName, rawSuffix].filter(Boolean).join(' '),        // Title + Name + Suffix
+        [rawPrefix, rawName, rawGiven].filter(Boolean).join(' '),         // Title + Name + GivenName
+        [rawPrefix, rawName, rawGiven, rawSuffix].filter(Boolean).join(' '), // full with titles
+        name,                                                             // RegNum + Name + GivenName
     ].filter(Boolean))];
+
+    // Also store prefix/suffix for structural CT lookup (prefix field + name field)
+    const prefixForDupe = rawPrefix || null;
+    const suffixForDupe = rawSuffix || null;
 
     // Gender: 0 = Male, 1 = Female
     const gender = row['Gender'] === '0' ? 'Male' : row['Gender'] === '1' ? 'Female' : 'Unknown';
@@ -173,6 +185,8 @@ function transformAnimalRow(row, species) {
         _fatherRegNum: (row['FatherRegistrationNumber'] || '').trim(),
         _motherRegNum: (row['MotherRegistrationNumber'] || '').trim(),
         _nameVariants: nameVariants,
+        _prefixForDupe: prefixForDupe,
+        _suffixForDupe: suffixForDupe,
 
         // CritterTrack fields
         // Store ZooEasy RegistrationNumber in breederAssignedId so future imports
@@ -228,7 +242,7 @@ function transformLitterRow(row) {
 // Secondary match: same name + same birthDate across all animals.
 // Tertiary match (name-only): same name in user's own animals, then globally.
 // Returns { match, matchType, confidence } or null.
-async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, species) {
+async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, species, prefixForDupe, suffixForDupe) {
     // Primary: exact breederAssignedId match
     if (zeRegNum) {
         const byId = await Animal.findOne({ breederAssignedId: zeRegNum })
@@ -248,6 +262,15 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
                 .lean();
             if (byName) return { match: byName, matchType: 'name+birthDate', confidence: 'high' };
         }
+        // Also match CT's separate prefix + name fields with birthDate
+        if (prefixForDupe) {
+            const baseName = nameVariants[0];
+            if (baseName) {
+                const byPrefixName = await Animal.findOne({ prefix: prefixForDupe, name: baseName, birthDate: { $gte: start, $lte: end } })
+                    .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                if (byPrefixName) return { match: byPrefixName, matchType: 'name+birthDate', confidence: 'high' };
+            }
+        }
     }
     // Tertiary: name-only — own animals first (high), then global (possible)
     if (nameVariants?.length) {
@@ -258,6 +281,12 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
                 .select('id_public name ownerId_public breederAssignedId birthDate')
                 .lean();
             if (own) return { match: own, matchType: 'name_only', confidence: 'high' };
+        }
+        // prefix+name structural match against own animals
+        if (prefixForDupe && nameVariants[0]) {
+            const ownByPrefix = await Animal.findOne({ prefix: prefixForDupe, name: nameVariants[0], ownerId: userId })
+                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+            if (ownByPrefix) return { match: ownByPrefix, matchType: 'name_only', confidence: 'high' };
         }
         // Then global (any user) — flag as possible match
         for (const n of nameVariants) {
@@ -333,7 +362,7 @@ router.post('/', upload.fields([
             // Run global duplicate detection for every animal in the import
             const conflicts = [];
             for (const a of transformedAnimals) {
-                const hit = await findGlobalDuplicate(a._zooEasyRegNum, a._nameVariants, a.birthDate, userId, species);
+                const hit = await findGlobalDuplicate(a._zooEasyRegNum, a._nameVariants, a.birthDate, userId, species, a._prefixForDupe, a._suffixForDupe);
                 if (hit) {
                     conflicts.push({
                         zeRegNum: a._zooEasyRegNum,
@@ -413,7 +442,7 @@ router.post('/', upload.fields([
                 continue;
             }
 
-            const hit = await findGlobalDuplicate(_zooEasyRegNum, animal._nameVariants, animal.birthDate, userId, species);
+            const hit = await findGlobalDuplicate(_zooEasyRegNum, animal._nameVariants, animal.birthDate, userId, species, animal._prefixForDupe, animal._suffixForDupe);
 
             if (hit) {
                 const resolution = conflictResolutions[_zooEasyRegNum] || 'use_existing';
