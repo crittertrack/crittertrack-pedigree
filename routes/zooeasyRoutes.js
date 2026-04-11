@@ -136,6 +136,17 @@ function transformAnimalRow(row, species) {
         .filter(Boolean);
     const name = nameParts.join(' ') || '(unnamed)';
 
+    // All unique non-empty name variants to try for duplicate detection,
+    // ordered from most-likely-to-match to least
+    const rawName = (row['Name'] || '').trim();
+    const rawGiven = (row['GivenName'] || '').trim();
+    const nameVariants = [...new Set([
+        rawName,                                   // just Name field
+        rawGiven,                                  // just GivenName field
+        [rawName, rawGiven].filter(Boolean).join(' '), // Name + GivenName
+        name,                                      // full: RegNum + Name + GivenName
+    ].filter(Boolean))];
+
     // Gender: 0 = Male, 1 = Female
     const gender = row['Gender'] === '0' ? 'Male' : row['Gender'] === '1' ? 'Female' : 'Unknown';
 
@@ -161,6 +172,7 @@ function transformAnimalRow(row, species) {
         _zooEasyRegNum: (row['RegistrationNumber'] || '').trim(),
         _fatherRegNum: (row['FatherRegistrationNumber'] || '').trim(),
         _motherRegNum: (row['MotherRegistrationNumber'] || '').trim(),
+        _nameVariants: nameVariants,
 
         // CritterTrack fields
         // Store ZooEasy RegistrationNumber in breederAssignedId so future imports
@@ -216,24 +228,26 @@ function transformLitterRow(row) {
 // Secondary match: same name + same birthDate (±0 days) across all animals,
 // catches animals manually entered in CT before this import.
 // Returns the matching CT animal doc or null.
-async function findGlobalDuplicate(zeRegNum, name, birthDate) {
-    // Primary: exact breederAssignedId match anywhere in the DB
+async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate) {
+    // Primary: exact breederAssignedId match
     if (zeRegNum) {
         const byId = await Animal.findOne({ breederAssignedId: zeRegNum })
             .select('id_public name ownerId_public breederAssignedId birthDate')
             .lean();
         if (byId) return { match: byId, matchType: 'id' };
     }
-    // Secondary: name + birthDate match (only when birthDate is known)
-    if (name && birthDate) {
+    // Secondary: try each name variant individually against name + birthDate
+    if (birthDate && nameVariants?.length) {
         const start = new Date(birthDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(birthDate);
         end.setHours(23, 59, 59, 999);
-        const byName = await Animal.findOne({ name, birthDate: { $gte: start, $lte: end } })
-            .select('id_public name ownerId_public breederAssignedId birthDate')
-            .lean();
-        if (byName) return { match: byName, matchType: 'name+birthDate' };
+        for (const n of nameVariants) {
+            const byName = await Animal.findOne({ name: n, birthDate: { $gte: start, $lte: end } })
+                .select('id_public name ownerId_public breederAssignedId birthDate')
+                .lean();
+            if (byName) return { match: byName, matchType: 'name+birthDate' };
+        }
     }
     return null;
 }
@@ -301,7 +315,7 @@ router.post('/', upload.fields([
             // Run global duplicate detection for every animal in the import
             const conflicts = [];
             for (const a of transformedAnimals) {
-                const hit = await findGlobalDuplicate(a._zooEasyRegNum, a.name, a.birthDate);
+                const hit = await findGlobalDuplicate(a._zooEasyRegNum, a._nameVariants, a.birthDate);
                 if (hit) {
                     conflicts.push({
                         zeRegNum: a._zooEasyRegNum,
@@ -378,7 +392,7 @@ router.post('/', upload.fields([
                 continue;
             }
 
-            const hit = await findGlobalDuplicate(_zooEasyRegNum, animal.name, animal.birthDate);
+            const hit = await findGlobalDuplicate(_zooEasyRegNum, animal._nameVariants, animal.birthDate);
 
             if (hit) {
                 const resolution = conflictResolutions[_zooEasyRegNum] || 'use_existing';
