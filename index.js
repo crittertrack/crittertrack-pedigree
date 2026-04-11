@@ -817,8 +817,10 @@ app.use('/api/supplies', authMiddleware, suppliesRoutes);
 // Data Portability — Export / Import (Require authMiddleware)
 const exportRoutes = require('./routes/exportRoutes');
 const importRoutes = require('./routes/importRoutes');
+const zooeasyRoutes = require('./routes/zooeasyRoutes');
 app.use('/api/export', authMiddleware, exportRoutes);
 app.use('/api/import', authMiddleware, importRoutes);
+app.use('/api/import/zooeasy', authMiddleware, zooeasyRoutes);
 
 // Payment Routes (PayPal subscription activate — requires auth; webhook registered above before bodyParser)
 app.use('/api/payments', authMiddleware, paymentRoutes);
