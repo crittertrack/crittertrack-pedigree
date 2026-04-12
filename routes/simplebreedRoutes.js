@@ -310,10 +310,10 @@ function parseAnimalDetail(html, sbId) {
     };
 
     const rawName = extractField('Name') || '';
-    // extractField captures everything to end of line, so take just the first word to avoid
-    // "Female Birth: 2025/08/06 ..." being passed to mapGender
-    const genderRaw = (extractField('Gender') || extractField('Sex') || '').split(/\s+/)[0];
-    const gender = mapGender(genderRaw);
+    // Use a dedicated word-boundary regex for gender to avoid capturing trailing fields
+    // e.g. "Gender: Female Birth: 2025/08/06" → captures only "Female"
+    const genderMatch = bodyText.match(/\bGender\s*:?\s*(\w+)/i) || bodyText.match(/\bSex\s*:?\s*(\w+)/i);
+    const gender = mapGender(genderMatch ? genderMatch[1] : null);
 
     // Birth date: try "Birth:" first (living animals), then parse from "Lived: YYYY/MM/DD - YYYY/MM/DD"
     let birthDate = null;
