@@ -338,7 +338,8 @@ function parseAnimalDetail(html, sbId) {
     if (statusMatch) status = mapStatus(statusMatch[1]);
 
     let species = 'Unknown';
-    const speciesMatch = bodyText.match(/(?:^|\n)(Fancy mouse|Fancy rat|Syrian hamster|Dwarf hamster|Campbells|Russian dwarf|Roborovski|Guinea pig|Rabbit|Chinchilla|Gerbil|Sugar glider|Ferret|Hedgehog)\b/i);
+    // Don't require line-start — the species appears in the page title e.g. "MF DONUT - FANCY MOUSE"
+    const speciesMatch = bodyText.match(/\b(Fancy mouse|Fancy rat|Syrian hamster|Dwarf hamster|Campbells|Russian dwarf|Roborovski|Guinea pig|Rabbit|Chinchilla|Gerbil|Sugar glider|Ferret|Hedgehog)\b/i);
     if (speciesMatch) {
         species = speciesMatch[1].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     }
