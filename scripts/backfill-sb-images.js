@@ -11,7 +11,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { Animal } = require('../database/models');
+const { Animal, PublicAnimal } = require('../database/models');
 
 const SB_BASE = 'https://www.simplebreed.com';
 const FETCH_HEADERS = {
@@ -144,6 +144,7 @@ async function run() {
             const uploadedUrl = await r2.uploadBuffer(key, img.buffer, img.contentType);
             if (uploadedUrl) {
                 await Animal.updateOne({ id_public: a.id_public }, { $set: { imageUrl: uploadedUrl } });
+                await PublicAnimal.updateOne({ id_public: a.id_public }, { $set: { imageUrl: uploadedUrl } });
                 console.log(`  ${label} — ✓ uploaded`);
                 success++;
             } else {
