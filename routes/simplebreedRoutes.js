@@ -258,9 +258,11 @@ async function parseProfilePage(html) {
         // Collect nextData elements for pagination
         const nextItems = [];
         $('.nextData').each((_, el) => {
-            const nextHref = ($(el).attr('href') || '').trim();
+            let nextHref = ($(el).attr('href') || '').trim();
             const postBody = ($(el).attr('post') || 'status=all&gender=all').trim();
             if (nextHref && nextHref.includes('user_animals')) {
+                // Ensure absolute URL
+                if (!nextHref.startsWith('http')) nextHref = `${SB_BASE}${nextHref.startsWith('/') ? '' : '/'}${nextHref}`;
                 nextItems.push({ href: nextHref, postBody });
             }
         });
@@ -269,9 +271,9 @@ async function parseProfilePage(html) {
 
     // Initial profile page
     let pendingFetches = extractFromHtml(html);
+    console.log(`[SB] Initial page parse: ${animals.length} animals, ${pendingFetches.length} pagination pages`);
 
     // Follow nextData pagination (POST to each user_animals URL)
-    // Use a visited set to avoid loops
     const visitedUrls = new Set();
     while (pendingFetches.length > 0) {
         const batch = pendingFetches.splice(0);
@@ -287,12 +289,14 @@ async function parseProfilePage(html) {
                     timeout: 20000,
                 });
                 return extractFromHtml(resp.data);
-            } catch {
+            } catch (err) {
+                console.warn(`[SB] Pagination fetch failed for ${href}:`, err.message);
                 return [];
             }
         }));
         for (const next of results.flat()) pendingFetches.push(next);
     }
+    console.log(`[SB] Total animals after pagination: ${animals.length}`);
 
     return animals;
 }
