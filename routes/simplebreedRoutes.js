@@ -183,71 +183,113 @@ async function findGlobalDuplicate(sbIdKey, nameVariants, birthDate, userId, spe
 
 // ─── HTML scrapers ────────────────────────────────────────────────────────────
 
-function parseProfilePage(html) {
-    const $ = cheerio.load(html);
+/**
+ * Parse animals from a SimpleBreed profile HTML page.
+ * The page only renders the first few animals; a `.nextData` element carries
+ * the URL + POST body needed to load the rest. We follow the chain until there
+ * are no more nextData elements.
+ */
+async function parseProfilePage(html) {
     const animals = [];
+    const seen = new Set();
 
-    // ── Detect species sections ───────────────────────────────────────────────
-    // Profile pages group animals under headings like "Fancy mouse (14)"
-    // We map each sbId to a species by finding which heading precedes it in the DOM.
-    const speciesHeadings = [];
-    $('*').each((_, el) => {
-        const text = $(el).text().trim();
-        if (/^[A-Za-z][A-Za-z &]+ \(\d+\)$/.test(text) && $(el).children().length === 0) {
-            speciesHeadings.push({ text: text.replace(/\s*\(\d+\)$/, '').trim(), node: el });
-        }
-    });
+    function extractFromHtml(pageHtml) {
+        const $ = cheerio.load(pageHtml);
 
-    // ── Get full page text for context extraction ──────────────────────────────
-    const bodyText = $('body').text();
-
-    // ── Find every animal link ─────────────────────────────────────────────────
-    // The page format per animal is:  YYYY/MM/DD  #ID  [Name](link)  STATUS
-    // We find all <a href="/animal?aid=N"> links then look at surrounding text.
-    $('a[href*="/animal?aid="]').each((_, el) => {
-        const href = $(el).attr('href') || '';
-        const m = href.match(/\/animal\?aid=(\d+)/);
-        if (!m) return;
-        const sbId = m[1];
-        const name = $(el).text().trim();
-        if (!name) return;
-        if (animals.find(a => a.sbId === sbId)) return; // dedup
-
-        // Walk up to find a container that has a date in its text
-        let birthDate = null;
-        let status = 'Pet';
-        let $ctx = $(el);
-        for (let i = 0; i < 5; i++) {
-            const ctxText = $ctx.text();
-            const dateM = ctxText.match(/(\d{4}\/\d{2}\/\d{2})/);
-            if (dateM) {
-                birthDate = dateM[1].replace(/\//g, '-');
-                // Status: word(s) after the animal name in the context
-                const afterName = ctxText.slice(ctxText.indexOf(name) + name.length).trim();
-                const statusCandidate = afterName.split(/\s{2,}|\n/)[0].trim();
-                status = mapStatus(statusCandidate.split(/\s+/)[0]);
-                break;
+        // Build species map: heading text → approximate character position in body text
+        const bodyText = $('body').text();
+        const speciesHeadings = [];
+        $('*').each((_, el) => {
+            const text = $(el).text().trim();
+            if (/^[A-Za-z][A-Za-z &]+ \(\d+\)$/.test(text) && $(el).children().length === 0) {
+                speciesHeadings.push({
+                    text: text.replace(/\s*\(\d+\)$/, '').trim(),
+                    pos: bodyText.indexOf(text),
+                });
             }
-            const parent = $ctx.parent();
-            if (!parent.length || parent.is('body')) break;
-            $ctx = parent;
-        }
+        });
 
-        // Determine species from bodyText position relative to species headings
-        let species = 'Unknown';
-        if (speciesHeadings.length > 0) {
-            // Find position of this animal name in body text
-            const namePos = bodyText.indexOf(name);
-            let bestSpecies = speciesHeadings[0].text;
-            for (const sh of speciesHeadings) {
-                const shPos = bodyText.indexOf(sh.text);
-                if (shPos !== -1 && shPos < namePos) bestSpecies = sh.text;
+        $('a[href*="/animal?aid="]').each((_, el) => {
+            const href = $(el).attr('href') || '';
+            const m = href.match(/\/animal\?aid=(\d+)/);
+            if (!m) return;
+            const sbId = m[1];
+            if (seen.has(sbId)) return;
+            seen.add(sbId);
+
+            const name = $(el).text().trim();
+            if (!name) return;
+
+            // Walk up for birth date + status context
+            let birthDate = null;
+            let status = 'Pet';
+            let $ctx = $(el);
+            for (let i = 0; i < 6; i++) {
+                const ctxText = $ctx.text();
+                const dateM = ctxText.match(/(\d{4}\/\d{2}\/\d{2})/);
+                if (dateM) {
+                    birthDate = dateM[1].replace(/\//g, '-');
+                    const after = ctxText.slice(ctxText.indexOf(name) + name.length).trim();
+                    status = mapStatus(after.split(/\s{2,}|\n/)[0].trim().split(/\s+/)[0]);
+                    break;
+                }
+                const parent = $ctx.parent();
+                if (!parent.length || parent.is('body')) break;
+                $ctx = parent;
             }
-            species = bestSpecies.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        }
 
-        animals.push({ sbId, name, birthDate, status, species });
-    });
+            // Species: last heading that appears before this animal name in body text
+            let species = 'Unknown';
+            if (speciesHeadings.length > 0) {
+                const namePos = bodyText.indexOf(name);
+                let best = speciesHeadings[0].text;
+                for (const sh of speciesHeadings) {
+                    if (sh.pos !== -1 && sh.pos < namePos) best = sh.text;
+                }
+                species = best.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            }
+
+            animals.push({ sbId, name, birthDate, status, species });
+        });
+
+        // Collect nextData elements for pagination
+        const nextItems = [];
+        $('.nextData').each((_, el) => {
+            const nextHref = ($(el).attr('href') || '').trim();
+            const postBody = ($(el).attr('post') || 'status=all&gender=all').trim();
+            if (nextHref && nextHref.includes('user_animals')) {
+                nextItems.push({ href: nextHref, postBody });
+            }
+        });
+        return nextItems;
+    }
+
+    // Initial profile page
+    let pendingFetches = extractFromHtml(html);
+
+    // Follow nextData pagination (POST to each user_animals URL)
+    // Use a visited set to avoid loops
+    const visitedUrls = new Set();
+    while (pendingFetches.length > 0) {
+        const batch = pendingFetches.splice(0);
+        const results = await Promise.all(batch.map(async ({ href, postBody }) => {
+            if (visitedUrls.has(href)) return [];
+            visitedUrls.add(href);
+            try {
+                const resp = await axios.post(href, postBody, {
+                    headers: {
+                        ...FETCH_HEADERS,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    timeout: 20000,
+                });
+                return extractFromHtml(resp.data);
+            } catch {
+                return [];
+            }
+        }));
+        for (const next of results.flat()) pendingFetches.push(next);
+    }
 
     return animals;
 }
@@ -436,7 +478,7 @@ router.post('/preview', async (req, res) => {
 
     let profileAnimals;
     try {
-        profileAnimals = parseProfilePage(html);
+        profileAnimals = await parseProfilePage(html);
     } catch {
         return res.status(422).json({ message: 'Could not parse the SimpleBreed profile page.' });
     }
