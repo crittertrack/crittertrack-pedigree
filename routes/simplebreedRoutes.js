@@ -5,37 +5,34 @@ const cheerio = require('cheerio');
 const { Animal } = require('../database/models');
 const { getNextSequence } = require('../database/db_service');
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const SB_BASE = 'https://www.simplebreed.com';
+const useR2 = (process.env.STORAGE_PROVIDER || '').toUpperCase() === 'R2';
 const FETCH_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml',
     'Accept-Language': 'en-US,en;q=0.9',
 };
 
-/** Validate + normalise a SimpleBreed profile URL or username → canonical URL */
+// ─── Fetch helpers ────────────────────────────────────────────────────────────
+
 function normaliseSbUrl(input) {
     if (!input || typeof input !== 'string') return null;
     input = input.trim();
-    // Accept: full URL, or just username
-    const m = input.match(/(?:https?:\/\/)?(?:www\.)?simplebreed\.com\/([a-zA-Z0-9_-]+)\/?$/);
+    const m = input.match(/(?:https?:\/\/)?(?:www\.)?simplebreed\.com\/([a-zA-Z0-9_@-]+)\/?$/);
     if (m) return `${SB_BASE}/${m[1]}`;
-    // Accept plain username with no slashes/dots
-    if (/^[a-zA-Z0-9_-]+$/.test(input)) return `${SB_BASE}/${input}`;
+    if (/^[a-zA-Z0-9_@-]+$/.test(input)) return `${SB_BASE}/${input}`;
     return null;
 }
 
-/** Fetch HTML from a simplebreed page */
 async function fetchSbHtml(url) {
     const res = await axios.get(url, { headers: FETCH_HEADERS, timeout: 20000, maxRedirects: 5 });
     return res.data;
 }
 
-/** Async sleep helper */
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-/** Process an array in batches with concurrency limit */
 async function batchAll(items, batchSize, fn) {
     const results = [];
     for (let i = 0; i < items.length; i += batchSize) {
@@ -47,7 +44,8 @@ async function batchAll(items, batchSize, fn) {
     return results;
 }
 
-/** Map simplebreed status text → CritterTrack status */
+// ─── Field mapping helpers ────────────────────────────────────────────────────
+
 function mapStatus(raw) {
     if (!raw) return 'Pet';
     const s = raw.trim().toUpperCase();
@@ -61,7 +59,6 @@ function mapStatus(raw) {
     return 'Pet';
 }
 
-/** Normalise gender string */
 function mapGender(raw) {
     if (!raw) return 'Unknown';
     const s = raw.trim().toLowerCase();
@@ -70,7 +67,6 @@ function mapGender(raw) {
     return 'Unknown';
 }
 
-/** Convert YYYY/MM/DD → Date object (or null) */
 function parseSbDate(str) {
     if (!str) return null;
     const m = str.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
@@ -80,27 +76,122 @@ function parseSbDate(str) {
 }
 
 /**
- * Parse the profile page → array of { sbId, name, birthDate, status, species }
- * The profile page lists animals grouped under species headings.
+ * On SimpleBreed, prefix + name are combined in a single name string, e.g. "MM Curry".
+ * This function attempts to split off a breeder prefix (1-4 uppercase letters, optionally
+ * followed by a digit) so that CT's separate prefix/name fields are populated correctly,
+ * and so findGlobalDuplicate can match against existing CT animals regardless of how they
+ * store the prefix.
+ *
+ * Returns { fullName, prefix, baseName, nameVariants }
  */
+// Common animal name suffixes (roman numerals, Jr/Sr, trailing numbers)
+const SUFFIX_RE = /\s+(Jr\.?|Sr\.?|II|III|IV|VI{0,3}|[2-9]|No\.?\s*\d+)$/i;
+
+function splitSbName(rawName) {
+    if (!rawName) return { fullName: '', prefix: null, baseName: '', suffix: null, nameVariants: [] };
+    const trimmed = rawName.trim();
+
+    // Detect prefix: 1-4 uppercase letters (optionally with digits/dot) at start, then a space
+    const prefixMatch = trimmed.match(/^([A-Z]{1,4}[0-9]{0,2}(?:\.[A-Z]{1,4})?)\s+(.+)$/);
+    let prefix = null;
+    let working = trimmed;
+    if (prefixMatch) {
+        prefix = prefixMatch[1];
+        working = prefixMatch[2].trim();
+    }
+
+    // Detect suffix at end of (prefix-stripped) name
+    let suffix = null;
+    let baseName = working;
+    const suffixMatch = working.match(SUFFIX_RE);
+    if (suffixMatch) {
+        suffix = suffixMatch[1].trim();
+        baseName = working.slice(0, working.length - suffixMatch[0].length).trim();
+    }
+
+    const nameVariants = [...new Set([
+        trimmed,                                                         // "MM Curry Jr" — full
+        baseName,                                                        // "Curry"
+        suffix ? `${baseName} ${suffix}` : null,                        // "Curry Jr"
+        prefix ? `${prefix} ${baseName}` : null,                        // "MM Curry"
+        prefix && suffix ? `${prefix} ${baseName} ${suffix}` : null,    // same as trimmed
+    ].filter(Boolean))];
+
+    return { fullName: trimmed, prefix, baseName, suffix, nameVariants };
+}
+
+// ─── Duplicate detection (mirrors zooeasyRoutes findGlobalDuplicate) ──────────
+
+async function findGlobalDuplicate(sbIdKey, nameVariants, birthDate, userId, species, prefix) {
+    // 1. Exact breederAssignedId match (any owner)
+    if (sbIdKey) {
+        const byId = await Animal.findOne({ breederAssignedId: sbIdKey })
+            .select('id_public name prefix suffix ownerId ownerId_public breederAssignedId birthDate').lean();
+        if (byId) return { match: byId, matchType: 'id', confidence: 'high' };
+    }
+
+    // 2. Name + birthDate (any owner)
+    if (birthDate && nameVariants?.length) {
+        const start = new Date(birthDate); start.setHours(0, 0, 0, 0);
+        const end = new Date(birthDate); end.setHours(23, 59, 59, 999);
+        for (const n of nameVariants) {
+            const byName = await Animal.findOne({ name: n, birthDate: { $gte: start, $lte: end } })
+                .select('id_public name prefix suffix ownerId ownerId_public breederAssignedId birthDate').lean();
+            if (byName) return { match: byName, matchType: 'name+birthDate', confidence: 'high' };
+        }
+        // Also try CT split prefix+baseName fields with birthDate
+        if (prefix) {
+            const baseName = nameVariants.find(v => !v.startsWith(prefix)) || nameVariants[nameVariants.length - 1];
+            if (baseName) {
+                const byPfx = await Animal.findOne({ prefix, name: baseName, birthDate: { $gte: start, $lte: end } })
+                    .select('id_public name prefix suffix ownerId ownerId_public breederAssignedId birthDate').lean();
+                if (byPfx) return { match: byPfx, matchType: 'name+birthDate', confidence: 'high' };
+            }
+        }
+    }
+
+    // 3. Name only — own animals (high), then global (possible)
+    if (nameVariants?.length) {
+        const speciesFilter = species && species !== 'Unknown' ? { species } : {};
+        for (const n of nameVariants) {
+            const own = await Animal.findOne({ name: n, ownerId: userId, ...speciesFilter })
+                .select('id_public name prefix suffix ownerId ownerId_public breederAssignedId birthDate').lean();
+            if (own) return { match: own, matchType: 'name_only', confidence: 'high' };
+        }
+        if (prefix) {
+            const baseName = nameVariants.find(v => !v.startsWith(prefix)) || nameVariants[nameVariants.length - 1];
+            if (baseName) {
+                const ownPfx = await Animal.findOne({ prefix, name: baseName, ownerId: userId })
+                    .select('id_public name prefix suffix ownerId ownerId_public breederAssignedId birthDate').lean();
+                if (ownPfx) return { match: ownPfx, matchType: 'name_only', confidence: 'high' };
+            }
+        }
+        for (const n of nameVariants) {
+            const global = await Animal.findOne({ name: n, ...speciesFilter })
+                .select('id_public name prefix suffix ownerId ownerId_public breederAssignedId birthDate').lean();
+            if (global) return { match: global, matchType: 'name_only', confidence: 'possible' };
+        }
+    }
+
+    return null;
+}
+
+// ─── HTML scrapers ────────────────────────────────────────────────────────────
+
 function parseProfilePage(html) {
     const $ = cheerio.load(html);
     const animals = [];
     let currentSpecies = 'Unknown';
 
-    // Walk through all text nodes and elements in document order
     $('body').find('*').addBack().contents().each((_, node) => {
         const el = $(node);
         const text = node.type === 'text' ? node.data.trim() : el.text().trim();
 
-        // Detect species headings — they appear as text like "Fancy mouse (196)"
         if (node.type === 'text' && /^[A-Za-z][a-z &]+ \(\d+\)$/.test(text)) {
-            currentSpecies = text.replace(/\s*\(\d+\)$/, '').trim();
-            // Proper capitalise: "Fancy mouse" → "Fancy Mouse"
-            currentSpecies = currentSpecies.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            currentSpecies = text.replace(/\s*\(\d+\)$/, '').trim()
+                .split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         }
 
-        // Animal links
         if (node.name === 'a') {
             const href = el.attr('href') || '';
             const m = href.match(/\/animal\?aid=(\d+)$/);
@@ -109,17 +200,13 @@ function parseProfilePage(html) {
             const name = el.text().trim();
             if (!name) return;
 
-            // Date and status are in the surrounding parent element text
             const parentText = el.parent().text();
             const dateMatch = parentText.match(/(\d{4}\/\d{2}\/\d{2})/);
             const birthDate = dateMatch ? dateMatch[1].replace(/\//g, '-') : null;
-
-            // Status: text after the animal name in the parent block
             const afterName = parentText.split(name).pop().trim();
             const statusWord = afterName.split(/\s+/)[0];
             const status = mapStatus(statusWord);
 
-            // Avoid duplicates (same sbId can appear more than once due to DOM traversal)
             if (!animals.find(a => a.sbId === sbId)) {
                 animals.push({ sbId, name, birthDate, status, species: currentSpecies });
             }
@@ -129,33 +216,41 @@ function parseProfilePage(html) {
     return animals;
 }
 
-/**
- * Parse an animal detail page → full animal data
- */
 function parseAnimalDetail(html, sbId) {
     const $ = cheerio.load(html);
     const bodyText = $('body').text();
 
-    // Helper: extract value after a label in body text
     const extractField = (label) => {
         const re = new RegExp(label + '\\s*:?\\s*([^\\n\\r]+)', 'i');
         const m = bodyText.match(re);
         return m ? m[1].trim() : null;
     };
 
-    const name = extractField('Name');
+    const rawName = extractField('Name') || '';
     const gender = mapGender(extractField('Gender'));
+
+    // Birth date: try "Birth:" first (living animals), then parse from "Lived: YYYY/MM/DD - YYYY/MM/DD"
+    let birthDate = null;
+    let deceasedDate = null;
     const birthRaw = extractField('Birth');
-    const birthDate = birthRaw ? parseSbDate(birthRaw.match(/(\d{4}[\/\-]\d{2}[\/\-]\d{2})/)?.[1]) : null;
+    if (birthRaw) {
+        birthDate = parseSbDate(birthRaw.match(/(\d{4}[\/\-]\d{2}[\/\-]\d{2})/)?.[1]);
+    } else {
+        const livedRaw = extractField('Lived');
+        if (livedRaw) {
+            const dates = [...livedRaw.matchAll(/(\d{4}[\/\-]\d{2}[\/\-]\d{2})/g)].map(m => m[1]);
+            if (dates[0]) birthDate = parseSbDate(dates[0]);
+            if (dates[1]) deceasedDate = parseSbDate(dates[1]);
+        }
+    }
+
     const morph = extractField('Variation/morph') || extractField('Variation') || null;
     const internalId = extractField('ID in breedery') || null;
 
-    // Status: look for STATUS label, or pull from prominent RETIRED/BREEDER/PET text near top
     let status = 'Pet';
     const statusMatch = bodyText.match(/^\s*(RETIRED|BREEDER|PET|AVAILABLE|SOLD|DECEASED|BOOKED)\s/im);
     if (statusMatch) status = mapStatus(statusMatch[1]);
 
-    // Species: from page title pattern "NAME - FANCY MOUSE" or text
     let species = 'Unknown';
     const speciesMatch = bodyText.match(/(?:^|\n)(Fancy mouse|Fancy rat|Syrian hamster|Dwarf hamster|Campbells|Russian dwarf|Roborovski|Guinea pig|Rabbit|Chinchilla|Gerbil|Sugar glider|Ferret|Hedgehog)\b/i);
     if (speciesMatch) {
@@ -163,7 +258,6 @@ function parseAnimalDetail(html, sbId) {
     }
 
     // ── Parent links ─────────────────────────────────────────────────────────
-    // Strategy 1: look for table/row elements with Father/Mother/Sire/Dam label near a link
     let sireId = null, damId = null;
 
     $('tr, li, div, td').each((_, el) => {
@@ -177,7 +271,6 @@ function parseAnimalDetail(html, sbId) {
         if ((text.includes('mother') || text.includes('dam')) && !damId) damId = m[1];
     });
 
-    // Strategy 2: if labels not found, collect all non-self/non-offspring links near "PARENTS" text
     if (!sireId && !damId) {
         const bodyHtml = $.html('body');
         const parentsIdx = bodyHtml.toUpperCase().indexOf('>PARENTS<');
@@ -191,12 +284,95 @@ function parseAnimalDetail(html, sbId) {
             while ((lm = linkRe.exec(section)) !== null) {
                 if (lm[1] !== sbId && !foundIds.includes(lm[1])) foundIds.push(lm[1]);
             }
-            if (foundIds.length >= 1) sireId = foundIds[0]; // will swap if genders reveal otherwise
+            if (foundIds.length >= 1) sireId = foundIds[0];
             if (foundIds.length >= 2) damId = foundIds[1];
         }
     }
 
-    return { sbId, name, gender, birthDate, morph, status, species, sireId, damId, internalId };
+    // ── Profile image ──────────────────────────────────────────────────────────
+    // SimpleBreed wraps the photo in an <a href="/picread?aid=ID&pic=0"> link.
+    // Store that URL; the import will fetch picread and resolve the actual img src.
+    let sbImageUrl = null;
+    const picreadLink = $('a[href*="picread"]').first();
+    if (picreadLink.length) {
+        // Check if there's a direct <img> inside the link first
+        const imgInLink = picreadLink.find('img').first();
+        if (imgInLink.length) {
+            const src = imgInLink.attr('src') || '';
+            if (src) sbImageUrl = src.startsWith('http') ? src : `${SB_BASE}${src.startsWith('/') ? src : '/' + src}`;
+        }
+        // Otherwise store the picread href for deferred resolution
+        if (!sbImageUrl) {
+            const href = (picreadLink.attr('href') || '').trim();
+            if (href) sbImageUrl = href.startsWith('http') ? href : `${SB_BASE}${href.startsWith('/') ? href : '/' + href}`;
+        }
+    }
+    // Fallback: any <img> that looks like an animal photo (not a tiny icon or logo)
+    if (!sbImageUrl) {
+        $('img').each((_, el) => {
+            const src = $(el).attr('src') || '';
+            if (!src || /logo|icon|flag|button/i.test(src)) return;
+            const w = parseInt($(el).attr('width') || '0', 10);
+            if (w > 0 && w < 50) return;
+            sbImageUrl = src.startsWith('http') ? src : `${SB_BASE}${src.startsWith('/') ? src : '/' + src}`;
+            return false; // break
+        });
+    }
+
+    const { fullName, prefix, baseName, suffix, nameVariants } = splitSbName(rawName);
+    return { sbId, fullName, prefix, baseName, suffix, nameVariants, gender, birthDate, deceasedDate, morph, species, sireId, damId, internalId, sbImageUrl };
+}
+
+// ─── Image helpers ───────────────────────────────────────────────────────────
+
+/**
+ * Resolves a SimpleBreed image URL (which may be a picread HTML page or a direct image)
+ * into a { buffer, contentType } object, or null if no image found / not supported.
+ */
+async function resolveSbImageBuffer(url) {
+    if (!url) return null;
+    try {
+        const resp = await axios.get(url, { responseType: 'arraybuffer', headers: FETCH_HEADERS, timeout: 15000 });
+        const ct = (resp.headers['content-type'] || '').split(';')[0].trim();
+        // Direct image response
+        if (ct.startsWith('image/')) {
+            return { buffer: Buffer.from(resp.data), contentType: ct };
+        }
+        // HTML page (e.g. /picread) — parse the actual img src
+        const html = Buffer.from(resp.data).toString('utf8');
+        const $ = cheerio.load(html);
+        let imgSrc = null;
+        $('img').each((_, el) => {
+            const src = $(el).attr('src') || '';
+            if (!src || /logo|icon|flag|button/i.test(src)) return;
+            const w = parseInt($(el).attr('width') || '0', 10);
+            if (w > 0 && w < 50) return;
+            imgSrc = src.startsWith('http') ? src : `${SB_BASE}${src.startsWith('/') ? src : '/' + src}`;
+            return false; // break
+        });
+        if (!imgSrc) return null;
+        const imgResp = await axios.get(imgSrc, { responseType: 'arraybuffer', headers: FETCH_HEADERS, timeout: 15000 });
+        const imgCt = (imgResp.headers['content-type'] || 'image/jpeg').split(';')[0].trim();
+        if (!imgCt.startsWith('image/')) return null;
+        return { buffer: Buffer.from(imgResp.data), contentType: imgCt };
+    } catch {
+        return null;
+    }
+}
+
+async function uploadSbImage(sbImageUrl, id_public) {
+    if (!useR2 || !sbImageUrl) return null;
+    const img = await resolveSbImageBuffer(sbImageUrl);
+    if (!img) return null;
+    try {
+        const r2 = require('../storage/r2_client');
+        const ext = img.contentType.replace('image/', '').replace('jpeg', 'jpg').split('+')[0] || 'jpg';
+        const key = `animals/${id_public}-sb.${ext}`;
+        return await r2.uploadBuffer(key, img.buffer, img.contentType);
+    } catch (err) {
+        console.warn(`[SB] R2 upload failed for CT ${id_public}:`, err.message);
+        return null;
+    }
 }
 
 // ─── Preview Endpoint ─────────────────────────────────────────────────────────
@@ -204,7 +380,11 @@ function parseAnimalDetail(html, sbId) {
 /**
  * POST /api/import/simplebreed/preview
  * Body: { profileUrl: string }
- * Returns: { animals: [...], profileUrl }
+ * Returns: { items, conflicts, total, profileUrl }
+ *
+ * items[] shape matches zooeasy preview: { sbId, name, prefix, birthDate, status, species, isDuplicate }
+ * conflicts[] shape matches zooeasy: { sbId, name, matchType, confidence, existingId, existingName,
+ *   existingBirthDate, existingOwner, isOwnedByImporter }
  */
 router.post('/preview', async (req, res) => {
     const { profileUrl } = req.body;
@@ -214,39 +394,63 @@ router.post('/preview', async (req, res) => {
     let html;
     try {
         html = await fetchSbHtml(canonicalUrl);
-    } catch (err) {
+    } catch {
         return res.status(502).json({ message: 'Could not reach SimpleBreed. Check the URL and try again.' });
     }
 
-    let animals;
+    let profileAnimals;
     try {
-        animals = parseProfilePage(html);
-    } catch (err) {
+        profileAnimals = parseProfilePage(html);
+    } catch {
         return res.status(422).json({ message: 'Could not parse the SimpleBreed profile page.' });
     }
 
-    if (!animals.length) {
+    if (!profileAnimals.length) {
         return res.status(404).json({ message: 'No animals found on this SimpleBreed profile. The account may be private or empty.' });
     }
 
-    // Check for existing duplicates by breederAssignedId (sbId stored as "#NNNNN")
     const userId = req.user.id;
-    const existingMap = {};
-    const sbIdKeys = animals.map(a => `#${a.sbId}`);
-    const existing = await Animal.find({
-        ownerId: userId,
-        breederAssignedId: { $in: sbIdKeys }
-    }).select('breederAssignedId id_public name').lean();
-    for (const ex of existing) {
-        existingMap[ex.breederAssignedId] = { id_public: ex.id_public, name: ex.name };
+
+    const items = [];
+    const conflicts = [];
+
+    for (const pa of profileAnimals) {
+        const sbIdKey = `#${pa.sbId}`;
+        const birthDate = pa.birthDate ? parseSbDate(pa.birthDate) : null;
+        const { fullName, prefix, nameVariants } = splitSbName(pa.name);
+
+        // Use #sbId as the ID key for preview (internalId not available until detail page fetch)
+        const dupResult = await findGlobalDuplicate(sbIdKey, nameVariants, birthDate, userId, pa.species, prefix);
+
+        items.push({
+            sbId: pa.sbId,
+            sbIdKey,
+            name: fullName,
+            prefix: prefix || null,
+            birthDate: pa.birthDate || null,
+            status: pa.status,
+            species: pa.species,
+            isDuplicate: !!dupResult,
+        });
+
+        if (dupResult) {
+            const m = dupResult.match;
+            const existingName = [m.prefix, m.name, m.suffix].filter(Boolean).join(' ');
+            conflicts.push({
+                sbId: pa.sbId,
+                name: fullName,
+                matchType: dupResult.matchType,
+                confidence: dupResult.confidence,
+                existingId: m.id_public,
+                existingName,
+                existingBirthDate: m.birthDate ? String(m.birthDate).slice(0, 10) : null,
+                existingOwner: m.ownerId_public || '?',
+                isOwnedByImporter: String(m.ownerId) === String(userId),
+            });
+        }
     }
 
-    const result = animals.map(a => ({
-        ...a,
-        duplicate: existingMap[`#${a.sbId}`] || null,
-    }));
-
-    res.json({ animals: result, profileUrl: canonicalUrl });
+    res.json({ items, conflicts, total: items.length, profileUrl: canonicalUrl });
 });
 
 // ─── Import Endpoint ──────────────────────────────────────────────────────────
@@ -254,8 +458,8 @@ router.post('/preview', async (req, res) => {
 /**
  * POST /api/import/simplebreed/import
  * Body: {
- *   selectedIds: string[],         — sbIds to import
- *   conflictResolutions: { [sbId]: 'skip' | 'import_anyway' },
+ *   selectedIds: string[],
+ *   conflictResolutions: { [sbId]: 'use_existing' | 'import_anyway' },
  *   confirm: boolean
  * }
  */
@@ -269,19 +473,18 @@ router.post('/import', async (req, res) => {
     const userId = req.user.id;
     const userId_public = req.user.id_public || '';
 
-    // ── Step 1: Fetch detail pages for all selected animals ───────────────────
-    const detailMap = {}; // sbId → parsed detail
-
+    // ── Fetch detail pages ────────────────────────────────────────────────────
+    const detailMap = {};
     await batchAll(selectedIds, 5, async (sbId) => {
         try {
             const html = await fetchSbHtml(`${SB_BASE}/animal?aid=${sbId}`);
             detailMap[sbId] = parseAnimalDetail(html, sbId);
         } catch {
-            detailMap[sbId] = null; // will be reported as error
+            detailMap[sbId] = null;
         }
     });
 
-    // ── Step 2: Collect all unique parent sbIds not already in detailMap ──────
+    // ── Collect + fetch parent pages ──────────────────────────────────────────
     const allParentIds = new Set();
     for (const sbId of selectedIds) {
         const d = detailMap[sbId];
@@ -290,8 +493,7 @@ router.post('/import', async (req, res) => {
         if (d.damId && !selectedIds.includes(d.damId)) allParentIds.add(d.damId);
     }
 
-    // Fetch parent detail pages (needed for gender-based sire/dam assignment)
-    const parentDetailMap = {}; // sbId → parsed detail
+    const parentDetailMap = {};
     await batchAll([...allParentIds], 5, async (sbId) => {
         try {
             const html = await fetchSbHtml(`${SB_BASE}/animal?aid=${sbId}`);
@@ -301,126 +503,95 @@ router.post('/import', async (req, res) => {
         }
     });
 
-    // Combined lookup: selected + parent details
     const allDetails = { ...detailMap, ...parentDetailMap };
 
-    // ── Step 3: Determine sire/dam using gender when label-based detection failed ─
+    // ── Gender-correct sire/dam assignments ───────────────────────────────────
     for (const sbId of selectedIds) {
         const d = detailMap[sbId];
-        if (!d) continue;
-
-        // If both are set, verify gender correctness and swap if needed
-        const swapIfNeeded = (id1, id2) => {
-            if (!id1 || !id2) return { sire: id1, dam: id2 };
-            const g1 = (allDetails[id1]?.gender || 'Unknown');
-            const g2 = (allDetails[id2]?.gender || 'Unknown');
-            if (g1 === 'Female' && g2 !== 'Female') return { sire: id2, dam: id1 };
-            if (g2 === 'Female' && g1 !== 'Female') return { sire: id1, dam: id2 };
-            // If same gender or unknown, keep as-is
-            return { sire: id1, dam: id2 };
-        };
-
-        if (d.sireId || d.damId) {
-            const corrected = swapIfNeeded(d.sireId || d.damId, d.sireId && d.damId ? d.damId : null);
-            d.sireId = corrected.sire;
-            d.damId = corrected.dam;
+        if (!d || (!d.sireId && !d.damId)) continue;
+        const id1 = d.sireId, id2 = d.damId;
+        if (id1 && id2) {
+            const g1 = allDetails[id1]?.gender || 'Unknown';
+            const g2 = allDetails[id2]?.gender || 'Unknown';
+            if (g1 === 'Female' && g2 !== 'Female') { d.sireId = id2; d.damId = id1; }
+        } else {
+            const knownId = id1 || id2;
+            const g = allDetails[knownId]?.gender || 'Unknown';
+            if (g === 'Female') { d.sireId = null; d.damId = knownId; }
+            else { d.sireId = knownId; d.damId = null; }
         }
     }
 
-    // ── Step 4: Check for existing duplicates in DB ───────────────────────────
+    // ── DB duplicate check ─────────────────────────────────────────────────────
+    // Match by internalId (if present) first, then fall back to #sbId
     const allSbIds = [...selectedIds, ...allParentIds];
     const sbIdKeys = allSbIds.map(id => `#${id}`);
+    const internalIdKeys = allSbIds.map(id => allDetails[id]?.internalId).filter(Boolean);
     const existingAnimals = await Animal.find({
-        ownerId: userId,
-        breederAssignedId: { $in: sbIdKeys }
-    }).select('breederAssignedId id_public name').lean();
-    const existingMap = {}; // '#sbId' → { id_public, name }
+        breederAssignedId: { $in: [...sbIdKeys, ...internalIdKeys] }
+    }).select('breederAssignedId id_public name ownerId').lean();
+    const existingMap = {};
     for (const ex of existingAnimals) existingMap[ex.breederAssignedId] = ex;
+    // Build lookup by sbId: prefer internalId match, fall back to #sbId
+    const resolveExisting = (sbId) => {
+        const iid = allDetails[sbId]?.internalId;
+        return (iid && existingMap[iid]) || existingMap[`#${sbId}`] || null;
+    };
 
-    // Also check globally (any owner) for breeding records linking
-    const existingGlobal = await Animal.find({
-        breederAssignedId: { $in: sbIdKeys }
-    }).select('breederAssignedId id_public').lean();
-    const globalMap = {};
-    for (const ex of existingGlobal) globalMap[ex.breederAssignedId] = ex;
-
-    // ── Step 5: Dry run / preview ─────────────────────────────────────────────
-    const willCreate = [];
+    // ── Classify selected animals ─────────────────────────────────────────────
     const willSkip = [];
+    const toCreate = [];
     const errors = [];
 
     for (const sbId of selectedIds) {
         const d = detailMap[sbId];
-        if (!d) { errors.push({ sbId, error: 'Failed to fetch animal detail page' }); continue; }
-
-        const key = `#${sbId}`;
-        const resolution = conflictResolutions[sbId] || (existingMap[key] ? 'skip' : 'create');
-
-        if (existingMap[key] && resolution === 'skip') {
-            willSkip.push({ sbId, name: d.name, existingId: existingMap[key].id_public });
+        if (!d) { errors.push({ sbId, error: 'Failed to fetch detail page' }); continue; }
+        const existing = resolveExisting(sbId);
+        if (existing && conflictResolutions[sbId] !== 'import_anyway') {
+            willSkip.push({ sbId, existingId: existing.id_public });
         } else {
-            willCreate.push({ sbId, name: d.name, action: existingMap[key] ? 'import_anyway' : 'create' });
+            toCreate.push(sbId);
         }
     }
 
+    const parentStubs = [...allParentIds].filter(id => !resolveExisting(id) && !selectedIds.includes(id));
+    const allToCreate = [...new Set([...toCreate, ...parentStubs])];
+
     if (!confirm) {
-        return res.json({
-            preview: {
-                willCreate: willCreate.length,
-                willSkip: willSkip.length,
-                parentsFetched: allParentIds.size,
-                items: willCreate,
-                skipped: willSkip,
-                errors,
-            }
-        });
+        return res.json({ preview: { willCreate: toCreate.length, willSkip: willSkip.length, parentStubs: parentStubs.length, errors } });
     }
 
-    // ── Step 6: Write to DB ───────────────────────────────────────────────────
-    const sbIdToCtId = {}; // sbId → id_public (for parent linking)
-
-    // Pre-fill with existing animals from globalMap
-    for (const [key, ex] of Object.entries(globalMap)) {
-        const id = key.replace('#', '');
-        sbIdToCtId[id] = ex.id_public;
+    // ── Pass 1: Create animals ─────────────────────────────────────────────────
+    const sbIdToCtId = {};
+    // Seed with already-existing animals so parent links work
+    for (const sbId of allSbIds) {
+        const ex = resolveExisting(sbId);
+        if (ex) sbIdToCtId[sbId] = ex.id_public;
     }
-
-    // Pass 1: Create all selected animals (and parent stubs if needed)
-    const toCreate = [...new Set([
-        ...selectedIds.filter(id => {
-            const key = `#${id}`;
-            const res = conflictResolutions[id] || (existingMap[key] ? 'skip' : 'create');
-            return res !== 'skip';
-        }),
-        ...[...allParentIds].filter(id => !globalMap[`#${id}`]) // parent stubs only if not in DB
-    ])];
 
     let created = 0;
     const createErrors = [];
 
-    for (const sbId of toCreate) {
+    for (const sbId of allToCreate) {
         const d = allDetails[sbId];
         if (!d) { createErrors.push({ sbId, error: 'No detail data' }); continue; }
-
         try {
             const id_public = await getNextSequence('animalId');
-            const isSelectedAnimal = selectedIds.includes(sbId);
-
             await Animal.create({
                 id_public,
                 ownerId: userId,
                 ownerId_public: userId_public,
-                isOwned: isSelectedAnimal,
-                name: d.name || `SimpleBreed #${sbId}`,
+                isOwned: selectedIds.includes(sbId),
+                name: d.baseName || d.fullName || `SimpleBreed #${sbId}`,
+                prefix: d.prefix || null,
+                suffix: d.suffix || null,
                 gender: d.gender || 'Unknown',
                 birthDate: d.birthDate || null,
                 color: d.morph || null,
-                status: d.status || 'Pet',
+                deceasedDate: d.deceasedDate || null,
                 species: d.species !== 'Unknown' ? d.species : null,
-                breederAssignedId: `#${sbId}`,
-                remarks: d.internalId ? `SimpleBreed internal ID: ${d.internalId}` : '',
+                breederAssignedId: d.internalId || `#${sbId}`,
             });
-
             sbIdToCtId[sbId] = id_public;
             created++;
         } catch (err) {
@@ -428,15 +599,41 @@ router.post('/import', async (req, res) => {
         }
     }
 
-    // Pass 2: Link parents
+    // ── Pass 1.5: Upload images for newly created animals ──────────────────────
+    let imagesUploaded = 0;
+    if (useR2) {
+        await batchAll(allToCreate, 3, async (sbId) => {
+            const d = allDetails[sbId];
+            const id_public = sbIdToCtId[sbId];
+            if (!d?.sbImageUrl || !id_public) return;
+            const uploadedUrl = await uploadSbImage(d.sbImageUrl, id_public);
+            if (uploadedUrl) {
+                await Animal.updateOne({ id_public }, { $set: { imageUrl: uploadedUrl } });
+                imagesUploaded++;
+            }
+        });
+
+        // Also update image for existing/skipped animals that currently have no image
+        await batchAll(willSkip, 3, async ({ sbId, existingId }) => {
+            const d = allDetails[sbId] || detailMap[sbId];
+            if (!d?.sbImageUrl) return;
+            const existing = await Animal.findOne({ id_public: existingId }).select('imageUrl').lean();
+            if (existing?.imageUrl) return; // already has image, don't overwrite
+            const uploadedUrl = await uploadSbImage(d.sbImageUrl, existingId);
+            if (uploadedUrl) {
+                await Animal.updateOne({ id_public: existingId }, { $set: { imageUrl: uploadedUrl } });
+                imagesUploaded++;
+            }
+        });
+    }
+
+    // ── Pass 2: Link parents ──────────────────────────────────────────────────
     let parentLinked = 0;
     for (const sbId of selectedIds) {
         const d = detailMap[sbId];
         if (!d || !sbIdToCtId[sbId]) continue;
-
         const sireCtId = d.sireId ? (sbIdToCtId[d.sireId] || null) : null;
         const damCtId = d.damId ? (sbIdToCtId[d.damId] || null) : null;
-
         if (sireCtId || damCtId) {
             await Animal.updateOne(
                 { id_public: sbIdToCtId[sbId], ownerId: userId },
@@ -446,12 +643,7 @@ router.post('/import', async (req, res) => {
         }
     }
 
-    res.json({
-        written: { animals: created },
-        skipped: { animals: willSkip.length },
-        parentLinked,
-        errors: [...errors, ...createErrors],
-    });
+    res.json({ written: { animals: created }, skipped: { animals: willSkip.length }, parentLinked, imagesUploaded, errors: [...errors, ...createErrors] });
 });
 
 module.exports = router;
