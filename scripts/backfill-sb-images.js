@@ -92,8 +92,10 @@ async function run() {
     await mongoose.connect(uri);
     console.log('Connected to MongoDB');
 
-    const r2 = (process.env.STORAGE_PROVIDER || '').toUpperCase() === 'R2' ? require('../storage/r2_client') : null;
-    if (!r2 && !dryRun) { console.error('STORAGE_PROVIDER is not R2 — use --dry-run to preview'); await mongoose.disconnect(); process.exit(1); }
+    if (!process.env.UPLOADER_URL && !process.env.PUBLIC_HOST) {
+        process.env.UPLOADER_URL = 'https://uploads.crittertrack.net';
+    }
+    const r2 = require('../storage/r2_client');
 
     const query = {
         sbId: { $ne: null, $exists: true },
