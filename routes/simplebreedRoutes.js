@@ -481,14 +481,16 @@ router.post('/preview', async (req, res) => {
     let html;
     try {
         html = await fetchSbHtml(canonicalUrl);
-    } catch {
+    } catch (err) {
+        console.error('[SB PREVIEW] Failed to fetch profile HTML:', err && err.stack ? err.stack : err);
         return res.status(502).json({ message: 'Could not reach SimpleBreed. Check the URL and try again.' });
     }
 
     let profileAnimals;
     try {
         profileAnimals = await parseProfilePage(html);
-    } catch {
+    } catch (err) {
+        console.error('[SB PREVIEW] Failed to parse profile page:', err && err.stack ? err.stack : err);
         return res.status(422).json({ message: 'Could not parse the SimpleBreed profile page.' });
     }
 
@@ -498,111 +500,25 @@ router.post('/preview', async (req, res) => {
 
     const userId = req.user.id;
 
-    // ── Fetch detail pages for all animals (in parallel batches) ──────────────
-    // This gives us gender, color, sire/dam IDs, internalId for duplicate matching.
-    const detailCache = {};
-    await batchAll(profileAnimals, 5, async (pa) => {
-        try {
-            const detailHtml = await fetchSbHtml(`${SB_BASE}/animal?aid=${pa.sbId}`);
-            detailCache[pa.sbId] = parseAnimalDetail(detailHtml, pa.sbId);
-        } catch {
-            detailCache[pa.sbId] = null;
-        }
-    });
+    // ── Extract request params ────────────────────────────────────────────────
+    const selectedIds = Array.isArray(req.body.selectedIds) ? req.body.selectedIds : profileAnimals.map(a => a.sbId);
+    const conflictResolutions = req.body.conflictResolutions || {};
+    const confirm = !!req.body.confirm;
+    const speciesMap = Object.fromEntries(profileAnimals.map(a => [a.sbId, a.species]));
+    const userId_public = req.user.id_public;
 
-    const items = [];
-    const conflicts = [];
-
-    for (const pa of profileAnimals) {
-        const detail = detailCache[pa.sbId];
-        // Prefer detail-page data where available; fall back to profile listing data
-        const fullName = detail?.fullName || pa.name;
-        const { prefix, nameVariants } = splitSbName(fullName);
-        const birthDate = detail?.birthDate || (pa.birthDate ? parseSbDate(pa.birthDate) : null);
-        // Build all candidate breederAssignedId values:
-        // - internalId as-is (e.g. "MM S13-M1")
-        // - internalId with prefix stripped (e.g. "S13-M1") — CT may store it without prefix
-        // - #sbId numeric fallback
-        const internalId = detail?.internalId || null;
-        const { baseName: internalBaseName } = internalId ? splitSbName(internalId) : {};
-        const idKeys = [...new Set([
-            internalId,
-            internalBaseName && internalBaseName !== internalId ? internalBaseName : null,
-            `#${pa.sbId}`,
-        ].filter(Boolean))];
-
-        const dupResult = await findGlobalDuplicate(idKeys, nameVariants, birthDate, userId, pa.species, prefix);
-        const sbIdKey = internalId || `#${pa.sbId}`;
-
-        items.push({
-            sbId: pa.sbId,
-            sbIdKey,
-            name: fullName,
-            prefix: detail?.prefix || null,
-            suffix: detail?.suffix || null,
-            gender: detail?.gender || null,
-            birthDate: birthDate ? birthDate.toISOString().slice(0, 10) : (pa.birthDate || null),
-            deceasedDate: detail?.deceasedDate ? detail.deceasedDate.toISOString().slice(0, 10) : null,
-            color: detail?.morph || null,
-            status: pa.status,
-            species: detail?.species !== 'Unknown' ? (detail?.species || pa.species) : pa.species,
-            sireId: detail?.sireId || null,
-            damId: detail?.damId || null,
-            isDuplicate: !!dupResult,
-        });
-
-        if (dupResult) {
-            const m = dupResult.match;
-            const existingName = [m.prefix, m.name, m.suffix].filter(Boolean).join(' ');
-            conflicts.push({
-                sbId: pa.sbId,
-                name: fullName,
-                matchType: dupResult.matchType,
-                confidence: dupResult.confidence,
-                existingId: m.id_public,
-                existingName,
-                existingBirthDate: m.birthDate ? String(m.birthDate).slice(0, 10) : null,
-                existingOwner: m.ownerId_public || '?',
-                isOwnedByImporter: String(m.ownerId) === String(userId),
-            });
-        }
-    }
-
-    res.json({ items, conflicts, total: items.length, profileUrl: canonicalUrl });
-});
-
-// ─── Import Endpoint ──────────────────────────────────────────────────────────
-
-/**
- * POST /api/import/simplebreed/import
- * Body: {
- *   selectedIds: string[],
- *   conflictResolutions: { [sbId]: 'use_existing' | 'import_anyway' },
- *   confirm: boolean
- * }
- */
-router.post('/import', async (req, res) => {
-    const { selectedIds, conflictResolutions = {}, speciesMap = {}, confirm = false } = req.body;
-
-    if (!Array.isArray(selectedIds) || !selectedIds.length) {
-        return res.status(400).json({ message: 'No animals selected.' });
-    }
-
-    const userId = req.user.id;
-    const userId_public = req.user.id_public || '';
-
-    // ── Fetch detail pages ────────────────────────────────────────────────────
+    // ── Fetch detail pages for selected animals (in parallel batches) ─────────
     const detailMap = {};
     await batchAll(selectedIds, 5, async (sbId) => {
         try {
-            const html = await fetchSbHtml(`${SB_BASE}/animal?aid=${sbId}`);
-            detailMap[sbId] = parseAnimalDetail(html, sbId);
+            const detailHtml = await fetchSbHtml(`${SB_BASE}/animal?aid=${sbId}`);
+            detailMap[sbId] = parseAnimalDetail(detailHtml, sbId);
         } catch {
             detailMap[sbId] = null;
         }
     });
 
-    // ── Collect + fetch parent pages ──────────────────────────────────────────
+    // ── Collect parent IDs not already in selectedIds ─────────────────────────
     const allParentIds = new Set();
     for (const sbId of selectedIds) {
         const d = detailMap[sbId];
