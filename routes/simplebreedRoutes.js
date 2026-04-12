@@ -299,6 +299,8 @@ async function parseProfilePage(html) {
 
 function parseAnimalDetail(html, sbId) {
     const $ = cheerio.load(html);
+    // Strip script and style tags before extracting text to avoid JS/CSS leaking into field values
+    $('script, style').remove();
     const bodyText = $('body').text();
 
     const extractField = (label) => {
@@ -513,11 +515,20 @@ router.post('/preview', async (req, res) => {
         const fullName = detail?.fullName || pa.name;
         const { prefix, nameVariants } = splitSbName(fullName);
         const birthDate = detail?.birthDate || (pa.birthDate ? parseSbDate(pa.birthDate) : null);
-        // Check both internalId and #sbId against breederAssignedId
-        const idKeys = [detail?.internalId, `#${pa.sbId}`].filter(Boolean);
+        // Build all candidate breederAssignedId values:
+        // - internalId as-is (e.g. "MM S13-M1")
+        // - internalId with prefix stripped (e.g. "S13-M1") — CT may store it without prefix
+        // - #sbId numeric fallback
+        const internalId = detail?.internalId || null;
+        const { baseName: internalBaseName } = internalId ? splitSbName(internalId) : {};
+        const idKeys = [...new Set([
+            internalId,
+            internalBaseName && internalBaseName !== internalId ? internalBaseName : null,
+            `#${pa.sbId}`,
+        ].filter(Boolean))];
 
         const dupResult = await findGlobalDuplicate(idKeys, nameVariants, birthDate, userId, pa.species, prefix);
-        const sbIdKey = detail?.internalId || `#${pa.sbId}`;
+        const sbIdKey = internalId || `#${pa.sbId}`;
 
         items.push({
             sbId: pa.sbId,
