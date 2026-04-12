@@ -718,6 +718,8 @@ const LitterSchema = new mongoose.Schema({
     showOnPublicProfile: { type: Boolean, default: false, index: true },
     // Tracks whether the mating-day reminder notification has already been sent
     matingReminderSent: { type: Boolean, default: false },
+    // Tracks whether the user has permanently dismissed the weaning notification for this litter
+    weaningDismissed: { type: Boolean, default: false },
 
     // Litter photo gallery (born litters only)
     images: [{ url: { type: String }, r2Key: { type: String } }],
