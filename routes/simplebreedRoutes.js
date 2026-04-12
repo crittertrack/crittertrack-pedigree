@@ -196,7 +196,9 @@ async function parseProfilePage(html) {
     const animals = [];
     const seen = new Set();
 
-    function extractFromHtml(pageHtml) {
+    // defaultSpecies is carried across pagination so paginated partial-HTML pages
+    // (which lack the species heading) still get the right species assigned.
+    function extractFromHtml(pageHtml, defaultSpecies = null) {
         const $ = cheerio.load(pageHtml);
 
         // Build species map: heading text → approximate character position in body text
@@ -211,6 +213,11 @@ async function parseProfilePage(html) {
                 });
             }
         });
+
+        // Species context to pass forward: last heading seen on this page, or inherited default
+        const pageSpecies = speciesHeadings.length > 0
+            ? speciesHeadings[speciesHeadings.length - 1].text
+            : defaultSpecies;
 
         $('a[href*="/animal?aid="]').each((_, el) => {
             const href = $(el).attr('href') || '';
@@ -241,7 +248,7 @@ async function parseProfilePage(html) {
                 $ctx = parent;
             }
 
-            // Species: last heading that appears before this animal name in body text
+            // Species: last heading before this animal, falling back to inherited default
             let species = 'Unknown';
             if (speciesHeadings.length > 0) {
                 const namePos = bodyText.indexOf(name);
@@ -250,20 +257,21 @@ async function parseProfilePage(html) {
                     if (sh.pos !== -1 && sh.pos < namePos) best = sh.text;
                 }
                 species = best.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            } else if (defaultSpecies) {
+                species = defaultSpecies.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
             }
 
             animals.push({ sbId, name, birthDate, status, species });
         });
 
-        // Collect nextData elements for pagination
+        // Collect nextData elements — carry species context forward
         const nextItems = [];
         $('.nextData').each((_, el) => {
             let nextHref = ($(el).attr('href') || '').trim();
             const postBody = ($(el).attr('post') || 'status=all&gender=all').trim();
             if (nextHref && nextHref.includes('user_animals')) {
-                // Ensure absolute URL
                 if (!nextHref.startsWith('http')) nextHref = `${SB_BASE}${nextHref.startsWith('/') ? '' : '/'}${nextHref}`;
-                nextItems.push({ href: nextHref, postBody });
+                nextItems.push({ href: nextHref, postBody, speciesContext: pageSpecies });
             }
         });
         return nextItems;
@@ -277,18 +285,15 @@ async function parseProfilePage(html) {
     const visitedUrls = new Set();
     while (pendingFetches.length > 0) {
         const batch = pendingFetches.splice(0);
-        const results = await Promise.all(batch.map(async ({ href, postBody }) => {
+        const results = await Promise.all(batch.map(async ({ href, postBody, speciesContext }) => {
             if (visitedUrls.has(href)) return [];
             visitedUrls.add(href);
             try {
                 const resp = await axios.post(href, postBody, {
-                    headers: {
-                        ...FETCH_HEADERS,
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
+                    headers: { ...FETCH_HEADERS, 'Content-Type': 'application/x-www-form-urlencoded' },
                     timeout: 20000,
                 });
-                return extractFromHtml(resp.data);
+                return extractFromHtml(resp.data, speciesContext);
             } catch (err) {
                 console.warn(`[SB] Pagination fetch failed for ${href}:`, err.message);
                 return [];
@@ -507,25 +512,44 @@ router.post('/preview', async (req, res) => {
 
     const userId = req.user.id;
 
-    // Build items from profile-page data only (gender/sireId/damId/color fetched during import)
-    const items = profileAnimals.map(a => ({
-        sbId: a.sbId,
-        name: a.name,
-        gender: null,
-        birthDate: a.birthDate || null,
-        sireId: null,
-        damId: null,
-        color: null,
-        species: (a.species && a.species !== 'Unknown') ? a.species : null,
-        status: a.status || 'Pet',
-    }));
+    // Fetch detail pages for all animals — needed for color, accurate species, sireId/damId,
+    // and internalId (better dedup). Use moderate concurrency to avoid rate-limiting SB.
+    const detailMap = {};
+    await batchAll(profileAnimals, 8, async (pa) => {
+        try {
+            const detailHtml = await fetchSbHtml(`${SB_BASE}/animal?aid=${pa.sbId}`);
+            detailMap[pa.sbId] = parseAnimalDetail(detailHtml, pa.sbId);
+        } catch {
+            detailMap[pa.sbId] = null;
+        }
+    });
 
-    // Duplicate detection using name + birthDate from profile page
+    // Build items merging profile-page data with enriched detail data
+    const items = profileAnimals.map(a => {
+        const d = detailMap[a.sbId];
+        const species = (d?.species && d.species !== 'Unknown') ? d.species
+            : (a.species && a.species !== 'Unknown') ? a.species : null;
+        return {
+            sbId: a.sbId,
+            name: a.name,
+            birthDate: a.birthDate || null,
+            sireId: d?.sireId || null,
+            damId: d?.damId || null,
+            color: d?.morph || null,
+            species,
+            status: a.status || 'Pet',
+        };
+    });
+
+    // Duplicate detection: #sbId + internalId (ID match) plus name+birthDate (name match)
     const conflicts = [];
     for (const a of profileAnimals) {
+        const d = detailMap[a.sbId];
         const { nameVariants, prefix } = splitSbName(a.name);
         const birthDate = parseSbDate(a.birthDate);
-        const dup = await findGlobalDuplicate(null, nameVariants, birthDate, userId, a.species, prefix);
+        const idKeys = [`#${a.sbId}`];
+        if (d?.internalId) idKeys.push(d.internalId);
+        const dup = await findGlobalDuplicate(idKeys, nameVariants, birthDate, userId, a.species, prefix);
         if (dup) {
             const isOwnedByImporter = dup.match.ownerId?.toString() === userId?.toString();
             conflicts.push({
