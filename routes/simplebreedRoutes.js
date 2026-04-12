@@ -693,12 +693,12 @@ router.post('/import', async (req, res) => {
         }
     }
 
-    // Only create parent stubs for parents of animals actually being created (not skipped ones)
+    // Create parent stubs for parents of any selected animal (including skipped ones) that aren't already in CT
     const parentStubs = [...allParentIds].filter(id => {
         if (resolveExisting(id)) return false; // already in CT
-        if (selectedIds.includes(id)) return false; // in the import list itself
-        // Only stub if at least one animal being created references this parent
-        return toCreate.some(cid => {
+        if (selectedIds.includes(id)) return false; // in the import list itself (will be created properly)
+        // Stub if any selected animal references this parent
+        return selectedIds.some(cid => {
             const d = detailMap[cid];
             return d && (d.sireId === id || d.damId === id);
         });
