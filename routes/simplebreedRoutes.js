@@ -310,7 +310,7 @@ function parseAnimalDetail(html, sbId) {
     };
 
     const rawName = extractField('Name') || '';
-    const gender = mapGender(extractField('Gender'));
+    const gender = mapGender(extractField('Gender') || extractField('Sex'));
 
     // Birth date: try "Birth:" first (living animals), then parse from "Lived: YYYY/MM/DD - YYYY/MM/DD"
     let birthDate = null;
@@ -646,8 +646,27 @@ router.post('/import', async (req, res) => {
     }).select('breederAssignedId id_public name ownerId').lean();
     const existingMap = {};
     for (const ex of existingAnimals) existingMap[ex.breederAssignedId] = ex;
-    // Build lookup by sbId: prefer internalId match, fall back to #sbId
+
+    // Resolve manual map_to:<ctId> entries: fetch CT animals by id_public
+    const manualCtIds = Object.values(conflictResolutions)
+        .filter(v => typeof v === 'string' && v.startsWith('map_to:'))
+        .map(v => v.slice(7));
+    const manualCTMap = {}; // sbId -> Animal
+    if (manualCtIds.length) {
+        const ctAnimals = await Animal.find({ id_public: { $in: manualCtIds } })
+            .select('id_public name prefix suffix ownerId').lean();
+        const ctById = Object.fromEntries(ctAnimals.map(a => [a.id_public, a]));
+        for (const [sbId, res] of Object.entries(conflictResolutions)) {
+            if (typeof res === 'string' && res.startsWith('map_to:')) {
+                const ctId = res.slice(7);
+                if (ctById[ctId]) manualCTMap[sbId] = ctById[ctId];
+            }
+        }
+    }
+
+    // Build lookup by sbId: prefer manual mapping, then internalId match, then #sbId
     const resolveExisting = (sbId) => {
+        if (manualCTMap[sbId]) return manualCTMap[sbId];
         const iid = allDetails[sbId]?.internalId;
         return (iid && existingMap[iid]) || existingMap[`#${sbId}`] || null;
     };
@@ -661,7 +680,9 @@ router.post('/import', async (req, res) => {
         const d = detailMap[sbId];
         if (!d) { errors.push({ sbId, error: 'Failed to fetch detail page' }); continue; }
         const existing = resolveExisting(sbId);
-        if (existing && conflictResolutions[sbId] !== 'import_anyway') {
+        // map_to always means use_existing; import_anyway overrides auto-detected duplicates only
+        const isManualMap = typeof conflictResolutions[sbId] === 'string' && conflictResolutions[sbId].startsWith('map_to:');
+        if (existing && (isManualMap || conflictResolutions[sbId] !== 'import_anyway')) {
             willSkip.push({ sbId, existingId: existing.id_public });
         } else {
             toCreate.push(sbId);
