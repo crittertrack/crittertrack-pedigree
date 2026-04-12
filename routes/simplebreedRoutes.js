@@ -554,12 +554,30 @@ router.post('/preview', async (req, res) => {
 // Body: { selectedIds, conflictResolutions, speciesMap }
 router.post('/import', async (req, res) => {
     const { selectedIds, conflictResolutions = {}, speciesMap = {} } = req.body;
-    if (!Array.isArray(selectedIds) || !selectedIds.length) {
-        return res.status(400).json({ message: 'No animals selected for import.' });
+    if (!Array.isArray(selectedIds)) {
+        return res.status(400).json({ message: 'Invalid request.' });
     }
 
     const userId = req.user.id;
     const userId_public = req.user.id_public;
+
+    // ── Stub-only mode: no new animals, just register SB→CT mappings ─────────
+    // For each map_to:<ctId> resolution, tag the existing CT animal with #sbId
+    // as breederAssignedId (only if currently empty) so future imports find it.
+    if (!selectedIds.length) {
+        const mapEntries = Object.entries(conflictResolutions)
+            .filter(([, v]) => typeof v === 'string' && v.startsWith('map_to:'));
+        let stubsLinked = 0;
+        for (const [sbId, resolution] of mapEntries) {
+            const ctId = resolution.slice(7);
+            const result = await Animal.updateOne(
+                { id_public: ctId, $or: [{ breederAssignedId: null }, { breederAssignedId: '' }, { breederAssignedId: { $exists: false } }] },
+                { $set: { breederAssignedId: `#${sbId}` } }
+            );
+            if (result.modifiedCount > 0) stubsLinked++;
+        }
+        return res.json({ written: { animals: 0 }, skipped: { animals: mapEntries.length - stubsLinked }, parentLinked: 0, imagesUploaded: 0, stubsLinked, errors: [] });
+    }
 
     // ── Fetch detail pages for selected animals ───────────────────────────────
     const detailMap = {};
