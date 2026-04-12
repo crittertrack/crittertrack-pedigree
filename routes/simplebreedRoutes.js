@@ -786,7 +786,26 @@ router.post('/import', async (req, res) => {
         }
     }
 
-    res.json({ written: { animals: created }, skipped: { animals: willSkip.length }, parentLinked, imagesUploaded, errors: [...errors, ...createErrors] });
+    // ── Pass 3: Write sbId on existing CT animals for all map_to / use_existing resolutions
+    let stubsLinked = 0;
+    for (const [sbId, resolution] of Object.entries(conflictResolutions)) {
+        if (selectedIds.includes(sbId)) continue; // already created, sbId set at creation
+        let ctId = null;
+        if (typeof resolution === 'string' && resolution.startsWith('map_to:')) {
+            ctId = resolution.slice(7);
+        } else if (resolution === 'use_existing') {
+            const ex = resolveExisting(sbId);
+            if (ex) ctId = ex.id_public;
+        }
+        if (!ctId) continue;
+        const result = await Animal.updateOne(
+            { id_public: ctId, $or: [{ sbId: null }, { sbId: '' }, { sbId: { $exists: false } }] },
+            { $set: { sbId: String(sbId) } }
+        );
+        if (result.modifiedCount > 0) stubsLinked++;
+    }
+
+    res.json({ written: { animals: created }, skipped: { animals: willSkip.length }, parentLinked, imagesUploaded, stubsLinked, errors: [...errors, ...createErrors] });
 });
 
 module.exports = router;
