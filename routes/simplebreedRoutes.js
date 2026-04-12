@@ -96,8 +96,9 @@ function splitSbName(rawName) {
     if (!rawName) return { fullName: '', prefix: null, baseName: '', suffix: null, nameVariants: [] };
     const trimmed = rawName.trim();
 
-    // Detect prefix: 1-4 uppercase letters (optionally with digits/dot) at start, then a space
-    const prefixMatch = trimmed.match(/^([A-Z]{1,4}[0-9]{0,2}(?:\.[A-Z]{1,4})?)\s+(.+)$/);
+    // Detect prefix: 1-4 uppercase letters (optionally with digits/dot) at start, then
+    // optional 's (possessive, e.g. "M3's Mex") then a space
+    const prefixMatch = trimmed.match(/^([A-Z]{1,4}[0-9]{0,2}(?:\.[A-Z]{1,4})?)(?:'s)?\s+(.+)$/);
     let prefix = null;
     let working = trimmed;
     if (prefixMatch) {
