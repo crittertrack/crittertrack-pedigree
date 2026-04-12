@@ -310,13 +310,10 @@ function parseAnimalDetail(html, sbId) {
     };
 
     const rawName = extractField('Name') || '';
-    // Use a dedicated word-boundary regex for gender to avoid capturing trailing fields
-    // e.g. "Gender: Female Birth: 2025/08/06" → captures only "Female"
-    const genderMatch = bodyText.match(/\bGender\s*:?\s*(\w+)/i) || bodyText.match(/\bSex\s*:?\s*(\w+)/i);
+    // The page contains a search filter "Gender: Every sex / Unknown / Female / Male" BEFORE
+    // the animal's own "Gender: Female" field, so we must match only Male|Female explicitly.
+    const genderMatch = bodyText.match(/\bGender\s*:?\s*(Male|Female)\b/i) || bodyText.match(/\bSex\s*:?\s*(Male|Female)\b/i);
     const gender = mapGender(genderMatch ? genderMatch[1] : null);
-    // DEBUG - remove after confirming gender works
-    const genderSnippet = bodyText.slice(Math.max(0, bodyText.search(/gender/i) - 5), bodyText.search(/gender/i) + 40);
-    console.log(`[SB gender debug] sbId=${sbId} match=${JSON.stringify(genderMatch?.[1])} snippet=${JSON.stringify(genderSnippet)}`);
 
     // Birth date: try "Birth:" first (living animals), then parse from "Lived: YYYY/MM/DD - YYYY/MM/DD"
     let birthDate = null;
