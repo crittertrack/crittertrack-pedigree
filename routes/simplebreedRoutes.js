@@ -578,7 +578,7 @@ router.post('/preview', async (req, res) => {
  * }
  */
 router.post('/import', async (req, res) => {
-    const { selectedIds, conflictResolutions = {}, confirm = false } = req.body;
+    const { selectedIds, conflictResolutions = {}, speciesMap = {}, confirm = false } = req.body;
 
     if (!Array.isArray(selectedIds) || !selectedIds.length) {
         return res.status(400).json({ message: 'No animals selected.' });
@@ -724,7 +724,7 @@ router.post('/import', async (req, res) => {
                 birthDate: d.birthDate || null,
                 color: d.morph || null,
                 deceasedDate: d.deceasedDate || null,
-                species: d.species !== 'Unknown' ? d.species : null,
+                species: (d.species !== 'Unknown' ? d.species : null) || speciesMap[sbId] || 'Fancy Mouse',
                 breederAssignedId: d.internalId || `#${sbId}`,
             });
             sbIdToCtId[sbId] = id_public;
