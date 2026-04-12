@@ -20,8 +20,13 @@ const FETCH_HEADERS = {
 function normaliseSbUrl(input) {
     if (!input || typeof input !== 'string') return null;
     input = input.trim();
-    const m = input.match(/(?:https?:\/\/)?(?:www\.)?simplebreed\.com\/([a-zA-Z0-9_@-]+)\/?$/);
-    if (m) return `${SB_BASE}/${m[1]}`;
+    // profile?uid=12345 format
+    const uidMatch = input.match(/(?:https?:\/\/)?(?:www\.)?simplebreed\.com\/(profile\?uid=\d+)/);
+    if (uidMatch) return `${SB_BASE}/${uidMatch[1]}`;
+    // plain username path: simplebreed.com/username
+    const userMatch = input.match(/(?:https?:\/\/)?(?:www\.)?simplebreed\.com\/([a-zA-Z0-9_@-]+)\/?$/);
+    if (userMatch) return `${SB_BASE}/${userMatch[1]}`;
+    // bare username
     if (/^[a-zA-Z0-9_@-]+$/.test(input)) return `${SB_BASE}/${input}`;
     return null;
 }
