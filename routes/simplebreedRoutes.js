@@ -512,43 +512,22 @@ router.post('/preview', async (req, res) => {
 
     const userId = req.user.id;
 
-    // Fetch detail pages for all animals — needed for color, accurate species, sireId/damId,
-    // and internalId (better dedup). Use moderate concurrency to avoid rate-limiting SB.
-    const detailMap = {};
-    await batchAll(profileAnimals, 8, async (pa) => {
-        try {
-            const detailHtml = await fetchSbHtml(`${SB_BASE}/animal?aid=${pa.sbId}`);
-            detailMap[pa.sbId] = parseAnimalDetail(detailHtml, pa.sbId);
-        } catch {
-            detailMap[pa.sbId] = null;
-        }
-    });
+    // Preview is fast: no detail-page fetching. Profile page gives us name, birthDate,
+    // sbId, status and species — enough for duplicate detection and species dropdown.
+    const items = profileAnimals.map(a => ({
+        sbId: a.sbId,
+        name: a.name,
+        birthDate: a.birthDate || null,
+        species: (a.species && a.species !== 'Unknown') ? a.species : null,
+        status: a.status || 'Pet',
+    }));
 
-    // Build items merging profile-page data with enriched detail data
-    const items = profileAnimals.map(a => {
-        const d = detailMap[a.sbId];
-        const species = (d?.species && d.species !== 'Unknown') ? d.species
-            : (a.species && a.species !== 'Unknown') ? a.species : null;
-        return {
-            sbId: a.sbId,
-            name: a.name,
-            birthDate: a.birthDate || null,
-            sireId: d?.sireId || null,
-            damId: d?.damId || null,
-            color: d?.morph || null,
-            species,
-            status: a.status || 'Pet',
-        };
-    });
-
-    // Duplicate detection: #sbId + internalId (ID match) plus name+birthDate (name match)
+    // Duplicate detection: #sbId (ID match) + name+birthDate / name-only (name match)
     const conflicts = [];
     for (const a of profileAnimals) {
-        const d = detailMap[a.sbId];
         const { nameVariants, prefix } = splitSbName(a.name);
         const birthDate = parseSbDate(a.birthDate);
         const idKeys = [`#${a.sbId}`];
-        if (d?.internalId) idKeys.push(d.internalId);
         const dup = await findGlobalDuplicate(idKeys, nameVariants, birthDate, userId, a.species, prefix);
         if (dup) {
             const isOwnedByImporter = dup.match.ownerId?.toString() === userId?.toString();
