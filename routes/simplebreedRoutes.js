@@ -473,6 +473,9 @@ async function uploadSbImage(sbImageUrl, id_public) {
  * conflicts[] shape matches zooeasy: { sbId, name, matchType, confidence, existingId, existingName,
  *   existingBirthDate, existingOwner, isOwnedByImporter }
  */
+// ─── Preview Endpoint ─────────────────────────────────────────────────────────
+// Fast: only fetches the profile page (no per-animal detail pages).
+// Returns { items, conflicts, total, profileUrl } to match the frontend data shape.
 router.post('/preview', async (req, res) => {
     const { profileUrl } = req.body;
     const canonicalUrl = normaliseSbUrl(profileUrl);
@@ -500,19 +503,62 @@ router.post('/preview', async (req, res) => {
 
     const userId = req.user.id;
 
-    // ── Extract request params ────────────────────────────────────────────────
-    const selectedIds = Array.isArray(req.body.selectedIds) ? req.body.selectedIds : profileAnimals.map(a => a.sbId);
-    const conflictResolutions = req.body.conflictResolutions || {};
-    const confirm = !!req.body.confirm;
-    const speciesMap = Object.fromEntries(profileAnimals.map(a => [a.sbId, a.species]));
+    // Build items from profile-page data only (gender/sireId/damId/color fetched during import)
+    const items = profileAnimals.map(a => ({
+        sbId: a.sbId,
+        name: a.name,
+        gender: null,
+        birthDate: a.birthDate || null,
+        sireId: null,
+        damId: null,
+        color: null,
+        species: (a.species && a.species !== 'Unknown') ? a.species : null,
+        status: a.status || 'Pet',
+    }));
+
+    // Duplicate detection using name + birthDate from profile page
+    const conflicts = [];
+    for (const a of profileAnimals) {
+        const { nameVariants, prefix } = splitSbName(a.name);
+        const birthDate = parseSbDate(a.birthDate);
+        const dup = await findGlobalDuplicate(null, nameVariants, birthDate, userId, a.species, prefix);
+        if (dup) {
+            const isOwnedByImporter = dup.match.ownerId?.toString() === userId?.toString();
+            conflicts.push({
+                sbId: a.sbId,
+                name: a.name,
+                matchType: dup.matchType,
+                confidence: dup.confidence,
+                existingId: dup.match.id_public,
+                existingName: dup.match.name,
+                existingBirthDate: dup.match.birthDate ? String(dup.match.birthDate).slice(0, 10) : null,
+                existingOwner: isOwnedByImporter ? 'you' : (dup.match.ownerId_public || 'unknown'),
+                isOwnedByImporter,
+            });
+        }
+    }
+
+    return res.json({ items, conflicts, total: items.length, profileUrl: canonicalUrl });
+});
+
+// ─── Import Endpoint ──────────────────────────────────────────────────────────
+// Slow: fetches per-animal detail pages, creates CT records, uploads images.
+// Body: { selectedIds, conflictResolutions, speciesMap }
+router.post('/import', async (req, res) => {
+    const { selectedIds, conflictResolutions = {}, speciesMap = {} } = req.body;
+    if (!Array.isArray(selectedIds) || !selectedIds.length) {
+        return res.status(400).json({ message: 'No animals selected for import.' });
+    }
+
+    const userId = req.user.id;
     const userId_public = req.user.id_public;
 
-    // ── Fetch detail pages for selected animals (in parallel batches) ─────────
+    // ── Fetch detail pages for selected animals ───────────────────────────────
     const detailMap = {};
     await batchAll(selectedIds, 5, async (sbId) => {
         try {
-            const detailHtml = await fetchSbHtml(`${SB_BASE}/animal?aid=${sbId}`);
-            detailMap[sbId] = parseAnimalDetail(detailHtml, sbId);
+            const html = await fetchSbHtml(`${SB_BASE}/animal?aid=${sbId}`);
+            detailMap[sbId] = parseAnimalDetail(html, sbId);
         } catch {
             detailMap[sbId] = null;
         }
@@ -556,8 +602,7 @@ router.post('/preview', async (req, res) => {
         }
     }
 
-    // ── DB duplicate check ─────────────────────────────────────────────────────
-    // Match by internalId (if present) first, then fall back to #sbId
+    // ── DB duplicate check ────────────────────────────────────────────────────
     const allSbIds = [...selectedIds, ...allParentIds];
     const sbIdKeys = allSbIds.map(id => `#${id}`);
     const internalIdKeys = allSbIds.map(id => allDetails[id]?.internalId).filter(Boolean);
@@ -567,31 +612,30 @@ router.post('/preview', async (req, res) => {
     const existingMap = {};
     for (const ex of existingAnimals) existingMap[ex.breederAssignedId] = ex;
 
-    // Resolve manual map_to:<ctId> entries: fetch CT animals by id_public
+    // Resolve manual map_to:<ctId> entries
     const manualCtIds = Object.values(conflictResolutions)
         .filter(v => typeof v === 'string' && v.startsWith('map_to:'))
         .map(v => v.slice(7));
-    const manualCTMap = {}; // sbId -> Animal
+    const manualCTMap = {};
     if (manualCtIds.length) {
         const ctAnimals = await Animal.find({ id_public: { $in: manualCtIds } })
             .select('id_public name prefix suffix ownerId').lean();
         const ctById = Object.fromEntries(ctAnimals.map(a => [a.id_public, a]));
-        for (const [sbId, res] of Object.entries(conflictResolutions)) {
-            if (typeof res === 'string' && res.startsWith('map_to:')) {
-                const ctId = res.slice(7);
+        for (const [sbId, resolution] of Object.entries(conflictResolutions)) {
+            if (typeof resolution === 'string' && resolution.startsWith('map_to:')) {
+                const ctId = resolution.slice(7);
                 if (ctById[ctId]) manualCTMap[sbId] = ctById[ctId];
             }
         }
     }
 
-    // Build lookup by sbId: prefer manual mapping, then internalId match, then #sbId
     const resolveExisting = (sbId) => {
         if (manualCTMap[sbId]) return manualCTMap[sbId];
         const iid = allDetails[sbId]?.internalId;
         return (iid && existingMap[iid]) || existingMap[`#${sbId}`] || null;
     };
 
-    // ── Classify selected animals ─────────────────────────────────────────────
+    // ── Classify ──────────────────────────────────────────────────────────────
     const willSkip = [];
     const toCreate = [];
     const errors = [];
@@ -600,7 +644,6 @@ router.post('/preview', async (req, res) => {
         const d = detailMap[sbId];
         if (!d) { errors.push({ sbId, error: 'Failed to fetch detail page' }); continue; }
         const existing = resolveExisting(sbId);
-        // map_to always means use_existing; import_anyway overrides auto-detected duplicates only
         const isManualMap = typeof conflictResolutions[sbId] === 'string' && conflictResolutions[sbId].startsWith('map_to:');
         if (existing && (isManualMap || conflictResolutions[sbId] !== 'import_anyway')) {
             willSkip.push({ sbId, existingId: existing.id_public });
@@ -609,11 +652,9 @@ router.post('/preview', async (req, res) => {
         }
     }
 
-    // Only create parent stubs for parents referenced by animals being imported (toCreate), not skipped ones
     const parentStubs = [...allParentIds].filter(id => {
-        if (resolveExisting(id)) return false; // already in CT
-        if (toCreate.includes(id)) return false; // will be created as a real animal
-        // Stub if any animal being imported references this parent
+        if (resolveExisting(id)) return false;
+        if (toCreate.includes(id)) return false;
         return toCreate.some(cid => {
             const d = detailMap[cid];
             return d && (d.sireId === id || d.damId === id);
@@ -621,13 +662,8 @@ router.post('/preview', async (req, res) => {
     });
     const allToCreate = [...toCreate, ...parentStubs];
 
-    if (!confirm) {
-        return res.json({ preview: { willCreate: toCreate.length, willSkip: willSkip.length, parentStubs: parentStubs.length, errors } });
-    }
-
-    // ── Pass 1: Create animals ─────────────────────────────────────────────────
+    // ── Pass 1: Create animals ────────────────────────────────────────────────
     const sbIdToCtId = {};
-    // Seed with already-existing animals so parent links work
     for (const sbId of allSbIds) {
         const ex = resolveExisting(sbId);
         if (ex) sbIdToCtId[sbId] = ex.id_public;
@@ -664,7 +700,7 @@ router.post('/preview', async (req, res) => {
         }
     }
 
-    // ── Pass 1.5: Upload images for newly created animals ──────────────────────
+    // ── Pass 1.5: Upload images ───────────────────────────────────────────────
     let imagesUploaded = 0;
     if (useR2) {
         await batchAll(allToCreate, 3, async (sbId) => {
@@ -678,12 +714,11 @@ router.post('/preview', async (req, res) => {
             }
         });
 
-        // Also update image for existing/skipped animals that currently have no image
         await batchAll(willSkip, 3, async ({ sbId, existingId }) => {
-            const d = allDetails[sbId] || detailMap[sbId];
+            const d = allDetails[sbId];
             if (!d?.sbImageUrl) return;
             const existing = await Animal.findOne({ id_public: existingId }).select('imageUrl').lean();
-            if (existing?.imageUrl) return; // already has image, don't overwrite
+            if (existing?.imageUrl) return;
             const uploadedUrl = await uploadSbImage(d.sbImageUrl, existingId);
             if (uploadedUrl) {
                 await Animal.updateOne({ id_public: existingId }, { $set: { imageUrl: uploadedUrl } });
