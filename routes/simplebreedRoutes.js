@@ -314,6 +314,9 @@ function parseAnimalDetail(html, sbId) {
     // e.g. "Gender: Female Birth: 2025/08/06" → captures only "Female"
     const genderMatch = bodyText.match(/\bGender\s*:?\s*(\w+)/i) || bodyText.match(/\bSex\s*:?\s*(\w+)/i);
     const gender = mapGender(genderMatch ? genderMatch[1] : null);
+    // DEBUG - remove after confirming gender works
+    const genderSnippet = bodyText.slice(Math.max(0, bodyText.search(/gender/i) - 5), bodyText.search(/gender/i) + 40);
+    console.log(`[SB gender debug] sbId=${sbId} match=${JSON.stringify(genderMatch?.[1])} snippet=${JSON.stringify(genderSnippet)}`);
 
     // Birth date: try "Birth:" first (living animals), then parse from "Lived: YYYY/MM/DD - YYYY/MM/DD"
     let birthDate = null;
