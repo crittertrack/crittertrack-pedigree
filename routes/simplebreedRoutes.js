@@ -128,10 +128,11 @@ function splitSbName(rawName) {
 
 // ─── Duplicate detection (mirrors zooeasyRoutes findGlobalDuplicate) ──────────
 
-// idKeys: string | string[] — all breederAssignedId values to check (e.g. internalId + #sbId)
-async function findGlobalDuplicate(idKeys, nameVariants, birthDate, userId, species, prefix) {
+// idKeys: string | string[] — all breederAssignedId values to check (e.g. internalId)
+// sbIdKey: the SimpleBreed animal ID to check against the dedicated sbId field
+async function findGlobalDuplicate(idKeys, sbIdKey, nameVariants, birthDate, userId, species, prefix) {
     const idKeyArr = Array.isArray(idKeys) ? idKeys.filter(Boolean) : (idKeys ? [idKeys] : []);
-    const sel = 'id_public name prefix suffix ownerId ownerId_public breederAssignedId birthDate';
+    const sel = 'id_public name prefix suffix ownerId ownerId_public breederAssignedId sbId birthDate';
 
     // 1. Name + birthDate (any owner) — highest signal
     if (birthDate && nameVariants?.length) {
@@ -180,6 +181,13 @@ async function findGlobalDuplicate(idKeys, nameVariants, birthDate, userId, spec
         const byId = await Animal.findOne({ breederAssignedId: { $in: idKeyArr } })
             .select(sel).lean();
         if (byId) return { match: byId, matchType: 'id', confidence: 'high' };
+    }
+
+    // 4. SB ID field (dedicated, any owner)
+    if (sbIdKey) {
+        const bySbId = await Animal.findOne({ sbId: sbIdKey })
+            .select(sel).lean();
+        if (bySbId) return { match: bySbId, matchType: 'id', confidence: 'high' };
     }
 
     return null;
@@ -523,13 +531,13 @@ router.post('/preview', async (req, res) => {
         status: a.status || 'Pet',
     }));
 
-    // Duplicate detection: #sbId (ID match) + name+birthDate / name-only (name match)
+    // Duplicate detection: sbId field + name+birthDate / name-only (name match)
     const conflicts = [];
     for (const a of profileAnimals) {
         const { nameVariants, prefix } = splitSbName(a.name);
         const birthDate = parseSbDate(a.birthDate);
-        const idKeys = [`#${a.sbId}`];
-        const dup = await findGlobalDuplicate(idKeys, nameVariants, birthDate, userId, a.species, prefix);
+        const idKeys = [];
+        const dup = await findGlobalDuplicate(idKeys, a.sbId, nameVariants, birthDate, userId, a.species, prefix);
         if (dup) {
             const isOwnedByImporter = dup.match.ownerId?.toString() === userId?.toString();
             conflicts.push({
@@ -562,8 +570,8 @@ router.post('/import', async (req, res) => {
     const userId_public = req.user.id_public;
 
     // ── Stub-only mode: no new animals, just register SB→CT mappings ─────────
-    // For each map_to:<ctId> resolution, tag the existing CT animal with #sbId
-    // as breederAssignedId (only if currently empty) so future imports find it.
+    // For each map_to:<ctId> resolution, tag the existing CT animal with sbId
+    // so future imports find it.
     if (!selectedIds.length) {
         const mapEntries = Object.entries(conflictResolutions)
             .filter(([, v]) => typeof v === 'string' && v.startsWith('map_to:'));
@@ -571,8 +579,8 @@ router.post('/import', async (req, res) => {
         for (const [sbId, resolution] of mapEntries) {
             const ctId = resolution.slice(7);
             const result = await Animal.updateOne(
-                { id_public: ctId, $or: [{ breederAssignedId: null }, { breederAssignedId: '' }, { breederAssignedId: { $exists: false } }] },
-                { $set: { breederAssignedId: `#${sbId}` } }
+                { id_public: ctId, $or: [{ sbId: null }, { sbId: '' }, { sbId: { $exists: false } }] },
+                { $set: { sbId } }
             );
             if (result.modifiedCount > 0) stubsLinked++;
         }
@@ -630,13 +638,20 @@ router.post('/import', async (req, res) => {
 
     // ── DB duplicate check ────────────────────────────────────────────────────
     const allSbIds = [...selectedIds, ...allParentIds];
-    const sbIdKeys = allSbIds.map(id => `#${id}`);
     const internalIdKeys = allSbIds.map(id => allDetails[id]?.internalId).filter(Boolean);
+    // Find existing animals by sbId field OR breederAssignedId (for internalId matches)
     const existingAnimals = await Animal.find({
-        breederAssignedId: { $in: [...sbIdKeys, ...internalIdKeys] }
-    }).select('breederAssignedId id_public name ownerId').lean();
-    const existingMap = {};
-    for (const ex of existingAnimals) existingMap[ex.breederAssignedId] = ex;
+        $or: [
+            { sbId: { $in: allSbIds.map(String) } },
+            ...(internalIdKeys.length ? [{ breederAssignedId: { $in: internalIdKeys } }] : []),
+        ]
+    }).select('breederAssignedId sbId id_public name ownerId').lean();
+    const existingBySbId = {};
+    const existingByBreeId = {};
+    for (const ex of existingAnimals) {
+        if (ex.sbId) existingBySbId[ex.sbId] = ex;
+        if (ex.breederAssignedId) existingByBreeId[ex.breederAssignedId] = ex;
+    }
 
     // Resolve manual map_to:<ctId> entries
     const manualCtIds = Object.values(conflictResolutions)
@@ -657,8 +672,9 @@ router.post('/import', async (req, res) => {
 
     const resolveExisting = (sbId) => {
         if (manualCTMap[sbId]) return manualCTMap[sbId];
+        if (existingBySbId[sbId]) return existingBySbId[sbId];
         const iid = allDetails[sbId]?.internalId;
-        return (iid && existingMap[iid]) || existingMap[`#${sbId}`] || null;
+        return (iid && existingByBreeId[iid]) || null;
     };
 
     // ── Classify ──────────────────────────────────────────────────────────────
@@ -717,7 +733,8 @@ router.post('/import', async (req, res) => {
                 color: d.morph || null,
                 deceasedDate: d.deceasedDate || null,
                 species: (d.species !== 'Unknown' ? d.species : null) || speciesMap[sbId] || 'Fancy Mouse',
-                breederAssignedId: d.internalId || `#${sbId}`,
+                breederAssignedId: d.internalId || null,
+                sbId: String(sbId),
             });
             sbIdToCtId[sbId] = id_public;
             created++;

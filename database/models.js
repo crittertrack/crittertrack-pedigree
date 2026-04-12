@@ -193,6 +193,7 @@ const AnimalSchema = new mongoose.Schema({
     birthDate: { type: Date, default: Date.now },
     deceasedDate: { type: Date, default: null },
     breederAssignedId: { type: String, default: null },
+    sbId: { type: String, default: null, index: true }, // SimpleBreed animal ID (immutable, set during SB import)
     status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
@@ -506,6 +507,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     birthDate: { type: Date },
     deceasedDate: { type: Date, default: null },
     breederAssignedId: { type: String, default: null },
+    sbId: { type: String, default: null, index: true }, // SimpleBreed animal ID (immutable)
     status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
