@@ -693,17 +693,17 @@ router.post('/import', async (req, res) => {
         }
     }
 
-    // Create parent stubs for parents of any selected animal (including skipped ones) that aren't already in CT
+    // Only create parent stubs for parents referenced by animals being imported (toCreate), not skipped ones
     const parentStubs = [...allParentIds].filter(id => {
         if (resolveExisting(id)) return false; // already in CT
-        if (selectedIds.includes(id)) return false; // in the import list itself (will be created properly)
-        // Stub if any selected animal references this parent
-        return selectedIds.some(cid => {
+        if (toCreate.includes(id)) return false; // will be created as a real animal
+        // Stub if any animal being imported references this parent
+        return toCreate.some(cid => {
             const d = detailMap[cid];
             return d && (d.sireId === id || d.damId === id);
         });
     });
-    const allToCreate = [...new Set([...toCreate, ...parentStubs])];
+    const allToCreate = [...toCreate, ...parentStubs];
 
     if (!confirm) {
         return res.json({ preview: { willCreate: toCreate.length, willSkip: willSkip.length, parentStubs: parentStubs.length, errors } });
@@ -730,6 +730,7 @@ router.post('/import', async (req, res) => {
                 ownerId: userId,
                 ownerId_public: userId_public,
                 isOwned: selectedIds.includes(sbId),
+                isStub: parentStubs.includes(sbId),
                 name: d.baseName || d.fullName || `SimpleBreed #${sbId}`,
                 prefix: d.prefix || null,
                 suffix: d.suffix || null,

@@ -1,0 +1,10 @@
+Found 9 animals created in the last 2 hours:
+CTC4413 | Spencer | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:22 GMT+0200 (Central European Summer Time)
+CTC4412 | M3's Mottley | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
+CTC4411 | Liana | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
+CTC4410 | Arianna | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
+CTC4409 | Sofia | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
+CTC4408 | Tutu | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
+CTC4407 | S13-M1 | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
+CTC4406 | Blueberry | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
+CTC4405 | Donut | isStub: N | owner: CTU8 | created: Sun Apr 12 2026 16:06:21 GMT+0200 (Central European Summer Time)
