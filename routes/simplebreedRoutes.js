@@ -489,25 +489,45 @@ router.post('/preview', async (req, res) => {
 
     const userId = req.user.id;
 
+    // ── Fetch detail pages for all animals (in parallel batches) ──────────────
+    // This gives us gender, color, sire/dam IDs, internalId for duplicate matching.
+    const detailCache = {};
+    await batchAll(profileAnimals, 5, async (pa) => {
+        try {
+            const detailHtml = await fetchSbHtml(`${SB_BASE}/animal?aid=${pa.sbId}`);
+            detailCache[pa.sbId] = parseAnimalDetail(detailHtml, pa.sbId);
+        } catch {
+            detailCache[pa.sbId] = null;
+        }
+    });
+
     const items = [];
     const conflicts = [];
 
     for (const pa of profileAnimals) {
-        const sbIdKey = `#${pa.sbId}`;
-        const birthDate = pa.birthDate ? parseSbDate(pa.birthDate) : null;
-        const { fullName, prefix, nameVariants } = splitSbName(pa.name);
+        const detail = detailCache[pa.sbId];
+        // Prefer detail-page data where available; fall back to profile listing data
+        const fullName = detail?.fullName || pa.name;
+        const { prefix, nameVariants } = splitSbName(fullName);
+        const birthDate = detail?.birthDate || (pa.birthDate ? parseSbDate(pa.birthDate) : null);
+        const sbIdKey = detail?.internalId || `#${pa.sbId}`;
 
-        // Use #sbId as the ID key for preview (internalId not available until detail page fetch)
         const dupResult = await findGlobalDuplicate(sbIdKey, nameVariants, birthDate, userId, pa.species, prefix);
 
         items.push({
             sbId: pa.sbId,
             sbIdKey,
             name: fullName,
-            prefix: prefix || null,
-            birthDate: pa.birthDate || null,
+            prefix: detail?.prefix || null,
+            suffix: detail?.suffix || null,
+            gender: detail?.gender || null,
+            birthDate: birthDate ? birthDate.toISOString().slice(0, 10) : (pa.birthDate || null),
+            deceasedDate: detail?.deceasedDate ? detail.deceasedDate.toISOString().slice(0, 10) : null,
+            color: detail?.morph || null,
             status: pa.status,
-            species: pa.species,
+            species: detail?.species !== 'Unknown' ? (detail?.species || pa.species) : pa.species,
+            sireId: detail?.sireId || null,
+            damId: detail?.damId || null,
             isDuplicate: !!dupResult,
         });
 
