@@ -310,7 +310,10 @@ function parseAnimalDetail(html, sbId) {
     };
 
     const rawName = extractField('Name') || '';
-    const gender = mapGender(extractField('Gender') || extractField('Sex'));
+    // extractField captures everything to end of line, so take just the first word to avoid
+    // "Female Birth: 2025/08/06 ..." being passed to mapGender
+    const genderRaw = (extractField('Gender') || extractField('Sex') || '').split(/\s+/)[0];
+    const gender = mapGender(genderRaw);
 
     // Birth date: try "Birth:" first (living animals), then parse from "Lived: YYYY/MM/DD - YYYY/MM/DD"
     let birthDate = null;
