@@ -184,10 +184,10 @@ router.post('/transactions', async (req, res) => {
             
             if (!animal) {
                 console.log('[Budget] ✗ Animal not found or not owned by buyer, skipping view-only offer');
-            } else if (animal.soldStatus === 'purchased') {
-                console.log('[Budget] ✗ Animal already marked as purchased, cannot create duplicate view-only offer');
+            } else if (animal.soldStatus === 'sold') {
+                console.log('[Budget] ✗ Animal already marked as sold, cannot create duplicate view-only offer');
                 return res.status(400).json({ 
-                    message: `${animal.name} is already marked as purchased. Cannot create duplicate purchase record.` 
+                    message: `${animal.name} is already marked as sold. Cannot create duplicate transfer record.` 
                 });
             } else {
                 console.log('[Budget] ✓ Creating transfer with view-only offer...');

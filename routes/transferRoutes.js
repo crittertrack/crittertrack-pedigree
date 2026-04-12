@@ -93,7 +93,7 @@ router.post('/:id/accept', async (req, res) => {
         // Update animal ownership
         animal.ownerId = userId;
         animal.ownerId_public = newOwner.id_public;
-        animal.soldStatus = transfer.transferType === 'sale' ? 'sold' : 'purchased';
+        animal.soldStatus = 'sold';
         animal.isOwned = true; // Mark animal as owned by new owner (not view-only)
         animal.isForSale = false; // Clear for-sale flag on transfer
         animal.availableForBreeding = false; // Clear stud flag on transfer
