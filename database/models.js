@@ -76,6 +76,7 @@ const UserSchema = new mongoose.Schema({
         date: { type: Date, default: Date.now },
         reason: { type: String, default: 'No reason specified' },
         category: { type: String, default: 'general' },
+        subject: { type: String, default: null }, // e.g. animal name/id or profile description
         moderatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
         isLifted: { type: Boolean, default: false }
     }],

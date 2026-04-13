@@ -470,7 +470,7 @@ router.get('/users/:userId/info', requireModerator, async (req, res) => {
 // POST /api/moderation/users/:userId/warn - add individual warning record
 router.post('/users/:userId/warn', requireModerator, validateModerationInput, async (req, res) => {
     try {
-        const { reason, category } = req.body;
+        const { reason, category, subject } = req.body;
         let userId = req.params.userId;
         
         console.log('[MODERATION WARN] Warning user:', { userId, reason, category });
@@ -493,6 +493,7 @@ router.post('/users/:userId/warn', requireModerator, validateModerationInput, as
             date: new Date(),
             reason: reason || 'No reason specified',
             category: category || 'general',
+            subject: subject || null,
             moderatorId: req.user.id,
             isLifted: false
         };
@@ -562,7 +563,7 @@ router.post('/users/:userId/warn', requireModerator, validateModerationInput, as
 // POST /api/moderation/users/:userId/inform - send an informational notice to user's reminders bar
 router.post('/users/:userId/inform', requireModerator, async (req, res) => {
     try {
-        const { message } = req.body;
+        const { message, subject } = req.body;
         let userId = req.params.userId;
 
         if (!message || !message.trim()) {
@@ -579,7 +580,8 @@ router.post('/users/:userId/inform', requireModerator, async (req, res) => {
             type: 'moderator_message',
             message: message.trim(),
             status: 'pending',
-            read: false
+            read: false,
+            metadata: { subject: subject || null }
         });
 
         res.json({ message: 'Notice sent successfully.' });
