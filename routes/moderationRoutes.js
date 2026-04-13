@@ -10,6 +10,7 @@ const {
     AnimalReport,
     MessageReport,
     RatingReport,
+    BugReport,
     BreederRating,
     Animal,
     PublicProfile,
@@ -811,6 +812,45 @@ router.get('/reports', async (req, res) => {
     } catch (error) {
         console.error('[MODERATION REPORTS] Error fetching reports:', error);
         res.status(500).json({ message: 'Unable to fetch reports.' });
+    }
+});
+
+// GET /api/moderation/reports/stats - total counts per status across all report types + bug reports
+router.get('/reports/stats', requireModerator, async (req, res) => {
+    try {
+        const statuses = ['pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'];
+        const bugStatuses = ['pending', 'in-progress', 'resolved', 'dismissed'];
+
+        const [profileCounts, animalCounts, messageCounts, ratingCounts, bugCounts] = await Promise.all([
+            ProfileReport.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            AnimalReport.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            MessageReport.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            RatingReport.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            BugReport.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }])
+        ]);
+
+        const tally = {};
+        for (const row of [...profileCounts, ...animalCounts, ...messageCounts, ...ratingCounts]) {
+            const s = row._id || 'unknown';
+            tally[s] = (tally[s] || 0) + row.count;
+        }
+        // Normalise bug report statuses (in-progress -> in_progress)
+        for (const row of bugCounts) {
+            const s = (row._id || 'unknown').replace('-', '_');
+            tally[s] = (tally[s] || 0) + row.count;
+        }
+
+        res.json({
+            total: Object.values(tally).reduce((a, b) => a + b, 0),
+            pending: tally.pending || 0,
+            in_progress: tally.in_progress || 0,
+            reviewed: tally.reviewed || 0,
+            resolved: tally.resolved || 0,
+            dismissed: tally.dismissed || 0
+        });
+    } catch (error) {
+        console.error('Failed to fetch report stats:', error);
+        res.status(500).json({ error: 'Failed to fetch report stats' });
     }
 });
 
