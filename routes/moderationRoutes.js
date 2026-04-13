@@ -559,6 +559,36 @@ router.post('/users/:userId/warn', requireModerator, validateModerationInput, as
     }
 });
 
+// POST /api/moderation/users/:userId/inform - send an informational notice to user's reminders bar
+router.post('/users/:userId/inform', requireModerator, async (req, res) => {
+    try {
+        const { message } = req.body;
+        let userId = req.params.userId;
+
+        if (!message || !message.trim()) {
+            return res.status(400).json({ message: 'Message is required.' });
+        }
+
+        let user = await User.findById(userId);
+        if (!user) user = await User.findOne({ id_public: userId });
+        if (!user) return res.status(404).json({ message: 'User not found.' });
+
+        await Notification.create({
+            userId: user._id,
+            userId_public: user.id_public,
+            type: 'moderator_message',
+            message: message.trim(),
+            status: 'pending',
+            read: false
+        });
+
+        res.json({ message: 'Notice sent successfully.' });
+    } catch (error) {
+        console.error('[MODERATION INFORM] Failed to inform user:', error);
+        res.status(500).json({ message: 'Failed to send notice.' });
+    }
+});
+
 // POST /api/moderation/users/:userId/lift-warning - mark specific warning as lifted
 router.post('/users/:userId/lift-warning', requireModerator, validateModerationInput, async (req, res) => {
     try {
