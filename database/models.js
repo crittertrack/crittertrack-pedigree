@@ -769,6 +769,7 @@ const NotificationSchema = new mongoose.Schema({
     }],
     pollEndsAt: { type: Date, default: null },
     allowMultipleChoices: { type: Boolean, default: false },
+    allowUserSuggestions: { type: Boolean, default: false }, // Users can add their own poll options
     isAnonymous: { type: Boolean, default: false },
     userVote: { type: mongoose.Schema.Types.Mixed, default: null }, // For user-specific vote tracking
     

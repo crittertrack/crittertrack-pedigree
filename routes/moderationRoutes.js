@@ -26,6 +26,51 @@ const requireAuth = protect;
 // PUBLIC/USER ROUTES (before requireModerator middleware)
 // ============================================================
 
+// Poll suggest option - user adds a new option to a poll that allows user suggestions
+router.post('/poll/suggest-option', requireAuth, async (req, res) => {
+    try {
+        const { notificationId, optionText } = req.body;
+        if (!notificationId || !optionText || !optionText.trim()) {
+            return res.status(400).json({ error: 'Notification ID and option text are required' });
+        }
+        const text = optionText.trim();
+        if (text.length > 100) {
+            return res.status(400).json({ error: 'Option text must be 100 characters or less' });
+        }
+
+        const anyPoll = await Notification.findOne({ _id: notificationId, broadcastType: 'poll' });
+        if (!anyPoll) return res.status(404).json({ error: 'Poll not found' });
+        if (!anyPoll.allowUserSuggestions) return res.status(403).json({ error: 'This poll does not allow user suggestions' });
+        if (anyPoll.pollEndsAt && new Date() > new Date(anyPoll.pollEndsAt)) {
+            return res.status(400).json({ error: 'This poll has ended' });
+        }
+        if (anyPoll.pollOptions.length >= 20) {
+            return res.status(400).json({ error: 'Poll option limit reached (20 max)' });
+        }
+        // Prevent duplicate options (case-insensitive)
+        const duplicate = anyPoll.pollOptions.some(o => o.text.toLowerCase() === text.toLowerCase());
+        if (duplicate) return res.status(400).json({ error: 'That option already exists' });
+
+        // Add the option to all user copies of this poll
+        const allPollNotifications = await Notification.find({
+            broadcastType: 'poll',
+            pollQuestion: anyPoll.pollQuestion,
+            createdAt: anyPoll.createdAt
+        });
+        const newOption = { text, votes: 0, voters: [] };
+        for (const notification of allPollNotifications) {
+            notification.pollOptions.push({ ...newOption });
+            await notification.save();
+        }
+
+        const updated = await Notification.findById(notificationId);
+        res.json({ message: 'Option added', pollOptions: updated.pollOptions });
+    } catch (error) {
+        console.error('Error suggesting poll option:', error);
+        res.status(500).json({ error: 'Failed to add poll option' });
+    }
+});
+
 // Poll voting - any authenticated user can vote
 router.post('/poll/vote', requireAuth, async (req, res) => {
     try {
@@ -1649,7 +1694,7 @@ router.get('/audit-logs', requireAdmin, async (req, res) => {
 // POST /api/moderation/broadcast - Send system-wide broadcast message (Admin only)
 router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res) => {
     try {
-        const { title, message, type, scheduledFor, pollQuestion, pollOptions, pollEndsAt, allowMultipleChoices, isAnonymous, targetUserIds } = req.body;
+        const { title, message, type, scheduledFor, pollQuestion, pollOptions, pollEndsAt, allowMultipleChoices, allowUserSuggestions, isAnonymous, targetUserIds } = req.body;
 
         // Validate input
         if (!title) {
@@ -1734,6 +1779,7 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
                 pollOptions: pollOptionsFormatted,
                 pollEndsAt: pollEndsAt ? new Date(pollEndsAt) : null,
                 allowMultipleChoices: allowMultipleChoices || false,
+                allowUserSuggestions: allowUserSuggestions || false,
                 isAnonymous: isAnonymous || false
             })
         }));
@@ -1922,9 +1968,37 @@ router.get('/polls', requireModerator, async (req, res) => {
             }
         ]);
 
+        // Populate voter info for each poll option
+        const allVoterIds = new Set();
+        for (const poll of polls) {
+            for (const option of (poll.pollOptions || [])) {
+                for (const voterId of (option.voters || [])) {
+                    allVoterIds.add(voterId.toString());
+                }
+            }
+        }
+        const voterDocs = await User.find(
+            { _id: { $in: [...allVoterIds] } },
+            { _id: 1, personalName: 1, breederName: 1, id_public: 1 }
+        );
+        const voterMap = {};
+        for (const u of voterDocs) {
+            voterMap[u._id.toString()] = {
+                displayName: u.breederName || u.personalName || u.id_public || 'Unknown',
+                id_public: u.id_public
+            };
+        }
+        const pollsWithVoters = polls.map(poll => ({
+            ...poll,
+            pollOptions: (poll.pollOptions || []).map(opt => ({
+                ...opt,
+                voterDetails: (opt.voters || []).map(id => voterMap[id.toString()] || { displayName: 'Unknown' })
+            }))
+        }));
+
         res.json({
             success: true,
-            polls: polls
+            polls: pollsWithVoters
         });
     } catch (error) {
         console.error('Failed to fetch polls:', error);
