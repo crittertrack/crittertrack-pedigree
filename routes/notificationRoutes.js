@@ -51,7 +51,7 @@ router.get('/unread-count', async (req, res) => {
             userId, 
             read: false, 
             status: 'pending',
-            type: { $nin: ['broadcast', 'announcement'] }
+            type: { $nin: ['broadcast', 'announcement', 'moderator_message'] }
         });
         
         return res.status(200).json({ count });
