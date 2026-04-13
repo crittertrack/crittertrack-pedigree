@@ -31,9 +31,9 @@ const validateModerationInput = (req, res, next) => {
                 }
             }
 
-            // Status field: only allow specific values
+            // Status field: allow user account statuses and report statuses
             if (req.body.status) {
-                const validStatuses = ['normal', 'suspended', 'banned'];
+                const validStatuses = ['normal', 'suspended', 'banned', 'pending', 'in_progress', 'reviewed', 'resolved', 'dismissed'];
                 if (!validStatuses.includes(req.body.status)) {
                     return res.status(400).json({ error: 'Invalid status value' });
                 }
