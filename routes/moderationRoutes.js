@@ -2144,7 +2144,9 @@ router.get('/analytics/overview', requireModerator, async (req, res) => {
             Promise.all([
                 ProfileReport.countDocuments({ status: 'pending' }),
                 AnimalReport.countDocuments({ status: 'pending' }),
-                MessageReport.countDocuments({ status: 'pending' })
+                MessageReport.countDocuments({ status: 'pending' }),
+                RatingReport.countDocuments({ status: 'pending' }),
+                BugReport.countDocuments({ status: 'pending' })
             ]).then(counts => counts.reduce((a, b) => a + b, 0)),
             User.countDocuments({ warningCount: { $gt: 0 }, accountStatus: 'normal' }),
             User.countDocuments({ accountStatus: 'suspended' }),
