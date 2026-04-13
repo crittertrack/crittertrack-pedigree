@@ -157,7 +157,8 @@ router.get('/users/active', async (req, res) => {
                 { lastActive: { $gte: timeThreshold } },
                 { lastActive: null, last_login: { $gte: timeThreshold } }
             ],
-            accountStatus: { $ne: 'banned' }
+            accountStatus: { $ne: 'banned' },
+            id_public: { $ne: 'CTU8' }
         })
         .select('id_public lastActive last_login')
         .lean();
