@@ -2,7 +2,7 @@
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { Notification, User, PublicProfile, PublicAnimal, Animal } = require('../database/models');
+const { Notification, User, PublicProfile, PublicAnimal, Animal, Litter } = require('../database/models');
 const fs = require('fs');
 const { calculateInbreedingCoefficient, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
 const { ProfanityError } = require('../utils/profanityFilter');
@@ -506,6 +506,23 @@ router.get('/any/:id_public', async (req, res) => {
             // If viewing from notification, always allow access to the animal details
             if (viewFromNotification) {
                 console.log(`[viewFromNotification] Allowing user to view animal ${id_public} from notification`);
+                return res.status(200).json(await withBreederName(animal));
+            }
+
+            // If this user is the original owner (they transferred the animal out),
+            // always grant full visibility regardless of the new owner's privacy settings.
+            // This preserves the original breeder's view access via their archive and litter management.
+            if (animal.originalOwnerId && animal.originalOwnerId.toString() === userId.toString()) {
+                console.log(`[originalOwner] Allowing original owner to view transferred animal ${id_public}`);
+                return res.status(200).json(await withBreederName(animal));
+            }
+
+            // If user owns a litter that lists this animal as offspring, grant full visibility.
+            // Covers cases where the animal was linked to the user's litter (e.g. transferred before
+            // originalOwnerId was recorded, or manually linked from another breeder).
+            const ownedLitterWithAnimal = await Litter.findOne({ ownerId: userId, offspringIds_public: id_public }).lean();
+            if (ownedLitterWithAnimal) {
+                console.log(`[litterOwner] Allowing litter owner to view linked offspring ${id_public}`);
                 return res.status(200).json(await withBreederName(animal));
             }
 
