@@ -749,6 +749,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
             $or: [
                 { name: { $regex: filters.name, $options: 'i' } },
                 { prefix: { $regex: filters.name, $options: 'i' } },
+                { suffix: { $regex: filters.name, $options: 'i' } },
                 { breederAssignedId: { $regex: filters.name, $options: 'i' } },
                 { id_public: { $regex: filters.name, $options: 'i' } },
                 { tags: regex }

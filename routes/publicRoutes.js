@@ -277,9 +277,9 @@ router.get('/global/animals', async (req, res) => {
         // only adds animals with showOnPublicProfile === true), so no extra filter needed here.
 
         if (query.name) {
-            // Search both name and id_public (OR) so CT IDs like "CTU2-001" are findable
+            // Search name, prefix, suffix, and id_public (OR) so prefix/suffix names like "FKM" are findable
             const nameRegex = { $regex: query.name, $options: 'i' };
-            q.$or = [{ name: nameRegex }, { id_public: nameRegex }];
+            q.$or = [{ name: nameRegex }, { prefix: nameRegex }, { suffix: nameRegex }, { id_public: nameRegex }];
         }
 
         if (query.id_public) {
