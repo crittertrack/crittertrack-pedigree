@@ -1453,6 +1453,7 @@ const recursivelyFetchAncestry = async (animalId_public, depth) => {
         name: `${animal.prefix ? animal.prefix + ' ' : ''}${animal.name}${animal.suffix ? ' ' + animal.suffix : ''}`,
         gender: animal.gender,
         birthDate: animal.birthDate,
+        deceasedDate: animal.deceasedDate,
         color: animal.color,
         // Calculate generation based on depth (5 is max depth we support here)
         generation: 5 - depth, 
