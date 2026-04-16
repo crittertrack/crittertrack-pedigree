@@ -455,6 +455,14 @@ const AnimalSchema = new mongoose.Schema({
     transferHistory: { type: String, default: null },
     breedingRestrictions: { type: String, default: null },
     exportRestrictions: { type: String, default: null },
+    // Legal documents (PDF, DOC, DOCX)
+    legalDocuments: [{
+        id: { type: String },
+        filename: { type: String },
+        url: { type: String },
+        uploadedAt: { type: Date, default: Date.now },
+        uploadedBy: { type: String }, // userId_public
+    }],
     
     // Growth tracking
     growthRecords: [{ 

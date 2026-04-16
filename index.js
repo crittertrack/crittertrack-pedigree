@@ -141,8 +141,19 @@ const imageFileFilter = (req, file, cb) => {
     }
 };
 
+// Document file filter (PDF, DOC, DOCX, PAGES)
+const documentFileFilter = (req, file, cb) => {
+    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.apple.pages'];
+    if (allowed.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('INVALID_DOCUMENT_TYPE'));
+    }
+};
+
 const storage = multer.memoryStorage(); // Use memory storage to forward files to Worker
 const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 }, fileFilter: imageFileFilter });
+const uploadDocument = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: documentFileFilter }); // 10MB for documents
 
 // Provide a guarded upload endpoint that enforces file type and size server-side
 // This endpoint now forwards uploads to the Cloudflare Worker (R2 storage)
@@ -189,6 +200,53 @@ app.post('/api/upload', uploadSingle.single('file'), async (req, res) => {
     } catch (err) {
         console.error('Upload endpoint error:', err && err.message ? err.message : err);
         return res.status(500).json({ message: 'Upload failed' });
+    }
+});
+
+// Document upload endpoint (for legal documents: PDF, DOC, DOCX)
+app.post('/api/upload-document', uploadDocument.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+        
+        // Forward the file to the Cloudflare Worker for R2 storage
+        const uploaderUrl = process.env.UPLOADER_URL || process.env.PUBLIC_HOST;
+        if (!uploaderUrl) {
+            // Fallback: save locally if no uploader configured
+            const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0];
+            let base = process.env.PUBLIC_URL || process.env.DOMAIN || null;
+            if (base) {
+                if (!/^https?:\/\//i.test(base)) base = `${proto}://${base}`;
+                base = base.replace(/\/$/, '');
+            } else {
+                base = `${proto}://${req.get('host')}`;
+            }
+            const fileUrl = `${base}/uploads/${req.file.filename}`;
+            return res.json({ url: fileUrl, filename: req.file.filename });
+        }
+
+        // Create FormData and forward to Worker
+        const { Blob } = require('buffer');
+        const formData = new FormData();
+        const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+        formData.append('file', blob, req.file.originalname);
+
+        const workerResponse = await fetch(uploaderUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!workerResponse.ok) {
+            const errorText = await workerResponse.text();
+            console.error('Worker document upload failed:', errorText);
+            return res.status(500).json({ message: 'Document upload to storage failed' });
+        }
+
+        const result = await workerResponse.json();
+
+        return res.json({ url: result.url, filename: result.key || req.file.originalname });
+    } catch (err) {
+        console.error('Document upload endpoint error:', err && err.message ? err.message : err);
+        return res.status(500).json({ message: 'Document upload failed' });
     }
 });
 
