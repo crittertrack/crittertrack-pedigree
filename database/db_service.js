@@ -804,7 +804,8 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     }
 
     // Sort by birth date descending (most recent first)
-    const docs = await Animal.find(query).sort({ birthDate: -1 }).lean();
+    // Safety cap: never return more than 2000 animals in a single call to avoid OOM
+    const docs = await Animal.find(query).sort({ birthDate: -1 }).limit(2000).lean();
 
     // Bulk-resolve owner display names for view-only animals (single DB call)
     const viewOnlyOwnerIds = [...new Set(
