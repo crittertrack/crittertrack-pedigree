@@ -3,6 +3,7 @@ const router = express.Router();
 const { User, PublicProfile, Message } = require('../database/models');
 
 // Admin endpoint to migrate public profiles
+// OPTIMIZED: Batch loads users instead of 1 query per profile (1000→1 query)
 // GET /api/admin/migrate-public-profiles
 router.get('/migrate-public-profiles', async (req, res) => {
     try {
@@ -10,14 +11,23 @@ router.get('/migrate-public-profiles', async (req, res) => {
         const publicProfiles = await PublicProfile.find({});
         console.log(`Found ${publicProfiles.length} public profiles to migrate`);
 
+        // BATCH LOAD: Get all users in one query
+        const userIds = publicProfiles.map(p => p.userId_backend).filter(Boolean);
+        const users = await User.find({ _id: { $in: userIds } })
+            .select('_id personalName showBreederName breederName')
+            .lean();
+
+        // Index users by _id for O(1) lookup
+        const userMap = new Map(users.map(u => [u._id.toString(), u]));
+
         let updated = 0;
         let failed = 0;
         const results = [];
 
+        // Process all profiles with preloaded user data
         for (const profile of publicProfiles) {
             try {
-                // Get corresponding user
-                const user = await User.findById(profile.userId_backend);
+                const user = userMap.get(profile.userId_backend.toString());
                 
                 if (!user) {
                     results.push({ id_public: profile.id_public, status: 'failed', reason: 'User not found' });
@@ -63,6 +73,7 @@ router.get('/migrate-public-profiles', async (req, res) => {
 });
 
 // GET /api/admin/moderator-conversations - Get all conversations initiated by moderators
+// OPTIMIZED: Batch loads all users once instead of per message (200→10 queries for 100 msgs)
 router.get('/moderator-conversations', async (req, res) => {
     try {
         // First, find all conversations that contain moderator messages
@@ -79,14 +90,27 @@ router.get('/moderator-conversations', async (req, res) => {
             conversationId: { $in: modMessages }
         }).sort({ createdAt: -1 }).lean();
 
-        // Group by conversation
+        // BATCH LOAD: Collect all unique user IDs and fetch them all at once
+        const allUserIds = new Set();
+        for (const msg of allMessages) {
+            if (msg.senderId) allUserIds.add(msg.senderId.toString());
+            if (msg.receiverId) allUserIds.add(msg.receiverId.toString());
+        }
+
+        const users = await User.find({ _id: { $in: Array.from(allUserIds) } })
+            .select('_id role id_public personalName breederName showPersonalName showBreederName')
+            .lean();
+
+        const userMap = new Map(users.map(u => [u._id.toString(), u]));
+
+        // Group by conversation using preloaded user data
         const conversationsMap = new Map();
         
         for (const msg of allMessages) {
             if (!conversationsMap.has(msg.conversationId)) {
-                // Find the other user ID (non-staff user in the conversation)
-                const senderUser = await User.findById(msg.senderId).select('role id_public').lean();
-                const receiverUser = await User.findById(msg.receiverId).select('role id_public').lean();
+                // Use preloaded user data instead of querying database
+                const senderUser = userMap.get(msg.senderId?.toString());
+                const receiverUser = userMap.get(msg.receiverId?.toString());
                 
                 // Determine which user is the regular user (not staff)
                 let otherUserId;
@@ -137,15 +161,7 @@ router.get('/moderator-conversations', async (req, res) => {
 
         const conversations = Array.from(conversationsMap.values());
 
-        // Fetch user info for all conversation partners
-        const otherUserIds = conversations.map(c => c.otherUserId);
-        const users = await User.find({ _id: { $in: otherUserIds } })
-            .select('id_public personalName breederName showPersonalName showBreederName')
-            .lean();
-        
-        const userMap = new Map(users.map(u => [u._id.toString(), u]));
-
-        // Attach user info to each conversation
+        // Use preloaded user data for final info
         const conversationsWithUserInfo = conversations.map(conv => ({
             ...conv,
             otherUser: userMap.get(conv.otherUserId) || null

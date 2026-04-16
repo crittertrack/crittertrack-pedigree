@@ -1411,62 +1411,75 @@ const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
 // --- PEDIGREE SERVICE FUNCTIONS ---
 
 /**
- * Recursive function to fetch an animal's ancestry up to a specified depth.
- * This function is designed to work ONLY with the PublicAnimal records.
- * The PublicAnimal records contain enough denormalized data (id_public for sire/dam) to trace the lineage
- * without needing to access the private Animal records, which simplifies the logic
- * and is the correct approach for a view-only pedigree.
+ * Optimized breadth-first pedigree fetch using batch loading.
+ * Replaces recursive approach to reduce N+1 queries: 31 queries → 5 batch queries for 4 generations.
+ * 
+ * Strategy: Fetch all animals at each generation level in parallel using $in queries,
+ * then construct the pedigree tree from the results.
  */
-const recursivelyFetchAncestry = async (animalId_public, depth) => {
-    // Base case: Stop recursion when depth reaches 0
-    if (depth === 0 || !animalId_public) {
-        return null;
-    }
-
-    // 1. Fetch the PublicAnimal record
-    // Note: We use PublicAnimal here because we need to be able to trace ancestors
-    // even if the root animal is private, as long as its ancestors were made public
-    // at some point by their respective owners.
-    const animal = await PublicAnimal.findOne({ id_public: animalId_public }).lean();
-
-    if (!animal) {
-        // Ancestor not found (either never registered or never made public)
-        return { 
-            id_public: animalId_public,
-            isPlaceholder: true,
-            generation: 5 - depth // Set generation relative to max depth of 5
-        }; 
-    }
-
-    // 2. Recursive calls for sire and dam
-    const sireNode = await recursivelyFetchAncestry(animal.sireId_public, depth - 1);
-    const damNode = await recursivelyFetchAncestry(animal.damId_public, depth - 1);
-
-    // 3. Construct the current node object
-    const pedigreeNode = {
-        id_public: animal.id_public,
-        ownerId_public: animal.ownerId_public,
-        species: animal.species,
-        prefix: animal.prefix,
-        suffix: animal.suffix,
-        // Combine prefix and name for display
-        name: `${animal.prefix ? animal.prefix + ' ' : ''}${animal.name}${animal.suffix ? ' ' + animal.suffix : ''}`,
-        gender: animal.gender,
-        birthDate: animal.birthDate,
-        deceasedDate: animal.deceasedDate,
-        color: animal.color,
-        // Calculate generation based on depth (5 is max depth we support here)
-        generation: 5 - depth, 
-        sire: sireNode,
-        dam: damNode,
-    };
+const fetchPedigreeByBatch = async (rootId_public, maxDepth) => {
+    const animalsByLevel = {};
+    let currentLevelIds = [rootId_public];
     
-    return pedigreeNode;
+    // Breadth-first: Fetch all animals at each level in parallel
+    for (let level = 0; level < maxDepth && currentLevelIds.length > 0; level++) {
+        const animals = await PublicAnimal.find(
+            { id_public: { $in: currentLevelIds } },
+            { id_public: 1, sireId_public: 1, damId_public: 1, ownerId_public: 1, 
+              name: 1, prefix: 1, suffix: 1, species: 1, gender: 1, 
+              birthDate: 1, deceasedDate: 1, color: 1 }
+        ).lean();
+
+        animalsByLevel[level] = new Map(animals.map(a => [a.id_public, a]));
+
+        // Collect all parent IDs for the next level
+        const nextLevelIds = new Set();
+        for (const animal of animals) {
+            if (animal.sireId_public) nextLevelIds.add(animal.sireId_public);
+            if (animal.damId_public) nextLevelIds.add(animal.damId_public);
+        }
+        currentLevelIds = Array.from(nextLevelIds);
+    }
+
+    // Recursive helper to build the tree from fetched data
+    const buildTreeNode = (id_public, level) => {
+        if (!id_public || level >= maxDepth) return null;
+
+        const animal = animalsByLevel[level]?.get(id_public);
+
+        if (!animal) {
+            // Ancestor not found (either never registered or never made public)
+            return {
+                id_public,
+                isPlaceholder: true,
+                generation: level,
+            };
+        }
+
+        return {
+            id_public: animal.id_public,
+            ownerId_public: animal.ownerId_public,
+            species: animal.species,
+            prefix: animal.prefix,
+            suffix: animal.suffix,
+            name: `${animal.prefix ? animal.prefix + ' ' : ''}${animal.name}${animal.suffix ? ' ' + animal.suffix : ''}`,
+            gender: animal.gender,
+            birthDate: animal.birthDate,
+            deceasedDate: animal.deceasedDate,
+            color: animal.color,
+            generation: level,
+            sire: buildTreeNode(animal.sireId_public, level + 1),
+            dam: buildTreeNode(animal.damId_public, level + 1),
+        };
+    };
+
+    return buildTreeNode(rootId_public, 0);
 };
 
 
 /**
  * Generates a full pedigree chart for a given animal up to 4 generations (5 levels).
+ * Uses optimized batch loading instead of recursive queries (31→5 query reduction).
  */
 const generatePedigree = async (appUserId_backend, animalId_backend, generations = 4) => {
     const maxDepth = Math.min(generations, 4) + 1; // 4 generations is 5 levels (P + 4 ancestors)
@@ -1475,9 +1488,8 @@ const generatePedigree = async (appUserId_backend, animalId_backend, generations
     // We must ensure the user owns the root animal first using the private collection
     const rootAnimal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
     
-    // 2. Start the recursive trace using the root animal's public ID
-    // Note: The root animal's full data comes from the private record since the user owns it.
-    const pedigreeTree = await recursivelyFetchAncestry(rootAnimal.id_public, maxDepth);
+    // 2. Fetch the pedigree tree using optimized batch loading
+    const pedigreeTree = await fetchPedigreeByBatch(rootAnimal.id_public, maxDepth);
 
     return pedigreeTree;
 };
