@@ -308,11 +308,11 @@ router.get('/global/animals', async (req, res) => {
             q.status = query.status;
         }
 
-        // Allow unlimited results if no limit specified, otherwise cap at 1000
-        const limit = query.limit ? Math.min(parseInt(query.limit, 10) || 1000, 1000) : 0;
+        // Cap results at 1000 to prevent OOM crashes; default to 1000 when no limit specified
+        const limit = query.limit ? Math.min(parseInt(query.limit, 10) || 1000, 1000) : 1000;
 
-        console.log('Global animals search - Query filter:', q, 'Limit:', limit === 0 ? 'unlimited' : limit);
-        const docs = limit > 0 ? await Model.find(q).limit(limit).lean() : await Model.find(q).lean();
+        console.log('Global animals search - Query filter:', q, 'Limit:', limit);
+        const docs = await Model.find(q).limit(limit).lean();
         console.log('Global animals search - Results count:', docs.length);
         // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
         // collection are public by definition. Inject the field so frontend privacy checks work.
