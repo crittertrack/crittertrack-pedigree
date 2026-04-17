@@ -1585,7 +1585,7 @@ router.get('/:id_public/offspring', async (req, res) => {
                     { fatherId_public: animalIdPublic },
                     { motherId_public: animalIdPublic }
                 ]
-            }).lean();
+            }); // Fetch full documents with all properties
         } else {
             // Non-owner: public offspring + user's own private offspring
             allOffspring = await Animal.find({
@@ -1605,7 +1605,7 @@ router.get('/:id_public/offspring', async (req, res) => {
                         ]
                     }
                 ]
-            }).lean();
+            }); // Fetch full documents with all properties
         }
 
         // Group offspring by litter (based on birthDate and other parent)
@@ -1647,7 +1647,8 @@ router.get('/:id_public/offspring', async (req, res) => {
                             { sireId_public: animalIdPublic, damId_public: group.otherParentId },
                             { sireId_public: group.otherParentId, damId_public: animalIdPublic }
                         ]
-                    }).lean();
+                    }); // Fetch full litter document
+                }
                 }
 
                 // Fetch other parent data - search globally (user's animals first, then any other animal)
@@ -1657,13 +1658,13 @@ router.get('/:id_public/offspring', async (req, res) => {
                     otherParent = await Animal.findOne({ 
                         id_public: group.otherParentId,
                         ownerId: authenticatedUserId 
-                    }).lean();
+                    }); // Fetch full document
                     
                     // If not owned by user, search all animals globally
                     if (!otherParent) {
                         otherParent = await Animal.findOne({ 
                             id_public: group.otherParentId 
-                        }).lean();
+                        }); // Fetch full document
                     }
                 }
 
