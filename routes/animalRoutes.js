@@ -1649,7 +1649,6 @@ router.get('/:id_public/offspring', async (req, res) => {
                         ]
                     }); // Fetch full litter document
                 }
-                }
 
                 // Fetch other parent data - search globally (user's animals first, then any other animal)
                 let otherParent = null;
