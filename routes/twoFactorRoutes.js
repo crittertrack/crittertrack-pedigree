@@ -350,7 +350,8 @@ router.post('/verify-2fa', async (req, res) => {
         const jwt = require('jsonwebtoken');
         const sessionToken = jwt.sign(
             { 
-                userId: userId, 
+                user: { id: userId },
+                userId: userId,
                 twoFactorVerified: true,
                 type: 'admin_session'
             },

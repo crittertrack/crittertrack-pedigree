@@ -62,15 +62,26 @@ const authMiddleware = async (req, res, next) => {
 
     try {
         // 2. Verify token
-        // The payload (decoded) contains { user: { id: <backend_id> } }
+        // Support both standard login tokens and 2FA admin session tokens
         const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = decoded?.user?.id || decoded?.user?._id || decoded?.id || decoded?._id || decoded?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ message: 'Invalid or expired token.' });
+        }
         
-        // 3. Attach user payload to the request (req.user.id will be the MongoDB _id)
-        req.user = decoded.user;
+        // 3. Attach normalized user payload to the request (req.user.id will be the MongoDB _id)
+        req.user = {
+            ...(decoded.user || {}),
+            id: userId,
+            _id: userId,
+            twoFactorVerified: !!decoded.twoFactorVerified,
+            tokenType: decoded.type || 'access'
+        };
         
         // 4. Fetch and attach user's public ID, email, and role for authorization
         try {
-            const user = await User.findById(req.user.id).select('id_public email role');
+            const user = await User.findById(userId).select('id_public email role');
             if (user) {
                 req.user.id_public = user.id_public;
                 req.user.email = user.email;
@@ -84,6 +95,11 @@ const authMiddleware = async (req, res, next) => {
         // 5. Proceed to the next middleware/route handler
         next();
     } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            console.warn('JWT expired:', req.originalUrl);
+            return res.status(401).json({ message: 'Token expired.', expired: true });
+        }
+
         // 401: Unauthorized - Token is invalid or expired
         console.error("JWT verification failed:", error.message);
         return res.status(401).json({ message: 'Invalid or expired token.' });

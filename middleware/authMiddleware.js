@@ -11,7 +11,7 @@ const protect = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.id || decoded._id || decoded.user?.id;
+        const userId = decoded.id || decoded._id || decoded.userId || decoded.user?.id || decoded.user?._id || decoded.user?.userId;
 
         if (!userId) {
             return res.status(401).json({ message: 'Not authorized, invalid token payload.' });
@@ -43,6 +43,11 @@ const protect = async (req, res, next) => {
 
         return next();
     } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            console.warn('JWT expired:', req.originalUrl);
+            return res.status(401).json({ message: 'Token expired.', expired: true });
+        }
+
         console.error('JWT verification failed:', error.message || error);
         return res.status(401).json({ message: 'Not authorized, token verification failed.' });
     }
