@@ -17,44 +17,62 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const mongoUri = process.env.MONGODB_URI;
+if (!mongoUri) {
+    console.error('❌ MONGODB_URI not set in .env file');
+    process.exit(1);
+}
 
 // Import models
 const { Animal, Litter, User } = require('../database/models');
 
 async function fixOffspringParents() {
+    let connection = null;
     try {
         // Connect to MongoDB
-        await mongoose.connect(mongoUri);
-        console.log('✓ Connected to MongoDB');
+        connection = await mongoose.connect(mongoUri);
+        console.log('✓ Connected to MongoDB\n');
 
         // Find all litters with linked offspring
         const litters = await Litter.find({
             offspringIds_public: { $exists: true, $ne: [] }
-        }).select('_id ownerId sireId_public sirePrefixName damId_public damPrefixName offspringIds_public breedingPairCodeName');
+        }).select('_id ownerId sireId_public sirePrefixName damId_public damPrefixName offspringIds_public breedingPairCodeName').lean();
 
-        console.log(`\n📋 Found ${litters.length} litters with linked offspring\n`);
+        console.log(`📋 Found ${litters.length} litters with linked offspring\n`);
 
         let totalFixed = 0;
+        let totalAlreadyCorrect = 0;
         let totalErrors = 0;
+        let totalLittersProcessed = 0;
 
         // Process each litter
         for (const litter of litters) {
+            totalLittersProcessed++;
             try {
-                const owner = await User.findById(litter.ownerId).select('breederName personalName email');
+                const owner = await User.findById(litter.ownerId).select('breederName personalName email').lean();
                 const ownerInfo = owner?.breederName || owner?.personalName || owner?.email || 'Unknown User';
 
-                console.log(`\n📚 Litter: ${litter.breedingPairCodeName || litter._id} (Owner: ${ownerInfo})`);
+                console.log(`\n[${totalLittersProcessed}/${litters.length}] 📚 Litter: ${litter.breedingPairCodeName || litter._id}`);
+                console.log(`   Owner: ${ownerInfo}`);
                 console.log(`   Sire: ${litter.sirePrefixName || litter.sireId_public || 'None'}`);
                 console.log(`   Dam: ${litter.damPrefixName || litter.damId_public || 'None'}`);
-                console.log(`   Offspring to fix: ${litter.offspringIds_public.length}`);
+                console.log(`   Offspring to process: ${litter.offspringIds_public.length}`);
+
+                // Batch fetch all offspring at once for efficiency
+                const offspringAnimals = await Animal.find(
+                    { id_public: { $in: litter.offspringIds_public } },
+                    { _id: 1, id_public: 1, prefix: 1, name: 1, sireId_public: 1, damId_public: 1 }
+                ).lean();
+
+                const offspringMap = new Map(offspringAnimals.map(a => [a.id_public, a]));
 
                 // Fix each offspring linked to this litter
                 for (const offspringId_public of litter.offspringIds_public) {
                     try {
-                        const offspring = await Animal.findOne({ id_public: offspringId_public });
+                        const offspring = offspringMap.get(offspringId_public);
 
                         if (!offspring) {
-                            console.log(`   ⚠️  Offspring ${offspringId_public} not found`);
+                            console.log(`   ⚠️  Offspring ${offspringId_public} not found in database`);
+                            totalErrors++;
                             continue;
                         }
 
@@ -63,20 +81,6 @@ async function fixOffspringParents() {
                         const needsDamUpdate = litter.damId_public && offspring.damId_public !== litter.damId_public;
 
                         if (needsSireUpdate || needsDamUpdate) {
-                            // Get sire/dam animals to include in offspring record
-                            let sireAnimal = null;
-                            let damAnimal = null;
-
-                            if (litter.sireId_public) {
-                                sireAnimal = await Animal.findOne({ id_public: litter.sireId_public })
-                                    .select('id_public prefix name gender');
-                            }
-
-                            if (litter.damId_public) {
-                                damAnimal = await Animal.findOne({ id_public: litter.damId_public })
-                                    .select('id_public prefix name gender');
-                            }
-
                             // Update offspring with correct parent IDs
                             const updateData = {};
                             if (needsSireUpdate) {
@@ -86,35 +90,44 @@ async function fixOffspringParents() {
                                 updateData.damId_public = litter.damId_public;
                             }
 
-                            await Animal.findByIdAndUpdate(offspring._id, updateData, { new: true });
+                            await Animal.findByIdAndUpdate(offspring._id, updateData);
 
-                            const sireName = sireAnimal ? `${sireAnimal.prefix ? sireAnimal.prefix + ' ' : ''}${sireAnimal.name}` : 'None';
-                            const damName = damAnimal ? `${damAnimal.prefix ? damAnimal.prefix + ' ' : ''}${damAnimal.name}` : 'None';
-                            
-                            console.log(`   ✓ ${offspring.prefix ? offspring.prefix + ' ' : ''}${offspring.name} → Sire: ${sireName}, Dam: ${damName}`);
+                            const offspringName = offspring.prefix ? `${offspring.prefix} ${offspring.name}` : offspring.name;
+                            console.log(`   ✓ FIXED: ${offspringName} (${offspringId_public})`);
                             totalFixed++;
                         } else {
-                            console.log(`   ✓ ${offspring.prefix ? offspring.prefix + ' ' : ''}${offspring.name} (already correct)`);
+                            const offspringName = offspring.prefix ? `${offspring.prefix} ${offspring.name}` : offspring.name;
+                            console.log(`   ✓ OK: ${offspringName} (already correct)`);
+                            totalAlreadyCorrect++;
                         }
                     } catch (err) {
-                        console.log(`   ✗ Error updating offspring ${offspringId_public}: ${err.message}`);
+                        console.log(`   ✗ ERROR updating offspring ${offspringId_public}: ${err.message}`);
                         totalErrors++;
                     }
                 }
             } catch (err) {
-                console.log(`✗ Error processing litter ${litter._id}: ${err.message}`);
+                console.log(`✗ ERROR processing litter ${litter._id}: ${err.message}`);
                 totalErrors++;
             }
         }
 
-        console.log(`\n✅ Migration Complete`);
-        console.log(`   Fixed: ${totalFixed} offspring`);
+        console.log(`\n\n========================================`);
+        console.log(`✅ MIGRATION COMPLETE`);
+        console.log(`========================================`);
+        console.log(`   Litters processed: ${totalLittersProcessed}`);
+        console.log(`   Offspring fixed: ${totalFixed}`);
+        console.log(`   Offspring already correct: ${totalAlreadyCorrect}`);
         console.log(`   Errors: ${totalErrors}`);
+        console.log(`========================================\n`);
 
         await mongoose.connection.close();
-        console.log('\n✓ Disconnected from MongoDB');
+        console.log('✓ Disconnected from MongoDB\n');
+        process.exit(totalErrors > 0 ? 1 : 0);
     } catch (err) {
-        console.error('❌ Migration failed:', err);
+        console.error('\n❌ MIGRATION FAILED:', err.message);
+        if (connection) {
+            await mongoose.connection.close();
+        }
         process.exit(1);
     }
 }
