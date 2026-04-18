@@ -898,12 +898,10 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         }
     }
     
-    // Normalize parent fields on update: accept numeric public IDs and resolve to internal _id
+    // Normalize parent fields on update: accept string public IDs like "CTC222"
     const resolveParentPublicToBackend = async (pubVal) => {
         if (!pubVal) return null;
-        const num = Number(pubVal);
-        if (Number.isNaN(num)) return null;
-        const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+        const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
         return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
     };
 
@@ -931,12 +929,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
                             shouldRemoveLitterLink = true;
                         }
                     } else {
-                        const num = Number(candidate);
-                        if (!Number.isNaN(num)) {
-                            updates.sireId_public = num;
-                            if (originalAnimal.sireId_public !== num) {
-                                shouldRemoveLitterLink = true;
-                            }
+                        updates.sireId_public = candidate;
+                        if (originalAnimal.sireId_public !== candidate) {
+                            shouldRemoveLitterLink = true;
                         }
                     }
                 }
@@ -959,12 +954,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
                             shouldRemoveLitterLink = true;
                         }
                     } else {
-                        const numM = Number(candidateM);
-                        if (!Number.isNaN(numM)) {
-                            updates.damId_public = numM;
-                            if (originalAnimal.damId_public !== numM) {
-                                shouldRemoveLitterLink = true;
-                            }
+                        updates.damId_public = candidateM;
+                        if (originalAnimal.damId_public !== candidateM) {
+                            shouldRemoveLitterLink = true;
                         }
                     }
                 }
