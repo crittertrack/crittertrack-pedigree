@@ -18,7 +18,7 @@ const { Animal } = require(modelPath);
 // Load env
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/crittertrack';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/crittertrack';
 
 async function migrateParentsToManualPedigree() {
     try {
@@ -27,6 +27,7 @@ async function migrateParentsToManualPedigree() {
         console.log('✅ Connected');
 
         // Find all animals with sireId_public or damId_public
+        console.log('🔍 Finding all animals with linked parents...');
         const animalsWithParents = await Animal.find({
             $or: [
                 { sireId_public: { $ne: null, $exists: true } },
@@ -60,6 +61,25 @@ async function migrateParentsToManualPedigree() {
             notes: ''
         });
 
+        // Pre-load all parent animals to reduce individual queries
+        console.log('⚡ Pre-loading parent animals...');
+        const parentIds = new Set();
+        for (const animal of animalsWithParents) {
+            const sireId = animal.sireId_public || animal.fatherId_public;
+            const damId = animal.damId_public || animal.motherId_public;
+            if (sireId) parentIds.add(sireId);
+            if (damId) parentIds.add(damId);
+        }
+
+        const parentCache = {};
+        if (parentIds.size > 0) {
+            const parents = await Animal.find({ id_public: { $in: Array.from(parentIds) } }).lean();
+            for (const parent of parents) {
+                parentCache[parent.id_public] = parent;
+            }
+            console.log(`✅ Pre-loaded ${Object.keys(parentCache).length} parent animals\n`);
+        }
+
         for (const animal of animalsWithParents) {
             try {
                 let needsUpdate = false;
@@ -80,18 +100,18 @@ async function migrateParentsToManualPedigree() {
                 let sireData = null;
                 let damData = null;
 
-                // Migrate sire
+                // Migrate sire (use cache first, fallback to query if needed)
                 if (sireId && (!updates.manualPedigree.sire || !updates.manualPedigree.sire.ctcId)) {
-                    sireData = await Animal.findOne({ id_public: sireId }).lean();
+                    sireData = parentCache[sireId] || await Animal.findOne({ id_public: sireId }).lean();
                     if (sireData) {
                         updates.manualPedigree.sire = buildSlot(sireData, 'Male');
                         needsUpdate = true;
                     }
                 }
 
-                // Migrate dam
+                // Migrate dam (use cache first, fallback to query if needed)
                 if (damId && (!updates.manualPedigree.dam || !updates.manualPedigree.dam.ctcId)) {
-                    damData = await Animal.findOne({ id_public: damId }).lean();
+                    damData = parentCache[damId] || await Animal.findOne({ id_public: damId }).lean();
                     if (damData) {
                         updates.manualPedigree.dam = buildSlot(damData, 'Female');
                         needsUpdate = true;
@@ -139,17 +159,16 @@ async function migrateParentsToManualPedigree() {
                         { $set: { manualPedigree: updates.manualPedigree } }
                     );
                     updated++;
-                    const parentSummary = [];
-                    if (sireData) parentSummary.push(`sire=${sireData.id_public}`);
-                    if (damData) parentSummary.push(`dam=${damData.id_public}`);
-                    console.log(`✅ [${animal.id_public}] ${animal.name}: Migrated ${parentSummary.join(', ')}`);
+                    if (updated % 50 === 0) {
+                        console.log(`⏳ Migrated: ${updated} animals (processed: ${processed}/${animalsWithParents.length})`);
+                    }
                 } else {
                     skipped++;
                 }
 
                 processed++;
                 if (processed % 100 === 0) {
-                    console.log(`⏳ Processed: ${processed}/${animalsWithParents.length}`);
+                    console.log(`⏳ Progress: ${processed}/${animalsWithParents.length} (${Math.round(processed/animalsWithParents.length*100)}%) - Updated: ${updated}, Skipped: ${skipped}`);
                 }
             } catch (error) {
                 console.error(`❌ Error migrating ${animal.id_public}: ${error.message}`);
