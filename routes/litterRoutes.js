@@ -142,7 +142,15 @@ router.get('/:id_public/offspring', async (req, res) => {
         // Preserve the order animals were added to the litter (offspringIds_public order)
         const idIndex = new Map(ids.map((id, i) => [id, i]));
         animals.sort((a, b) => (idIndex.get(a.id_public) ?? Infinity) - (idIndex.get(b.id_public) ?? Infinity));
-        res.status(200).json(animals);
+        // Inject litter's parent IDs as fallback for any offspring whose DB links were wiped
+        const litterSireId = litter.sireId_public || null;
+        const litterDamId = litter.damId_public || null;
+        const enriched = animals.map(a => ({
+            ...a,
+            sireId_public: a.sireId_public || litterSireId,
+            damId_public: a.damId_public || litterDamId,
+        }));
+        res.status(200).json(enriched);
     } catch (error) {
         console.error('Error fetching litter offspring:', error);
         res.status(500).json({ message: 'Internal server error.' });
