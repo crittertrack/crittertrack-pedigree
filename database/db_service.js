@@ -971,6 +971,32 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             }
         }
 
+        // SYNC: When manualPedigree is updated, extract sire/dam CTC IDs and sync to sireId_public/damId_public
+        // This ensures beta pedigree entries automatically populate the canonical parent fields
+        if (updates.manualPedigree && typeof updates.manualPedigree === 'object') {
+            const mp = updates.manualPedigree;
+            
+            // Extract sire CTC ID from manualPedigree.sire
+            if (mp.sire && mp.sire.ctcId && updates.sireId_public === undefined) {
+                const sireId = mp.sire.ctcId;
+                if (originalAnimal.sireId_public !== sireId) {
+                    shouldRemoveLitterLink = true;
+                }
+                updates.sireId_public = sireId;
+                console.log(`[updateAnimal] Synced sire from manualPedigree: ${sireId}`);
+            }
+            
+            // Extract dam CTC ID from manualPedigree.dam
+            if (mp.dam && mp.dam.ctcId && updates.damId_public === undefined) {
+                const damId = mp.dam.ctcId;
+                if (originalAnimal.damId_public !== damId) {
+                    shouldRemoveLitterLink = true;
+                }
+                updates.damId_public = damId;
+                console.log(`[updateAnimal] Synced dam from manualPedigree: ${damId}`);
+            }
+        }
+
         // If birthdate or parents changed, remove litter link
         if (shouldRemoveLitterLink && originalAnimal.litterId) {
             updates.litterId = null;
