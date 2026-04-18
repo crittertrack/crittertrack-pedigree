@@ -1042,12 +1042,11 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             morph: updates.morph
         }));
 
-        // Normalize parent fields on update as well (accept public numeric IDs)
+        // Normalize parent fields on update as well (accept string public IDs like "CTC222")
         const resolveParentPublicToBackend = async (pubVal) => {
             if (!pubVal) return null;
-            const num = Number(pubVal);
-            if (Number.isNaN(num)) return null;
-            const found = await Animal.findOne({ id_public: num, ownerId: appUserId_backend }).select('_id id_public').lean();
+            // Try string id_public match first (owned by this user), then accept as-is
+            const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
             return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
         };
 
@@ -1064,8 +1063,8 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                         if (resolved) {
                             updates.sireId_public = resolved.id_public;
                         } else {
-                            const num = Number(candidate);
-                            if (!Number.isNaN(num)) updates.sireId_public = num;
+                            // Not owned by user but still a valid ID - set as-is (same as POST route)
+                            updates.sireId_public = candidate;
                         }
                     } catch (e) { /* ignore */ }
                 }
@@ -1083,8 +1082,8 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                         if (resolvedM) {
                             updates.damId_public = resolvedM.id_public;
                         } else {
-                            const numM = Number(candidateM);
-                            if (!Number.isNaN(numM)) updates.damId_public = numM;
+                            // Not owned by user but still a valid ID - set as-is (same as POST route)
+                            updates.damId_public = candidateM;
                         }
                     } catch (e) { /* ignore */ }
                 }
