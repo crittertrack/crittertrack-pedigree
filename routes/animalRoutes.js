@@ -327,6 +327,11 @@ router.post('/', upload.single('file'), async (req, res) => {
             animalData.showOnPublicProfile = animalData.isDisplay;
         }
 
+        // Ensure ownerId_public is always set (required by schema)
+        if (!animalData.ownerId_public) {
+            animalData.ownerId_public = req.user.id_public;
+        }
+
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
         // Notifications are created AFTER the save, but the links remain active.
         // Links are only removed if the breeder/parent owner explicitly rejects via notification.

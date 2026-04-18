@@ -675,6 +675,15 @@ const addAnimal = async (appUserId_backend, animalData) => {
 
     enforceCleanAnimalText(animalData);
 
+    // Ensure ownerId_public is always present (required by schema)
+    // It should be set by the route, but look it up as a fallback
+    if (!animalData.ownerId_public) {
+        try {
+            const owner = await User.findById(appUserId_backend).select('id_public').lean();
+            if (owner?.id_public) animalData.ownerId_public = owner.id_public;
+        } catch (e) { /* non-fatal */ }
+    }
+
     const newAnimal = new Animal({
         ownerId: appUserId_backend,
         id_public,
