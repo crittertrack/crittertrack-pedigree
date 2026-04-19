@@ -805,7 +805,7 @@ router.get('/genetics/:speciesName', async (req, res) => {
             geneticsData.genes.forEach(gene => {
                 geneLoci[gene.symbol] = {
                     name: gene.name,
-                    combinations: gene.alleles || []
+                    combinations: (gene.combinations || []).map(c => c.notation)
                 };
             });
         }
@@ -815,7 +815,7 @@ router.get('/genetics/:speciesName', async (req, res) => {
             geneticsData.markingGenes.forEach(gene => {
                 geneLoci[gene.symbol] = {
                     name: gene.name,
-                    combinations: gene.alleles || []
+                    combinations: (gene.combinations || []).map(c => c.notation)
                 };
             });
         }
@@ -825,7 +825,7 @@ router.get('/genetics/:speciesName', async (req, res) => {
             geneticsData.coatGenes.forEach(gene => {
                 geneLoci[gene.symbol] = {
                     name: gene.name,
-                    combinations: gene.alleles || []
+                    combinations: (gene.combinations || []).map(c => c.notation)
                 };
             });
         }
@@ -835,7 +835,7 @@ router.get('/genetics/:speciesName', async (req, res) => {
             geneticsData.otherGenes.forEach(gene => {
                 geneLoci[gene.symbol] = {
                     name: gene.name,
-                    combinations: gene.alleles || []
+                    combinations: (gene.combinations || []).map(c => c.notation)
                 };
             });
         }
