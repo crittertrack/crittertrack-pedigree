@@ -805,43 +805,44 @@ router.get('/genetics/:speciesName', async (req, res) => {
         const geneSymbolOverrides = { 'Dw': 'Du', 'Cu': 'Ve', 'Wv': 'Wa', 'K': 'Ki' };
         const resolveKey = (symbol) => geneSymbolOverrides[symbol] || symbol;
 
+        const buildLocusEntry = (gene) => {
+            const notations = (gene.combinations || []).map(c => c.notation);
+            const phenotypeMap = {};
+            (gene.combinations || []).forEach(c => {
+                phenotypeMap[c.notation] = {
+                    phenotype: c.phenotype || null,
+                    carrier: c.carrier || null,
+                    isLethal: c.isLethal || false
+                };
+            });
+            return { name: gene.name, combinations: notations, phenotypeMap };
+        };
+
         // Process color/pattern genes
         if (geneticsData.genes && Array.isArray(geneticsData.genes)) {
             geneticsData.genes.forEach(gene => {
-                geneLoci[resolveKey(gene.symbol)] = {
-                    name: gene.name,
-                    combinations: (gene.combinations || []).map(c => c.notation)
-                };
+                geneLoci[resolveKey(gene.symbol)] = buildLocusEntry(gene);
             });
         }
 
         // Process marking genes
         if (geneticsData.markingGenes && Array.isArray(geneticsData.markingGenes)) {
             geneticsData.markingGenes.forEach(gene => {
-                geneLoci[resolveKey(gene.symbol)] = {
-                    name: gene.name,
-                    combinations: (gene.combinations || []).map(c => c.notation)
-                };
+                geneLoci[resolveKey(gene.symbol)] = buildLocusEntry(gene);
             });
         }
 
         // Process coat/texture genes
         if (geneticsData.coatGenes && Array.isArray(geneticsData.coatGenes)) {
             geneticsData.coatGenes.forEach(gene => {
-                geneLoci[resolveKey(gene.symbol)] = {
-                    name: gene.name,
-                    combinations: (gene.combinations || []).map(c => c.notation)
-                };
+                geneLoci[resolveKey(gene.symbol)] = buildLocusEntry(gene);
             });
         }
 
         // Process other genes
         if (geneticsData.otherGenes && Array.isArray(geneticsData.otherGenes)) {
             geneticsData.otherGenes.forEach(gene => {
-                geneLoci[resolveKey(gene.symbol)] = {
-                    name: gene.name,
-                    combinations: (gene.combinations || []).map(c => c.notation)
-                };
+                geneLoci[resolveKey(gene.symbol)] = buildLocusEntry(gene);
             });
         }
 
