@@ -800,10 +800,15 @@ router.get('/genetics/:speciesName', async (req, res) => {
         // Transform the database format to the calculator format
         const geneLoci = {};
 
+        // Some genes have a DB symbol that differs from their allele notation symbol.
+        // These overrides ensure the geneLoci key matches the notation used in combinations.
+        const geneSymbolOverrides = { 'Dw': 'Du', 'Cu': 'Ve', 'Wv': 'Wa', 'K': 'Ki' };
+        const resolveKey = (symbol) => geneSymbolOverrides[symbol] || symbol;
+
         // Process color/pattern genes
         if (geneticsData.genes && Array.isArray(geneticsData.genes)) {
             geneticsData.genes.forEach(gene => {
-                geneLoci[gene.symbol] = {
+                geneLoci[resolveKey(gene.symbol)] = {
                     name: gene.name,
                     combinations: (gene.combinations || []).map(c => c.notation)
                 };
@@ -813,7 +818,7 @@ router.get('/genetics/:speciesName', async (req, res) => {
         // Process marking genes
         if (geneticsData.markingGenes && Array.isArray(geneticsData.markingGenes)) {
             geneticsData.markingGenes.forEach(gene => {
-                geneLoci[gene.symbol] = {
+                geneLoci[resolveKey(gene.symbol)] = {
                     name: gene.name,
                     combinations: (gene.combinations || []).map(c => c.notation)
                 };
@@ -823,7 +828,7 @@ router.get('/genetics/:speciesName', async (req, res) => {
         // Process coat/texture genes
         if (geneticsData.coatGenes && Array.isArray(geneticsData.coatGenes)) {
             geneticsData.coatGenes.forEach(gene => {
-                geneLoci[gene.symbol] = {
+                geneLoci[resolveKey(gene.symbol)] = {
                     name: gene.name,
                     combinations: (gene.combinations || []).map(c => c.notation)
                 };
@@ -833,7 +838,7 @@ router.get('/genetics/:speciesName', async (req, res) => {
         // Process other genes
         if (geneticsData.otherGenes && Array.isArray(geneticsData.otherGenes)) {
             geneticsData.otherGenes.forEach(gene => {
-                geneLoci[gene.symbol] = {
+                geneLoci[resolveKey(gene.symbol)] = {
                     name: gene.name,
                     combinations: (gene.combinations || []).map(c => c.notation)
                 };
