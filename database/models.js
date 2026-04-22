@@ -109,6 +109,9 @@ const UserSchema = new mongoose.Schema({
         collections: { type: mongoose.Schema.Types.Mixed, default: [] },
         // Map of animal id_public -> array of collection IDs the animal belongs to
         animalMap: { type: mongoose.Schema.Types.Mixed, default: {} }
+    },
+    uiPreferences: {
+        defaultAnimalView: { type: String, default: 'list' }
     }
 });
 const User = mongoose.model('User', UserSchema);

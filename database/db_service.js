@@ -425,6 +425,8 @@ const getUserProfileById = async (appUserId_backend) => {
         hasSeenProfileSetupGuide: publicProfile?.hasSeenProfileSetupGuide || false,
         // Breeder info (stored on PublicProfile)
         breederInfo: publicProfile?.breederInfo || {},
+        // UI preferences
+        uiPreferences: user.uiPreferences || { defaultAnimalView: 'list' },
     };
 };
 
