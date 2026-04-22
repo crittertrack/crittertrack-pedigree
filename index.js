@@ -845,6 +845,10 @@ app.use('/api/ratings', authMiddleware, ratingRoutes);
 const favoritesRoutes = require('./routes/favoritesRoutes');
 app.use('/api/favorites', authMiddleware, favoritesRoutes);
 
+// Collections Routes (Require authMiddleware)
+const collectionsRoutes = require('./routes/collectionsRoutes');
+app.use('/api/collections', authMiddleware, collectionsRoutes);
+
 // Enclosure Routes (private management)
 const enclosureRoutes = require('./routes/enclosureRoutes');
 app.use('/api/enclosures', authMiddleware, enclosureRoutes);

@@ -101,7 +101,15 @@ const UserSchema = new mongoose.Schema({
     lastDonationDate: { type: Date, default: null },           // Last one-time donation (gift badge, 31 days)
     
     // Duplicate detection dismissed pairs (to avoid showing same duplicates repeatedly)
-    dismissedDuplicatePairs: { type: [String], default: [] }  // Array of '{id1}|{id2}' sorted pairs
+    dismissedDuplicatePairs: { type: [String], default: [] },  // Array of '{id1}|{id2}' sorted pairs
+
+    // Animal Collections (user-defined groupings)
+    animalCollections: {
+        // Array of collection definitions: { id: String, name: String }
+        collections: { type: mongoose.Schema.Types.Mixed, default: [] },
+        // Map of animal id_public -> array of collection IDs the animal belongs to
+        animalMap: { type: mongoose.Schema.Types.Mixed, default: {} }
+    }
 });
 const User = mongoose.model('User', UserSchema);
 
