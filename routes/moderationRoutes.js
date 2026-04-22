@@ -1958,14 +1958,17 @@ router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
 
         // Extract broadcast details to find matching notifications
         const broadcastTitle = broadcast.details?.title;
-        const broadcastCreatedAt = broadcast.createdAt;
+        // Notifications have createdAt = sendAt (the scheduled/immediate send time), stored as scheduledFor in audit details
+        const notificationCreatedAt = broadcast.details?.scheduledFor
+            ? new Date(broadcast.details.scheduledFor)
+            : broadcast.createdAt;
 
         // Delete all user notifications matching this broadcast
-        // Match by type='broadcast', title, and createdAt within 1 second window
+        // Match by type='broadcast', title, and createdAt within a 60-second window around sendAt
         let deletedNotificationsCount = 0;
         if (broadcastTitle) {
-            const timeWindowStart = new Date(broadcastCreatedAt.getTime() - 1000); // 1 second before
-            const timeWindowEnd = new Date(broadcastCreatedAt.getTime() + 1000); // 1 second after
+            const timeWindowStart = new Date(notificationCreatedAt.getTime() - 60000);
+            const timeWindowEnd = new Date(notificationCreatedAt.getTime() + 60000);
             
             const deleteResult = await Notification.deleteMany({
                 type: 'broadcast',
