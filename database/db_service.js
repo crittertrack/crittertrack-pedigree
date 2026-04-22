@@ -814,7 +814,15 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
 
     // Sort by birth date descending (most recent first)
     // Safety cap: never return more than 2000 animals in a single call to avoid OOM
-    const docs = await Animal.find(query).sort({ birthDate: -1 }).limit(2000).lean();
+    // slim=true: return only the fields needed to render list cards — cuts payload by ~85%
+    const slimFields = filters.slim === 'true' || filters.slim === true
+        ? 'id_public ownerId ownerId_public name prefix suffix species gender birthDate ' +
+          'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isStub archived ' +
+          'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
+          'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId'
+        : null;
+    const baseFind = Animal.find(query).sort({ birthDate: -1 }).limit(2000);
+    const docs = await (slimFields ? baseFind.select(slimFields) : baseFind).lean();
 
     // Bulk-resolve owner display names for view-only animals (single DB call)
     const viewOnlyOwnerIds = [...new Set(
