@@ -819,7 +819,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         ? 'id_public ownerId ownerId_public name prefix suffix species gender birthDate ' +
           'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isStub archived ' +
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
-          'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId'
+          'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId'
         : null;
     const baseFind = Animal.find(query).sort({ birthDate: -1 }).limit(2000);
     const docs = await (slimFields ? baseFind.select(slimFields) : baseFind).lean();
