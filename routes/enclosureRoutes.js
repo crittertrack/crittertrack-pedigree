@@ -70,8 +70,15 @@ router.patch('/assign-animal', async (req, res) => {
             const enc = await Enclosure.findOne({ _id: enclosureId, ownerId: req.user.id }).select('_id').lean();
             if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
         }
+        const animal = await Animal.findOne({ id_public: animalId_public, ownerId: req.user.id }).select('_id status').lean();
+        if (!animal) return res.status(404).json({ message: 'Animal not found' });
+
+        if (animal.status === 'Deceased' || animal.status === 'Rehomed') {
+            return res.status(400).json({ message: `Cannot assign ${animal.status.toLowerCase()} animals to an enclosure` });
+        }
+
         const result = await Animal.findOneAndUpdate(
-            { id_public: animalId_public, ownerId: req.user.id },
+            { _id: animal._id },
             { $set: { enclosureId: enclosureId || null } },
             { new: true }
         );
