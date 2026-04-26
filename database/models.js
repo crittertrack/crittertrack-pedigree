@@ -324,6 +324,7 @@ const AnimalSchema = new mongoose.Schema({
     litterSizeBorn: { type: Number, default: null }, // Number of offspring born
     litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
+    lossesCount: { type: Number, default: null }, // Number of offspring losses post-birth
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
@@ -378,6 +379,7 @@ const AnimalSchema = new mongoose.Schema({
         litterSizeBorn: { type: Number, default: null },
         litterSizeWeaned: { type: Number, default: null },
         stillbornCount: { type: Number, default: null },
+        lossesCount: { type: Number, default: null },
         
         // Link to created litter (if this breeding record resulted in a litter)
         litterId: { type: String, default: null }, // Reference to Litter.litter_id_public (CTL-ID)
@@ -611,6 +613,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     litterSizeBorn: { type: Number, default: null }, // Number of offspring born
     litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
+    lossesCount: { type: Number, default: null }, // Number of offspring losses post-birth
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
@@ -705,6 +708,7 @@ const LitterSchema = new mongoose.Schema({
     numberBorn: { type: Number, required: false, min: 0, default: null }, // Legacy field (will sync with litterSizeBorn)
     litterSizeWeaned: { type: Number, default: null }, // Total number weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn
+    lossesCount: { type: Number, default: null }, // Number of losses
     weaningDate: { type: Date, default: null },
     
     // Optional administrative breakdown of males/females/unknown  
@@ -731,6 +735,7 @@ const LitterSchema = new mongoose.Schema({
     litterSizeBorn: { type: Number, default: null },
     litterSizeWeaned: { type: Number, default: null },
     stillbornCount: { type: Number, default: null },
+    lossesCount: { type: Number, default: null },
     unknownCount: { type: Number, default: null },
     weaningDate: { type: Date, default: null },
 

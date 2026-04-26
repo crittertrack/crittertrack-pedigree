@@ -2247,6 +2247,7 @@ router.post('/:animalId/breeding-records', async (req, res) => {
             litterSizeBorn,
             litterSizeWeaned,
             stillbornCount,
+            lossesCount,
             notes
         } = req.body;
         
@@ -2267,6 +2268,7 @@ router.post('/:animalId/breeding-records', async (req, res) => {
             litterSizeBorn: litterSizeBorn || null,
             litterSizeWeaned: litterSizeWeaned || null,
             stillbornCount: stillbornCount || null,
+            lossesCount: lossesCount || null,
             notes: notes || null
         };
         
@@ -2325,6 +2327,7 @@ router.put('/:animalId/breeding-records/:recordId', async (req, res) => {
             litterSizeBorn,
             litterSizeWeaned,
             stillbornCount,
+            lossesCount,
             notes
         } = req.body;
         
@@ -2337,6 +2340,7 @@ router.put('/:animalId/breeding-records/:recordId', async (req, res) => {
         if (litterSizeBorn !== undefined) record.litterSizeBorn = litterSizeBorn;
         if (litterSizeWeaned !== undefined) record.litterSizeWeaned = litterSizeWeaned;
         if (stillbornCount !== undefined) record.stillbornCount = stillbornCount;
+        if (lossesCount !== undefined) record.lossesCount = lossesCount;
         if (notes !== undefined) record.notes = notes;
         
         await animal.save();
@@ -2349,6 +2353,7 @@ router.put('/:animalId/breeding-records/:recordId', async (req, res) => {
                 if (record.litterSizeBorn !== undefined) { syncToLitter.litterSizeBorn = record.litterSizeBorn; syncToLitter.numberBorn = record.litterSizeBorn; }
                 if (record.litterSizeWeaned !== undefined) syncToLitter.litterSizeWeaned = record.litterSizeWeaned;
                 if (record.stillbornCount !== undefined) syncToLitter.stillbornCount = record.stillbornCount;
+                if (record.lossesCount !== undefined) syncToLitter.lossesCount = record.lossesCount;
                 if (Object.keys(syncToLitter).length) {
                     await Litter.findOneAndUpdate(
                         { litter_id_public: record.litterId },
