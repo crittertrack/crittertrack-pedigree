@@ -53,6 +53,7 @@ router.post('/', async (req, res) => {
                 litterSizeBorn: newLitter.litterSizeBorn ?? newLitter.numberBorn ?? null,
                 litterSizeWeaned: newLitter.litterSizeWeaned ?? null,
                 stillbornCount: newLitter.stillbornCount ?? null,
+                lossesCount: newLitter.lossesCount ?? null,
             };
             const parentIds = [newLitter.sireId_public, newLitter.damId_public].filter(Boolean);
             if (ctlId && parentIds.length) {
@@ -62,6 +63,7 @@ router.post('/', async (req, res) => {
                         'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
                         'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
                         'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
+                        'breedingRecords.$[rec].lossesCount': syncFields.lossesCount,
                     }},
                     { arrayFilters: [{ 'rec.litterId': ctlId }] }
                 );
@@ -216,6 +218,7 @@ router.put('/:id_backend', async (req, res) => {
                 litterSizeBorn: updatedLitter.litterSizeBorn ?? updatedLitter.numberBorn ?? null,
                 litterSizeWeaned: updatedLitter.litterSizeWeaned ?? null,
                 stillbornCount: updatedLitter.stillbornCount ?? null,
+                lossesCount: updatedLitter.lossesCount ?? null,
             };
             const parentIds = [updatedLitter.sireId_public, updatedLitter.damId_public].filter(Boolean);
             if (ctlId && parentIds.length) {
@@ -225,6 +228,7 @@ router.put('/:id_backend', async (req, res) => {
                         'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
                         'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
                         'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
+                        'breedingRecords.$[rec].lossesCount': syncFields.lossesCount,
                     }},
                     { arrayFilters: [{ 'rec.litterId': ctlId }] }
                 );

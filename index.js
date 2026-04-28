@@ -560,6 +560,34 @@ app.post('/api/users/dismiss-profile-setup-guide', authMiddleware, async (req, r
     }
 });
 
+// PATCH /api/users/preferences — save UI preferences (e.g. default animal view)
+app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
+    try {
+        const { User } = require('./database/models');
+        const { defaultAnimalView } = req.body;
+
+        const allowed = ['list', 'collections', 'management'];
+        if (defaultAnimalView !== undefined && !allowed.includes(defaultAnimalView)) {
+            return res.status(400).json({ message: 'Invalid defaultAnimalView value' });
+        }
+
+        const update = {};
+        if (defaultAnimalView !== undefined) {
+            update['uiPreferences.defaultAnimalView'] = defaultAnimalView;
+        }
+
+        if (Object.keys(update).length === 0) {
+            return res.status(400).json({ message: 'No valid preferences provided' });
+        }
+
+        await User.findByIdAndUpdate(req.user.id, { $set: update });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[PREFERENCES] Error saving:', error);
+        res.status(500).json({ message: 'Failed to save preferences' });
+    }
+});
+
 // Get user's custom species order
 app.get('/api/users/species-order', authMiddleware, async (req, res) => {
     try {
@@ -844,6 +872,10 @@ app.use('/api/ratings', authMiddleware, ratingRoutes);
 // Favorites Routes (Require authMiddleware)
 const favoritesRoutes = require('./routes/favoritesRoutes');
 app.use('/api/favorites', authMiddleware, favoritesRoutes);
+
+// Collections Routes (Require authMiddleware)
+const collectionsRoutes = require('./routes/collectionsRoutes');
+app.use('/api/collections', authMiddleware, collectionsRoutes);
 
 // Enclosure Routes (private management)
 const enclosureRoutes = require('./routes/enclosureRoutes');

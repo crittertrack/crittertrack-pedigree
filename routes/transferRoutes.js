@@ -115,6 +115,7 @@ router.post('/:id/accept', async (req, res) => {
                     $set: { 
                         ownerId_public: animal.ownerId_public,
                         status: animal.status,
+                        isOwned: true,
                         isForSale: false,
                         availableForBreeding: false,
                     } 

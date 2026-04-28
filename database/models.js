@@ -101,7 +101,18 @@ const UserSchema = new mongoose.Schema({
     lastDonationDate: { type: Date, default: null },           // Last one-time donation (gift badge, 31 days)
     
     // Duplicate detection dismissed pairs (to avoid showing same duplicates repeatedly)
-    dismissedDuplicatePairs: { type: [String], default: [] }  // Array of '{id1}|{id2}' sorted pairs
+    dismissedDuplicatePairs: { type: [String], default: [] },  // Array of '{id1}|{id2}' sorted pairs
+
+    // Animal Collections (user-defined groupings)
+    animalCollections: {
+        // Array of collection definitions: { id: String, name: String }
+        collections: { type: mongoose.Schema.Types.Mixed, default: [] },
+        // Map of animal id_public -> array of collection IDs the animal belongs to
+        animalMap: { type: mongoose.Schema.Types.Mixed, default: {} }
+    },
+    uiPreferences: {
+        defaultAnimalView: { type: String, default: 'list' }
+    }
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -313,6 +324,7 @@ const AnimalSchema = new mongoose.Schema({
     litterSizeBorn: { type: Number, default: null }, // Number of offspring born
     litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
+    lossesCount: { type: Number, default: null }, // Number of offspring losses post-birth
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
@@ -367,6 +379,7 @@ const AnimalSchema = new mongoose.Schema({
         litterSizeBorn: { type: Number, default: null },
         litterSizeWeaned: { type: Number, default: null },
         stillbornCount: { type: Number, default: null },
+        lossesCount: { type: Number, default: null },
         
         // Link to created litter (if this breeding record resulted in a litter)
         litterId: { type: String, default: null }, // Reference to Litter.litter_id_public (CTL-ID)
@@ -600,6 +613,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     litterSizeBorn: { type: Number, default: null }, // Number of offspring born
     litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
+    lossesCount: { type: Number, default: null }, // Number of offspring losses post-birth
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
@@ -694,6 +708,7 @@ const LitterSchema = new mongoose.Schema({
     numberBorn: { type: Number, required: false, min: 0, default: null }, // Legacy field (will sync with litterSizeBorn)
     litterSizeWeaned: { type: Number, default: null }, // Total number weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn
+    lossesCount: { type: Number, default: null }, // Number of losses
     weaningDate: { type: Date, default: null },
     
     // Optional administrative breakdown of males/females/unknown  
@@ -720,6 +735,7 @@ const LitterSchema = new mongoose.Schema({
     litterSizeBorn: { type: Number, default: null },
     litterSizeWeaned: { type: Number, default: null },
     stillbornCount: { type: Number, default: null },
+    lossesCount: { type: Number, default: null },
     unknownCount: { type: Number, default: null },
     weaningDate: { type: Date, default: null },
 
