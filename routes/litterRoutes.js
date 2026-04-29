@@ -22,6 +22,28 @@ const litterUpload = multer({
     fileFilter: imageFileFilter,
 });
 
+// Keep parent in-mating flags in sync with active litters.
+// Active litter = not planned, has matingDate, and not yet born.
+const syncParentsInMating = async (ownerId, parentIdsPublic = []) => {
+    const parentIds = [...new Set((parentIdsPublic || []).filter(Boolean))];
+    if (!parentIds.length) return;
+
+    for (const id_public of parentIds) {
+        const activeCount = await Litter.countDocuments({
+            ownerId,
+            $or: [{ sireId_public: id_public }, { damId_public: id_public }],
+            isPlanned: { $ne: true },
+            matingDate: { $ne: null },
+            $or: [{ birthDate: null }, { birthDate: { $exists: false } }],
+        });
+
+        await Animal.updateOne(
+            { ownerId, id_public },
+            { $set: { isInMating: activeCount > 0 } }
+        );
+    }
+};
+
 // --- Litter Route Controllers (PROTECTED) ---
 
 // POST /api/litters
@@ -33,6 +55,13 @@ router.post('/', async (req, res) => {
         const litterData = req.body;
 
         const newLitter = await addLitter(appUserId_backend, litterData);
+
+        // Auto-sync sire/dam "In Mating" based on active litters.
+        try {
+            await syncParentsInMating(appUserId_backend, [newLitter.sireId_public, newLitter.damId_public]);
+        } catch (inMatingErr) {
+            console.error('Warning: failed to sync parent in-mating flags:', inMatingErr);
+        }
 
         // Log user activity
         logUserActivity({
@@ -197,7 +226,23 @@ router.put('/:id_backend', async (req, res) => {
         const litterId_backend = req.params.id_backend;
         const updates = req.body; // Updates object
 
+        const priorLitter = await Litter.findOne({ _id: litterId_backend, ownerId: appUserId_backend })
+            .select('sireId_public damId_public')
+            .lean();
+
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
+
+        // Recompute in-mating for both old and new parents (covers parent changes/removals).
+        try {
+            await syncParentsInMating(appUserId_backend, [
+                priorLitter?.sireId_public,
+                priorLitter?.damId_public,
+                updatedLitter?.sireId_public,
+                updatedLitter?.damId_public,
+            ]);
+        } catch (inMatingErr) {
+            console.error('Warning: failed to sync parent in-mating flags on litter update:', inMatingErr);
+        }
 
         // Log user activity
         logUserActivity({
