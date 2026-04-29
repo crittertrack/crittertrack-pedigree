@@ -1416,7 +1416,7 @@ router.put('/:id_backend/toggle', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
-        // Expected body: { makePublic: true, includeRemarks: false, includeGeneticCode: true }
+        // Expected body: { makePublic: true }
         const toggleData = req.body; 
 
         const updatedAnimal = await toggleAnimalPublic(appUserId_backend, animalId_backend, toggleData);
@@ -1889,9 +1889,7 @@ router.post('/bulk-publish', async (req, res) => {
             
             // Make animal public with default settings (no remarks/genetic code)
             await toggleAnimalPublic(appUserId_backend, animal._id, {
-                makePublic: true,
-                includeRemarks: false,
-                includeGeneticCode: false
+                makePublic: true
             });
             
             publishedCount++;

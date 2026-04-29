@@ -500,8 +500,6 @@ const AnimalSchema = new mongoose.Schema({
     // Public visibility toggles
     showOnPublicProfile: { type: Boolean, default: false, index: true },
     isDisplay: { type: Boolean, default: false }, // Main toggle for public profile visibility
-    includeRemarks: { type: Boolean, default: false }, // If public, include remarks
-    includeGeneticCode: { type: Boolean, default: false }, // If public, include genetic code
     
     // Availability for sale/stud (for showcase)
     isForSale: { type: Boolean, default: false },
@@ -666,10 +664,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     
     // Inbreeding coefficient (cached value)
     inbreedingCoefficient: { type: Number, default: null },
-    
-    // Settings used by db_service to know which fields to copy during update
-    includeRemarks: { type: Boolean, default: false },
-    includeGeneticCode: { type: Boolean, default: false },
 }, { timestamps: true });
 const PublicAnimal = mongoose.model('PublicAnimal', PublicAnimalSchema, 'publicanimals');
 

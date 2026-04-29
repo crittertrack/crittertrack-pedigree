@@ -1268,15 +1268,13 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
  * Toggles an animal's public visibility and updates the PublicAnimal collection.
  * @param {string} appUserId_backend - The user's internal ID.
  * @param {string} animalId_backend - The animal's internal ID.
- * @param {object} toggleData - { makePublic: boolean, includeRemarks: boolean, includeGeneticCode: boolean }
+ * @param {object} toggleData - { makePublic: boolean }
  */
 const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleData) => {
     const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
     
-    // 1. Update the private animal's public status and settings
+    // 1. Update the private animal's public status
     animal.showOnPublicProfile = toggleData.makePublic;
-    animal.includeRemarks = toggleData.includeRemarks;
-    animal.includeGeneticCode = toggleData.includeGeneticCode;
     await animal.save();
 
     // 2. Manage the PublicAnimal collection record
@@ -1305,12 +1303,9 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             isNursing: animal.isNursing || false,
             status: animal.status || null,
             breederId_public: animal.breederId_public || null,
-            // Include sensitive data based on settings
-            remarks: toggleData.includeRemarks ? animal.remarks : '',
-            geneticCode: toggleData.includeGeneticCode ? animal.geneticCode : null,
-            // Store toggle settings on the public record for update purposes
-            includeRemarks: toggleData.includeRemarks,
-            includeGeneticCode: toggleData.includeGeneticCode,
+            // Always include genetic code and remarks
+            remarks: animal.remarks || '',
+            geneticCode: animal.geneticCode || null,
             // Sync display settings
             isDisplay: animal.isDisplay || false,
         };
