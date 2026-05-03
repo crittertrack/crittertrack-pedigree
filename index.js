@@ -564,16 +564,39 @@ app.post('/api/users/dismiss-profile-setup-guide', authMiddleware, async (req, r
 app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
     try {
         const { User } = require('./database/models');
-        const { defaultAnimalView } = req.body;
+        const {
+            defaultAnimalView,
+            enclosureShowUnowned,
+            enclosureShowBooked,
+            enclosureShowRehomed,
+        } = req.body;
 
         const allowed = ['list', 'collections', 'management'];
         if (defaultAnimalView !== undefined && !allowed.includes(defaultAnimalView)) {
             return res.status(400).json({ message: 'Invalid defaultAnimalView value' });
         }
+        if (enclosureShowUnowned !== undefined && typeof enclosureShowUnowned !== 'boolean') {
+            return res.status(400).json({ message: 'Invalid enclosureShowUnowned value' });
+        }
+        if (enclosureShowBooked !== undefined && typeof enclosureShowBooked !== 'boolean') {
+            return res.status(400).json({ message: 'Invalid enclosureShowBooked value' });
+        }
+        if (enclosureShowRehomed !== undefined && typeof enclosureShowRehomed !== 'boolean') {
+            return res.status(400).json({ message: 'Invalid enclosureShowRehomed value' });
+        }
 
         const update = {};
         if (defaultAnimalView !== undefined) {
             update['uiPreferences.defaultAnimalView'] = defaultAnimalView;
+        }
+        if (enclosureShowUnowned !== undefined) {
+            update['uiPreferences.enclosureShowUnowned'] = enclosureShowUnowned;
+        }
+        if (enclosureShowBooked !== undefined) {
+            update['uiPreferences.enclosureShowBooked'] = enclosureShowBooked;
+        }
+        if (enclosureShowRehomed !== undefined) {
+            update['uiPreferences.enclosureShowRehomed'] = enclosureShowRehomed;
         }
 
         if (Object.keys(update).length === 0) {

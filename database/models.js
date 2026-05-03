@@ -111,7 +111,10 @@ const UserSchema = new mongoose.Schema({
         animalMap: { type: mongoose.Schema.Types.Mixed, default: {} }
     },
     uiPreferences: {
-        defaultAnimalView: { type: String, default: 'list' }
+        defaultAnimalView: { type: String, default: 'list' },
+        enclosureShowUnowned: { type: Boolean, default: true },
+        enclosureShowBooked: { type: Boolean, default: true },
+        enclosureShowRehomed: { type: Boolean, default: false }
     }
 });
 const User = mongoose.model('User', UserSchema);

@@ -426,7 +426,12 @@ const getUserProfileById = async (appUserId_backend) => {
         // Breeder info (stored on PublicProfile)
         breederInfo: publicProfile?.breederInfo || {},
         // UI preferences
-        uiPreferences: user.uiPreferences || { defaultAnimalView: 'list' },
+        uiPreferences: {
+            defaultAnimalView: user.uiPreferences?.defaultAnimalView || 'list',
+            enclosureShowUnowned: user.uiPreferences?.enclosureShowUnowned !== false,
+            enclosureShowBooked: user.uiPreferences?.enclosureShowBooked !== false,
+            enclosureShowRehomed: user.uiPreferences?.enclosureShowRehomed === true,
+        },
     };
 };
 
