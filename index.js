@@ -567,6 +567,7 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
         const {
             defaultAnimalView,
             enclosureShowUnowned,
+            enclosureShowAvailable,
             enclosureShowBooked,
             enclosureShowRehomed,
         } = req.body;
@@ -577,6 +578,9 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
         }
         if (enclosureShowUnowned !== undefined && typeof enclosureShowUnowned !== 'boolean') {
             return res.status(400).json({ message: 'Invalid enclosureShowUnowned value' });
+        }
+        if (enclosureShowAvailable !== undefined && typeof enclosureShowAvailable !== 'boolean') {
+            return res.status(400).json({ message: 'Invalid enclosureShowAvailable value' });
         }
         if (enclosureShowBooked !== undefined && typeof enclosureShowBooked !== 'boolean') {
             return res.status(400).json({ message: 'Invalid enclosureShowBooked value' });
@@ -591,6 +595,9 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
         }
         if (enclosureShowUnowned !== undefined) {
             update['uiPreferences.enclosureShowUnowned'] = enclosureShowUnowned;
+        }
+        if (enclosureShowAvailable !== undefined) {
+            update['uiPreferences.enclosureShowAvailable'] = enclosureShowAvailable;
         }
         if (enclosureShowBooked !== undefined) {
             update['uiPreferences.enclosureShowBooked'] = enclosureShowBooked;

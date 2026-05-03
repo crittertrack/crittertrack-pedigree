@@ -113,6 +113,7 @@ const UserSchema = new mongoose.Schema({
     uiPreferences: {
         defaultAnimalView: { type: String, default: 'list' },
         enclosureShowUnowned: { type: Boolean, default: true },
+        enclosureShowAvailable: { type: Boolean, default: true },
         enclosureShowBooked: { type: Boolean, default: true },
         enclosureShowRehomed: { type: Boolean, default: false }
     }
