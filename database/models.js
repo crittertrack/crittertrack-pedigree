@@ -248,7 +248,15 @@ const AnimalSchema = new mongoose.Schema({
         lastDoneDate: { type: Date, default: null },
         frequencyDays: { type: Number, default: null },
     }],
-    
+
+    // Custom milestones — one-time or recurring events tracked per animal
+    milestones: [{
+        label: { type: String, required: true, trim: true },
+        startDate: { type: Date, required: true },
+        interval: { type: Number, default: null },       // e.g. 2 (for "every 2 weeks")
+        intervalUnit: { type: String, default: null },   // 'day' | 'week' | 'month' | 'year' | null
+    }],
+
     // Tags for local organization (lines, enclosures, etc)
     tags: [{ type: String, trim: true }],
     
