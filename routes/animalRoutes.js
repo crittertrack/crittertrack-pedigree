@@ -769,6 +769,25 @@ router.get('/duplicates', async (req, res) => {
     }
 });
 
+// POST /api/animals/parents-batch
+// Batch fetch name fields for a list of animal public IDs (used by list-view parent name lookup)
+// Body: { ids: ['CTC26', 'CTC11', ...] }
+router.post('/parents-batch', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) return res.json([]);
+        // Limit to 200 IDs to avoid abuse
+        const safeIds = ids.slice(0, 200);
+        const animals = await Animal.find(
+            { id_public: { $in: safeIds } },
+        ).select('id_public name prefix suffix').lean();
+        return res.json(animals);
+    } catch (err) {
+        console.error('[parents-batch] Error:', err);
+        return res.status(500).json({ message: 'Failed to fetch parent names' });
+    }
+});
+
 // POST /api/animals/duplicates/dismiss
 // Mark a pair of animals as "not duplicates" so they won't show in future scans
 // Body: { id1: 'abc123', id2: 'def456' }
