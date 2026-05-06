@@ -827,7 +827,8 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         ? 'id_public ownerId ownerId_public name prefix suffix species gender birthDate ' +
           'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isQuarantine isStub archived ' +
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
-          'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId'
+          'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
+          'color coat coatPattern earset phenotype morph markings eyeColor nailColor size carrierTraits geneticCode lifeStage'
         : null;
     const baseFind = Animal.find(query).sort({ birthDate: -1 });
     const cappedFind = slimFields ? baseFind : baseFind.limit(2000);
