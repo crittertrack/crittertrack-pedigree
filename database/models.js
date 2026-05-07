@@ -226,6 +226,7 @@ const AnimalSchema = new mongoose.Schema({
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
     isQuarantine: { type: Boolean, default: false }, // Animal is in quarantine/isolation
+    isInTreatment: { type: Boolean, default: false }, // Animal is actively undergoing treatment
 
     // Feeding schedule tracking (for Management view)
     lastFedDate: { type: Date, default: null },
@@ -570,6 +571,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
     isQuarantine: { type: Boolean, default: false }, // Animal is in quarantine/isolation
+    isInTreatment: { type: Boolean, default: false }, // Animal is actively undergoing treatment
 
     // Feeding schedule tracking (for Management view)
     lastFedDate: { type: Date, default: null },
