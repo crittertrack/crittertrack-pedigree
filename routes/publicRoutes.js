@@ -314,9 +314,27 @@ router.get('/global/animals', async (req, res) => {
         console.log('Global animals search - Query filter:', q, 'Limit:', limit);
         const docs = await Model.find(q).limit(limit).lean();
         console.log('Global animals search - Results count:', docs.length);
+
+        // For each doc, backfill sireId_public/damId_public from the private Animal record
+        // in case the PublicAnimal record is stale (parents linked after the last sync).
+        const ids = docs.map(d => d.id_public).filter(Boolean);
+        const privateParents = ids.length
+            ? await Animal.find({ id_public: { $in: ids } }).select('id_public sireId_public damId_public').lean()
+            : [];
+        const privateParentMap = {};
+        for (const p of privateParents) privateParentMap[p.id_public] = p;
+
         // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
         // collection are public by definition. Inject the field so frontend privacy checks work.
-        const publicDocs = docs.map(doc => ({ ...doc, showOnPublicProfile: true }));
+        const publicDocs = docs.map(doc => {
+            const priv = privateParentMap[doc.id_public];
+            return {
+                ...doc,
+                sireId_public: doc.sireId_public || priv?.sireId_public || null,
+                damId_public: doc.damId_public || priv?.damId_public || null,
+                showOnPublicProfile: true,
+            };
+        });
         return res.status(200).json(publicDocs);
     } catch (error) {
         console.error('Error fetching global animals:', error && (error.stack || error));
