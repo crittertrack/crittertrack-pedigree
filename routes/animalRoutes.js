@@ -1166,7 +1166,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         // (FormData always serialises booleans as strings "true"/"false")
         const BOOL_FIELDS = [
             'isForSale', 'availableForBreeding', 'isOwned', 'isPregnant', 'isNursing',
-            'isInMating', 'isQuarantine', 'showOnPublicProfile', 'isDisplay',
+            'isInMating', 'isQuarantine', 'isInTreatment', 'showOnPublicProfile', 'isDisplay',
         ];
         for (const field of BOOL_FIELDS) {
             if (updates[field] === 'true')  updates[field] = true;
@@ -1193,7 +1193,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
                 color: 'Color', coat: 'Coat', earset: 'Earset', coatPattern: 'Coat Pattern',
                 morph: 'Morph', phenotype: 'Phenotype', markings: 'Markings', eyeColor: 'Eye Color', nailColor: 'Nail Color',
                 weight: 'Weight', length: 'Length', remarks: 'Remarks', geneticCode: 'Genetic Code',
-                isQuarantine: 'Quarantine', isOwned: 'Owned', isPregnant: 'Pregnant', isNursing: 'Nursing', isInMating: 'In Mating',
+                isQuarantine: 'Quarantine', isInTreatment: 'In Treatment', isOwned: 'Owned', isPregnant: 'Pregnant', isNursing: 'Nursing', isInMating: 'In Mating',
                 breederId_public: 'Breeder', sireId_public: 'Sire', damId_public: 'Dam', enclosureId: 'Enclosure',
                 lastFedDate: 'Last Fed', feedingFrequencyDays: 'Feeding Frequency (days)',
                 lastMaintenanceDate: 'Last Maintenance', maintenanceFrequencyDays: 'Maintenance Frequency (days)',
