@@ -184,12 +184,13 @@ async function run() {
             careTasks: [],
             animalCareTasks: [],
             // Health tab demo — Under Treatment
+            isInTreatment: true,
             medicalConditions: JSON.stringify([
-                { name: 'Respiratory infection', notes: 'Mild URI, started treatment 2025-04-28' },
+                { id: 'mc1', name: 'Respiratory infection', notes: 'Mild URI, started treatment 2026-04-28' },
             ]),
             medications: JSON.stringify([
-                { name: 'Baytril (Enrofloxacin)', notes: '0.1ml PO BID × 10 days, started 2025-04-28' },
-                { name: 'Nebulisation (saline)', notes: 'Daily 5 min sessions' },
+                { id: 'med1', name: 'Baytril (Enrofloxacin)', dose: '0.1ml PO', notes: '', startDate: daysAgo(9).toISOString().split('T')[0], stopDate: daysFromNow(1).toISOString().split('T')[0], intervalValue: 12, intervalUnit: 'hours' },
+                { id: 'med2', name: 'Nebulisation (saline)', dose: '5 min session', notes: '', startDate: daysAgo(9).toISOString().split('T')[0], stopDate: daysFromNow(5).toISOString().split('T')[0], intervalValue: 1, intervalUnit: 'days' },
             ]),
             chronicConditions: null,
             healthStatus: 'Under treatment — URI',
@@ -229,6 +230,7 @@ async function run() {
                         ...(def.vaccinations  !== undefined && { vaccinations: def.vaccinations }),
                         ...(def.dewormingRecords !== undefined && { dewormingRecords: def.dewormingRecords }),
                         ...(def.isQuarantine  !== undefined && { isQuarantine: def.isQuarantine }),
+                        ...(def.isInTreatment  !== undefined && { isInTreatment: def.isInTreatment }),
                         ...(def.isInMating     !== undefined && { isInMating: def.isInMating }),
                         ...(def.isPregnant     !== undefined && { isPregnant: def.isPregnant }),
                         ...(def.isNursing      !== undefined && { isNursing: def.isNursing }),
