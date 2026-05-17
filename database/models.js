@@ -277,7 +277,7 @@ const AnimalSchema = new mongoose.Schema({
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
     
-    // Tab 2: Status & Privacy Fields
+    // Tab 2: Ownership Fields
     keeperName: { type: String, default: null }, // Free-text keeper/custodian name
     groupRole: { type: String, default: null }, // Role in group/colony (e.g., alpha, beta, omega)
     keeperHistory: [{
@@ -883,6 +883,42 @@ const FeedbackSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 const Feedback = mongoose.model('Feedback', FeedbackSchema);
+
+
+// --- 9B. BETA SURVEY SCHEMA ---
+const BetaSurveySchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    userIdPublic: { type: String, required: true }, // CTUID
+    userEmail: { type: String, required: true },
+    userName: { type: String, required: true },
+    
+    // Questions 1-14: Linear scales (1-5)
+    q1_overall_satisfaction: { type: Number, min: 1, max: 5, required: true }, // Very dissatisfied to Very satisfied
+    q2_visual_design: { type: Number, min: 1, max: 5, required: true }, // Visual design satisfaction
+    
+    // Question 3: Multiple choice - what do you use most for
+    q3_primary_use: { type: [String], required: true }, // Array of selected options
+    
+    // Question 4: Multiple choice - features used most often
+    q4_features_used: { type: [String], required: true }, // Array of selected options
+    
+    q5_find_animals: { type: Number, min: 1, max: 5, required: true }, // Very difficult to Very easy
+    q6_litter_family_tree: { type: Number, min: 1, max: 5, required: true }, // Very difficult to Very easy
+    q7_genetics_tools: { type: Number, min: 1, max: 5, required: true }, // Not useful to Very useful
+    q8_animal_profile_clarity: { type: Number, min: 1, max: 5, required: true }, // Very unclear to Very clear
+    q9_litter_tracking: { type: Number, min: 1, max: 5, required: true }, // Not well to Very well
+    q10_ownership_management: { type: Number, min: 1, max: 5, required: true }, // Not well to Very well
+    q11_profile_settings: { type: Number, min: 1, max: 5, required: true }, // Very hard to Very easy
+    q12_breeder_directory: { type: Number, min: 1, max: 5, required: true }, // Not helpful to Very helpful
+    q13_visibility_comfort: { type: Number, min: 1, max: 5, required: true }, // Very uncomfortable to Very comfortable
+    q14_marketplace_utility: { type: Number, min: 1, max: 5, required: true }, // Not useful to Very useful
+    
+    // Question 15: Free text feedback
+    q15_improvements: { type: String, default: null },
+    
+    createdAt: { type: Date, default: Date.now, index: true }
+}, { timestamps: true });
+const BetaSurvey = mongoose.model('BetaSurvey', BetaSurveySchema);
 
 
 // --- 10. MESSAGE SCHEMA ---
@@ -2145,6 +2181,7 @@ module.exports = {
     GeneticsFeedback,
     BugReport,
     Feedback,
+    BetaSurvey,
     Message,
     MessageReport,
     ProfileReport,

@@ -55,26 +55,26 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Breeder ID |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `color` | Color |  | Overview |
 | `coat` | Coat Type |  | Overview |
-| `earset` | Earset |  | Physical |
+| `earset` | Earset |  | Appearance |
 | `coatPattern` | Pattern |  | Overview |
-| `lifeStage` | Life Stage |  | Physical |
-| `bodyLength` | Body Length |  | Physical |
-| `adultWeight` | Adult Weight |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
-| `weight` | Weight |  | Physical |
-| `length` | Body/Tail Length |  | Physical |
-| `carrierTraits` | Carrier Traits |  | Physical |
+| `lifeStage` | Life Stage |  | Appearance |
+| `bodyLength` | Body Length |  | Appearance |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `bodyConditionScore` | Body Condition Score |  | Appearance |
+| `weight` | Weight |  | Appearance |
+| `length` | Body/Tail Length |  | Appearance |
+| `carrierTraits` | Carrier Traits |  | Appearance |
 | `pedigreeRegistrationId` | Pedigree Registration # |  | Identification |
 | `breed` | Breed |  | Overview |
 | `strain` | Strain |  | Overview |
-| `origin` | Origin |  | Lineage |
+| `origin` | Origin |  | Pedigree |
 | `isNeutered` | Neutered/Spayed |  | Breeding |
 | `spayNeuterDate` | Spay/Neuter Date |  | Breeding |
 | `heatStatus` | Heat Status |  | Breeding |
@@ -150,8 +150,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `endOfLifeCareNotes` | End of Life Care Notes |  | End of Life |
 | `transferHistory` | Transfer History |  | Legal & Documentation |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `markings` | Markings |  | Physical |
+| `phenotype` | Phenotype |  | Appearance |
+| `markings` | Markings |  | Appearance |
 | `remarks` | Notes/Remarks |  | Overview |
 
 ### ❌ Disabled Fields (41)
@@ -211,21 +211,21 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Breeder ID |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `color` | Color |  | Overview |
 | `coat` | Coat Type |  | Overview |
 | `coatPattern` | Pattern |  | Overview |
-| `lifeStage` | Life Stage |  | Physical |
-| `heightAtWithers` | Height at Withers |  | Physical |
-| `bodyLength` | Body Length |  | Physical |
-| `chestGirth` | Chest Girth |  | Physical |
-| `adultWeight` | Adult Weight |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
-| `weight` | Weight |  | Physical |
+| `lifeStage` | Life Stage |  | Appearance |
+| `heightAtWithers` | Height at Withers |  | Appearance |
+| `bodyLength` | Body Length |  | Appearance |
+| `chestGirth` | Chest Girth |  | Appearance |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `bodyConditionScore` | Body Condition Score |  | Appearance |
+| `weight` | Weight |  | Appearance |
 | `microchipNumber` | Microchip # |  | Identification |
 | `pedigreeRegistrationId` | Pedigree Registration # |  | Identification |
 | `breed` | Breed |  | Overview |
@@ -237,7 +237,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `fciRegistrationNumber` | FCI Registration # |  | Identification |
 | `cfaRegistrationNumber` | CFA Registration # |  | Identification |
 | `workingRegistryIds` | Working Registry IDs |  | Identification |
-| `origin` | Origin |  | Lineage |
+| `origin` | Origin |  |Pedigree |
 | `isNeutered` | Neutered/Spayed |  | Breeding |
 | `spayNeuterDate` | Spay/Neuter Date |  | Breeding |
 | `heatStatus` | Heat Status |  | Breeding |
@@ -330,7 +330,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `endOfLifeCareNotes` | End of Life Care Notes |  | End of Life |
 | `insurance` | Insurance |  | Legal & Documentation |
 | `legalStatus` | Legal Status |  | Legal & Documentation |
-| `coOwnership` | Co-Ownership |  | Status & Privacy |
+| `coOwnership` | Co-Ownership |  | Ownership |
 | `transferHistory` | Transfer History |  | Legal & Documentation |
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
@@ -367,24 +367,24 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Breeder ID |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `color` | Base Color |  | Overview |
 | `coatPattern` | Morph/Pattern |  | Overview |
-| `lifeStage` | Life Stage |  | Physical |
-| `bodyLength` | Snout-Vent Length (SVL) |  | Physical |
-| `adultWeight` | Adult Weight |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
-| `weight` | Weight |  | Physical |
-| `length` | Total Length |  | Physical |
+| `lifeStage` | Life Stage |  | Appearance |
+| `bodyLength` | Snout-Vent Length (SVL) |  | Appearance |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `bodyConditionScore` | Body Condition Score |  | Appearance |
+| `weight` | Weight |  | Appearance |
+| `length` | Total Length |  | Appearance |
 | `microchipNumber` | Microchip # |  | Identification |
 | `pedigreeRegistrationId` | Registry/Studbook # |  | Identification |
 | `licenseNumber` | CITES/License Number |  | Legal & Documentation |
 | `licenseJurisdiction` | License Jurisdiction |  | Legal & Documentation |
-| `origin` | Origin |  | Lineage |
+| `origin` | Origin |  |Pedigree |
 | `ovulationDate` | Pre-lay/Ovulation Date |  | Breeding |
 | `matingDates` | Breeding Dates |  | Breeding |
 | `expectedDueDate` | Expected Lay/Birth Date |  | Breeding |
@@ -449,14 +449,14 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `necropsyResults` | Necropsy Results |  | End of Life |
 | `endOfLifeCareNotes` | End of Life Care Notes |  | End of Life |
 | `legalStatus` | Legal Status/Permits |  | Legal & Documentation |
-| `coOwnership` | Co-Ownership |  | Status & Privacy |
+| `coOwnership` | Co-Ownership |  | Ownership |
 | `transferHistory` | Transfer History |  | Legal & Documentation |
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `morph` | Morph |  | Physical |
-| `markings` | Pattern/Markings |  | Physical |
+| `phenotype` | Phenotype |  | Appearance |
+| `morph` | Morph |  | Appearance |
+| `markings` | Pattern/Markings |  | Appearance |
 | `remarks` | Notes/Remarks |  | Overview |
 
 ### ❌ Disabled Fields (47)
@@ -523,29 +523,29 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Band Number |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `colonyId` | Flock/Aviary ID |  | Identification |
-| `carrierTraits` | Carrier Traits |  | Physical |
+| `carrierTraits` | Carrier Traits |  | Appearance |
 | `color` | Color |  | Overview |
 | `coat` | Feather Type |  | Overview |
 | `coatPattern` | Plumage Pattern |  | Overview |
-| `lifeStage` | Life Stage |  | Physical |
-| `bodyLength` | Body Length |  | Physical |
-| `adultWeight` | Adult Weight |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
-| `weight` | Weight |  | Physical |
-| `length` | Wingspan |  | Physical |
-| `eyeColor` | Eye Color |  | Physical |
+| `lifeStage` | Life Stage |  | Appearance |
+| `bodyLength` | Body Length |  | Appearance |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `bodyConditionScore` | Body Condition Score |  | Appearance |
+| `weight` | Weight |  | Appearance |
+| `length` | Wingspan |  | Appearance |
+| `eyeColor` | Eye Color |  | Appearance |
 | `microchipNumber` | Microchip # |  | Identification |
 | `pedigreeRegistrationId` | Registration # |  | Identification |
 | `breed` | Breed/Variety |  | Overview |
 | `licenseNumber` | Permit Number |  | Legal & Documentation |
 | `licenseJurisdiction` | Jurisdiction |  | Legal & Documentation |
-| `origin` | Origin |  | Lineage |
+| `origin` | Origin |  |Pedigree |
 | `ovulationDate` | Ovulation Date |  | Breeding |
 | `matingDates` | Mating Dates |  | Breeding |
 | `expectedDueDate` | Expected Hatch Date |  | Breeding |
@@ -620,14 +620,14 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `endOfLifeCareNotes` | End of Life Care Notes |  | End of Life |
 | `insurance` | Insurance |  | Legal & Documentation |
 | `legalStatus` | Legal Status/CITES |  | Legal & Documentation |
-| `coOwnership` | Co-Ownership |  | Status & Privacy |
+| `coOwnership` | Co-Ownership |  | Ownership |
 | `transferHistory` | Transfer History |  | Legal & Documentation |
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `morph` | Mutation/Morph |  | Physical |
-| `markings` | Markings |  | Physical |
+| `phenotype` | Phenotype |  | Appearance |
+| `morph` | Mutation/Morph |  | Appearance |
+| `markings` | Markings |  | Appearance |
 | `remarks` | Notes/Remarks |  | Overview |
 
 ### ❌ Disabled Fields (33)
@@ -681,23 +681,23 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Breeder ID |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `color` | Color |  | Overview |
 | `coatPattern` | Skin Pattern |  | Overview |
-| `lifeStage` | Life Stage |  | Physical |
-| `bodyLength` | Body Length |  | Physical |
-| `adultWeight` | Adult Weight |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
-| `weight` | Weight |  | Physical |
-| `length` | Snout-Vent Length |  | Physical |
+| `lifeStage` | Life Stage |  | Appearance |
+| `bodyLength` | Body Length |  | Appearance |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `bodyConditionScore` | Body Condition Score |  | Appearance |
+| `weight` | Weight |  | Appearance |
+| `length` | Snout-Vent Length |  | Appearance |
 | `pedigreeRegistrationId` | Registration # |  | Identification |
 | `licenseNumber` | CITES/Export License |  | Legal & Documentation |
 | `licenseJurisdiction` | Jurisdiction |  | Legal & Documentation |
-| `origin` | Origin |  | Lineage |
+| `origin` | Origin |  |Pedigree |
 | `ovulationDate` | Egg-laying Date |  | Breeding |
 | `matingDates` | Mating Dates |  | Breeding |
 | `expectedDueDate` | Expected Spawn Date |  | Breeding |
@@ -774,11 +774,11 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
 | `insurance` | Insurance |  | Legal & Documentation |
-| `coOwnership` | Co-Ownership |  | Status & Privacy |
+| `coOwnership` | Co-Ownership |  | Ownership |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `morph` | Morph |  | Physical |
-| `markings` | Markings |  | Physical |
+| `phenotype` | Phenotype |  | Appearance |
+| `morph` | Morph |  | Appearance |
+| `markings` | Markings |  | Appearance |
 | `remarks` | Notes/Remarks |  | Overview |
 
 ### ❌ Disabled Fields (52)
@@ -837,20 +837,20 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Breeder ID |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `color` | Color |  | Overview |
 | `coatPattern` | Color Pattern |  | Overview |
-| `lifeStage` | Life Stage |  | Physical |
-| `bodyLength` | Standard Length |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
-| `length` | Length |  | Physical |
+| `lifeStage` | Life Stage |  | Appearance |
+| `bodyLength` | Standard Length |  | Appearance |
+| `bodyConditionScore` | Body Condition Score |  | Appearance |
+| `length` | Length |  | Appearance |
 | `pedigreeRegistrationId` | Registration # |  | Identification |
 | `breed` | Variety |  | Overview |
-| `origin` | Origin |  | Lineage |
+| `origin` | Origin |  |Pedigree |
 | `matingDates` | Spawn Dates |  | Breeding |
 | `expectedDueDate` | Expected Hatch Date |  | Breeding |
 | `litterCount` | Fry Count |  | Breeding |
@@ -876,8 +876,8 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `isPregnant` | Gravid |  | Breeding |
 | `isNursing` | Mouthbrooding |  | Breeding |
 | `isInMating` | In Mating |  | Breeding |
-| `adultWeight` | Adult Weight |  | Physical |
-| `weight` | Weight |  | Physical |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `weight` | Weight |  | Appearance |
 | `licenseNumber` | Permit Number |  | Legal & Documentation |
 | `licenseJurisdiction` | Permit Jurisdiction |  | Legal & Documentation |
 | `ovulationDate` | Spawn Readiness Date |  | Breeding |
@@ -922,13 +922,13 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `transferHistory` | Transfer History |  | Legal & Documentation |
 | `insurance` | Insurance |  | Legal & Documentation |
 | `legalStatus` | Legal Status/Permits |  | Legal & Documentation |
-| `coOwnership` | Co-Ownership |  | Status & Privacy |
+| `coOwnership` | Co-Ownership |  | Ownership |
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export/Import Restrictions |  | Legal & Documentation |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `morph` | Morph/Variety |  | Physical |
-| `markings` | Markings |  | Physical |
+| `phenotype` | Phenotype |  | Appearance |
+| `morph` | Morph/Variety |  | Appearance |
+| `markings` | Markings |  | Appearance |
 | `remarks` | Notes/Remarks |  | Overview |
 
 > ⚠️ **Fish Notes:** `breed` ("Variety") and `strain` ("Breeding Line") may overlap for some keepers — review whether both are needed per use case. `humidity` repurposed as "Water Parameters/pH" since atmospheric humidity is N/A for fish.
@@ -995,17 +995,17 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Breeder ID |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `color` | Color |  | Overview |
 | `coatPattern` | Exoskeleton Pattern |  | Overview |
-| `lifeStage` | Life Stage (Instar) |  | Physical |
-| `bodyLength` | Body Length |  | Physical |
-| `length` | Leg Span/Length |  | Physical |
-| `origin` | Origin |  | Lineage |
+| `lifeStage` | Life Stage (Instar) |  | Appearance |
+| `bodyLength` | Body Length |  | Appearance |
+| `length` | Leg Span/Length |  | Appearance |
+| `origin` | Origin |  |Pedigree |
 | `matingDates` | Mating Dates |  | Breeding |
 | `expectedDueDate` | Expected Egg Sac/Hatch Date |  | Breeding |
 | `litterCount` | Spiderling/Nymph Count |  | Breeding |
@@ -1049,11 +1049,11 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `legalStatus` | Legal Status/Permits |  | Legal & Documentation |
 | `transferHistory` | Transfer History |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
-| `phenotype` | Phenotype |  | Physical |
-| `morph` | Morph/Color Form |  | Physical |
-| `markings` | Markings |  | Physical |
-| `adultWeight` | Adult Weight |  | Physical |
-| `weight` | Weight |  | Physical |
+| `phenotype` | Phenotype |  | Appearance |
+| `morph` | Morph/Color Form |  | Appearance |
+| `markings` | Markings |  | Appearance |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `weight` | Weight |  | Appearance |
 | `pedigreeRegistrationId` | Breeding Registration # |  | Identification |
 | `breed` | Species/Locality |  | Overview |
 | `remarks` | Notes/Remarks |  | Overview |
@@ -1154,26 +1154,26 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 |------------|-------|----------|-----|
 | `prefix` | Prefix |  | Overview |
 | `suffix` | Suffix |  | Overview |
-| `isOwned` | Currently Owned |  | Status & Privacy |
+| `isOwned` | Currently Owned |  | Ownership |
 | `manualBreederName` | Breeder Name (Manual) |  | Overview |
 | `breederyId` | Breeder ID |  | Identification |
-| `currentOwnerDisplay` | Current Owner |  | Status & Privacy |
-| `keeperHistory` | Keeper History |  | Status & Privacy |
+| `currentOwnerDisplay` | Current Owner |  | Ownership |
+| `keeperHistory` | Keeper History |  | Ownership |
 | `colonyId` | Colony ID |  | Identification |
-| `groupRole` | Group Role |  | Status & Privacy |
-| `carrierTraits` | Carrier Traits |  | Physical |
+| `groupRole` | Group Role |  | Ownership |
+| `carrierTraits` | Carrier Traits |  | Appearance |
 | `color` | Color |  | Overview |
 | `coat` | Coat/Covering Type |  | Overview |
-| `earset` | Earset |  | Physical |
+| `earset` | Earset |  | Appearance |
 | `coatPattern` | Pattern |  | Overview |
-| `lifeStage` | Life Stage |  | Physical |
-| `heightAtWithers` | Height at Withers |  | Physical |
-| `bodyLength` | Body Length |  | Physical |
-| `chestGirth` | Chest Girth |  | Physical |
-| `adultWeight` | Adult Weight |  | Physical |
-| `bodyConditionScore` | Body Condition Score |  | Physical |
-| `weight` | Weight |  | Physical |
-| `length` | Length |  | Physical |
+| `lifeStage` | Life Stage |  | Appearance |
+| `heightAtWithers` | Height at Withers |  | Appearance |
+| `bodyLength` | Body Length |  | Appearance |
+| `chestGirth` | Chest Girth |  | Appearance |
+| `adultWeight` | Adult Weight |  | Appearance |
+| `bodyConditionScore` | Body Condition Score |  | Appearance |
+| `weight` | Weight |  | Appearance |
+| `length` | Length |  | Appearance |
 | `microchipNumber` | Microchip # |  | Identification |
 | `pedigreeRegistrationId` | Pedigree Registration # |  | Identification |
 | `breed` | Breed/Species/Type |  | Overview |
@@ -1186,7 +1186,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `fciRegistrationNumber` | FCI Registration # |  | Identification |
 | `cfaRegistrationNumber` | CFA Registration # |  | Identification |
 | `workingRegistryIds` | Working Registry IDs |  | Identification |
-| `origin` | Origin |  | Lineage |
+| `origin` | Origin |  |Pedigree |
 | `isNeutered` | Neutered/Spayed |  | Breeding |
 | `spayNeuterDate` | Spay/Neuter Date |  | Breeding |
 | `heatStatus` | Heat Status |  | Breeding |
@@ -1283,14 +1283,14 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `endOfLifeCareNotes` | End of Life Care Notes |  | End of Life |
 | `insurance` | Insurance |  | Legal & Documentation |
 | `legalStatus` | Legal Status/Permits |  | Legal & Documentation |
-| `coOwnership` | Co-Ownership |  | Status & Privacy |
+| `coOwnership` | Co-Ownership |  | Ownership |
 | `transferHistory` | Transfer History |  | Legal & Documentation |
 | `breedingRestrictions` | Breeding Restrictions |  | Legal & Documentation |
 | `exportRestrictions` | Export Restrictions |  | Legal & Documentation |
 | `geneticCode` | Genetic Code |  | Overview |
-| `phenotype` | Phenotype |  | Physical |
-| `morph` | Morph/Variety |  | Physical |
-| `markings` | Markings |  | Physical |
+| `phenotype` | Phenotype |  | Appearance |
+| `morph` | Morph/Variety |  | Appearance |
+| `markings` | Markings |  | Appearance |
 | `remarks` | Notes/Remarks |  | Overview |
 
 ---
