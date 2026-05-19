@@ -22,55 +22,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/transfers - Initiate a new transfer request
-router.post('/', async (req, res) => {
-    try {
-        const { animalId_public, toUserId, price, notes } = req.body;
-        const fromUserId = req.user.id;
-
-        // 1. Verify animal exists and belongs to the sender
-        const animal = await Animal.findOne({ id_public: animalId_public, ownerId: fromUserId });
-        if (!animal) {
-            return res.status(404).json({ message: 'Animal not found or you are not the owner.' });
-        }
-
-        // 2. Create the Transfer Record
-        const transfer = await AnimalTransfer.create({
-            fromUserId,
-            toUserId,
-            animalId_public,
-            price: price || 0,
-            notes: notes || '',
-            status: 'pending'
-        });
-
-        // 3. Create Notification for the Recipient
-        const sender = await User.findById(fromUserId).select('personalName breederName');
-        const senderName = sender.breederName || sender.personalName || 'A CritterTrack User';
-
-        await Notification.create({
-            userId: toUserId,
-            type: 'transfer_request',
-            status: 'pending',
-            animalId_public,
-            animalName: animal.name,
-            animalImageUrl: animal.imageUrl || '',
-            transferId: transfer._id,
-            message: `${senderName} wants to transfer ${animal.name} (${animalId_public}) to you.`,
-            metadata: {
-                transferId: transfer._id,
-                animalId: animalId_public,
-                price: price || 0
-            }
-        });
-
-        res.status(201).json({ message: 'Transfer request sent successfully.', transfer });
-    } catch (error) {
-        console.error('Error creating transfer:', error);
-        res.status(500).json({ message: 'Internal server error while creating transfer.' });
-    }
-});
-
 // POST /api/transfers/:id/accept - Accept a transfer
 router.post('/:id/accept', async (req, res) => {
     try {
