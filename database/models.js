@@ -724,6 +724,16 @@ const LitterSchema = new mongoose.Schema({
     femaleCount: { type: Number, default: null },
     unknownCount: { type: Number, default: null },
     
+    // Stillborn breakdown by sex
+    maleStillbornCount: { type: Number, default: null },
+    femaleStillbornCount: { type: Number, default: null },
+    unknownStillbornCount: { type: Number, default: null },
+    
+    // Losses breakdown by sex
+    maleLossesCount: { type: Number, default: null },
+    femaleLossesCount: { type: Number, default: null },
+    unknownLossesCount: { type: Number, default: null },
+    
     // Public IDs of offspring animals that came from this litter
     offspringIds_public: { type: [String], default: [] }, 
     

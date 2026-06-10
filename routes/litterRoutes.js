@@ -83,6 +83,12 @@ router.post('/', async (req, res) => {
                 litterSizeWeaned: newLitter.litterSizeWeaned ?? null,
                 stillbornCount: newLitter.stillbornCount ?? null,
                 lossesCount: newLitter.lossesCount ?? null,
+                maleStillbornCount: newLitter.maleStillbornCount ?? null,
+                femaleStillbornCount: newLitter.femaleStillbornCount ?? null,
+                unknownStillbornCount: newLitter.unknownStillbornCount ?? null,
+                maleLossesCount: newLitter.maleLossesCount ?? null,
+                femaleLossesCount: newLitter.femaleLossesCount ?? null,
+                unknownLossesCount: newLitter.unknownLossesCount ?? null,
             };
             const parentIds = [newLitter.sireId_public, newLitter.damId_public].filter(Boolean);
             if (ctlId && parentIds.length) {
