@@ -1693,6 +1693,12 @@ router.get('/:id_public/offspring', async (req, res) => {
                     }
                 }
 
+                // Mark offspring as private if they don't have showOnPublicProfile set to true
+                const offspringWithPrivacyFlag = group.offspring.map(o => ({
+                    ...o.toObject ? o.toObject() : o,
+                    isPrivate: !o.showOnPublicProfile
+                }));
+
                 return {
                     litterId: litterRecord?._id || null,
                     litter_id_public: litterRecord?.litter_id_public || null,
@@ -1702,7 +1708,7 @@ router.get('/:id_public/offspring', async (req, res) => {
                     damId_public: group.otherParentType === 'sire' ? animalIdPublic : group.otherParentId,
                     otherParent: otherParent,
                     otherParentType: group.otherParentType,
-                    offspring: group.offspring,
+                    offspring: offspringWithPrivacyFlag,
                     numberBorn: group.offspring.length
                 };
             })
