@@ -1,11 +1,42 @@
 const express = require('express');
 const router = express.Router();
 const Contact = require('../database/contactModel');
-const { Animal } = require('../database/models');
+const { Animal, User, PublicProfile } = require('../database/models');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication to all routes
 router.use(protect);
+
+// GET /api/contacts/users - Get list of users for CTUID selector
+router.get('/users', async (req, res) => {
+    try {
+        const { search } = req.query;
+        
+        let filter = {};
+        
+        // If search term provided, filter by id_public, personalName, or breederName
+        if (search && search.trim()) {
+            const searchRegex = new RegExp(search.trim(), 'i');
+            filter.$or = [
+                { id_public: searchRegex },
+                { personalName: searchRegex },
+                { breederName: searchRegex }
+            ];
+        }
+        
+        // Get users from PublicProfile collection (contains public data)
+        const users = await PublicProfile.find(filter)
+            .select('id_public personalName breederName country state')
+            .limit(100)
+            .sort({ id_public: 1 })
+            .lean();
+        
+        res.json(users);
+    } catch (error) {
+        console.error('[CONTACTS] Error fetching users:', error);
+        res.status(500).json({ message: 'Failed to fetch users', error: error.message });
+    }
+});
 
 // GET /api/contacts - Get all contacts for the logged-in user
 router.get('/', async (req, res) => {
