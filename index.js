@@ -954,6 +954,10 @@ app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
 const suppliesRoutes = require('./routes/suppliesRoutes');
 app.use('/api/supplies', authMiddleware, suppliesRoutes);
 
+// Contact Routes (Require authMiddleware)
+const contactRoutes = require('./routes/contactRoutes');
+app.use('/api/contacts', authMiddleware, contactRoutes);
+
 // Data Portability — Export / Import (Require authMiddleware)
 const exportRoutes = require('./routes/exportRoutes');
 const importRoutes = require('./routes/importRoutes');
