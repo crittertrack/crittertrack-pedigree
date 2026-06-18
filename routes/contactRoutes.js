@@ -347,21 +347,42 @@ router.get('/:id/bred-animals', async (req, res) => {
             return res.status(404).json({ message: 'Contact not found' });
         }
         
-        // If contact doesn't have a linked CTUID, return empty array
-        if (!contact.linkedCTUID) {
-            return res.json([]);
+        let animals = [];
+        
+        // If contact has a linked CTUID, find animals bred by this contact
+        if (contact.linkedCTUID) {
+            animals = await Animal.find({
+                breederId_public: contact.linkedCTUID,
+                ownerId: req.user._id,
+                archived: { $ne: true } // Exclude archived animals
+            })
+            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
+            .sort({ birthDate: -1 })
+            .lean();
         }
         
-        // Find animals bred by this contact (breederId_public matches contact's CTUID)
-        // that are currently owned by the logged-in user
-        const animals = await Animal.find({
-            breederId_public: contact.linkedCTUID,
-            ownerId: req.user._id,
-            archived: { $ne: true } // Exclude archived animals
-        })
-        .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
-        .sort({ birthDate: -1 })
-        .lean();
+        // Also include manually assigned animals with 'breeder' or 'both' role
+        const assignedBreederAnimals = contact.assignedAnimals
+            .filter(a => a.role === 'breeder' || a.role === 'both')
+            .map(a => a.animalId_public);
+        
+        if (assignedBreederAnimals.length > 0) {
+            const manualAnimals = await Animal.find({
+                id_public: { $in: assignedBreederAnimals },
+                ownerId: req.user._id,
+                archived: { $ne: true }
+            })
+            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
+            .sort({ birthDate: -1 })
+            .lean();
+            
+            // Merge and deduplicate by id_public
+            const animalMap = new Map();
+            [...animals, ...manualAnimals].forEach(animal => {
+                animalMap.set(animal.id_public, animal);
+            });
+            animals = Array.from(animalMap.values());
+        }
         
         res.json(animals);
     } catch (error) {
@@ -382,21 +403,42 @@ router.get('/:id/own-animals', async (req, res) => {
             return res.status(404).json({ message: 'Contact not found' });
         }
         
-        // If contact doesn't have a linked CTUID, return empty array
-        if (!contact.linkedCTUID) {
-            return res.json([]);
+        let animals = [];
+        
+        // If contact has a linked CTUID, find animals bred by current user owned by this contact
+        if (contact.linkedCTUID) {
+            animals = await Animal.find({
+                breederId_public: req.user.id_public,
+                ownerId_public: contact.linkedCTUID,
+                archived: { $ne: true } // Exclude archived animals
+            })
+            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl ownerId_public')
+            .sort({ birthDate: -1 })
+            .lean();
         }
         
-        // Find animals bred by current user (breederId_public matches user's CTUID)
-        // that are currently owned by this contact (ownerId_public matches contact's CTUID)
-        const animals = await Animal.find({
-            breederId_public: req.user.id_public,
-            ownerId_public: contact.linkedCTUID,
-            archived: { $ne: true } // Exclude archived animals
-        })
-        .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl ownerId_public')
-        .sort({ birthDate: -1 })
-        .lean();
+        // Also include manually assigned animals with 'keeper' or 'both' role
+        const assignedKeeperAnimals = contact.assignedAnimals
+            .filter(a => a.role === 'keeper' || a.role === 'both')
+            .map(a => a.animalId_public);
+        
+        if (assignedKeeperAnimals.length > 0) {
+            const manualAnimals = await Animal.find({
+                id_public: { $in: assignedKeeperAnimals },
+                ownerId: req.user._id,
+                archived: { $ne: true }
+            })
+            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl ownerId_public')
+            .sort({ birthDate: -1 })
+            .lean();
+            
+            // Merge and deduplicate by id_public
+            const animalMap = new Map();
+            [...animals, ...manualAnimals].forEach(animal => {
+                animalMap.set(animal.id_public, animal);
+            });
+            animals = Array.from(animalMap.values());
+        }
         
         res.json(animals);
     } catch (error) {
