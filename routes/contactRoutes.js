@@ -335,4 +335,74 @@ router.get('/:id/animals', async (req, res) => {
     }
 });
 
+// GET /api/contacts/:id/bred-animals - Get animals bred by this contact that are owned by current user
+router.get('/:id/bred-animals', async (req, res) => {
+    try {
+        const contact = await Contact.findOne({
+            _id: req.params.id,
+            userId: req.user._id
+        });
+        
+        if (!contact) {
+            return res.status(404).json({ message: 'Contact not found' });
+        }
+        
+        // If contact doesn't have a linked CTUID, return empty array
+        if (!contact.linkedCTUID) {
+            return res.json([]);
+        }
+        
+        // Find animals bred by this contact (breederId_public matches contact's CTUID)
+        // that are currently owned by the logged-in user
+        const animals = await Animal.find({
+            breederId_public: contact.linkedCTUID,
+            ownerId: req.user._id,
+            archived: { $ne: true } // Exclude archived animals
+        })
+        .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
+        .sort({ birthDate: -1 })
+        .lean();
+        
+        res.json(animals);
+    } catch (error) {
+        console.error('[CONTACTS] Error fetching bred animals:', error);
+        res.status(500).json({ message: 'Failed to fetch bred animals', error: error.message });
+    }
+});
+
+// GET /api/contacts/:id/own-animals - Get animals bred by current user that are owned by this contact
+router.get('/:id/own-animals', async (req, res) => {
+    try {
+        const contact = await Contact.findOne({
+            _id: req.params.id,
+            userId: req.user._id
+        });
+        
+        if (!contact) {
+            return res.status(404).json({ message: 'Contact not found' });
+        }
+        
+        // If contact doesn't have a linked CTUID, return empty array
+        if (!contact.linkedCTUID) {
+            return res.json([]);
+        }
+        
+        // Find animals bred by current user (breederId_public matches user's CTUID)
+        // that are currently owned by this contact (ownerId_public matches contact's CTUID)
+        const animals = await Animal.find({
+            breederId_public: req.user.id_public,
+            ownerId_public: contact.linkedCTUID,
+            archived: { $ne: true } // Exclude archived animals
+        })
+        .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl ownerId_public')
+        .sort({ birthDate: -1 })
+        .lean();
+        
+        res.json(animals);
+    } catch (error) {
+        console.error('[CONTACTS] Error fetching own animals:', error);
+        res.status(500).json({ message: 'Failed to fetch own animals', error: error.message });
+    }
+});
+
 module.exports = router;
