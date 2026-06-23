@@ -765,6 +765,12 @@ const LitterSchema = new mongoose.Schema({
     matingReminderSent: { type: Boolean, default: false },
     // Tracks whether the user has permanently dismissed the weaning notification for this litter
     weaningDismissed: { type: Boolean, default: false },
+    
+    // Pregnancy loss tracking — for confirmed pregnancies that resulted in no live offspring
+    // (e.g., mom cannibalized litter, all stillborn, reabsorbed, etc.)
+    pregnancyLost: { type: Boolean, default: false },
+    pregnancyLostReason: { type: String, enum: ['Cannibalized', 'All Stillborn', 'Reabsorbed', 'Unknown', null], default: null },
+    pregnancyLostNotes: { type: String, default: null },
 
     // Litter photo gallery (born litters only)
     images: [{ url: { type: String }, r2Key: { type: String } }],
