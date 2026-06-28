@@ -2449,6 +2449,8 @@ router.delete('/:animalId/breeding-records/:recordId', async (req, res) => {
 // POST /api/animals/:id_public/return
 // Current owner returns an animal to its original creator (reverses a transfer)
 router.post('/:id_public/return', async (req, res) => {
+    const session = await mongoose.startSession(); // Start a session
+    session.startTransaction(); // Start a transaction
     try {
         const userId = req.user.id;
         const { id_public } = req.params;
@@ -2456,6 +2458,7 @@ router.post('/:id_public/return', async (req, res) => {
         const animal = await Animal.findOne({ id_public });
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found.' });
+            await session.abortTransaction();
         }
 
         // Must be current owner
@@ -2464,6 +2467,7 @@ router.post('/:id_public/return', async (req, res) => {
         }
 
         // Must have an original owner to return to
+        // Must have an original owner to return to
         if (!animal.originalOwnerId) {
             return res.status(400).json({ message: 'This animal was not transferred — nothing to return.' });
         }
@@ -2471,6 +2475,7 @@ router.post('/:id_public/return', async (req, res) => {
         const originalOwnerId = animal.originalOwnerId;
         const originalOwner = await User.findById(originalOwnerId).select('_id id_public');
         if (!originalOwner) {
+            await session.abortTransaction();
             return res.status(404).json({ message: 'Original owner account not found.' });
         }
 
@@ -2485,21 +2490,21 @@ router.post('/:id_public/return', async (req, res) => {
             id => String(id) !== String(originalOwnerId)
         );
 
-        await animal.save();
+        await animal.save({ session }); // Pass session
 
         // Update ownedAnimals arrays
-        await User.findByIdAndUpdate(userId, { $pull: { ownedAnimals: animal._id } });
-        await User.findByIdAndUpdate(originalOwnerId, { $addToSet: { ownedAnimals: animal._id } });
+        await User.findByIdAndUpdate(userId, { $pull: { ownedAnimals: animal._id } }, { session }); // Pass session
+        await User.findByIdAndUpdate(originalOwnerId, { $addToSet: { ownedAnimals: animal._id } }, { session }); // Pass session
 
         // Update PublicAnimal if public
         if (animal.showOnPublicProfile) {
             const { PublicAnimal } = require('../database/models');
             await PublicAnimal.updateOne(
                 { id_public: animal.id_public },
-                { $set: { ownerId_public: originalOwner.id_public } }
+                { $set: { ownerId_public: originalOwner.id_public } },
+                { session } // Pass session
             );
         }
-
         // Notify original owner
         try {
             const { Notification, PublicProfile } = require('../database/models');
@@ -2509,21 +2514,25 @@ router.post('/:id_public/return', async (req, res) => {
             await Notification.create({
                 userId: originalOwnerId,
                 userId_public: origProfile?.id_public || '',
-                type: 'transfer_returned',
-                status: 'approved',
+                type: 'transfer_returned', // Specific type for returned transfers
+                status: 'returned', // Consistent status naming
                 animalId_public: animal.id_public,
                 animalName: animal.name,
                 animalImageUrl: animal.imageUrl || '',
                 message: `${returnerName} has returned ${animal.name} (${animal.id_public}) to you.`,
-            });
+            }, { session }); // Pass session
         } catch (notifErr) {
             console.error('[Return] Failed to create notification:', notifErr.message);
         }
 
+        await session.commitTransaction(); // Commit the transaction
         res.status(200).json({ message: `${animal.name} has been returned successfully.` });
     } catch (error) {
         console.error('[Return] Error:', error);
         res.status(500).json({ message: 'Internal server error while returning animal.', error: error.message });
+        await session.abortTransaction(); // Abort transaction on error
+    } finally {
+        session.endSession(); // End the session
     }
 });
 

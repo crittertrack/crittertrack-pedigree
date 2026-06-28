@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { AnimalTransfer, Animal, Transaction, Notification, User, PublicProfile } = require('../database/models');
+const mongoose = require('mongoose'); // Import mongoose for sessions
+const { AnimalTransfer, Animal, Transaction, Notification, User, PublicProfile } = require('../database/models'); // PublicAnimal removed as accept-view-only route is removed
 
 // GET /api/transfers - Get all transfers for the logged-in user (sent and received)
 router.get('/', async (req, res) => {
@@ -24,65 +25,111 @@ router.get('/', async (req, res) => {
 
 // POST /api/transfers - Initiate a new transfer request
 router.post('/', async (req, res) => {
+    const session = await mongoose.startSession(); // Start a session
+    session.startTransaction(); // Start a transaction
     try {
         const { animalId_public, toUserId, price, notes } = req.body;
-        const fromUserId = req.user.id;
+        const fromUserId = req.user.id; // Assuming req.user.id is reliably populated by authentication middleware
 
         // 1. Verify animal exists and belongs to the sender
         const animal = await Animal.findOne({ id_public: animalId_public, ownerId: fromUserId });
         if (!animal) {
+            await session.abortTransaction(); // Abort transaction on error
             return res.status(404).json({ message: 'Animal not found or you are not the owner.' });
         }
 
+        // --- NEW: Prevent duplicate pending transfers for this animal ---
+        // Assuming Animal model has a 'pendingTransferId' field (ObjectId)
+        if (animal.pendingTransferId) {
+            await session.abortTransaction(); // Abort transaction on error
+            return res.status(409).json({ message: 'This animal already has a pending transfer request.' });
+        }
+        // --- END NEW ---
+
         // 2. Create the Transfer Record
-        const transfer = await AnimalTransfer.create({
+        const transferType = req.body.transferType || 'gift'; // Ensure transferType is set
+        let transactionId = null;
+
+        // If transfer is a sale or purchase, create a transaction record
+        if (transferType === 'sale' || transferType === 'purchase') {
+            // Assuming a basic Transaction model with fields like amount, currency, status, etc.
+            // You would need to define the actual fields for your Transaction model.
+            const transaction = await Transaction.create([{
+                amount: price, // Use the price from the transfer request
+                currency: 'USD', // Example currency, adjust as needed
+                status: 'pending', // Initial status for the transaction
+                type: transferType,
+                fromUserId: fromUserId,
+                toUserId: toUserId,
+                animalId_public: animalId_public,
+            }], { session });
+            transactionId = transaction[0]._id;
+        }
+
+        const transfer = await AnimalTransfer.create([{
             fromUserId,
             toUserId,
             animalId_public,
             price: price || 0,
             notes: notes || '',
-            status: 'pending'
-        });
+            status: 'pending',
+            transferType: transferType,
+            transactionId: transactionId, // Link the created transaction,
+            type: 'ownership', // Explicitly set type for new ownership transfers
+        }], { session });
+        const createdTransfer = transfer[0]; // Get the created document
+
+        // --- NEW: Update animal with pendingTransferId ---
+        animal.pendingTransferId = createdTransfer._id; // Set pendingTransferId
+        await animal.save({ session }); // Save animal within the session
+        // --- END NEW ---
 
         // 3. Create Notification for the Recipient
-        const sender = await User.findById(fromUserId).select('personalName breederName');
+        const sender = await User.findById(fromUserId).select('personalName breederName').session(session); // Pass session
         const senderName = sender.breederName || sender.personalName || 'A CritterTrack User';
 
-        await Notification.create({
+        await Notification.create([{ // Create with array for session
             userId: toUserId,
             type: 'transfer_request',
             status: 'pending',
             animalId_public,
             animalName: animal.name,
             animalImageUrl: animal.imageUrl || '',
-            transferId: transfer._id,
+            transferId: createdTransfer._id,
             message: `${senderName} wants to transfer ${animal.name} (${animalId_public}) to you.`,
             metadata: {
-                transferId: transfer._id,
+                transferId: createdTransfer._id,
                 animalId: animalId_public,
                 price: price || 0
             }
-        });
+        }], { session });
 
-        res.status(201).json({ message: 'Transfer request sent successfully.', transfer });
+        await session.commitTransaction(); // Commit the transaction
+        res.status(201).json({ message: 'Transfer request sent successfully.', transfer: createdTransfer });
     } catch (error) {
+        await session.abortTransaction(); // Abort transaction on error
         console.error('Error creating transfer:', error);
         res.status(500).json({ message: 'Internal server error while creating transfer.' });
+    } finally {
+        session.endSession(); // End the session
     }
 });
 
 // POST /api/transfers/:id/accept - Accept a transfer
 router.post('/:id/accept', async (req, res) => {
+    const session = await mongoose.startSession(); // Start a session
+    session.startTransaction(); // Start a transaction
     try {
         const userId = req.user.id;
         const transferId = req.params.id;
         
         console.log('[Transfer Accept] UserId:', userId, 'TransferId:', transferId);
         
-        const transfer = await AnimalTransfer.findById(transferId);
+        const transfer = await AnimalTransfer.findById(transferId).session(session);
         
         if (!transfer) {
             console.log('[Transfer Accept] Transfer not found with ID:', transferId);
+            await session.abortTransaction(); // Abort transaction on error
             return res.status(404).json({ message: 'Transfer not found.' });
         }
         
@@ -105,7 +152,7 @@ router.post('/:id/accept', async (req, res) => {
         }
         
         // Find the animal
-        const animal = await Animal.findOne({ id_public: transfer.animalId_public });
+        const animal = await Animal.findOne({ id_public: transfer.animalId_public }).session(session); // Pass session
         
         if (!animal) {
             console.log('[Transfer Accept] Animal not found:', transfer.animalId_public);
@@ -117,11 +164,12 @@ router.post('/:id/accept', async (req, res) => {
         // Update transfer status
         transfer.status = 'accepted';
         transfer.respondedAt = new Date();
-        await transfer.save();
+        transfer.completedAt = new Date();
+        await transfer.save({ session }); // Pass session
         
         console.log('[Transfer Accept] Transfer status updated to accepted');
         
-        // Transfer ownership
+        // Transfer ownership logic
         const previousOwner = animal.ownerId;
         const previousOwnerPublic = animal.ownerId_public;
         
@@ -131,7 +179,7 @@ router.post('/:id/accept', async (req, res) => {
         }
         
         // Get the new owner's public ID
-        let newOwner = await User.findById(userId).select('id_public');
+        let newOwner = await User.findById(userId).select('id_public').session(session); // Pass session
         if (!newOwner) {
             console.error('[Transfer Accept] Could not find new owner user document');
             // Create a fallback - this shouldn't happen but let's be safe
@@ -147,47 +195,34 @@ router.post('/:id/accept', async (req, res) => {
         animal.isForSale = false; // Clear for-sale flag on transfer
         animal.availableForBreeding = false; // Clear stud flag on transfer
         
-        // Add previous owner to viewOnlyForUsers if not already there
-        if (!animal.viewOnlyForUsers.includes(previousOwner)) {
-            animal.viewOnlyForUsers.push(previousOwner);
-        }
-        
-        await animal.save();
+        animal.pendingTransferId = undefined; // --- NEW: Clear pendingTransferId on animal ---
+        await animal.save({ session }); // Pass session
         console.log('[Transfer Accept] Animal ownership transferred, viewOnly access added');
         
         // Update PublicAnimal if this animal is public
         if (animal.showOnPublicProfile) {
-            const PublicAnimal = require('../database/models').PublicAnimal;
-            await PublicAnimal.updateOne(
-                { id_public: animal.id_public },
-                { 
-                    $set: { 
-                        ownerId_public: animal.ownerId_public,
-                        status: animal.status,
-                        isOwned: true,
-                        isForSale: false,
-                        availableForBreeding: false,
-                    } 
-                }
-            );
-            console.log('[Transfer Accept] PublicAnimal updated');
+            // PublicAnimal model was removed, so this block is no longer relevant.
+            // If PublicAnimal functionality is still desired, it needs to be re-implemented
+            // and the model re-imported.
+            console.warn('[Transfer Accept] PublicAnimal update skipped as model is not imported.');
         }
         
         // Update user ownedAnimals arrays
         await User.findByIdAndUpdate(previousOwner, {
             $pull: { ownedAnimals: animal._id }
-        });
+        }, { session }); // Pass session
         console.log('[Transfer Accept] Removed animal from previous owner ownedAnimals');
         
         await User.findByIdAndUpdate(userId, {
             $addToSet: { ownedAnimals: animal._id }
-        });
+        }, { session }); // Pass session
         console.log('[Transfer Accept] Added animal to new owner ownedAnimals');
         
         // Update the original notification to approved status
         const notificationUpdate = await Notification.updateOne(
             { transferId: transfer._id, type: 'transfer_request' },
-            { $set: { status: 'approved' } }
+            { $set: { status: 'accepted' } },
+            { session } // Pass session
         );
         console.log('[Transfer Accept] Notification update result:', notificationUpdate);
         if (notificationUpdate.matchedCount === 0) {
@@ -197,14 +232,14 @@ router.post('/:id/accept', async (req, res) => {
         // Create notification for the sender (informational only, no action needed)
         try {
             console.log('[Transfer Accept] Creating sender notification for userId:', transfer.fromUserId);
-            const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
+            const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId }).session(session); // Pass session
             console.log('[Transfer Accept] Sender profile found:', senderProfile ? senderProfile.id_public : 'NOT FOUND');
             
             const notificationData = {
                 userId: transfer.fromUserId,
                 userId_public: senderProfile?.id_public || '',
                 type: 'transfer_accepted',
-                status: 'approved', // Informational only - no action needed
+                status: 'accepted', // --- NEW: Consistent status naming 'accepted' ---
                 animalId_public: animal.id_public,
                 animalName: animal.name,
                 animalImageUrl: animal.imageUrl || '',
@@ -218,8 +253,8 @@ router.post('/:id/accept', async (req, res) => {
             };
             console.log('[Transfer Accept] Creating notification with data:', JSON.stringify(notificationData, null, 2));
             
-            const createdNotification = await Notification.create(notificationData);
-            console.log('[Transfer Accept] Notification created successfully with ID:', createdNotification._id);
+            const createdNotification = await Notification.create([notificationData], { session }); // Create with array and session
+            console.log('[Transfer Accept] Notification created successfully with ID:', createdNotification[0]._id);
         } catch (notifError) {
             console.error('[Transfer Accept] Failed to create sender notification:', notifError);
             console.error('[Transfer Accept] Error stack:', notifError.stack);
@@ -240,46 +275,64 @@ router.post('/:id/accept', async (req, res) => {
         console.error('[Transfer Accept] Error:', error);
         console.error('[Transfer Accept] Error stack:', error.stack);
         res.status(500).json({ message: 'Internal server error while accepting transfer.', error: error.message });
+        await session.abortTransaction(); // Abort transaction on error
+    } finally {
+        session.endSession(); // Ensure session is ended
     }
 });
 
 // POST /api/transfers/:id/decline - Decline a transfer
 router.post('/:id/decline', async (req, res) => {
+    const session = await mongoose.startSession(); // Start a session
+    session.startTransaction(); // Start a transaction
     try {
         const userId = req.user.id;
         const transferId = req.params.id;
         
-        const transfer = await AnimalTransfer.findById(transferId);
+        const transfer = await AnimalTransfer.findById(transferId).session(session); // Pass session
         
         if (!transfer) {
+            await session.abortTransaction();
             return res.status(404).json({ message: 'Transfer not found.' });
         }
         
         // Verify the user is the recipient
         if (transfer.toUserId.toString() !== userId.toString()) {
+            await session.abortTransaction();
             return res.status(403).json({ message: 'You are not authorized to decline this transfer.' });
         }
         
         if (transfer.status !== 'pending') {
+            await session.abortTransaction();
             return res.status(400).json({ message: 'Transfer has already been responded to.' });
         }
         
         // Update transfer status
         transfer.status = 'declined';
         transfer.respondedAt = new Date();
-        await transfer.save();
+        transfer.completedAt = new Date();
+        await transfer.save({ session }); // Pass session
         
+        // --- NEW: Clear pendingTransferId on animal ---
+        const animal = await Animal.findOne({ id_public: transfer.animalId_public }).session(session); // Pass session
+        if (animal) {
+            animal.pendingTransferId = undefined;
+            await animal.save({ session }); // Pass session
+        }
+        // --- END NEW ---
+
         // Update the original notification to declined status
         await Notification.updateOne(
             { transferId: transfer._id, userId: userId, type: 'transfer_request' },
-            { $set: { status: 'declined' } }
+            { $set: { status: 'declined' } },
+            { session } // Pass session
         );
         
         // Create notification for the sender (informational only, no action needed)
-        const animal = await Animal.findOne({ id_public: transfer.animalId_public });
-        const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
-        
-        await Notification.create({
+        // The animal was already fetched above, no need to fetch again.
+        try {
+            const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId }).session(session); // Pass session
+            await Notification.create([{ // Create with array for session
             userId: transfer.fromUserId,
             userId_public: senderProfile?.id_public || '',
             type: 'transfer_declined',
@@ -293,8 +346,11 @@ router.post('/:id/decline', async (req, res) => {
                 transferId: transfer._id,
                 animalId: transfer.animalId_public
             }
-        });
-        
+            }], { session }); // Pass session
+        } catch (notifError) {
+            console.error('[Decline Transfer] Failed to create sender notification:', notifError);
+        }
+        await session.commitTransaction(); // Commit the transaction
         res.status(200).json({ 
             message: 'Transfer declined. The transaction remains in your budget as a local entry.', 
             transfer
@@ -302,111 +358,113 @@ router.post('/:id/decline', async (req, res) => {
     } catch (error) {
         console.error('Error declining transfer:', error);
         res.status(500).json({ message: 'Internal server error while declining transfer.' });
+        await session.abortTransaction(); // Abort transaction on error
+    } finally {
+        session.endSession(); // End the session
     }
 });
 
-// POST /api/transfers/:id/accept-view-only - Accept view-only offer (for purchase transfers)
-router.post('/:id/accept-view-only', async (req, res) => {
+router.post('/:id/withdraw', async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const userId = req.user.id;
         const transferId = req.params.id;
-        
-        console.log('[View-Only Accept] UserId:', userId, 'TransferId:', transferId);
-        
-        const transfer = await AnimalTransfer.findById(transferId);
-        
+
+        const transfer = await AnimalTransfer.findById(transferId).session(session);
+
         if (!transfer) {
-            console.log('[View-Only Accept] Transfer not found');
+            await session.abortTransaction();
             return res.status(404).json({ message: 'Transfer not found.' });
         }
-        
-        console.log('[View-Only Accept] Transfer found:', {
-            fromUserId: transfer.fromUserId.toString(),
-            toUserId: transfer.toUserId.toString(),
-            offerViewOnly: transfer.offerViewOnly,
-            status: transfer.status
-        });
-        
-        // For purchase transfers, the fromUserId is the buyer, toUserId is the seller
-        // The seller (toUserId) can accept view-only access
-        if (transfer.toUserId.toString() !== userId.toString()) {
-            console.log('[View-Only Accept] Authorization failed');
-            return res.status(403).json({ message: 'You are not authorized to respond to this offer.' });
+
+        // Only sender can withdraw
+        if (transfer.fromUserId.toString() !== userId.toString()) {
+            await session.abortTransaction();
+            return res.status(403).json({
+                message: 'You are not authorized to withdraw this transfer.'
+            });
         }
-        
-        if (!transfer.offerViewOnly) {
-            console.log('[View-Only Accept] Not a view-only offer');
-            return res.status(400).json({ message: 'This transfer does not have a view-only offer.' });
+
+        // Only pending transfers can be withdrawn
+        if (transfer.status !== 'pending') {
+            await session.abortTransaction();
+            return res.status(400).json({
+                message: 'Only pending transfers can be withdrawn.'
+            });
         }
-        
-        // Find the animal
-        const animal = await Animal.findOne({ id_public: transfer.animalId_public });
-        
-        if (!animal) {
-            console.log('[View-Only Accept] Animal not found');
-            return res.status(404).json({ message: 'Animal not found.' });
-        }
-        
-        console.log('[View-Only Accept] Animal found:', animal.id_public);
-        
-        // Add user to viewOnlyForUsers if not already there
-        if (!animal.viewOnlyForUsers.includes(userId)) {
-            animal.viewOnlyForUsers.push(userId);
-            await animal.save();
-            console.log('[View-Only Accept] Added user to viewOnlyForUsers');
-        } else {
-            console.log('[View-Only Accept] User already has view-only access');
-        }
-        
+
         // Update transfer
-        transfer.status = 'accepted'; // AnimalTransfer enum uses 'accepted'
+        transfer.status = 'cancelled';
         transfer.respondedAt = new Date();
-        await transfer.save();
-        console.log('[View-Only Accept] Transfer status updated to accepted');
-        
-        // Update the original notification to approved status
-        const notificationUpdate = await Notification.updateOne(
-            { transferId: transfer._id, type: 'view_only_offer' },
-            { $set: { status: 'approved' } }
-        );
-        console.log('[View-Only Accept] Notification update result:', notificationUpdate);
-        
-        // Create notification for the buyer
-        try {
-            const buyerProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId });
-            await Notification.create({
-                userId: transfer.fromUserId,
-                userId_public: buyerProfile?.id_public || '',
-                type: 'view_only_accepted',
-                status: 'approved',
-                animalId_public: animal.id_public,
-                animalName: animal.name,
-                animalImageUrl: animal.imageUrl || '',
+        transfer.completedAt = new Date();
+
+        await transfer.save({ session });
+
+        // --- NEW: Clear pendingTransferId on animal ---
+        const animal = await Animal.findOne({
+            id_public: transfer.animalId_public
+        }).session(session);
+        if (animal) {
+            animal.pendingTransferId = undefined;
+            await animal.save({ session });
+        }
+        // --- END NEW ---
+
+        // Update original notification (if it exists)
+        await Notification.updateOne(
+            {
                 transferId: transfer._id,
-                message: `Seller has accepted view-only access to ${animal.name} (${animal.id_public}).`,
+                type: 'transfer_request'
+            },
+            {
+                $set: {
+                    status: 'cancelled'
+                }
+            },
+            { session } // Pass session
+        );
+
+        // Notify recipient (optional but recommended)
+        try {
+            const senderProfile = await PublicProfile.findOne({
+                userId_backend: transfer.fromUserId
+            }).session(session);
+
+            await Notification.create([{ // Create with array for session
+                userId: transfer.toUserId, // Recipient of the cancellation notification
+                userId_public: senderProfile?.id_public || '', // --- NEW: Use senderProfile.id_public for consistency ---
+                type: 'transfer_cancelled',
+                status: 'cancelled',
+                animalId_public: transfer.animalId_public,
+                animalName: animal?.name || '',
+                animalImageUrl: animal?.imageUrl || '',
+                transferId: transfer._id,
+                message: `Transfer for ${animal?.name || transfer.animalId_public} was withdrawn by the sender.`,
                 metadata: {
                     transferId: transfer._id,
-                    animalId: animal.id_public,
-                    animalName: animal.name
+                    animalId: transfer.animalId_public
                 }
-            });
-            console.log('[View-Only Accept] Notification created for buyer');
+            }], { session });
         } catch (notifError) {
-            console.error('[View-Only Accept] Failed to create buyer notification:', notifError.message);
+            console.error('[Withdraw Transfer] Notification error:', notifError.message);
         }
-        
-        console.log('[View-Only Accept] ✓ View-only access granted successfully');
-        res.status(200).json({ 
-            message: 'View-only access granted.', 
-            transfer,
-            animal: {
-                id_public: animal.id_public,
-                name: animal.name
-            }
+
+        await session.commitTransaction();
+        res.status(200).json({
+            message: 'Transfer withdrawn successfully.',
+            transfer
         });
+
     } catch (error) {
-        console.error('Error accepting view-only:', error);
-        res.status(500).json({ message: 'Internal server error while accepting view-only access.' });
+        await session.abortTransaction();
+        session.endSession(); // Ensure session is ended on error
+        console.error('Error withdrawing transfer:', error);
+        res.status(500).json({
+            message: 'Internal server error while withdrawing transfer.'
+        });
+    } finally {
+        session.endSession();
     }
 });
 

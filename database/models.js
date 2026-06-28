@@ -197,7 +197,15 @@ const AnimalSchema = new mongoose.Schema({
     // Transfer/Ownership tracking
     originalOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Original breeder/creator
     soldStatus: { type: String, enum: [null, 'sold'], default: null }, // null = not transferred
-    viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users with view-only access
+    // viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Removed from PublicAnimalSchema as it's not a public-facing concept
+    // --- NEW: pendingTransferId for preventing duplicate pending transfers ---
+    pendingTransferId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'AnimalTransfer',
+        unique: true, // Ensures only one non-null value
+        sparse: true, // Allows multiple documents to have null values
+        index: true, // For efficient lookups
+    },
     hiddenForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who have hidden this view-only animal
     
     // Key display data
@@ -783,8 +791,8 @@ const Litter = mongoose.model('Litter', LitterSchema);
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     userId_public: { type: String, index: true },
-    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'view_only_offer', 'transfer_accepted', 'transfer_declined', 'animal_returned', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder', 'new_rating'] },
-    status: { type: String, enum: ['pending', 'approved', 'rejected', 'read', 'declined'], default: 'pending', index: true },
+    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'transfer_accepted', 'transfer_declined', 'animal_returned', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder', 'new_rating'], index: true },
+    status: { type: String, enum: ['pending', 'accepted', 'rejected', 'read', 'declined', 'cancelled', 'returned'], default: 'pending', index: true }, // Added 'returned' for consistency
     
     // Request details
     requestedBy_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -1869,7 +1877,7 @@ const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
 // --- 16. TRANSACTION SCHEMA (for budget tracking) ---
 const TransactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    type: { type: String, enum: ['sale', 'purchase', 'expense', 'income'], required: true, index: true },
+    type: { type: String, enum: ['sale', 'purchase', 'expense', 'income', 'gift'], required: true, index: true }, // Added 'gift' for completeness
     animalId: { type: String, default: null }, // id_public of the animal
     animalName: { type: String, default: null },
     price: { type: Number, required: true, default: 0 },
@@ -1887,18 +1895,69 @@ const Transaction = mongoose.model('Transaction', TransactionSchema);
 
 
 // --- 17. ANIMAL TRANSFER SCHEMA ---
-const AnimalTransferSchema = new mongoose.Schema({
-    fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    animalId_public: { type: String, required: true, index: true },
-    transactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', default: null },
-    transferType: { type: String, enum: ['sale', 'purchase', 'gift'], required: true },
-    status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending', index: true },
-    offerViewOnly: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now, index: true },
-    completedAt: { type: Date, default: null }
-}, { timestamps: true });
+// --- ANIMAL TRANSFER SCHEMA (REFINED) ---
+const AnimalTransferSchema = new mongoose.Schema(
+    {
+        fromUserId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+            index: true,
+        },
+        toUserId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+            index: true,
+        },
+        animalId_public: {
+            type: String,
+            required: true,
+            index: true,
+        },
+        transactionId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Transaction',
+            default: null,
+        },
+        transferType: {
+            type: String,
+            enum: ['sale', 'purchase', 'gift'], // Added enum for validation
+            required: true,
+            index: true,
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'accepted', 'declined', 'cancelled'], // Added enum for validation
+            default: 'pending',
+            index: true,
+        },
+        respondedAt: {
+            type: Date,
+            default: null,
+        },
+        completedAt: {
+            type: Date,
+            default: null,
+        },
+        price: { type: Number, default: 0 }, // Added for transfer price
+        type: { type: String, enum: ['ownership', 'view_only_grant'], default: 'ownership' }, // New field to distinguish transfer types
+        isLegacyMigration: { type: Boolean, default: false }, // New field to mark legacy migrations
+    },
+    {
+        timestamps: true, // creates createdAt + updatedAt automatically
+    }
+);
+
+// --- INDEXES (important for performance + preventing duplicates) ---
+AnimalTransferSchema.index({ animalId_public: 1, status: 1 });
+AnimalTransferSchema.index({ toUserId: 1, status: 1 });
+AnimalTransferSchema.index({ fromUserId: 1, status: 1 });
+
+// --- MODEL ---
 const AnimalTransfer = mongoose.model('AnimalTransfer', AnimalTransferSchema);
+
+module.exports = AnimalTransfer;
 
 
 // --- 18. MOD CHAT SCHEMA ---
@@ -2171,7 +2230,7 @@ AnimalSchema.index({ id_public: 1, ownerId: 1 });
 AnimalSchema.index({ ownerId: 1, isDisplay: 1 });
 
 // 3. Message unread filtering (dashboard badge counts)
-MessageSchema.index({ conversationId: 1, read: 1 });
+MessageSchema.index({ conversationId: 1, read: 1 }); // Already present
 
 // 4. Notification filtering (dashboard display)
 NotificationSchema.index({ userId: 1, status: 1 });
@@ -2180,7 +2239,7 @@ NotificationSchema.index({ userId: 1, status: 1 });
 LitterSchema.index({ ownerId: 1, isPlanned: 1 });
 
 // 6. Transaction financial reporting (future use)
-// Transaction.index({ userId: 1, date: -1 }) - Add when Transaction fully implemented
+TransactionSchema.index({ userId: 1, date: -1 }); // Uncommented and applied
 
 // Note: These indexes are created on application startup via Mongoose
 // If running for the first time, MongoDB will build these indexes in the background
