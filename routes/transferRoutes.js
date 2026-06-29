@@ -195,6 +195,11 @@ router.post('/:id/accept', async (req, res) => {
         animal.isForSale = false; // Clear for-sale flag on transfer
         animal.availableForBreeding = false; // Clear stud flag on transfer
         
+        // Add the previous owner to viewOnlyForUsers so they can see it in their "Sold Animals" archive
+        if (previousOwner && !animal.viewOnlyForUsers.includes(previousOwner)) {
+            animal.viewOnlyForUsers.push(previousOwner);
+        }
+        
         animal.pendingTransferId = undefined; // --- NEW: Clear pendingTransferId on animal ---
         await animal.save({ session }); // Pass session
         console.log('[Transfer Accept] Animal ownership transferred, viewOnly access added');
