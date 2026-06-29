@@ -1,7 +1,7 @@
 ﻿const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const mongoose = require('mongoose');
+const mongoose = require('mongoose'); // Import mongoose for sessions
 const path = require('path');
 const { Notification, User, PublicProfile, PublicAnimal, Animal, Litter } = require('../database/models');
 const fs = require('fs');
@@ -546,12 +546,10 @@ router.get('/any/:id_public', async (req, res) => {
                 return res.status(200).json(await withBreederName(animal));
             }
 
-            // If this user is the original owner (they transferred the animal out),
-            // always grant full visibility regardless of the new owner's privacy settings.
-            // This preserves the original breeder's view access via their archive and litter management.
-            if (animal.originalOwnerId && animal.originalOwnerId.toString() === userId.toString()) {
-                console.log(`[originalOwner] Allowing original owner to view transferred animal ${id_public}`);
-                return res.status(200).json(await withBreederName(animal));
+            // If this user has view-only access, grant it.
+            if (animal.viewOnlyForUsers && animal.viewOnlyForUsers.includes(userId)) {
+                console.log(`[viewOnlyForUser] Allowing user to view animal ${id_public} as view-only`);
+                return res.status(200).json({ ...await withBreederName(animal), isViewOnly: true });
             }
 
             // If user owns a litter that lists this animal as offspring, grant full visibility.
@@ -923,7 +921,7 @@ router.get('/archived', async (req, res) => {
             archived: true
         }).lean();
         
-        // Get sold/transferred animals (view-only animals that user sees)
+         // Get sold/transferred animals (live view-only animals that user sees)
         const soldTransferredAnimals = await Animal.find({
             viewOnlyForUsers: userId,
             hiddenForUsers: { $ne: userId }
@@ -2525,6 +2523,13 @@ router.post('/:id_public/return', async (req, res) => {
         } catch (notifErr) {
             console.error('[Return] Failed to create notification:', notifErr.message);
         }
+
+        // Remove the original owner from viewOnlyForUsers since they now own the animal again
+        animal.viewOnlyForUsers = (animal.viewOnlyForUsers || []).filter(
+            id => String(id) !== String(originalOwnerId)
+        );
+
+        await animal.save({ session }); // Pass session
 
         await session.commitTransaction(); // Commit the transaction
         res.status(200).json({ message: `${animal.name} has been returned successfully.` });

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose'); // Import mongoose for sessions
+const mongoose = require('mongoose');
 const { AnimalTransfer, Animal, Transaction, Notification, User, PublicProfile } = require('../database/models'); // PublicAnimal removed as accept-view-only route is removed
 
 // GET /api/transfers - Get all transfers for the logged-in user (sent and received)
@@ -195,7 +195,8 @@ router.post('/:id/accept', async (req, res) => {
         animal.isForSale = false; // Clear for-sale flag on transfer
         animal.availableForBreeding = false; // Clear stud flag on transfer
         
-        // Add the previous owner to viewOnlyForUsers so they can see it in their "Sold Animals" archive
+        // Add the previous owner to viewOnlyForUsers so they can see the live animal record
+        // in their "Sold Animals" archive, reflecting all changes.
         if (previousOwner && !animal.viewOnlyForUsers.includes(previousOwner)) {
             animal.viewOnlyForUsers.push(previousOwner);
         }
