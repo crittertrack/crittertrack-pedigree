@@ -1,6 +1,7 @@
 ﻿const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const mongoose = require('mongoose');
 const path = require('path');
 const { Notification, User, PublicProfile, PublicAnimal, Animal, Litter } = require('../database/models');
 const fs = require('fs');
