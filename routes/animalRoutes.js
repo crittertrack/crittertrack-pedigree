@@ -1,4 +1,5 @@
 ﻿const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
@@ -2455,10 +2456,10 @@ router.post('/:id_public/return', async (req, res) => {
         const userId = req.user.id;
         const { id_public } = req.params;
 
-        const animal = await Animal.findOne({ id_public });
+        const animal = await Animal.findOne({ id_public }).session(session);
         if (!animal) {
-            return res.status(404).json({ message: 'Animal not found.' });
             await session.abortTransaction();
+            return res.status(404).json({ message: 'Animal not found.' });
         }
 
         // Must be current owner
@@ -2467,13 +2468,13 @@ router.post('/:id_public/return', async (req, res) => {
         }
 
         // Must have an original owner to return to
-        // Must have an original owner to return to
         if (!animal.originalOwnerId) {
+            await session.abortTransaction();
             return res.status(400).json({ message: 'This animal was not transferred — nothing to return.' });
         }
 
         const originalOwnerId = animal.originalOwnerId;
-        const originalOwner = await User.findById(originalOwnerId).select('_id id_public');
+        const originalOwner = await User.findById(originalOwnerId).select('_id id_public').session(session);
         if (!originalOwner) {
             await session.abortTransaction();
             return res.status(404).json({ message: 'Original owner account not found.' });
@@ -2493,8 +2494,8 @@ router.post('/:id_public/return', async (req, res) => {
         await animal.save({ session }); // Pass session
 
         // Update ownedAnimals arrays
-        await User.findByIdAndUpdate(userId, { $pull: { ownedAnimals: animal._id } }, { session }); // Pass session
-        await User.findByIdAndUpdate(originalOwnerId, { $addToSet: { ownedAnimals: animal._id } }, { session }); // Pass session
+        await User.findByIdAndUpdate(userId, { $pull: { ownedAnimals: animal._id } }, { session });
+        await User.findByIdAndUpdate(originalOwnerId, { $addToSet: { ownedAnimals: animal._id } }, { session });
 
         // Update PublicAnimal if public
         if (animal.showOnPublicProfile) {
@@ -2508,8 +2509,8 @@ router.post('/:id_public/return', async (req, res) => {
         // Notify original owner
         try {
             const { Notification, PublicProfile } = require('../database/models');
-            const returnerProfile = await PublicProfile.findOne({ userId_backend: userId });
-            const origProfile = await PublicProfile.findOne({ userId_backend: originalOwnerId });
+            const returnerProfile = await PublicProfile.findOne({ userId_backend: userId }).session(session);
+            const origProfile = await PublicProfile.findOne({ userId_backend: originalOwnerId }).session(session);
             const returnerName = returnerProfile?.breederName || returnerProfile?.personalName || 'Someone';
             await Notification.create({
                 userId: originalOwnerId,

@@ -2,24 +2,26 @@
 // You would run this as a standalone Node.js script, NOT as part of your Express app.
 
 const mongoose = require('mongoose');
-// Adjust the path to your models.js file as necessary
-const { Animal, AnimalTransfer, PublicAnimal, User } = require('./c:/Projects/crittertrack-pedigree/database/models'); 
+// Adjust the path to your models.js file as necessary (relative path)
+const { Animal, AnimalTransfer, PublicAnimal, User } = require('../database/models'); 
+
+require('dotenv').config(); // To load MONGODB_URI from .env file
 
 async function runLegacyDataMigration() {
     console.log('Starting legacy data migration...');
 
     // --- 1. Connect to MongoDB ---
-    // Ensure your MONGO_URI environment variable is set correctly for your production database
-    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/crittertrack_dev';
+    // Ensure your MONGODB_URI environment variable is set correctly for your production database
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/crittertrack_dev';
     try {
         await mongoose.connect(mongoUri, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
             // Add other connection options as needed for your environment (e.g., replicaSet, authSource)
         });
-        console.log('Successfully connected to MongoDB.');
+        console.log(`Successfully connected to MongoDB at ${mongoUri}.`);
     } catch (error) {
-        console.error('Failed to connect to MongoDB:', error);
+        console.error(`Failed to connect to MongoDB at ${mongoUri}:`, error);
         process.exit(1); // Exit if connection fails
     }
 
