@@ -260,6 +260,9 @@ router.post('/:id/accept', async (req, res) => {
             console.error('[Transfer Accept] Error stack:', notifError.stack);
             // Don't fail the whole transfer if notification creation fails
         }
+
+        await session.commitTransaction();
+console.log('[Transfer Accept] ✓ Transaction committed');
         
         console.log('[Transfer Accept] ✓ Transfer accepted successfully');
         res.status(200).json({ 
@@ -272,13 +275,21 @@ router.post('/:id/accept', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('[Transfer Accept] Error:', error);
-        console.error('[Transfer Accept] Error stack:', error.stack);
-        res.status(500).json({ message: 'Internal server error while accepting transfer.', error: error.message });
-        await session.abortTransaction(); // Abort transaction on error
-    } finally {
-        session.endSession(); // Ensure session is ended
+    console.error('[Transfer Accept] Error:', error);
+    console.error('[Transfer Accept] Error stack:', error.stack);
+
+    if (session.inTransaction()) {
+        await session.abortTransaction();
+        console.log('[Transfer Accept] Transaction aborted');
     }
+
+    res.status(500).json({
+        message: 'Internal server error while accepting transfer.',
+        error: error.message
+    });
+} finally {
+    await session.endSession();
+}
 });
 
 // POST /api/transfers/:id/decline - Decline a transfer
