@@ -197,7 +197,10 @@ router.post('/:id/accept', async (req, res) => {
         
         // Add the previous owner to viewOnlyForUsers so they can see the live animal record
         // in their "Sold Animals" archive, reflecting all changes.
-        if (previousOwner && !animal.viewOnlyForUsers.includes(previousOwner)) {
+        if (previousOwner) {
+            if (!Array.isArray(animal.viewOnlyForUsers)) {
+                animal.viewOnlyForUsers = [];
+            }
             animal.viewOnlyForUsers.push(previousOwner);
         }
         
