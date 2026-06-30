@@ -339,6 +339,14 @@ router.post('/', upload.single('file'), async (req, res) => {
         const newAnimal = await addAnimal(appUserId_backend, animalData);
 
         // Create notifications for breeder and parent linkages (if targeting other users' data)
+        // Ensure originalOwnerId is added to viewOnlyForUsers if set (e.g., from import)
+        if (newAnimal.originalOwnerId) {
+            if (!newAnimal.viewOnlyForUsers.includes(newAnimal.originalOwnerId)) {
+                newAnimal.viewOnlyForUsers.push(newAnimal.originalOwnerId);
+                await newAnimal.save(); // Save the document to persist the viewOnlyForUsers change
+            }
+        }
+
         const currentUserPublicId = req.user.id_public;
         
         // Check if this animal was transferred (has originalOwnerId)
@@ -1183,6 +1191,14 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
 
         // --- Animal Changelog ---
+        // Ensure originalOwnerId is added to viewOnlyForUsers if set/changed
+        if (updatedAnimal.originalOwnerId) {
+            if (!updatedAnimal.viewOnlyForUsers.includes(updatedAnimal.originalOwnerId)) {
+                updatedAnimal.viewOnlyForUsers.push(updatedAnimal.originalOwnerId);
+                await updatedAnimal.save(); // Save the document to persist the viewOnlyForUsers change
+            }
+        }
+
         try {
             const { AnimalLog } = require('../database/models');
             const CARE_FIELDS = new Set(['lastFedDate', 'feedingFrequencyDays', 'lastMaintenanceDate', 'maintenanceFrequencyDays', 'careTasks', 'animalCareTasks']);

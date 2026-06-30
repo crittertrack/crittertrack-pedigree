@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+﻿﻿const mongoose = require('mongoose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -198,6 +198,7 @@ const AnimalSchema = new mongoose.Schema({
     originalOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Original breeder/creator
     soldStatus: { type: String, enum: [null, 'sold'], default: null }, // null = not transferred
     // viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Removed from PublicAnimalSchema as it's not a public-facing concept
+    viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     // --- NEW: pendingTransferId for preventing duplicate pending transfers ---
     pendingTransferId: {
         type: mongoose.Schema.Types.ObjectId,
