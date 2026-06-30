@@ -1163,7 +1163,6 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             }
         }
 
->>>>>>> Stashed changes
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
         // Notifications are created AFTER the save, but the links remain active.
         // Links are only removed if the breeder/parent owner explicitly rejects via notification.
