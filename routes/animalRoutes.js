@@ -327,9 +327,18 @@ router.post('/', upload.single('file'), async (req, res) => {
             animalData.showOnPublicProfile = animalData.isDisplay;
         }
 
-        // Ensure ownerId_public is always set (required by schema)
-        if (!animalData.ownerId_public) {
-            animalData.ownerId_public = req.user.id_public;
+// Apply old logic for sold status and view-only access if originalOwnerId is present
+        // This ensures that if an animal is being created as part of a transfer process
+        // (where originalOwnerId would be set), its sold status and view access for the original owner are correctly configured.
+        if (animalData.originalOwnerId) {
+            animalData.soldStatus = 'sold';
+            if (!animalData.viewOnlyForUsers) {
+                animalData.viewOnlyForUsers = [];
+            }
+            // Ensure originalOwnerId (backend ID) is in viewOnlyForUsers (backend IDs)
+            if (!animalData.viewOnlyForUsers.includes(animalData.originalOwnerId)) {
+                animalData.viewOnlyForUsers.push(animalData.originalOwnerId);
+            }
         }
 
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
@@ -1140,22 +1149,21 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             updates.showOnPublicProfile = updates.isDisplay;
         }
 
-        // Normalize boolean string values sent from multipart/form-data
-        // (FormData always serialises booleans as strings "true"/"false")
-        const BOOL_FIELDS = [
-            'isForSale', 'availableForBreeding', 'isOwned', 'isPregnant', 'isNursing',
-            'isInMating', 'isQuarantine', 'showOnPublicProfile', 'isDisplay',
-        ];
-        for (const field of BOOL_FIELDS) {
-            if (updates[field] === 'true')  updates[field] = true;
-            if (updates[field] === 'false') updates[field] = false;
+        // Apply old logic for sold status and view-only access if originalOwnerId is present
+        // This ensures that if an animal's originalOwnerId is set or updated (e.g., during a transfer),
+        // its sold status and view access for the original owner are correctly configured.
+        if (updates.originalOwnerId) {
+            updates.soldStatus = 'sold';
+            if (!updates.viewOnlyForUsers) {
+                updates.viewOnlyForUsers = [];
+            }
+            // Ensure originalOwnerId (backend ID) is in viewOnlyForUsers (backend IDs)
+            if (!updates.viewOnlyForUsers.includes(updates.originalOwnerId)) {
+                updates.viewOnlyForUsers.push(updates.originalOwnerId);
+            }
         }
 
-        // Get original animal data to compare for changes before sending notifications
-        const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend })
-            .select('breederId_public sireId_public damId_public name prefix suffix species status gender birthDate deceasedDate color coat earset coatPattern morph phenotype markings eyeColor nailColor size weight length remarks geneticCode isQuarantine isOwned isPregnant isNursing isInMating enclosureId lastFedDate feedingFrequencyDays lastMaintenanceDate maintenanceFrequencyDays careTasks animalCareTasks')
-            .lean();
-        
+>>>>>>> Stashed changes
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
         // Notifications are created AFTER the save, but the links remain active.
         // Links are only removed if the breeder/parent owner explicitly rejects via notification.
