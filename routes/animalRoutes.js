@@ -1192,6 +1192,9 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             }
         }
 
+        // Fetch original animal state for changelog BEFORE updating
+        const originalAnimal = await Animal.findById(animalId_backend).lean();
+
         // IMPORTANT: Animal is saved with breeder/parent links immediately.
         // Notifications are created AFTER the save, but the links remain active.
         // Links are only removed if the breeder/parent owner explicitly rejects via notification.
