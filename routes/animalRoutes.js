@@ -1804,7 +1804,7 @@ router.get('/:id_public/inbreeding', async (req, res) => {
 // --- CALCULATE INBREEDING COEFFICIENT FOR A PAIRING ---
 router.get('/inbreeding/pairing', async (req, res) => {
     try {
-        const { sireId, damId, generations } = req.query;
+        const { sireId, damId, generations, includeAncestors } = req.query;
 
         if (!sireId || !damId) {
             return res.status(400).json({ message: 'Both sireId and damId are required' });
@@ -1822,17 +1822,38 @@ router.get('/inbreeding/pairing', async (req, res) => {
             return promise;
         };
 
+        const numGenerations = Math.min(parseInt(generations) || 50, 50);
+
+        // If frontend requests ancestors, use the more detailed 'explain' function
+        if (includeAncestors === 'true') {
+            const result = await explainPairingInbreeding(
+                sireId,
+                damId,
+                fetchAnimal,
+                numGenerations
+            );
+            // The result from explainPairingInbreeding should contain inbreedingCoefficient and commonAncestors
+            return res.status(200).json({
+                sireId,
+                damId,
+                generations: numGenerations,
+                ...result
+            });
+        }
+
+        // Original behavior: just calculate the coefficient
         const coefficient = await calculatePairingInbreeding(
             sireId,
             damId,
             fetchAnimal,
-            Math.min(parseInt(generations) || 12, 20)
+            numGenerations
         );
 
-        res.status(200).json({ 
+        res.status(200).json({
             sireId,
             damId,
-            inbreedingCoefficient: coefficient 
+            inbreedingCoefficient: coefficient,
+            generations: numGenerations
         });
     } catch (error) {
         console.error('Error calculating pairing inbreeding:', error);
