@@ -1832,6 +1832,19 @@ router.get('/inbreeding/pairing', async (req, res) => {
                 fetchAnimal,
                 numGenerations
             );
+
+            // Enrich breakdown with prefix/suffix for display names
+            if (result.breakdown && Array.isArray(result.breakdown)) {
+                result.breakdown = await Promise.all(result.breakdown.map(async (ancestor) => {
+                    const fullAncestor = await fetchAnimal(ancestor.ancestorId);
+                    return {
+                        ...ancestor,
+                        ancestorPrefix: fullAncestor?.prefix || null,
+                        ancestorSuffix: fullAncestor?.suffix || null,
+                    };
+                }));
+            }
+
             // The result from explainPairingInbreeding should contain inbreedingCoefficient and commonAncestors
             return res.status(200).json({
                 sireId,
