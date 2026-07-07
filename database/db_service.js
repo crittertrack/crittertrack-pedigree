@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+﻿﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -1661,6 +1661,99 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
 };
 
 /**
+ * Recalls a transferred animal back to the original owner.
+ */
+const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
+    const { Animal, User, PublicProfile, AnimalTransfer, Notification } = require('./models.js');
+
+    // 1. Find the animal by its public ID.
+    const animal = await Animal.findOne({ id_public: animalId_public });
+
+    if (!animal) {
+        throw new Error('Animal not found.');
+    }
+
+    // 2. Verify that the user making the request is the original owner.
+    if (!animal.originalOwnerId || animal.originalOwnerId.toString() !== appUserId_backend.toString()) {
+        throw new Error('Not authorized to recall this animal.');
+    }
+
+    // 3. Get necessary info for the transfer record and ownership update.
+    const currentOwnerId = animal.ownerId;
+    const originalOwnerId = animal.originalOwnerId;
+    const originalOwner = await User.findById(originalOwnerId).lean();
+    const currentOwnerPublicProfile = await PublicProfile.findOne({ userId_backend: currentOwnerId }).lean();
+
+    if (!originalOwner) {
+        throw new Error('Original owner profile not found.');
+    }
+
+    // 4. Create a new 'accepted' transfer record to log the recall event.
+    const recallTransfer = new AnimalTransfer({
+        animalId: animal._id,
+        animalId_public: animal.id_public,
+        fromUserId: currentOwnerId, // The user who is losing the animal
+        toUserId: originalOwnerId,   // The original owner who is recalling it
+        transferType: 'recall',
+        status: 'accepted',
+        notes: `Transfer recalled by original owner.`,
+        acceptedAt: new Date(),
+        completedAt: new Date(),
+    });
+    await recallTransfer.save();
+
+    // 5. Update the animal's ownership and view-only status.
+    animal.ownerId = originalOwnerId;
+    animal.ownerId_public = originalOwner.id_public;
+    animal.originalOwnerId = null; // Animal is now back with its original owner.
+    animal.status = 'Pet'; // Reset status to a default.
+    
+    const currentOwnerIdStr = currentOwnerId.toString();
+    const originalOwnerIdStr = originalOwnerId.toString();
+
+    // Remove the original owner from the view-only list since they now have full ownership.
+    animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(id => id.toString() !== originalOwnerIdStr);
+
+    // 6. Add a keeper history entry for the recall.
+    animal.keeperHistory.push({
+        userId: originalOwnerId,
+        userId_public: originalOwner.id_public,
+        name: originalOwner.personalName || originalOwner.breederName || 'Unknown',
+        country: originalOwner.country,
+        date: new Date(),
+    });
+    
+    await animal.save();
+
+    // 7. Update PublicAnimal if this animal is public.
+    if (animal.showOnPublicProfile) {
+        await PublicAnimal.updateOne(
+            { id_public: animal.id_public },
+            { $set: { ownerId_public: animal.ownerId_public, status: animal.status } }
+        );
+    }
+
+    // 8. Send a notification to the previous owner
+    if (currentOwnerPublicProfile) {
+        await Notification.create({
+            userId: currentOwnerId,
+            userId_public: currentOwnerPublicProfile.id_public,
+            type: 'animal_recalled',
+            animalId_public: animal.id_public,
+            animalName: animal.name,
+            animalPrefix: animal.prefix || '',
+            animalImageUrl: animal.imageUrl || animal.photoUrl || '',
+            requestedBy_id: originalOwnerId,
+            requestedBy_public: originalOwner.id_public,
+            requestedBy_name: originalOwner.personalName || originalOwner.breederName || 'The original owner',
+            message: `${originalOwner.personalName || originalOwner.breederName} has recalled ${animal.name}. The animal has been returned to their collection.`,
+        });
+    }
+
+    return { message: 'Animal successfully recalled.' };
+};
+
+/**
  * Hides a view-only animal from a user's list (soft delete for view-only animals)
  */
 const hideViewOnlyAnimal = async (appUserId_backend, animalId_public) => {
@@ -1993,6 +2086,7 @@ module.exports = {
     updateAnimal,
     toggleAnimalPublic,
     deleteAnimal,
+    recallTransferredAnimal,
     hideViewOnlyAnimal,
     restoreViewOnlyAnimal,
     getHiddenViewOnlyAnimals,

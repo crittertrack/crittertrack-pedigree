@@ -24,7 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
     "leo-profanity": "^1.8.0",
-    "mongoose": "^8.4.1",
+    "mongoose": "^8.24.1",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^9.0.1",
