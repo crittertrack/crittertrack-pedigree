@@ -739,10 +739,16 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         baseQuery = {
             $or: [
                 { ownerId: appUserId_backend },
+                // Animals transferred TO the user (view-only access)
                 { 
                     viewOnlyForUsers: appUserId_backend,
                     hiddenForUsers: { $ne: appUserId_backend } // Exclude hidden view-only animals
-                }
+                },
+                // Animals transferred OUT by the user (original owner, but no longer current owner)
+                {
+                    originalOwnerId: appUserId_backend,
+                    ownerId: { $ne: appUserId_backend }
+                } 
             ],
             isStub: { $ne: true }
         };
