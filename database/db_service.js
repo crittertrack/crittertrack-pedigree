@@ -1,4 +1,4 @@
-﻿﻿const mongoose = require('mongoose');
+﻿﻿﻿﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -824,7 +824,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // slim=true: return only the fields needed to render list cards — cuts payload by ~85%
     // Safety cap: only apply the 2000-doc limit for full (non-slim) calls to avoid OOM
     const slimFields = filters.slim === 'true' || filters.slim === true
-        ? 'id_public ownerId ownerId_public name prefix suffix species gender birthDate ' +
+        ? 'id_public ownerId ownerId_public originalOwnerId name prefix suffix species gender birthDate ' +
           'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isQuarantine isInTreatment isStub archived ' +
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
@@ -900,6 +900,7 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     animal.fatherId_public = animal.sireId_public || null;
     animal.motherId_public = animal.damId_public || null;
     animal.isDisplay = animal.showOnPublicProfile ?? false;
+    animal.originalOwnerId = animal.originalOwnerId || null; // Ensure originalOwnerId is always present
     return animal;
 };
 
