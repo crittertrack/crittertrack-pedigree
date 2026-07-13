@@ -685,15 +685,15 @@ const addAnimal = async (appUserId_backend, animalData) => {
 
     // Ensure ownerId_public is always present (required by schema)
     // It should be set by the route, but look it up as a fallback
-    if (!animalData.ownerId_public) {
+    if (!animalData.creatorId_public) {
         try {
             const owner = await User.findById(appUserId_backend).select('id_public').lean();
-            if (owner?.id_public) animalData.ownerId_public = owner.id_public;
+            if (owner?.id_public) animalData.creatorId_public = owner.id_public;
         } catch (e) { /* non-fatal */ }
     }
 
     const newAnimal = new Animal({
-        ownerId: appUserId_backend,
+        creatorId: appUserId_backend,
         id_public,
         // Default visibility to private if not specified
         showOnPublicProfile: false,
@@ -738,7 +738,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         // "All Animals" filter: All animals the user created OR received as view-only
         baseQuery = {
             $or: [
-                { ownerId: appUserId_backend },
+            { creatorId: appUserId_backend },
                 // Animals transferred TO the user (view-only access)
                 { 
                     viewOnlyForUsers: appUserId_backend,
@@ -746,8 +746,8 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
                 },
                 // Animals transferred OUT by the user (original owner, but no longer current owner)
                 {
-                    originalOwnerId: appUserId_backend,
-                    ownerId: { $ne: appUserId_backend }
+                originalCreatorId: appUserId_backend,
+                creatorId: { $ne: appUserId_backend }
                 } 
             ],
             isStub: { $ne: true }
@@ -830,7 +830,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // slim=true: return only the fields needed to render list cards — cuts payload by ~85%
     // Safety cap: only apply the 2000-doc limit for full (non-slim) calls to avoid OOM
     const slimFields = filters.slim === 'true' || filters.slim === true
-        ? 'id_public ownerId ownerId_public originalOwnerId name prefix suffix species gender birthDate ' +
+        ? 'id_public creatorId creatorId_public originalCreatorId name prefix suffix species gender birthDate ' +
           'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isQuarantine isInTreatment isStub archived ' +
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
@@ -844,10 +844,10 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Bulk-resolve owner display names for view-only animals (single DB call)
     const viewOnlyOwnerIds = [...new Set(
         docs
-            .filter(d => d.ownerId.toString() !== appUserId_backend.toString())
-            .map(d => d.ownerId.toString())
+            .filter(d => d.creatorId.toString() !== appUserId_backend.toString())
+            .map(d => d.creatorId.toString())
     )];
-    let ownerNameMap = {}; // ownerId (string) -> display name
+    let ownerNameMap = {}; // creatorId (string) -> display name
     let ownerAvatarMap = {}; // ownerId (string) -> profileImage URL
     let ownerIdPublicMap = {}; // ownerId (string) -> id_public
     if (viewOnlyOwnerIds.length > 0) {
@@ -870,15 +870,15 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
         isDisplay: d.showOnPublicProfile ?? false,
-        isViewOnly: d.ownerId.toString() !== appUserId_backend.toString(),
-        ownerName: d.ownerId.toString() !== appUserId_backend.toString()
-            ? (ownerNameMap[d.ownerId.toString()] || 'Unknown')
+        isViewOnly: d.creatorId.toString() !== appUserId_backend.toString(),
+        ownerName: d.creatorId.toString() !== appUserId_backend.toString()
+            ? (ownerNameMap[d.creatorId.toString()] || 'Unknown')
             : null,
-        ownerAvatar: d.ownerId.toString() !== appUserId_backend.toString()
-            ? (ownerAvatarMap[d.ownerId.toString()] || null)
+        ownerAvatar: d.creatorId.toString() !== appUserId_backend.toString()
+            ? (ownerAvatarMap[d.creatorId.toString()] || null)
             : null,
-        ownerIdPublic: d.ownerId.toString() !== appUserId_backend.toString()
-            ? (ownerIdPublicMap[d.ownerId.toString()] || null)
+        creatorIdPublic: d.creatorId.toString() !== appUserId_backend.toString()
+            ? (ownerIdPublicMap[d.creatorId.toString()] || null)
             : null,
     }));
 };
@@ -887,7 +887,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
  * Helper to find an animal by internal ID and verify ownership.
  */
 const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
-    const animal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend }).lean();
+    const animal = await Animal.findOne({ _id: animalId_backend, creatorId: appUserId_backend }).lean();
     if (!animal) {
         throw new Error('Animal not found or does not belong to user.');
     }
@@ -906,7 +906,7 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     animal.fatherId_public = animal.sireId_public || null;
     animal.motherId_public = animal.damId_public || null;
     animal.isDisplay = animal.showOnPublicProfile ?? false;
-    animal.originalOwnerId = animal.originalOwnerId || null; // Ensure originalOwnerId is always present
+    animal.originalCreatorId = animal.originalCreatorId || null; // Ensure originalCreatorId is always present
     return animal;
 };
 
@@ -915,7 +915,7 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
  */
 const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     // Fetch the original animal to check for changes
-    const originalAnimal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend }).lean();
+    const originalAnimal = await Animal.findOne({ _id: animalId_backend, creatorId: appUserId_backend }).lean();
     
     if (!originalAnimal) {
         throw new Error('Animal not found or user does not own this animal.');
@@ -1134,7 +1134,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     if (updatedAnimal.showOnPublicProfile || updatedAnimal.isDisplay) {
         // Prepare public updates - all fields are included when public
         const publicUpdates = {
-            ownerId_public: updatedAnimal.ownerId_public,
+            creatorId_public: updatedAnimal.creatorId_public,
             id_public: updatedAnimal.id_public,
             species: updatedAnimal.species,
             prefix: updatedAnimal.prefix,
@@ -1561,10 +1561,10 @@ const getPublicProfile = async (id_public) => {
  * Retrieves all publicly shared animals owned by a user.
  * Only returns animals actually owned by the user (not borrowed/bred to).
  */
-const getPublicAnimalsByOwner = async (ownerId_public) => { 
+const getPublicAnimalsByOwner = async (creatorId_public) => { 
     // Show owned animals, plus any marked for sale or stud regardless of isOwned status
     return PublicAnimal.find({
-        ownerId_public,
+        creatorId_public,
         $or: [{ isOwned: true }, { isForSale: true }, { availableForBreeding: true }]
     }).sort({ birthDate: -1 }).lean();
 };
@@ -1575,31 +1575,31 @@ const getPublicAnimalsByOwner = async (ownerId_public) => {
  */
 const deleteAnimal = async (appUserId_backend, animalId_backend) => {
     // Verify ownership and existence
-    const animal = await Animal.findOne({ _id: animalId_backend, ownerId: appUserId_backend });
+    const animal = await Animal.findOne({ _id: animalId_backend, creatorId: appUserId_backend });
     if (!animal) {
         throw new Error('Animal not found or does not own this animal.');
     }
 
     // Check if this is a transferred animal (has originalOwnerId and it's not the current owner)
-    if (animal.originalOwnerId && animal.originalOwnerId.toString() !== appUserId_backend.toString()) {
+    if (animal.originalCreatorId && animal.originalCreatorId.toString() !== appUserId_backend.toString()) {
         console.log(`[deleteAnimal] Reverting transferred animal ${animal.id_public} back to original owner`);
         
         // Revert ownership back to original owner
-        const originalOwner = await User.findById(animal.originalOwnerId).select('id_public');
+        const originalOwner = await User.findById(animal.originalCreatorId).select('id_public');
         
         if (originalOwner) {
-            const originalOwnerId = animal.originalOwnerId; // Store before clearing
+            const originalCreatorId = animal.originalCreatorId; // Store before clearing
             
             // Update animal ownership
-            animal.ownerId = originalOwnerId;
-            animal.ownerId_public = originalOwner.id_public;
+            animal.creatorId = originalCreatorId;
+            animal.creatorId_public = originalOwner.id_public;
             animal.soldStatus = null; // Clear sold status
-            animal.originalOwnerId = null; // Clear original owner reference
+            animal.originalCreatorId = null; // Clear original owner reference
             
             // Remove original owner from viewOnlyForUsers (they own it now, not view-only)
             // AND remove current owner (buyer returning the animal) - they should NOT have view-only access after returning
             animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(
-                userId => userId.toString() !== originalOwnerId.toString() && userId.toString() !== appUserId_backend.toString()
+                userId => userId.toString() !== originalCreatorId.toString() && userId.toString() !== appUserId_backend.toString()
             );
             
             await animal.save();
@@ -1610,7 +1610,7 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
                     { id_public: animal.id_public },
                     { 
                         $set: { 
-                            ownerId_public: animal.ownerId_public,
+                            creatorId_public: animal.creatorId_public,
                             status: animal.status
                         } 
                     }
@@ -1622,15 +1622,15 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
                 $pull: { ownedAnimals: animal._id }
             });
             
-            await User.findByIdAndUpdate(originalOwnerId, {
+            await User.findByIdAndUpdate(originalCreatorId, {
                 $addToSet: { ownedAnimals: animal._id }
             });
             
             // Create notification for original owner
             const { Notification, PublicProfile } = require('./models');
-            const originalOwnerProfile = await PublicProfile.findOne({ userId_backend: originalOwnerId });
+            const originalOwnerProfile = await PublicProfile.findOne({ userId_backend: originalCreatorId });
             await Notification.create({
-                userId: originalOwnerId,
+                userId: originalCreatorId,
                 userId_public: originalOwnerProfile?.id_public || '',
                 type: 'animal_returned',
                 animalId_public: animal.id_public,
@@ -1681,14 +1681,14 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     }
 
     // 2. Verify that the user making the request is the original owner.
-    if (!animal.originalOwnerId || animal.originalOwnerId.toString() !== appUserId_backend.toString()) {
+    if (!animal.originalCreatorId || animal.originalCreatorId.toString() !== appUserId_backend.toString()) {
         throw new Error('Not authorized to recall this animal.');
     }
 
     // 3. Get necessary info for the transfer record and ownership update.
-    const currentOwnerId = animal.ownerId;
-    const originalOwnerId = animal.originalOwnerId;
-    const originalOwner = await User.findById(originalOwnerId).lean();
+    const currentOwnerId = animal.creatorId;
+    const originalCreatorId = animal.originalCreatorId;
+    const originalOwner = await User.findById(originalCreatorId).lean();
     const currentOwnerPublicProfile = await PublicProfile.findOne({ userId_backend: currentOwnerId }).lean();
 
     if (!originalOwner) {
@@ -1700,7 +1700,7 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
         animalId: animal._id,
         animalId_public: animal.id_public,
         fromUserId: currentOwnerId, // The user who is losing the animal
-        toUserId: originalOwnerId,   // The original owner who is recalling it
+        toUserId: originalCreatorId,   // The original owner who is recalling it
         transferType: 'recall',
         status: 'accepted',
         notes: `Transfer recalled by original owner.`,
@@ -1710,20 +1710,20 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     await recallTransfer.save();
 
     // 5. Update the animal's ownership and view-only status.
-    animal.ownerId = originalOwnerId;
-    animal.ownerId_public = originalOwner.id_public;
-    animal.originalOwnerId = null; // Animal is now back with its original owner.
+    animal.creatorId = originalCreatorId;
+    animal.creatorId_public = originalOwner.id_public;
+    animal.originalCreatorId = null; // Animal is now back with its original owner.
     animal.status = 'Pet'; // Reset status to a default.
     
     const currentOwnerIdStr = currentOwnerId.toString();
-    const originalOwnerIdStr = originalOwnerId.toString();
+    const originalCreatorIdStr = originalCreatorId.toString();
 
     // Remove the original owner from the view-only list since they now have full ownership.
-    animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(id => id.toString() !== originalOwnerIdStr);
+    animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(id => id.toString() !== originalCreatorIdStr);
 
     // 6. Add a keeper history entry for the recall.
     animal.keeperHistory.push({
-        userId: originalOwnerId,
+        userId: originalCreatorId,
         userId_public: originalOwner.id_public,
         name: originalOwner.personalName || originalOwner.breederName || 'Unknown',
         country: originalOwner.country,
@@ -1736,7 +1736,7 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     if (animal.showOnPublicProfile) {
         await PublicAnimal.updateOne(
             { id_public: animal.id_public },
-            { $set: { ownerId_public: animal.ownerId_public, status: animal.status } }
+            { $set: { creatorId_public: animal.creatorId_public, status: animal.status } }
         );
     }
 
@@ -1750,7 +1750,7 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
             animalName: animal.name,
             animalPrefix: animal.prefix || '',
             animalImageUrl: animal.imageUrl || animal.photoUrl || '',
-            requestedBy_id: originalOwnerId,
+            requestedBy_id: originalCreatorId,
             requestedBy_public: originalOwner.id_public,
             requestedBy_name: originalOwner.personalName || originalOwner.breederName || 'The original owner',
             message: `${originalOwner.personalName || originalOwner.breederName} has recalled ${animal.name}. The animal has been returned to their collection.`,
@@ -1776,7 +1776,7 @@ const hideViewOnlyAnimal = async (appUserId_backend, animalId_public) => {
     );
 
     // Check if user is the owner (owners can't hide their own animals, only delete)
-    const isOwner = animal.ownerId.toString() === appUserId_backend.toString();
+    const isOwner = animal.creatorId.toString() === appUserId_backend.toString();
 
     if (isOwner) {
         throw new Error('You cannot hide animals you own. Use delete instead.');

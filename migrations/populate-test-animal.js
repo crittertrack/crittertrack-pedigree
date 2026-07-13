@@ -22,6 +22,13 @@ const generatedData = {
     origin: 'Captive-bred',
     tags: ['Show Winner', 'Line A', 'High Yield'],
 
+    // Identification
+    breederAssignedId: 'DD-01',
+    microchipNumber: '981020012345678',
+    pedigreeRegistrationId: 'FM-REG-991',
+    colonyId: 'COLONY-A',
+    tattooId: 'R-EAR-01',
+
     // Appearance
     color: 'Black Tan',
     coatPattern: 'Banded',
@@ -109,6 +116,13 @@ const sireData = {
     birthDate: '2024-02-20T00:00:00.000Z',
     status: 'Retired',
     tags: ['Sire Line', 'Foundation'],
+
+    // Identification overrides
+    breederAssignedId: 'DS-01',
+    microchipNumber: '981020087654321',
+    pedigreeRegistrationId: 'FM-REG-995',
+    tattooId: 'L-EAR-05',
+
     geneticCode: 'a/a B/B C/c D/d P/p',
     isDamAnimal: false,
     isSireAnimal: true,
@@ -136,6 +150,14 @@ const damData = {
     birthDate: '2024-03-15T00:00:00.000Z',
     status: 'Breeder',
     tags: ['Dam Line', 'High Yield'],
+
+    // Identification overrides
+    breederAssignedId: 'DD-02',
+    microchipNumber: '981020011223344',
+    pedigreeRegistrationId: 'FM-REG-996',
+    colonyId: 'COLONY-B',
+    tattooId: 'R-EAR-06',
+
     geneticCode: 'a/a b/b C/c D/d p/p',
     isDamAnimal: true,
     isSireAnimal: false,

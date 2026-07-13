@@ -1,4 +1,4 @@
-﻿﻿const mongoose = require('mongoose');
+﻿﻿﻿﻿const mongoose = require('mongoose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -190,12 +190,12 @@ const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publ
 
 // --- 4. ANIMAL SCHEMA (Private Data) ---
 const AnimalSchema = new mongoose.Schema({
-    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    ownerId_public: { type: String, required: true }, // Denormalized public owner ID
+    creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    creatorId_public: { type: String, required: true }, // Denormalized public creator ID
     id_public: { type: String, required: true, unique: true, index: true }, // The unique public Animal ID
     
     // Transfer/Ownership tracking
-    originalOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Original breeder/creator
+    originalCreatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Original breeder/creator
     soldStatus: { type: String, enum: [null, 'sold'], default: null }, // null = not transferred
     // viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Removed from PublicAnimalSchema as it's not a public-facing concept
     viewOnlyForUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -358,7 +358,6 @@ const AnimalSchema = new mongoose.Schema({
     offspringCount: { type: Number, default: null },
     
     // Stud/Fertility fields (sire role)
-    isStudAnimal: { type: Boolean, default: false },
     availableForBreeding: { type: Boolean, default: false },
     studFeeCurrency: { type: String, default: 'USD' },
     studFeeAmount: { type: Number, default: null },
@@ -366,7 +365,6 @@ const AnimalSchema = new mongoose.Schema({
     fertilityNotes: { type: String, default: null },
     
     // Dam/Fertility fields (dam role)
-    isDamAnimal: { type: Boolean, default: false },
     damFertilityStatus: { type: String, default: 'Unknown' },
     damFertilityNotes: { type: String, default: null },
     // Dog/Cat specific reproduction fields
@@ -537,7 +535,7 @@ const Animal = mongoose.model('Animal', AnimalSchema);
 
 // --- 5. PUBLIC ANIMAL SCHEMA (Shared/View-Only Data) ---
 const PublicAnimalSchema = new mongoose.Schema({
-    ownerId_public: { type: String, required: true, index: true }, // The public owner link
+    creatorId_public: { type: String, required: true, index: true }, // The public creator link
     id_public: { type: String, required: true, unique: true, index: true }, // The unique public Animal ID
     
     // Key display data
