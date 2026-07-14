@@ -1,4 +1,4 @@
-﻿﻿﻿﻿const mongoose = require('mongoose');
+﻿﻿﻿﻿﻿﻿const mongoose = require('mongoose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -186,6 +186,27 @@ const PublicProfileSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publicprofiles');
+
+// --- Health Record Sub-schema (for use in AnimalSchema) ---
+const HealthRecordSchema = new mongoose.Schema({
+    // Generic fields to accommodate different record types
+    name: { type: String },
+    date: { type: Date },
+    medication: { type: String },
+    condition: { type: String },
+    allergen: { type: String },
+    reaction: { type: String },
+    procedure: { type: String },
+    testName: { type: String },
+    result: { type: String },
+    reason: { type: String },
+    vetName: { type: String },
+    dosage: { type: String },
+    frequency: { type: String },
+    status: { type: String },
+    severity: { type: String },
+    notes: { type: String },
+}, { _id: false });
 
 
 // --- 4. ANIMAL SCHEMA (Private Data) ---
@@ -413,15 +434,15 @@ const AnimalSchema = new mongoose.Schema({
     isInfertile: { type: Boolean, default: false },
     
     // Tab 7: Health & Veterinary Fields
-    vaccinations: { type: String, default: null },
-    dewormingRecords: { type: String, default: null },
-    parasiteControl: { type: String, default: null },
-    medicalConditions: { type: String, default: null },
-    allergies: { type: String, default: null },
-    medications: { type: String, default: null },
-    medicalProcedures: { type: String, default: null },
-    labResults: { type: String, default: null },
-    vetVisits: { type: String, default: null },
+    vaccinations: [HealthRecordSchema],
+    dewormingRecords: [HealthRecordSchema],
+    parasiteControl: [HealthRecordSchema],
+    medicalConditions: [HealthRecordSchema],
+    allergies: [HealthRecordSchema],
+    medications: [HealthRecordSchema],
+    medicalProcedures: [HealthRecordSchema],
+    labResults: [HealthRecordSchema],
+    vetVisits: [HealthRecordSchema],
     primaryVet: { type: String, default: null },
     // Dog/Cat specific health fields
     spayNeuterDate: { type: Date, default: null },

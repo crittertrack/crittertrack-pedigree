@@ -1067,37 +1067,24 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
 
-        // When using multipart/form-data, array/object fields are stringified. Parse them back.
+        // When using multipart/form-data, array/object fields are stringified.
+        // This block parses them back into arrays before they reach the db_service.
         const arrayFields = [
             'tags', 'extraImages', 'careTasks', 'animalCareTasks', 'milestones',
             'vaccinations', 'dewormingRecords', 'parasiteControl', 'medicalConditions',
             'allergies', 'medications', 'medicalProcedures', 'labResults', 'vetVisits',
             'keeperHistory', 'breedingRecords', 'growthRecords', 'identifiers'
         ];
-
+ 
         for (const field of arrayFields) {
             if (updates[field] && typeof updates[field] === 'string') {
                 try {
                     updates[field] = JSON.parse(updates[field]);
                 } catch (e) {
-                    console.warn(`[animalRoutes] Failed to parse JSON for field "${field}"`);
+                    console.warn(`[animalRoutes] Could not parse stringified array for field "${field}". It may be a simple string.`);
                 }
             }
         }
-
-        // --- VALIDATION: Filter out invalid array entries ---
-        // Mongoose validation fails on save if arrays contain empty objects `{}`
-        // where a subdocument with required fields is expected.
-        if (updates.careTasks && Array.isArray(updates.careTasks)) {
-            updates.careTasks = updates.careTasks.filter(t => t && typeof t === 'object' && t.taskName);
-        }
-        if (updates.animalCareTasks && Array.isArray(updates.animalCareTasks)) {
-            updates.animalCareTasks = updates.animalCareTasks.filter(t => t && typeof t === 'object' && t.taskName);
-        }
-        if (updates.milestones && Array.isArray(updates.milestones)) {
-            updates.milestones = updates.milestones.filter(m => m && typeof m === 'object' && m.label);
-        }
-        // --- END VALIDATION ---
 
         console.log('[PUT /api/animals/:id] Request received for animal:', animalId_backend);
         console.log('[PUT /api/animals/:id] Health records in request:', {
