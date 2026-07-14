@@ -33,7 +33,7 @@ function toCSV(records) {
 // --- Field strippers: remove internal MongoDB / ObjectId fields ---
 
 function stripAnimal(doc) {
-    const { _id, __v, creatorId, originalcreatorId, viewOnlyForUsers, hiddenForUsers, litterId, ...rest } = doc;
+    const { _id, __v, creatorId, originalCreatorId, viewOnlyForUsers, hiddenForUsers, litterId, ...rest } = doc;
     return rest;
 }
 

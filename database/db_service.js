@@ -1580,7 +1580,7 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
         throw new Error('Animal not found or does not own this animal.');
     }
 
-    // Check if this is a transferred animal (has originalcreatorId and it's not the current owner)
+    // Check if this is a transferred animal (has originalCreatorId and it's not the current owner)
     if (animal.originalCreatorId && animal.originalCreatorId.toString() !== appUserId_backend.toString()) {
         console.log(`[deleteAnimal] Reverting transferred animal ${animal.id_public} back to original owner`);
         

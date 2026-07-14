@@ -174,8 +174,8 @@ router.post('/:id/accept', async (req, res) => {
         const previousOwnerPublic = animal.creatorId_public;
         
         // Set original owner if not already set
-        if (!animal.originalcreatorId) {
-            animal.originalcreatorId = previousOwner;
+        if (!animal.originalCreatorId) {
+            animal.originalCreatorId = previousOwner;
         }
         
         // Get the new owner's public ID

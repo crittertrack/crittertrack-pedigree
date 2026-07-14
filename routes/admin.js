@@ -542,9 +542,9 @@ router.get('/animals', async (req, res) => {
 
         const [animals, total] = await Promise.all([
             Animal.find(query)
-                .select('id_public name prefix suffix species gender status creatorId creatorId_public originalcreatorId showOnPublicProfile imageUrl createdAt soldStatus breederId_public')
+                .select('id_public name prefix suffix species gender status creatorId creatorId_public originalCreatorId showOnPublicProfile imageUrl createdAt soldStatus breederId_public')
                 .populate('creatorId', 'email personalName id_public')
-                .populate('originalcreatorId', 'email personalName id_public')
+                .populate('originalCreatorId', 'email personalName id_public')
                 .sort(sort)
                 .skip(skip)
                 .limit(parseInt(limit))
@@ -606,14 +606,14 @@ router.get('/animals/:animalId', async (req, res) => {
         if (mongoose.Types.ObjectId.isValid(animalId)) {
             animal = await Animal.findById(animalId)
                 .populate('creatorId', 'email personalName id_public')
-                .populate('originalcreatorId', 'email personalName id_public')
+                .populate('originalCreatorId', 'email personalName id_public')
                 .lean();
         }
         
         if (!animal) {
             animal = await Animal.findOne({ id_public: animalId })
                 .populate('creatorId', 'email personalName id_public')
-                .populate('originalcreatorId', 'email personalName id_public')
+                .populate('originalCreatorId', 'email personalName id_public')
                 .lean();
         }
 

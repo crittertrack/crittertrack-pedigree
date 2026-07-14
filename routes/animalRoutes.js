@@ -328,17 +328,17 @@ router.post('/', upload.single('file'), async (req, res) => {
             animalData.showOnPublicProfile = animalData.isDisplay;
         }
 
-// Apply old logic for sold status and view-only access if originalcreatorId is present
+// Apply old logic for sold status and view-only access if originalCreatorId is present
         // This ensures that if an animal is being created as part of a transfer process
-        // (where originalcreatorId would be set), its sold status and view access for the original owner are correctly configured.
-        if (animalData.originalcreatorId) {
+        // (where originalCreatorId would be set), its sold status and view access for the original owner are correctly configured.
+        if (animalData.originalCreatorId) {
             animalData.soldStatus = 'sold';
             if (!animalData.viewOnlyForUsers) {
                 animalData.viewOnlyForUsers = [];
             }
-            // Ensure originalcreatorId (backend ID) is in viewOnlyForUsers (backend IDs)
-            if (!animalData.viewOnlyForUsers.includes(animalData.originalcreatorId)) {
-                animalData.viewOnlyForUsers.push(animalData.originalcreatorId);
+            // Ensure originalCreatorId (backend ID) is in viewOnlyForUsers (backend IDs)
+            if (!animalData.viewOnlyForUsers.includes(animalData.originalCreatorId)) {
+                animalData.viewOnlyForUsers.push(animalData.originalCreatorId);
             }
         }
 
@@ -348,21 +348,21 @@ router.post('/', upload.single('file'), async (req, res) => {
         const newAnimal = await addAnimal(appUserId_backend, animalData);
 
         // Create notifications for breeder and parent linkages (if targeting other users' data)
-        // Ensure originalcreatorId is added to viewOnlyForUsers if set (e.g., from import)
-        if (newAnimal.originalcreatorId) {
-            if (!newAnimal.viewOnlyForUsers.includes(newAnimal.originalcreatorId)) {
-                newAnimal.viewOnlyForUsers.push(newAnimal.originalcreatorId);
+        // Ensure originalCreatorId is added to viewOnlyForUsers if set (e.g., from import)
+        if (newAnimal.originalCreatorId) {
+            if (!newAnimal.viewOnlyForUsers.includes(newAnimal.originalCreatorId)) {
+                newAnimal.viewOnlyForUsers.push(newAnimal.originalCreatorId);
                 await newAnimal.save(); // Save the document to persist the viewOnlyForUsers change
             }
         }
 
         const currentUserPublicId = req.user.id_public;
         
-        // Check if this animal was transferred (has originalcreatorId)
-        const isTransferred = !!newAnimal.originalcreatorId;
+        // Check if this animal was transferred (has originalCreatorId)
+        const isTransferred = !!newAnimal.originalCreatorId;
         let originalOwnerPublicId = null;
         if (isTransferred) {
-            const originalOwner = await User.findById(newAnimal.originalcreatorId).select('id_public');
+            const originalOwner = await User.findById(newAnimal.originalCreatorId).select('id_public');
             originalOwnerPublicId = originalOwner?.id_public;
             console.log(`[Notification Check] Animal was transferred, original owner: CT${originalOwnerPublicId}`);
         }
@@ -571,7 +571,7 @@ router.get('/any/:id_public', async (req, res) => {
 
             // If user owns a litter that lists this animal as offspring, grant full visibility.
             // Covers cases where the animal was linked to the user's litter (e.g. transferred before
-            // originalcreatorId was recorded, or manually linked from another breeder).
+            // originalCreatorId was recorded, or manually linked from another breeder).
             const ownedLitterWithAnimal = await Litter.findOne({ creatorId: userId, offspringIds_public: id_public }).lean();
             if (ownedLitterWithAnimal) {
                 console.log(`[litterOwner] Allowing litter owner to view linked offspring ${id_public}`);
@@ -1178,17 +1178,17 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             updates.showOnPublicProfile = updates.isDisplay;
         }
 
-        // Apply old logic for sold status and view-only access if originalcreatorId is present
-        // This ensures that if an animal's originalcreatorId is set or updated (e.g., during a transfer),
+        // Apply old logic for sold status and view-only access if originalCreatorId is present
+        // This ensures that if an animal's originalCreatorId is set or updated (e.g., during a transfer),
         // its sold status and view access for the original owner are correctly configured.
-        if (updates.originalcreatorId) {
+        if (updates.originalCreatorId) {
             updates.soldStatus = 'sold';
             if (!updates.viewOnlyForUsers) {
                 updates.viewOnlyForUsers = [];
             }
-            // Ensure originalcreatorId (backend ID) is in viewOnlyForUsers (backend IDs)
-            if (!updates.viewOnlyForUsers.includes(updates.originalcreatorId)) {
-                updates.viewOnlyForUsers.push(updates.originalcreatorId);
+            // Ensure originalCreatorId (backend ID) is in viewOnlyForUsers (backend IDs)
+            if (!updates.viewOnlyForUsers.includes(updates.originalCreatorId)) {
+                updates.viewOnlyForUsers.push(updates.originalCreatorId);
             }
         }
 
@@ -1201,10 +1201,10 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
 
         // --- Animal Changelog ---
-        // Ensure originalcreatorId is added to viewOnlyForUsers if set/changed
-        if (updatedAnimal.originalcreatorId) {
-            if (!updatedAnimal.viewOnlyForUsers.includes(updatedAnimal.originalcreatorId)) {
-                updatedAnimal.viewOnlyForUsers.push(updatedAnimal.originalcreatorId);
+        // Ensure originalCreatorId is added to viewOnlyForUsers if set/changed
+        if (updatedAnimal.originalCreatorId) {
+            if (!updatedAnimal.viewOnlyForUsers.includes(updatedAnimal.originalCreatorId)) {
+                updatedAnimal.viewOnlyForUsers.push(updatedAnimal.originalCreatorId);
                 await updatedAnimal.save(); // Save the document to persist the viewOnlyForUsers change
             }
         }
@@ -1260,11 +1260,11 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const currentUserPublicId = req.user.id_public;
         console.log(`[UPDATE] Current user public ID from req.user: ${currentUserPublicId}`);
         
-        // Check if this animal was transferred (has originalcreatorId)
-        const isTransferred = !!updatedAnimal.originalcreatorId;
+        // Check if this animal was transferred (has originalCreatorId)
+        const isTransferred = !!updatedAnimal.originalCreatorId;
         let originalOwnerPublicId = null;
         if (isTransferred) {
-            const originalOwner = await User.findById(updatedAnimal.originalcreatorId).select('id_public');
+            const originalOwner = await User.findById(updatedAnimal.originalCreatorId).select('id_public');
             originalOwnerPublicId = originalOwner?.id_public;
             console.log(`[UPDATE][Notification Check] Animal was transferred, original owner: CT${originalOwnerPublicId}`);
         }
@@ -2526,34 +2526,34 @@ router.post('/:id_public/return', async (req, res) => {
         }
 
         // Must have an original owner to return to
-        if (!animal.originalcreatorId) {
+        if (!animal.originalCreatorId) {
             await session.abortTransaction();
             return res.status(400).json({ message: 'This animal was not transferred — nothing to return.' });
         }
 
-        const originalcreatorId = animal.originalcreatorId;
-        const originalOwner = await User.findById(originalcreatorId).select('_id id_public').session(session);
+        const originalCreatorId = animal.originalCreatorId;
+        const originalOwner = await User.findById(originalCreatorId).select('_id id_public').session(session);
         if (!originalOwner) {
             await session.abortTransaction();
             return res.status(404).json({ message: 'Original owner account not found.' });
         }
 
         // Reverse ownership
-        animal.creatorId = originalcreatorId;
+        animal.creatorId = originalCreatorId;
         animal.creatorId_public = originalOwner.id_public;
-        animal.originalcreatorId = null;
+        animal.originalCreatorId = null;
         animal.soldStatus = null;
 
         // Remove original owner from viewOnlyForUsers (they now own it again)
         animal.viewOnlyForUsers = (animal.viewOnlyForUsers || []).filter(
-            id => String(id) !== String(originalcreatorId)
+            id => String(id) !== String(originalCreatorId)
         );
 
         await animal.save({ session }); // Pass session
 
         // Update ownedAnimals arrays
         await User.findByIdAndUpdate(userId, { $pull: { ownedAnimals: animal._id } }, { session });
-        await User.findByIdAndUpdate(originalcreatorId, { $addToSet: { ownedAnimals: animal._id } }, { session });
+        await User.findByIdAndUpdate(originalCreatorId, { $addToSet: { ownedAnimals: animal._id } }, { session });
 
         // Update PublicAnimal if public
         if (animal.showOnPublicProfile) {
@@ -2568,10 +2568,10 @@ router.post('/:id_public/return', async (req, res) => {
         try {
             const { Notification, PublicProfile } = require('../database/models');
             const returnerProfile = await PublicProfile.findOne({ userId_backend: userId }).session(session);
-            const origProfile = await PublicProfile.findOne({ userId_backend: originalcreatorId }).session(session);
+            const origProfile = await PublicProfile.findOne({ userId_backend: originalCreatorId }).session(session);
             const returnerName = returnerProfile?.breederName || returnerProfile?.personalName || 'Someone';
             await Notification.create({
-                userId: originalcreatorId,
+                userId: originalCreatorId,
                 userId_public: origProfile?.id_public || '',
                 type: 'transfer_returned', // Specific type for returned transfers
                 status: 'returned', // Consistent status naming
@@ -2586,7 +2586,7 @@ router.post('/:id_public/return', async (req, res) => {
 
         // Remove the original owner from viewOnlyForUsers since they now own the animal again
         animal.viewOnlyForUsers = (animal.viewOnlyForUsers || []).filter(
-            id => String(id) !== String(originalcreatorId)
+            id => String(id) !== String(originalCreatorId)
         );
 
         await animal.save({ session }); // Pass session

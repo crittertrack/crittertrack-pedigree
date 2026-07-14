@@ -20,7 +20,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 **Ownership:**
 - `creatorId` - Backend owner reference
 - `creatorId_public` - Public owner ID
-- `originalcreatorId` - Original breeder
+- `originalCreatorId` - Original breeder
 - `ownerName` - Custom owner name
 - `soldStatus` - Sale/transfer status
 
