@@ -1066,6 +1066,39 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const appUserId_backend = req.user.id;
         const animalId_backend = req.resolvedAnimalId || req.params.id_backend;
         const updates = req.body || {};
+
+        // When using multipart/form-data, array/object fields are stringified. Parse them back.
+        const arrayFields = [
+            'tags', 'extraImages', 'careTasks', 'animalCareTasks', 'milestones',
+            'vaccinations', 'dewormingRecords', 'parasiteControl', 'medicalConditions',
+            'allergies', 'medications', 'medicalProcedures', 'labResults', 'vetVisits',
+            'keeperHistory', 'breedingRecords', 'growthRecords', 'identifiers'
+        ];
+
+        for (const field of arrayFields) {
+            if (updates[field] && typeof updates[field] === 'string') {
+                try {
+                    updates[field] = JSON.parse(updates[field]);
+                } catch (e) {
+                    console.warn(`[animalRoutes] Failed to parse JSON for field "${field}"`);
+                }
+            }
+        }
+
+        // --- VALIDATION: Filter out invalid array entries ---
+        // Mongoose validation fails on save if arrays contain empty objects `{}`
+        // where a subdocument with required fields is expected.
+        if (updates.careTasks && Array.isArray(updates.careTasks)) {
+            updates.careTasks = updates.careTasks.filter(t => t && typeof t === 'object' && t.taskName);
+        }
+        if (updates.animalCareTasks && Array.isArray(updates.animalCareTasks)) {
+            updates.animalCareTasks = updates.animalCareTasks.filter(t => t && typeof t === 'object' && t.taskName);
+        }
+        if (updates.milestones && Array.isArray(updates.milestones)) {
+            updates.milestones = updates.milestones.filter(m => m && typeof m === 'object' && m.label);
+        }
+        // --- END VALIDATION ---
+
         console.log('[PUT /api/animals/:id] Request received for animal:', animalId_backend);
         console.log('[PUT /api/animals/:id] Health records in request:', {
             vaccinations: updates.vaccinations,
@@ -1784,6 +1817,15 @@ router.get('/:id_public/inbreeding', async (req, res) => {
         const animal = await Animal.findOne({ id_public: id_public });
         if (animal) {
             animal.inbreedingCoefficient = finalCoefficient;
+
+            // Clean up any invalid subdocuments before saving to prevent validation errors
+            if (animal.careTasks && Array.isArray(animal.careTasks)) {
+                animal.careTasks = animal.careTasks.filter(t => t && typeof t === 'object' && t.taskName);
+            }
+            if (animal.animalCareTasks && Array.isArray(animal.animalCareTasks)) {
+                animal.animalCareTasks = animal.animalCareTasks.filter(t => t && typeof t === 'object' && t.taskName);
+            }
+
             await animal.save();
 
             // Update public animal if it exists
