@@ -21,6 +21,12 @@ const generatedData = {
     lifeStage: 'Adult',
     origin: 'Captive-bred',
     tags: ['Show Winner', 'Line A', 'High Yield'],
+    imageUrl: 'https://critter-track-dev.s3.amazonaws.com/animal-images/6673624a63115edde0c3f5b0-1718837322839.jpg', // Example image
+    photoUrl: 'https://critter-track-dev.s3.amazonaws.com/animal-images/6673624a63115edde0c3f5b0-1718837322839.jpg', // Legacy support
+    extraImages: [
+        'https://critter-track-dev.s3.amazonaws.com/animal-images/6673624a63115edde0c3f5b0-1718837322839.jpg',
+        'https://critter-track-dev.s3.amazonaws.com/animal-images/6673624a63115edde0c3f5b0-1718837322839.jpg'
+    ],
 
     // Identification
     breederAssignedId: 'DD-01',
@@ -28,12 +34,25 @@ const generatedData = {
     pedigreeRegistrationId: 'FM-REG-991',
     colonyId: 'COLONY-A',
     tattooId: 'R-EAR-01',
+    ringId: 'BAND-001',
+    eartagNumber: 'ET-991',
+    dnaProfile: 'ISAG2020-12345',    
+    identifiers: [
+        { title: 'Lab ID', value: 'LAB-X-55' },
+        { title: 'Registry ID', value: 'OTHER-REG-77' }
+    ],
 
     // Appearance
     color: 'Black Tan',
     coatPattern: 'Banded',
     coat: 'Standard',
+    earset: 'Standard',
+    phenotype: 'Show Quality',
+    morph: 'N/A',
     markings: 'Head spot',
+    eyeColor: 'Black',
+    nailColor: 'Pink',
+    size: 'Medium',
     carrierTraits: 're, p, d',
     geneticCode: 'a/a B/b C/c D/d P/p',
 
@@ -44,8 +63,18 @@ const generatedData = {
     purchaseDate: '2025-03-01T00:00:00.000Z',
     purchasePrice: '50.00',
     purchasePriceCurrency: 'USD',
+    purchaseLocation: 'Online Breeder',
+    isForSale: true,
+    salePriceAmount: '100.00',
+    salePriceCurrency: 'USD',
+    saleDate: null,
+    saleLocation: null,
     licenseNumber: 'LIC-12345-AB',
+    licenseJurisdiction: 'State of Example',
+    insurance: 'PetPlan - Policy #PP-98765',
+    legalStatus: 'Clear',
     breedingRestrictions: 'Not to be bred with piebald lines.',
+    exportRestrictions: 'Not for export outside North America.',
     keeperHistory: [
         { name: 'Original Breeder', userId_public: 'CTC-USER-1', country: 'US' },
         { name: 'Second Owner', userId_public: null, country: 'CA' }
@@ -53,34 +82,74 @@ const generatedData = {
 
     // Health
     healthStatus: 'Excellent',
-    vaccinations: JSON.stringify([{ name: 'Standard Yearly', date: '2026-01-10' }]),
-    dewormingRecords: JSON.stringify([{ medication: 'Ivermectin', date: '2026-06-01' }]),
-    medicalConditions: JSON.stringify([{ condition: 'Slightly sensitive to dust', notes: 'Use paper bedding.' }]),
-    allergies: JSON.stringify([{ allergen: 'Cedar bedding' }]),
-    medications: JSON.stringify([{ medication: 'None' }]),
-    vetVisits: JSON.stringify([{ reason: 'Annual Checkup', date: '2026-01-10' }]),
+    quarantineStatus: { active: false, startDate: null, endDate: null, reason: '' },
+    vaccinations: [{ name: 'Standard Yearly', date: '2026-01-10' }],
+    dewormingRecords: [{ medication: 'Ivermectin', date: '2026-06-01' }],
+    medicalConditions: [{ condition: 'Slightly sensitive to dust', notes: 'Use paper bedding.', status: 'active', severity: 'minor' }],
+    allergies: [{ allergen: 'Cedar bedding', reaction: 'Sneezing' }],
+    medications: [{ medication: 'None', status: 'inactive' }],
+    vetVisits: [{ reason: 'Annual Checkup', date: '2026-01-10', vetName: 'Dr. Smith' }],
     primaryVet: 'Dr. Smith',
     spayNeuterDate: null,
     heartwormStatus: 'Negative',
     hipElbowScores: 'Not Applicable',
+    geneticHealth: [{ test: 'Myco-PCR', result: 'Negative', date: '2025-02-01' }],
+    healthTests: [{ test: 'Fecal Float', result: 'Clear', date: '2026-01-10' }],
+    healthNotes: 'Overall very healthy animal. Good weight and temperament.',
 
     // Care & Behavior
     dietType: 'Lab Blocks & Seed Mix',
     feedingSchedule: 'Daily',
+    supplements: 'Calcium drops in water twice a week.',
+    enclosureId: null, // This would be a real ObjectId
+    housingType: 'Tank with wire mesh lid',
+    bedding: 'Aspen shavings',
+    enrichment: 'Wheels, tubes, and chew toys.',    
+    careTasks: [{ taskName: 'Enclosure full clean', frequencyDays: 14, lastDoneDate: '2026-07-01' }],
+    animalCareTasks: [{ taskName: 'Nail trim', frequencyDays: 30, lastDoneDate: '2026-06-15' }],
     handlingNotes: 'Very friendly, enjoys being handled.',
     socializationNotes: 'Housed with two other females, gets along well.',
+    specialCareRequirements: 'Ensure bedding is low-dust.',
+    temperatureRange: '68-75°F',
+    humidity: '40-60%',
+    lighting: 'Natural room light',
+    noise: 'Tolerates normal household noise.',
+    exerciseRequirements: 'Daily wheel access',
+    dailyExerciseMinutes: 60,
+    groomingNeeds: 'Minimal, self-groomer.',
+    sheddingLevel: 'Low',
+    crateTrained: true,
+    litterTrained: false,
+    leashTrained: false,
+    freeFlightTrained: false,
     temperament: 'Curious and Active',
+    handlingTolerance: 'High',
+    socialStructure: 'Group-housed female',
     activityCycle: 'Nocturnal',
+    trainingLevel: 'Basic',
+    trainingDisciplines: 'N/A',
+    workingRole: 'Pet/Breeder',
+    certifications: 'N/A',
+    behavioralIssues: 'None noted.',
+    biteHistory: 'No bites recorded.',
+    reactivityNotes: 'Not reactive.',
     
     // Measurements
     measurementUnits: { weight: 'g', length: 'cm' },
-    growthRecords: JSON.stringify([
+    bodyWeight: '34',
+    bodyLength: '10.5',
+    heightAtWithers: '3',
+    chestGirth: '5',
+    adultWeight: '32',
+    bodyConditionScore: '3/5',
+    length: '10.5', // Redundant with bodyLength, but for completeness
+    growthRecords: [
         { date: '2025-02-01', weight: '15', length: '5', notes: 'Weaning weight' },
         { date: '2025-04-01', weight: '25', length: '8' },
         { date: '2025-06-01', weight: '32', length: '10', notes: 'Reached adult size' },
         { date: '2025-08-01', weight: '33', length: '10' },
         { date: '2025-10-01', weight: '34', length: '10.5' },
-    ]),
+    ],
 
     // Fertility
     isNeutered: false,
@@ -88,18 +157,49 @@ const generatedData = {
     isInMating: false,
     isPregnant: false,
     isNursing: false,
+    availableForBreeding: true,
+    studFeeAmount: null,
+    studFeeCurrency: null,
     isDamAnimal: true,
     damFertilityStatus: 'Proven',
+    heatStatus: 'Normal',
+    lastHeatDate: '2026-06-20T00:00:00.000Z',
+    ovulationDate: null,
+    estrusCycleLength: 5,
+    gestationLength: 21,
+    deliveryMethod: 'Natural',
+    whelpingDate: null,
+    queeningDate: null,
+    damFertilityNotes: 'Consistently produces large, healthy litters.',
+    reproductiveClearances: 'Cleared for breeding by vet.',
+    reproductiveComplications: 'None.',
+    lastMatingDate: '2026-03-01T00:00:00.000Z',
+    lastPregnancyDate: '2026-03-01T00:00:00.000Z',
+    litterCount: 1,
+    offspringCount: 8,
 
     // Show & Notes
     showTitles: '1st Place at National Mouse Show 2026',
+    showRatings: 'Excellent Type, Good Color',
+    judgeComments: 'A very promising young doe. Excellent head and ear set. Tail could be slightly longer.',
+    workingTitles: 'N/A',    
+    performanceScores: 'N/A',
     remarks: 'This is a test animal for demonstrating the new dashboard layout. All data is generated.',
-    milestones: JSON.stringify([
+    milestones: [
         { label: 'Born', startDate: '2025-01-15' },
         { label: 'Weaned', startDate: '2025-02-10' },
         { label: 'First Show', startDate: '2025-09-05' },
         { label: 'First Litter', startDate: '2026-03-20' },
-    ]),
+    ],
+
+    // End of Life
+    deceasedDate: null,
+    causeOfDeath: null,
+    necropsyResults: null,
+    endOfLifeCareNotes: null,
+
+    // Manual Pedigree
+    manualPedigree: {},
 };
 
 const childData = {
@@ -127,18 +227,20 @@ const sireData = {
     isDamAnimal: false,
     isSireAnimal: true,
     sireFertilityStatus: 'Proven',
-    damFertilityStatus: null,
+    fertilityNotes: 'Very reliable sire.',
+    availableForBreeding: false, // Retired
+    damFertilityStatus: null,    
     remarks: 'This is the sire for the demo animal CTC6991.',
-    growthRecords: JSON.stringify([
+    growthRecords: [
         { date: '2024-03-20', weight: '15', length: '5' },
         { date: '2024-05-20', weight: '30', length: '9' },
         { date: '2024-07-20', weight: '35', length: '11', notes: 'Reached adult size' },
-    ]),
-    milestones: JSON.stringify([
+    ],
+    milestones: [
         { label: 'Born', startDate: '2024-02-20' },
         { label: 'Weaned', startDate: '2024-03-18' },
         { label: 'Paired', startDate: '2025-01-01' },
-    ]),
+    ],
     showTitles: '',
 };
 
@@ -162,18 +264,19 @@ const damData = {
     isDamAnimal: true,
     isSireAnimal: false,
     damFertilityStatus: 'Proven',
-    sireFertilityStatus: null,
+    availableForBreeding: true,
+    sireFertilityStatus: null,    
     remarks: 'This is the dam for the demo animal CTC6991.',
-    growthRecords: JSON.stringify([
+    growthRecords: [
         { date: '2024-04-15', weight: '14', length: '5' },
         { date: '2024-06-15', weight: '28', length: '8' },
         { date: '2024-08-15', weight: '31', length: '10', notes: 'Reached adult size' },
-    ]),
-    milestones: JSON.stringify([
+    ],
+    milestones: [
         { label: 'Born', startDate: '2024-03-15' },
         { label: 'Weaned', startDate: '2024-04-10' },
         { label: 'First Litter', startDate: '2025-01-15' },
-    ]),
+    ],
     showTitles: 'Best of Breed 2025',
 };
 

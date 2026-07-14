@@ -306,6 +306,21 @@ router.post('/', upload.single('file'), async (req, res) => {
                 continue;
             }
 
+            // --- VALIDATION: Filter out invalid array entries ---
+            // Mongoose validation fails on save if arrays contain empty objects `{}`
+            // where a subdocument with required fields is expected.
+            if (rec.careTasks && Array.isArray(rec.careTasks)) {
+                rec.careTasks = rec.careTasks.filter(t => t && typeof t === 'object' && t.taskName);
+            }
+            if (rec.animalCareTasks && Array.isArray(rec.animalCareTasks)) {
+                rec.animalCareTasks = rec.animalCareTasks.filter(t => t && typeof t === 'object' && t.taskName);
+            }
+            if (rec.milestones && Array.isArray(rec.milestones)) {
+                rec.milestones = rec.milestones.filter(m => m && typeof m === 'object' && m.label);
+            }
+            // Add similar filters for other arrays of objects as needed (e.g., growthRecords)
+            // --- END VALIDATION ---
+
             try {
                 const isConflict = raw.id_public && existingAnimalIds.has(raw.id_public);
 
