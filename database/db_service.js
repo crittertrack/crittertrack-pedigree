@@ -639,7 +639,7 @@ const addAnimal = async (appUserId_backend, animalData) => {
     const resolveParentPublicToBackend = async (pubVal) => {
         if (!pubVal) return null;
         // Try to find by id_public (handles both string CTC1001 and legacy numeric)
-        const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
+        const found = await Animal.findOne({ id_public: pubVal, creatorId: appUserId_backend }).select('_id id_public').lean();
         return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
     };
 
@@ -683,7 +683,7 @@ const addAnimal = async (appUserId_backend, animalData) => {
 
     enforceCleanAnimalText(animalData);
 
-    // Ensure ownerId_public is always present (required by schema)
+    // Ensure creatorId_public is always present (required by schema)
     // It should be set by the route, but look it up as a fallback
     if (!animalData.creatorId_public) {
         try {
@@ -727,7 +727,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         // "My Animals" filter: Only animals the user created AND marked as owned (isOwned: true)
         // Excludes view-only animals (transferred animals), archived animals, and stubs
         baseQuery = {
-            ownerId: appUserId_backend,
+            creatorId: appUserId_backend,
             isOwned: true,
             isStub: { $ne: true }
         };
@@ -842,16 +842,16 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     const docs = await (slimFields ? cappedFind.select(slimFields) : cappedFind).lean();
 
     // Bulk-resolve owner display names for view-only animals (single DB call)
-    const viewOnlyOwnerIds = [...new Set(
+    const viewOnlycreatorIds = [...new Set(
         docs
             .filter(d => d.creatorId.toString() !== appUserId_backend.toString())
             .map(d => d.creatorId.toString())
     )];
     let ownerNameMap = {}; // creatorId (string) -> display name
-    let ownerAvatarMap = {}; // ownerId (string) -> profileImage URL
-    let ownerIdPublicMap = {}; // ownerId (string) -> id_public
-    if (viewOnlyOwnerIds.length > 0) {
-        const owners = await User.find({ _id: { $in: viewOnlyOwnerIds } })
+    let ownerAvatarMap = {}; // creatorId (string) -> profileImage URL
+    let creatorIdPublicMap = {}; // creatorId (string) -> id_public
+    if (viewOnlycreatorIds.length > 0) {
+        const owners = await User.find({ _id: { $in: viewOnlycreatorIds } })
             .select('_id id_public personalName breederName showBreederName profileImage profileImageUrl')
             .lean();
         owners.forEach(u => {
@@ -859,7 +859,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
                 ? u.breederName
                 : u.personalName || 'Unknown';
             ownerAvatarMap[u._id.toString()] = u.profileImage || u.profileImageUrl || null;
-            ownerIdPublicMap[u._id.toString()] = u.id_public || null;
+            creatorIdPublicMap[u._id.toString()] = u.id_public || null;
         });
     }
 
@@ -878,7 +878,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
             ? (ownerAvatarMap[d.creatorId.toString()] || null)
             : null,
         creatorIdPublic: d.creatorId.toString() !== appUserId_backend.toString()
-            ? (ownerIdPublicMap[d.creatorId.toString()] || null)
+            ? (creatorIdPublicMap[d.creatorId.toString()] || null)
             : null,
     }));
 };
@@ -936,7 +936,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     // Normalize parent fields on update: accept string public IDs like "CTC222"
     const resolveParentPublicToBackend = async (pubVal) => {
         if (!pubVal) return null;
-        const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
+        const found = await Animal.findOne({ id_public: pubVal, creatorId: appUserId_backend }).select('_id id_public').lean();
         return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
     };
 
@@ -1085,7 +1085,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
     
     const updatedAnimal = await Animal.findOneAndUpdate(
-        { _id: animalId_backend, ownerId: appUserId_backend },
+        { _id: animalId_backend, creatorId: appUserId_backend },
         { $set: updates },
         { new: true, runValidators: true }
     );
@@ -1296,7 +1296,7 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
     if (toggleData.makePublic) {
         // Create or update the public record
         const publicAnimalData = {
-            ownerId_public: animal.ownerId_public,
+            creatorId_public: animal.creatorId_public,
             id_public: animal.id_public,
             species: animal.species,
             prefix: animal.prefix,
@@ -1360,7 +1360,7 @@ const addLitter = async (appUserId_backend, litterData) => {
     const litter_id_public = litterData.litter_id_public || await getNextSequence('litterId');
     
     const newLitter = new Litter({
-        ownerId: appUserId_backend,
+        creatorId: appUserId_backend,
         litter_id_public,
         ...litterData,
     });
@@ -1377,7 +1377,7 @@ const addLitter = async (appUserId_backend, litterData) => {
  */
 const getUsersLitters = async (appUserId_backend) => {
     // Sort: planned matings (no birthDate) first, then by birthDate descending
-    const litters = await Litter.find({ ownerId: appUserId_backend }).sort({ isPlanned: -1, birthDate: -1 }).lean();
+    const litters = await Litter.find({ creatorId: appUserId_backend }).sort({ isPlanned: -1, birthDate: -1 }).lean();
     
     if (!litters.length) return [];
 
@@ -1390,9 +1390,9 @@ const getUsersLitters = async (appUserId_backend) => {
     const parentIds = [...parentIdSet];
 
     // Two bulk queries: owned animals first, then any Animal, then PublicAnimal
-    const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species ownerId';
+    const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId';
     const [ownedAnimals, anyAnimals, publicAnimals] = await Promise.all([
-        Animal.find({ id_public: { $in: parentIds }, ownerId: appUserId_backend }).select(SELECT).lean(),
+        Animal.find({ id_public: { $in: parentIds }, creatorId: appUserId_backend }).select(SELECT).lean(),
         Animal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
         PublicAnimal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
     ]);
@@ -1408,7 +1408,7 @@ const getUsersLitters = async (appUserId_backend) => {
         if (anyMap.has(id_public)) {
             const a = { ...anyMap.get(id_public) };
             // Flag as transferred if not owned by this user
-            if (a.ownerId && a.ownerId.toString() !== appUserId_backend.toString()) {
+            if (a.creatorId && a.creatorId.toString() !== appUserId_backend.toString()) {
                 a.isTransferred = true;
             }
             return a;
@@ -1444,7 +1444,7 @@ const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
     }
 
     const updatedLitter = await Litter.findOneAndUpdate(
-        { _id: litterId_backend, ownerId: appUserId_backend },
+        { _id: litterId_backend, creatorId: appUserId_backend },
         { $set: sanitizedUpdates },
         { new: true, runValidators: true }
     );
@@ -1474,7 +1474,7 @@ const fetchPedigreeByBatch = async (rootId_public, maxDepth) => {
     for (let level = 0; level < maxDepth && currentLevelIds.length > 0; level++) {
         const animals = await PublicAnimal.find(
             { id_public: { $in: currentLevelIds } },
-            { id_public: 1, sireId_public: 1, damId_public: 1, ownerId_public: 1, 
+            { id_public: 1, sireId_public: 1, damId_public: 1, creatorId_public: 1, 
               name: 1, prefix: 1, suffix: 1, species: 1, gender: 1, 
               birthDate: 1, deceasedDate: 1, color: 1 }
         ).lean();
@@ -1507,7 +1507,7 @@ const fetchPedigreeByBatch = async (rootId_public, maxDepth) => {
 
         return {
             id_public: animal.id_public,
-            ownerId_public: animal.ownerId_public,
+            creatorId_public: animal.creatorId_public,
             species: animal.species,
             prefix: animal.prefix,
             suffix: animal.suffix,
@@ -1580,7 +1580,7 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
         throw new Error('Animal not found or does not own this animal.');
     }
 
-    // Check if this is a transferred animal (has originalOwnerId and it's not the current owner)
+    // Check if this is a transferred animal (has originalcreatorId and it's not the current owner)
     if (animal.originalCreatorId && animal.originalCreatorId.toString() !== appUserId_backend.toString()) {
         console.log(`[deleteAnimal] Reverting transferred animal ${animal.id_public} back to original owner`);
         
@@ -1686,10 +1686,10 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     }
 
     // 3. Get necessary info for the transfer record and ownership update.
-    const currentOwnerId = animal.creatorId;
+    const currentcreatorId = animal.creatorId;
     const originalCreatorId = animal.originalCreatorId;
     const originalOwner = await User.findById(originalCreatorId).lean();
-    const currentOwnerPublicProfile = await PublicProfile.findOne({ userId_backend: currentOwnerId }).lean();
+    const currentOwnerPublicProfile = await PublicProfile.findOne({ userId_backend: currentcreatorId }).lean();
 
     if (!originalOwner) {
         throw new Error('Original owner profile not found.');
@@ -1699,7 +1699,7 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     const recallTransfer = new AnimalTransfer({
         animalId: animal._id,
         animalId_public: animal.id_public,
-        fromUserId: currentOwnerId, // The user who is losing the animal
+        fromUserId: currentcreatorId, // The user who is losing the animal
         toUserId: originalCreatorId,   // The original owner who is recalling it
         transferType: 'recall',
         status: 'accepted',
@@ -1715,7 +1715,7 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     animal.originalCreatorId = null; // Animal is now back with its original owner.
     animal.status = 'Pet'; // Reset status to a default.
     
-    const currentOwnerIdStr = currentOwnerId.toString();
+    const currentcreatorIdStr = currentcreatorId.toString();
     const originalCreatorIdStr = originalCreatorId.toString();
 
     // Remove the original owner from the view-only list since they now have full ownership.
@@ -1743,7 +1743,7 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     // 8. Send a notification to the previous owner
     if (currentOwnerPublicProfile) {
         await Notification.create({
-            userId: currentOwnerId,
+            userId: currentcreatorId,
             userId_public: currentOwnerPublicProfile.id_public,
             type: 'animal_recalled',
             animalId_public: animal.id_public,

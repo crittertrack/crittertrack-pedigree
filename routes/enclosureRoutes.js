@@ -5,7 +5,7 @@ const { Enclosure, Animal } = require('../database/models');
 // GET all enclosures for the authenticated user
 router.get('/', async (req, res) => {
     try {
-        const enclosures = await Enclosure.find({ ownerId: req.user.id }).sort({ name: 1 }).lean();
+        const enclosures = await Enclosure.find({ creatorId: req.user.id }).sort({ name: 1 }).lean();
         res.json(enclosures);
     } catch (err) {
         console.error('[GET /api/enclosures]', err);
@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
         const { name, enclosureType, size, notes, cleaningTasks } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
         const enc = new Enclosure({
-            ownerId: req.user.id,
+            creatorId: req.user.id,
             name: name.trim(),
             enclosureType: enclosureType?.trim() || '',
             size: size?.trim() || '',
@@ -47,7 +47,7 @@ router.put('/:id', async (req, res) => {
         };
         if (Array.isArray(cleaningTasks)) setData.cleaningTasks = cleaningTasks;
         const enc = await Enclosure.findOneAndUpdate(
-            { _id: req.params.id, ownerId: req.user.id },
+            { _id: req.params.id, creatorId: req.user.id },
             { $set: setData },
             { new: true }
         );
@@ -67,10 +67,10 @@ router.patch('/assign-animal', async (req, res) => {
         if (!animalId_public) return res.status(400).json({ message: 'animalId_public is required' });
         // If assigning, verify the enclosure belongs to this user
         if (enclosureId) {
-            const enc = await Enclosure.findOne({ _id: enclosureId, ownerId: req.user.id }).select('_id').lean();
+            const enc = await Enclosure.findOne({ _id: enclosureId, creatorId: req.user.id }).select('_id').lean();
             if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
         }
-        const animal = await Animal.findOne({ id_public: animalId_public, ownerId: req.user.id }).select('_id status').lean();
+        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: req.user.id }).select('_id status').lean();
         if (!animal) return res.status(404).json({ message: 'Animal not found' });
 
         if (animal.status === 'Deceased' || animal.status === 'Rehomed') {
@@ -93,11 +93,11 @@ router.patch('/assign-animal', async (req, res) => {
 // DELETE enclosure — also clears enclosureId from all assigned animals
 router.delete('/:id', async (req, res) => {
     try {
-        const enc = await Enclosure.findOneAndDelete({ _id: req.params.id, ownerId: req.user.id });
+        const enc = await Enclosure.findOneAndDelete({ _id: req.params.id, creatorId: req.user.id });
         if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
         // Unassign all animals from this enclosure
         await Animal.updateMany(
-            { ownerId: req.user.id, enclosureId: req.params.id },
+            { creatorId: req.user.id, enclosureId: req.params.id },
             { $set: { enclosureId: null } }
         );
         res.json({ message: 'Enclosure deleted' });

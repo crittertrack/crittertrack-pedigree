@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
         const fromUserId = req.user.id; // Assuming req.user.id is reliably populated by authentication middleware
 
         // 1. Verify animal exists and belongs to the sender
-        const animal = await Animal.findOne({ id_public: animalId_public, ownerId: fromUserId });
+        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: fromUserId });
         if (!animal) {
             await session.abortTransaction(); // Abort transaction on error
             return res.status(404).json({ message: 'Animal not found or you are not the owner.' });
@@ -159,7 +159,7 @@ router.post('/:id/accept', async (req, res) => {
             return res.status(404).json({ message: 'Animal not found.' });
         }
         
-        console.log('[Transfer Accept] Animal found:', animal.id_public, 'Current owner:', animal.ownerId.toString());
+        console.log('[Transfer Accept] Animal found:', animal.id_public, 'Current owner:', animal.creatorId.toString());
         
         // Update transfer status
         transfer.status = 'accepted';
@@ -170,12 +170,12 @@ router.post('/:id/accept', async (req, res) => {
         console.log('[Transfer Accept] Transfer status updated to accepted');
         
         // Transfer ownership logic
-        const previousOwner = animal.ownerId;
-        const previousOwnerPublic = animal.ownerId_public;
+        const previousOwner = animal.creatorId;
+        const previousOwnerPublic = animal.creatorId_public;
         
         // Set original owner if not already set
-        if (!animal.originalOwnerId) {
-            animal.originalOwnerId = previousOwner;
+        if (!animal.originalcreatorId) {
+            animal.originalcreatorId = previousOwner;
         }
         
         // Get the new owner's public ID
@@ -188,8 +188,8 @@ router.post('/:id/accept', async (req, res) => {
         console.log('[Transfer Accept] New owner found:', newOwner?.id_public);
         
         // Update animal ownership
-        animal.ownerId = userId;
-        animal.ownerId_public = newOwner.id_public;
+        animal.creatorId = userId;
+        animal.creatorId_public = newOwner.id_public;
         animal.soldStatus = 'sold';
         animal.isOwned = true; // Mark animal as owned by new owner (not view-only)
         animal.isForSale = false; // Clear for-sale flag on transfer
@@ -280,7 +280,7 @@ console.log('[Transfer Accept] ✓ Transaction committed');
             animal: {
                 id_public: animal.id_public,
                 name: animal.name,
-                ownerId_public: animal.ownerId_public
+                creatorId_public: animal.creatorId_public
             }
         });
     } catch (error) {

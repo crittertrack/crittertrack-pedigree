@@ -132,7 +132,7 @@ function splitSbName(rawName) {
 // sbIdKey: the SimpleBreed animal ID to check against the dedicated sbId field
 async function findGlobalDuplicate(idKeys, sbIdKey, nameVariants, birthDate, userId, species, prefix) {
     const idKeyArr = Array.isArray(idKeys) ? idKeys.filter(Boolean) : (idKeys ? [idKeys] : []);
-    const sel = 'id_public name prefix suffix ownerId ownerId_public breederAssignedId sbId birthDate';
+    const sel = 'id_public name prefix suffix creatorId creatorId_public breederAssignedId sbId birthDate';
 
     // 1. Name + birthDate (any owner) — highest signal
     if (birthDate && nameVariants?.length) {
@@ -157,14 +157,14 @@ async function findGlobalDuplicate(idKeys, sbIdKey, nameVariants, birthDate, use
     if (nameVariants?.length) {
         const speciesFilter = species && species !== 'Unknown' ? { species } : {};
         for (const n of nameVariants) {
-            const own = await Animal.findOne({ name: n, ownerId: userId, ...speciesFilter })
+            const own = await Animal.findOne({ name: n, creatorId: userId, ...speciesFilter })
                 .select(sel).lean();
             if (own) return { match: own, matchType: 'name_only', confidence: 'high' };
         }
         if (prefix) {
             const baseName = nameVariants.find(v => !v.startsWith(prefix)) || nameVariants[nameVariants.length - 1];
             if (baseName) {
-                const ownPfx = await Animal.findOne({ prefix, name: baseName, ownerId: userId })
+                const ownPfx = await Animal.findOne({ prefix, name: baseName, creatorId: userId })
                     .select(sel).lean();
                 if (ownPfx) return { match: ownPfx, matchType: 'name_only', confidence: 'high' };
             }
@@ -539,7 +539,7 @@ router.post('/preview', async (req, res) => {
         const idKeys = [];
         const dup = await findGlobalDuplicate(idKeys, a.sbId, nameVariants, birthDate, userId, a.species, prefix);
         if (dup) {
-            const isOwnedByImporter = dup.match.ownerId?.toString() === userId?.toString();
+            const isOwnedByImporter = dup.match.creatorId?.toString() === userId?.toString();
             conflicts.push({
                 sbId: a.sbId,
                 name: a.name,
@@ -548,7 +548,7 @@ router.post('/preview', async (req, res) => {
                 existingId: dup.match.id_public,
                 existingName: dup.match.name,
                 existingBirthDate: dup.match.birthDate ? String(dup.match.birthDate).slice(0, 10) : null,
-                existingOwner: isOwnedByImporter ? 'you' : (dup.match.ownerId_public || 'unknown'),
+                existingOwner: isOwnedByImporter ? 'you' : (dup.match.creatorId_public || 'unknown'),
                 isOwnedByImporter,
             });
         }
@@ -645,7 +645,7 @@ router.post('/import', async (req, res) => {
             { sbId: { $in: allSbIds.map(String) } },
             ...(internalIdKeys.length ? [{ breederAssignedId: { $in: internalIdKeys } }] : []),
         ]
-    }).select('breederAssignedId sbId id_public name ownerId').lean();
+    }).select('breederAssignedId sbId id_public name creatorId').lean();
     const existingBySbId = {};
     const existingByBreeId = {};
     for (const ex of existingAnimals) {
@@ -660,7 +660,7 @@ router.post('/import', async (req, res) => {
     const manualCTMap = {};
     if (manualCtIds.length) {
         const ctAnimals = await Animal.find({ id_public: { $in: manualCtIds } })
-            .select('id_public name prefix suffix ownerId').lean();
+            .select('id_public name prefix suffix creatorId').lean();
         const ctById = Object.fromEntries(ctAnimals.map(a => [a.id_public, a]));
         for (const [sbId, resolution] of Object.entries(conflictResolutions)) {
             if (typeof resolution === 'string' && resolution.startsWith('map_to:')) {
@@ -721,8 +721,8 @@ router.post('/import', async (req, res) => {
             const id_public = await getNextSequence('animalId');
             await Animal.create({
                 id_public,
-                ownerId: userId,
-                ownerId_public: userId_public,
+                creatorId: userId,
+                creatorId_public: userId_public,
                 isOwned: selectedIds.includes(sbId),
                 isStub: parentStubs.includes(sbId),
                 name: d.baseName || d.fullName || `SimpleBreed #${sbId}`,
@@ -779,7 +779,7 @@ router.post('/import', async (req, res) => {
         const damCtId = d.damId ? (sbIdToCtId[d.damId] || null) : null;
         if (sireCtId || damCtId) {
             await Animal.updateOne(
-                { id_public: sbIdToCtId[sbId], ownerId: userId },
+                { id_public: sbIdToCtId[sbId], creatorId: userId },
                 { $set: { sireId_public: sireCtId, damId_public: damCtId } }
             );
             parentLinked++;

@@ -228,9 +228,9 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     // ── Fetch existing IDs for conflict detection ────────────────────────────
     const [existingAnimals, existingLitters, existingEnclosures, existingSupplies] = await Promise.all([
-        importData.animals ? Animal.find({ ownerId: userId }).select('id_public name').lean() : Promise.resolve([]),
-        importData.litters ? Litter.find({ ownerId: userId }).select('litter_id_public breedingPairCodeName').lean() : Promise.resolve([]),
-        importData.enclosures ? Enclosure.find({ ownerId: userId }).select('name').lean() : Promise.resolve([]),
+        importData.animals ? Animal.find({ creatorId: userId }).select('id_public name').lean() : Promise.resolve([]),
+        importData.litters ? Litter.find({ creatorId: userId }).select('litter_id_public breedingPairCodeName').lean() : Promise.resolve([]),
+        importData.enclosures ? Enclosure.find({ creatorId: userId }).select('name').lean() : Promise.resolve([]),
         importData.supplies ? SupplyItem.find({ userId: userId }).select('name').lean() : Promise.resolve([]),
     ]);
 
@@ -313,8 +313,8 @@ router.post('/', upload.single('file'), async (req, res) => {
                     // New animal — assign fresh id_public if not provided or already exists
                     if (!raw.id_public) rec.id_public = await getNextSequence('animalId');
                     else rec.id_public = raw.id_public;
-                    rec.ownerId = userId;
-                    rec.ownerId_public = req.user.id_public || '';
+                    rec.creatorId = userId;
+                    rec.creatorId_public = req.user.id_public || '';
                     await Animal.create(rec);
                     written.animals++;
                 } else {
@@ -322,13 +322,13 @@ router.post('/', upload.single('file'), async (req, res) => {
                     if (action === 'skip') {
                         skipped.animals++;
                     } else if (action === 'overwrite') {
-                        await Animal.updateOne({ id_public: raw.id_public, ownerId: userId }, { $set: rec });
+                        await Animal.updateOne({ id_public: raw.id_public, creatorId: userId }, { $set: rec });
                         written.animals++;
                     } else if (action === 'createNew') {
                         const newId = await getNextSequence('animalId');
                         rec.id_public = newId;
-                        rec.ownerId = userId;
-                        rec.ownerId_public = req.user.id_public || '';
+                        rec.creatorId = userId;
+                        rec.creatorId_public = req.user.id_public || '';
                         delete rec.sireId_public; // lineage refs may be stale
                         delete rec.damId_public;
                         await Animal.create(rec);
@@ -355,7 +355,7 @@ router.post('/', upload.single('file'), async (req, res) => {
                 if (!isConflict) {
                     if (!raw.litter_id_public) rec.litter_id_public = await getNextSequence('litterId');
                     else rec.litter_id_public = raw.litter_id_public;
-                    rec.ownerId = userId;
+                    rec.creatorId = userId;
                     await Litter.create(rec);
                     written.litters++;
                 } else {
@@ -363,11 +363,11 @@ router.post('/', upload.single('file'), async (req, res) => {
                     if (action === 'skip') {
                         skipped.litters++;
                     } else if (action === 'overwrite') {
-                        await Litter.updateOne({ litter_id_public: raw.litter_id_public, ownerId: userId }, { $set: rec });
+                        await Litter.updateOne({ litter_id_public: raw.litter_id_public, creatorId: userId }, { $set: rec });
                         written.litters++;
                     } else if (action === 'createNew') {
                         rec.litter_id_public = await getNextSequence('litterId');
-                        rec.ownerId = userId;
+                        rec.creatorId = userId;
                         await Litter.create(rec);
                         written.litters++;
                     }
@@ -393,7 +393,7 @@ router.post('/', upload.single('file'), async (req, res) => {
             try {
                 const isConflict = existingEnclosureNames.has(rec.name.toLowerCase());
                 if (!isConflict) {
-                    rec.ownerId = userId;
+                    rec.creatorId = userId;
                     await Enclosure.create(rec);
                     written.enclosures++;
                 } else {
@@ -401,11 +401,11 @@ router.post('/', upload.single('file'), async (req, res) => {
                     if (action === 'skip') {
                         skipped.enclosures++;
                     } else if (action === 'overwrite') {
-                        await Enclosure.updateOne({ ownerId: userId, name: rec.name }, { $set: rec });
+                        await Enclosure.updateOne({ creatorId: userId, name: rec.name }, { $set: rec });
                         written.enclosures++;
                     } else if (action === 'createNew') {
                         rec.name = `${rec.name} (imported)`;
-                        rec.ownerId = userId;
+                        rec.creatorId = userId;
                         await Enclosure.create(rec);
                         written.enclosures++;
                     }

@@ -18,9 +18,9 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 - `status` - Pet/Breeder/Show/Working/etc.
 
 **Ownership:**
-- `ownerId` - Backend owner reference
-- `ownerId_public` - Public owner ID
-- `originalOwnerId` - Original breeder
+- `creatorId` - Backend owner reference
+- `creatorId_public` - Public owner ID
+- `originalcreatorId` - Original breeder
 - `ownerName` - Custom owner name
 - `soldStatus` - Sale/transfer status
 

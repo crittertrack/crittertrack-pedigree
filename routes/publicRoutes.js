@@ -34,18 +34,18 @@ router.get('/profile/:id_public', async (req, res) => {
 });
 
 
-// GET /api/public/animals/:ownerId_public
+// GET /api/public/animals/:creatorId_public
 // 2. Gets all publicly visible animals belonging to a specific owner.
-router.get('/animals/:ownerId_public', async (req, res) => {
+router.get('/animals/:creatorId_public', async (req, res) => {
     try {
         // Accept string IDs (CTU2) or legacy numeric IDs (2)
-        const ownerId_public = req.params.ownerId_public;
+        const creatorId_public = req.params.creatorId_public;
 
-        if (!ownerId_public) {
+        if (!creatorId_public) {
             return res.status(400).json({ message: 'Invalid public owner ID format.' });
         }
 
-        const animals = await getPublicAnimalsByOwner(ownerId_public);
+        const animals = await getPublicAnimalsByOwner(creatorId_public);
 
         // Success: Returns 200 with an array of public animals (can be empty if none are shared).
         res.status(200).json(animals);
@@ -407,7 +407,7 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
                     { fatherId_public: animalIdPublic },
                     { motherId_public: animalIdPublic }
                 ],
-                ownerId: authenticatedUserId
+                creatorId: authenticatedUserId
             }).lean();
             
             // Add private offspring (won't duplicate if already in public collection)
@@ -469,7 +469,7 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
                         // For authenticated users: try private Animal first (their own animals)
                         otherParent = await Animal.findOne({ 
                             id_public: group.otherParentId,
-                            ownerId: authenticatedUserId 
+                            creatorId: authenticatedUserId 
                         }).lean();
                         
                         // If not found in own animals, try PublicAnimal
@@ -567,7 +567,7 @@ router.get('/marketplace', async (req, res) => {
         }
 
         // Country filter - filter by owner's country
-        let countryFilteredOwnerIds = null;
+        let countryFilteredcreatorIds = null;
         if (query.country) {
             const countryQuery = { country: query.country };
             // If filtering US and a state is provided, also filter by state
@@ -577,10 +577,10 @@ router.get('/marketplace', async (req, res) => {
             const usersInCountry = await User.find(countryQuery)
                 .select('id_public')
                 .lean();
-            countryFilteredOwnerIds = usersInCountry.map(u => u.id_public);
+            countryFilteredcreatorIds = usersInCountry.map(u => u.id_public);
             
             // If no users found in that country, return empty results
-            if (countryFilteredOwnerIds.length === 0) {
+            if (countryFilteredcreatorIds.length === 0) {
                 return res.status(200).json({
                     animals: [],
                     pagination: {
@@ -592,7 +592,7 @@ router.get('/marketplace', async (req, res) => {
                 });
             }
             
-            filter.ownerId_public = { $in: countryFilteredOwnerIds };
+            filter.creatorId_public = { $in: countryFilteredcreatorIds };
         }
 
         // Search by name or ID
@@ -650,8 +650,8 @@ router.get('/marketplace', async (req, res) => {
             .limit(limit)
             .lean();
 
-        // Fetch owner info for each animal - use ownerId_public to look up owners
-        const ownerPublicIds = [...new Set(animals.map(a => a.ownerId_public).filter(Boolean))];
+        // Fetch owner info for each animal - use creatorId_public to look up owners
+        const ownerPublicIds = [...new Set(animals.map(a => a.creatorId_public).filter(Boolean))];
         const owners = await User.find({ id_public: { $in: ownerPublicIds } })
             .select('id_public personalName breederName showBreederName country state profileImage')
             .lean();
@@ -670,7 +670,7 @@ router.get('/marketplace', async (req, res) => {
         // Enrich animals with owner display info
         const enrichedAnimals = animals.map(animal => ({
             ...animal,
-            ownerInfo: animal.ownerId_public ? ownerMap[animal.ownerId_public] : null,
+            ownerInfo: animal.creatorId_public ? ownerMap[animal.creatorId_public] : null,
             listingType: animal.isForSale && animal.availableForBreeding ? 'both' 
                         : animal.isForSale ? 'sale' 
                         : 'stud'
@@ -725,14 +725,14 @@ router.get('/marketplace/countries', async (req, res) => {
                 { isForSale: true },
                 { availableForBreeding: true }
             ]
-        }).select('ownerId_public').lean();
+        }).select('creatorId_public').lean();
 
         // Get unique owner IDs
-        const ownerIds = [...new Set(animals.map(a => a.ownerId_public).filter(Boolean))];
+        const creatorIds = [...new Set(animals.map(a => a.creatorId_public).filter(Boolean))];
 
         // Fetch countries from users
         const users = await User.find({ 
-            id_public: { $in: ownerIds },
+            id_public: { $in: creatorIds },
             country: { $exists: true, $ne: null, $ne: '' }
         }).select('country').lean();
 
@@ -907,7 +907,7 @@ router.get('/litters/user/:id_public', async (req, res) => {
         const { id_public } = req.params;
         const profile = await PublicProfile.findOne({ id_public }).select('userId_backend').lean();
         if (!profile) return res.status(404).json({ message: 'User not found.' });
-        const litters = await Litter.find({ ownerId: profile.userId_backend, showOnPublicProfile: true })
+        const litters = await Litter.find({ creatorId: profile.userId_backend, showOnPublicProfile: true })
             .select('litter_id_public breedingPairCodeName sireId_public sirePrefixName damId_public damPrefixName isPlanned birthDate expectedDueDate matingDate litterSizeBorn maleCount femaleCount unknownCount notes images inbreedingCoefficient')
             .sort({ isPlanned: -1, birthDate: -1 })
             .lean();
@@ -983,7 +983,7 @@ router.get('/ratings/:id_public', async (req, res) => {
 router.get('/animals/recent-available', async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit || '50', 10), 100);
-        const { ownerIds } = req.query;
+        const { creatorIds } = req.query;
 
         const query = {
             isDisplay: true,
@@ -994,10 +994,10 @@ router.get('/animals/recent-available', async (req, res) => {
         };
 
         // Filter by owner IDs if provided
-        if (ownerIds) {
-            const ownerIdArray = ownerIds.split(',').map(id => id.trim()).filter(Boolean);
-            if (ownerIdArray.length > 0) {
-                query.ownerId_public = { $in: ownerIdArray };
+        if (creatorIds) {
+            const creatorIdArray = creatorIds.split(',').map(id => id.trim()).filter(Boolean);
+            if (creatorIdArray.length > 0) {
+                query.creatorId_public = { $in: creatorIdArray };
             }
         }
 

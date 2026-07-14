@@ -308,7 +308,7 @@ async function findGlobalDuplicate(regNum, nameVariants, birthDate, userId, spec
     // Primary: exact breederAssignedId match
     if (regNum) {
         const byId = await Animal.findOne({ breederAssignedId: regNum })
-            .select('id_public name ownerId_public breederAssignedId birthDate')
+            .select('id_public name creatorId_public breederAssignedId birthDate')
             .lean();
         if (byId) return { match: byId, matchType: 'id', confidence: 'high' };
     }
@@ -318,12 +318,12 @@ async function findGlobalDuplicate(regNum, nameVariants, birthDate, userId, spec
         const end   = new Date(birthDate); end.setHours(23, 59, 59, 999);
         for (const n of nameVariants) {
             const byName = await Animal.findOne({ name: n, birthDate: { $gte: start, $lte: end } })
-                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                .select('id_public name creatorId_public breederAssignedId birthDate').lean();
             if (byName) return { match: byName, matchType: 'name+birthDate', confidence: 'high' };
         }
         if (prefixForDupe && nameVariants[0]) {
             const byPfx = await Animal.findOne({ prefix: prefixForDupe, name: nameVariants[0], birthDate: { $gte: start, $lte: end } })
-                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                .select('id_public name creatorId_public breederAssignedId birthDate').lean();
             if (byPfx) return { match: byPfx, matchType: 'name+birthDate', confidence: 'high' };
         }
     }
@@ -331,18 +331,18 @@ async function findGlobalDuplicate(regNum, nameVariants, birthDate, userId, spec
     if (nameVariants?.length) {
         const speciesFilter = species ? { species } : {};
         for (const n of nameVariants) {
-            const own = await Animal.findOne({ name: n, ownerId: userId, ...speciesFilter })
-                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+            const own = await Animal.findOne({ name: n, creatorId: userId, ...speciesFilter })
+                .select('id_public name creatorId_public breederAssignedId birthDate').lean();
             if (own) return { match: own, matchType: 'name_only', confidence: 'high' };
         }
         if (prefixForDupe && nameVariants[0]) {
-            const ownByPfx = await Animal.findOne({ prefix: prefixForDupe, name: nameVariants[0], ownerId: userId })
-                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+            const ownByPfx = await Animal.findOne({ prefix: prefixForDupe, name: nameVariants[0], creatorId: userId })
+                .select('id_public name creatorId_public breederAssignedId birthDate').lean();
             if (ownByPfx) return { match: ownByPfx, matchType: 'name_only', confidence: 'high' };
         }
         for (const n of nameVariants) {
             const global = await Animal.findOne({ name: n, ...speciesFilter })
-                .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+                .select('id_public name creatorId_public breederAssignedId birthDate').lean();
             if (global) return { match: global, matchType: 'name_only', confidence: 'possible' };
         }
     }
@@ -447,7 +447,7 @@ router.post('/', upload.fields([
             const byRegMap = new Map(); // regNum → CT animal
             if (allRegNums.length) {
                 const byReg = await Animal.find({ breederAssignedId: { $in: allRegNums } })
-                    .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
+                    .select('id_public name prefix creatorId_public breederAssignedId birthDate').lean();
                 for (const doc of byReg) byRegMap.set(doc.breederAssignedId, doc);
             }
 
@@ -456,7 +456,7 @@ router.post('/', upload.fields([
             const byNameMap = new Map(); // name → [CT animals]
             if (allNames.length) {
                 const byName = await Animal.find({ name: { $in: allNames } })
-                    .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
+                    .select('id_public name prefix creatorId_public breederAssignedId birthDate').lean();
                 for (const doc of byName) {
                     if (!byNameMap.has(doc.name)) byNameMap.set(doc.name, []);
                     byNameMap.get(doc.name).push(doc);
@@ -494,7 +494,7 @@ router.post('/', upload.fields([
                         const docs = byNameMap.get(n) || [];
                         if (docs.length) {
                             const samePrefix = a._prefixForDupe && docs.find(d => d.prefix === a._prefixForDupe);
-                            const own = docs.find(d => String(d.ownerId_public) === String(req.user.id_public));
+                            const own = docs.find(d => String(d.creatorId_public) === String(req.user.id_public));
                             hit = { match: samePrefix || own || docs[0], matchType: 'name_only', confidence: 'possible' };
                             break;
                         }
@@ -509,11 +509,11 @@ router.post('/', upload.fields([
                         matchType:         hit.matchType,
                         confidence:        hit.confidence,
                         existingId:        hit.match.id_public,
-                        existingOwner:     hit.match.ownerId_public,
+                        existingOwner:     hit.match.creatorId_public,
                         existingPrefix:    hit.match.prefix || null,
                         existingName:      hit.match.name,
                         existingBirthDate: hit.match.birthDate ? String(hit.match.birthDate).slice(0, 10) : null,
-                        isOwnedByImporter: String(hit.match.ownerId_public) === String(req.user.id_public),
+                        isOwnedByImporter: String(hit.match.creatorId_public) === String(req.user.id_public),
                     });
                 }
             }
@@ -581,19 +581,19 @@ router.post('/', upload.fields([
                     return { $gte: s, $lte: e };
                 };
                 if (!existingLitterId && sireIdForDupe && damIdForDupe && l.birthDate) {
-                    const ex = await Litter.findOne({ ownerId: userId, sireId_public: sireIdForDupe, damId_public: damIdForDupe, birthDate: dateRange(l.birthDate) }).select('litter_id_public').lean();
+                    const ex = await Litter.findOne({ creatorId: userId, sireId_public: sireIdForDupe, damId_public: damIdForDupe, birthDate: dateRange(l.birthDate) }).select('litter_id_public').lean();
                     if (ex) existingLitterId = ex.litter_id_public;
                 }
                 if (!existingLitterId && sireIdForDupe && damIdForDupe && l.matingDate) {
-                    const ex = await Litter.findOne({ ownerId: userId, sireId_public: sireIdForDupe, damId_public: damIdForDupe, matingDate: dateRange(l.matingDate) }).select('litter_id_public').lean();
+                    const ex = await Litter.findOne({ creatorId: userId, sireId_public: sireIdForDupe, damId_public: damIdForDupe, matingDate: dateRange(l.matingDate) }).select('litter_id_public').lean();
                     if (ex) existingLitterId = ex.litter_id_public;
                 }
                 if (!existingLitterId && l.breedingPairCodeName && l.birthDate) {
-                    const ex = await Litter.findOne({ ownerId: userId, breedingPairCodeName: l.breedingPairCodeName, birthDate: dateRange(l.birthDate) }).select('litter_id_public').lean();
+                    const ex = await Litter.findOne({ creatorId: userId, breedingPairCodeName: l.breedingPairCodeName, birthDate: dateRange(l.birthDate) }).select('litter_id_public').lean();
                     if (ex) existingLitterId = ex.litter_id_public;
                 }
                 if (!existingLitterId && l.breedingPairCodeName && l.matingDate) {
-                    const ex = await Litter.findOne({ ownerId: userId, breedingPairCodeName: l.breedingPairCodeName, matingDate: dateRange(l.matingDate) }).select('litter_id_public').lean();
+                    const ex = await Litter.findOne({ creatorId: userId, breedingPairCodeName: l.breedingPairCodeName, matingDate: dateRange(l.matingDate) }).select('litter_id_public').lean();
                     if (ex) existingLitterId = ex.litter_id_public;
                 }
 
@@ -645,14 +645,14 @@ router.post('/', upload.fields([
     const confirmByNameMap = new Map();
     if (confirmRegNums.length) {
         const docs = await Animal.find({ breederAssignedId: { $in: confirmRegNums } })
-            .select('id_public name ownerId_public breederAssignedId birthDate').lean();
+            .select('id_public name creatorId_public breederAssignedId birthDate').lean();
         for (const doc of docs) confirmByRegMap.set(doc.breederAssignedId, doc);
     }
     {
         const allNames = [...new Set(transformedAnimals.flatMap(a => a._nameVariants || []))].filter(Boolean);
         if (allNames.length) {
             const docs = await Animal.find({ name: { $in: allNames } })
-                .select('id_public name prefix ownerId_public breederAssignedId birthDate').lean();
+                .select('id_public name prefix creatorId_public breederAssignedId birthDate').lean();
             for (const doc of docs) {
                 if (!confirmByNameMap.has(doc.name)) confirmByNameMap.set(doc.name, []);
                 confirmByNameMap.get(doc.name).push(doc);
@@ -705,7 +705,7 @@ router.post('/', upload.fields([
                     const docs = confirmByNameMap.get(n) || [];
                     if (docs.length) {
                         const samePrefix = animal._prefixForDupe && docs.find(d => d.prefix === animal._prefixForDupe);
-                        const own = docs.find(d => String(d.ownerId_public) === String(req.user.id_public));
+                        const own = docs.find(d => String(d.creatorId_public) === String(req.user.id_public));
                         hit = { match: samePrefix || own || docs[0] };
                         break;
                     }
@@ -724,8 +724,8 @@ router.post('/', upload.fields([
 
             const id_public = await getNextSequence('animalId');
             rec.id_public    = id_public;
-            rec.ownerId      = userId;
-            rec.ownerId_public = req.user.id_public || '';
+            rec.creatorId      = userId;
+            rec.creatorId_public = req.user.id_public || '';
             await Animal.create(rec);
             written.animals++;
             if (_kintrakId) kintrakIdToIdPublic.set(_kintrakId, id_public);
@@ -763,7 +763,7 @@ router.post('/', upload.fields([
             const update = {};
             if (sireIdPublic) update.sireId_public = sireIdPublic;
             if (damIdPublic)  update.damId_public  = damIdPublic;
-            await Animal.updateOne({ id_public: myIdPublic, ownerId: userId }, { $set: update });
+            await Animal.updateOne({ id_public: myIdPublic, creatorId: userId }, { $set: update });
         } catch (err) {
             errors.push({ section: 'animals', id: myIdPublic, error: `Lineage link failed: ${err.message}` });
         }
@@ -808,26 +808,26 @@ router.post('/', upload.fields([
             };
 
             if (!isDupe && sireIdPublic && damIdPublic && rec.birthDate) {
-                const e = await Litter.findOne({ ownerId: userId, sireId_public: sireIdPublic, damId_public: damIdPublic, birthDate: dateRange(rec.birthDate) }).lean();
+                const e = await Litter.findOne({ creatorId: userId, sireId_public: sireIdPublic, damId_public: damIdPublic, birthDate: dateRange(rec.birthDate) }).lean();
                 if (e) isDupe = true;
             }
             if (!isDupe && sireIdPublic && damIdPublic && rec.matingDate) {
-                const e = await Litter.findOne({ ownerId: userId, sireId_public: sireIdPublic, damId_public: damIdPublic, matingDate: dateRange(rec.matingDate) }).lean();
+                const e = await Litter.findOne({ creatorId: userId, sireId_public: sireIdPublic, damId_public: damIdPublic, matingDate: dateRange(rec.matingDate) }).lean();
                 if (e) isDupe = true;
             }
             if (!isDupe && rec.breedingPairCodeName && rec.birthDate) {
-                const e = await Litter.findOne({ ownerId: userId, breedingPairCodeName: rec.breedingPairCodeName, birthDate: dateRange(rec.birthDate) }).lean();
+                const e = await Litter.findOne({ creatorId: userId, breedingPairCodeName: rec.breedingPairCodeName, birthDate: dateRange(rec.birthDate) }).lean();
                 if (e) isDupe = true;
             }
             if (!isDupe && rec.breedingPairCodeName && rec.matingDate) {
-                const e = await Litter.findOne({ ownerId: userId, breedingPairCodeName: rec.breedingPairCodeName, matingDate: dateRange(rec.matingDate) }).lean();
+                const e = await Litter.findOne({ creatorId: userId, breedingPairCodeName: rec.breedingPairCodeName, matingDate: dateRange(rec.matingDate) }).lean();
                 if (e) isDupe = true;
             }
 
             if (isDupe) { skipped.litters++; continue; }
 
             rec.litter_id_public = await getNextSequence('litterId');
-            rec.ownerId = userId;
+            rec.creatorId = userId;
             await Litter.create(rec);
             written.litters++;
         } catch (err) {

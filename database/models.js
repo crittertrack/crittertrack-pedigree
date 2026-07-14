@@ -691,7 +691,7 @@ const PublicAnimal = mongoose.model('PublicAnimal', PublicAnimalSchema, 'publica
 
 // --- 6. LITTER SCHEMA ---
 const LitterSchema = new mongoose.Schema({
-    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     
     // System-assigned litter ID (e.g., CTL1001) - used for system linkage to breeding records
     litter_id_public: { type: String, unique: true, sparse: true, index: true, default: null },
@@ -2144,7 +2144,7 @@ const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
 
 // ── Enclosure ─────────────────────────────────────────────────────────────────
 const EnclosureSchema = new mongoose.Schema({
-    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
     size: { type: String, default: '', trim: true },           // e.g. 40 gallon, 48x24x24
@@ -2223,10 +2223,10 @@ const Favorite = mongoose.model('Favorite', FavoriteSchema);
 // Expected improvement: 40-60% faster queries for these operations
 
 // 1. Animal permission checks (security-critical)
-AnimalSchema.index({ id_public: 1, ownerId: 1 });
+AnimalSchema.index({ id_public: 1, creatorId: 1 });
 
 // 2. Public display filtering  
-AnimalSchema.index({ ownerId: 1, isDisplay: 1 });
+AnimalSchema.index({ creatorId: 1, isDisplay: 1 });
 
 // 3. Message unread filtering (dashboard badge counts)
 MessageSchema.index({ conversationId: 1, read: 1 }); // Already present
@@ -2235,7 +2235,7 @@ MessageSchema.index({ conversationId: 1, read: 1 }); // Already present
 NotificationSchema.index({ userId: 1, status: 1 });
 
 // 5. Litter breeding timeline filtering
-LitterSchema.index({ ownerId: 1, isPlanned: 1 });
+LitterSchema.index({ creatorId: 1, isPlanned: 1 });
 
 // 6. Transaction financial reporting (future use)
 TransactionSchema.index({ userId: 1, date: -1 }); // Uncommented and applied

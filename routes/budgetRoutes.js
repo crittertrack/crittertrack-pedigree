@@ -84,17 +84,17 @@ router.post('/transactions', async (req, res) => {
         // SALE with existing user (buyer) and existing animal
         if (type === 'sale' && buyerUserId && animalId) {
             console.log('[Budget] ✓ Conditions met for sale transfer, looking for animal...');
-            console.log('[Budget] Searching for animal with id_public:', animalId, 'and ownerId:', userId);
+            console.log('[Budget] Searching for animal with id_public:', animalId, 'and creatorId:', userId);
             
             // Verify the animal exists and belongs to the seller
-            const animal = await Animal.findOne({ id_public: animalId, ownerId: userId });
+            const animal = await Animal.findOne({ id_public: animalId, creatorId: userId });
             
             console.log('[Budget] Animal lookup result:', animal ? {
                 found: true,
                 id_public: animal.id_public,
                 name: animal.name,
-                ownerId: animal.ownerId,
-                ownerIdMatches: String(animal.ownerId) === String(userId),
+                creatorId: animal.creatorId,
+                creatorIdMatches: String(animal.creatorId) === String(userId),
                 soldStatus: animal.soldStatus
             } : { found: false });
             
@@ -171,14 +171,14 @@ router.post('/transactions', async (req, res) => {
             console.log('[Budget] Searching for animal with id_public:', animalId, 'owned by buyer:', userId);
             
             // Check if the animal exists and is owned by the BUYER (current user)
-            const animal = await Animal.findOne({ id_public: animalId, ownerId: userId });
+            const animal = await Animal.findOne({ id_public: animalId, creatorId: userId });
             
             console.log('[Budget] Animal lookup result:', animal ? {
                 found: true,
                 id_public: animal.id_public,
                 name: animal.name,
-                ownerId: animal.ownerId,
-                ownerIdMatches: String(animal.ownerId) === String(userId),
+                creatorId: animal.creatorId,
+                creatorIdMatches: String(animal.creatorId) === String(userId),
                 soldStatus: animal.soldStatus
             } : { found: false });
             

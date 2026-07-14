@@ -90,8 +90,8 @@ router.get('/users/moderation-overview', async (req, res) => {
 
         const [animalCounts, messageCounts] = await Promise.all([
             Animal.aggregate([
-                { $match: { ownerId: { $in: userIds } } },
-                { $group: { _id: '$ownerId', count: { $sum: 1 } } }
+                { $match: { creatorId: { $in: userIds } } },
+                { $group: { _id: '$creatorId', count: { $sum: 1 } } }
             ]),
             Message.aggregate([
                 { $match: { senderId: { $in: userIds } } },
@@ -426,8 +426,8 @@ router.get('/users/:userId/summary', async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         // Get content counts
-        const animalCount = await Animal.countDocuments({ ownerId: userId });
-        const publicAnimalCount = await PublicAnimal.countDocuments({ ownerId: userId });
+        const animalCount = await Animal.countDocuments({ creatorId: userId });
+        const publicAnimalCount = await PublicAnimal.countDocuments({ creatorId: userId });
         const litterCount = user.ownedLitters ? user.ownedLitters.length : 0;
         
         // Get reports filed by and against this user
@@ -533,7 +533,7 @@ router.get('/animals', async (req, res) => {
         }
         
         if (owner) {
-            query.ownerId_public = owner;
+            query.creatorId_public = owner;
         }
 
         // Get animals with pagination
@@ -542,9 +542,9 @@ router.get('/animals', async (req, res) => {
 
         const [animals, total] = await Promise.all([
             Animal.find(query)
-                .select('id_public name prefix suffix species gender status ownerId ownerId_public originalOwnerId showOnPublicProfile imageUrl createdAt soldStatus breederId_public')
-                .populate('ownerId', 'email personalName id_public')
-                .populate('originalOwnerId', 'email personalName id_public')
+                .select('id_public name prefix suffix species gender status creatorId creatorId_public originalcreatorId showOnPublicProfile imageUrl createdAt soldStatus breederId_public')
+                .populate('creatorId', 'email personalName id_public')
+                .populate('originalcreatorId', 'email personalName id_public')
                 .sort(sort)
                 .skip(skip)
                 .limit(parseInt(limit))
@@ -605,15 +605,15 @@ router.get('/animals/:animalId', async (req, res) => {
         
         if (mongoose.Types.ObjectId.isValid(animalId)) {
             animal = await Animal.findById(animalId)
-                .populate('ownerId', 'email personalName id_public')
-                .populate('originalOwnerId', 'email personalName id_public')
+                .populate('creatorId', 'email personalName id_public')
+                .populate('originalcreatorId', 'email personalName id_public')
                 .lean();
         }
         
         if (!animal) {
             animal = await Animal.findOne({ id_public: animalId })
-                .populate('ownerId', 'email personalName id_public')
-                .populate('originalOwnerId', 'email personalName id_public')
+                .populate('creatorId', 'email personalName id_public')
+                .populate('originalcreatorId', 'email personalName id_public')
                 .lean();
         }
 
@@ -1542,7 +1542,7 @@ router.post('/reports/submit', async (req, res) => {
     try {
         if (!req.user) return res.status(401).json({ error: 'Authentication required' });
 
-        const { contentType, contentId, category, description, contentOwnerId, reportedField } = req.body;
+        const { contentType, contentId, category, description, contentcreatorId, reportedField } = req.body;
 
         // Validate required fields
         if (!contentType || !contentId || !category || !description) {
@@ -1575,7 +1575,7 @@ router.post('/reports/submit', async (req, res) => {
 
         // Convert public IDs to internal MongoDB IDs
         let internalContentId = null;
-        let internalContentOwnerId = null;
+        let internalContentcreatorId = null;
 
         try {
             // If contentId looks like a public ID, convert it
@@ -1583,24 +1583,24 @@ router.post('/reports/submit', async (req, res) => {
                 const animal = await Animal.findOne({ id_public: contentId }).select('_id userId');
                 if (animal) {
                     internalContentId = animal._id;
-                    internalContentOwnerId = internalContentOwnerId || animal.userId;
+                    internalContentcreatorId = internalContentcreatorId || animal.userId;
                 }
             } else if (contentType === 'profile') {
                 const user = await User.findOne({ id_public: contentId }).select('_id');
                 if (user) {
                     internalContentId = user._id;
-                    internalContentOwnerId = internalContentOwnerId || user._id;
+                    internalContentcreatorId = internalContentcreatorId || user._id;
                 }
             }
         } catch (lookupError) {
             console.warn('Failed to lookup internal IDs:', lookupError);
         }
 
-        // Use provided contentOwnerId if it's already an internal ID, otherwise use looked up ID
-        const finalContentOwnerId = (contentOwnerId && contentOwnerId.length === 24) ? contentOwnerId : internalContentOwnerId;
+        // Use provided contentcreatorId if it's already an internal ID, otherwise use looked up ID
+        const finalContentcreatorId = (contentcreatorId && contentcreatorId.length === 24) ? contentcreatorId : internalContentcreatorId;
 
         // Prevent users from reporting their own content
-        if (finalContentOwnerId && String(req.user.id) === String(finalContentOwnerId)) {
+        if (finalContentcreatorId && String(req.user.id) === String(finalContentcreatorId)) {
             return res.status(400).json({ error: 'Cannot report your own content' });
         }
 
@@ -1610,7 +1610,7 @@ router.post('/reports/submit', async (req, res) => {
             reporterEmail: req.user.email,
             contentType,
             contentId: internalContentId,
-            contentOwnerId: finalContentOwnerId || null,
+            contentcreatorId: finalContentcreatorId || null,
             reportedField: reportedField || 'other',
             category,
             description,
@@ -1654,7 +1654,7 @@ router.get('/reports/list', async (req, res) => {
                 .lean(),
             AnimalReport.find(filter)
                 .populate('reporterId', 'email personalName id_public')
-                .populate('reportedAnimalId', 'name id_public species gender ownerId')
+                .populate('reportedAnimalId', 'name id_public species gender creatorId')
                 .populate('reviewedBy', 'email personalName id_public')
                 .sort(sort)
                 .lean(),
@@ -1674,7 +1674,7 @@ router.get('/reports/list', async (req, res) => {
                 reportType: 'profile',
                 contentType: 'profile',
                 contentId: r.reportedUserId?._id,
-                contentOwnerId: r.reportedUserId,
+                contentcreatorId: r.reportedUserId,
                 contentDetails: {
                     name: r.reportedUserId?.personalName || r.reportedUserId?.breederName,
                     id_public: r.reportedUserId?.id_public,
@@ -1686,7 +1686,7 @@ router.get('/reports/list', async (req, res) => {
                 reportType: 'animal',
                 contentType: 'animal',
                 contentId: r.reportedAnimalId?._id,
-                contentOwnerId: r.reportedAnimalId?.ownerId,
+                contentcreatorId: r.reportedAnimalId?.creatorId,
                 contentDetails: {
                     name: r.reportedAnimalId?.name,
                     id_public: r.reportedAnimalId?.id_public,
@@ -1699,7 +1699,7 @@ router.get('/reports/list', async (req, res) => {
                 reportType: 'message',
                 contentType: 'message',
                 contentId: r.messageId?._id,
-                contentOwnerId: r.reportedUserId,
+                contentcreatorId: r.reportedUserId,
                 contentDetails: {
                     message: r.messageId?.message,
                     senderId: r.messageId?.senderId,
@@ -1814,8 +1814,8 @@ router.post('/reports/:reportId/action', async (req, res) => {
         }
         
         // Get content owner ID based on report type
-        const contentOwnerId = reportType === 'profile' ? report.reportedUserId :
-                              reportType === 'animal' ? (await Animal.findById(report.reportedAnimalId).select('ownerId'))?.ownerId :
+        const contentcreatorId = reportType === 'profile' ? report.reportedUserId :
+                              reportType === 'animal' ? (await Animal.findById(report.reportedAnimalId).select('creatorId'))?.creatorId :
                               reportType === 'message' ? report.reportedUserId : null;
 
         // Execute action
@@ -1855,22 +1855,22 @@ router.post('/reports/:reportId/action', async (req, res) => {
                 break;
 
             case 'warn_user':
-                if (contentOwnerId) {
+                if (contentcreatorId) {
                     const user = await User.findByIdAndUpdate(
-                        contentOwnerId,
+                        contentcreatorId,
                         { $inc: { warningCount: 1 } },
                         { new: true }
                     );
                     if (user && user.warningCount >= 3) {
                         // Auto-suspend after 3 warnings
-                        await User.findByIdAndUpdate(contentOwnerId, { accountStatus: 'suspended' });
+                        await User.findByIdAndUpdate(contentcreatorId, { accountStatus: 'suspended' });
                     }
                 }
                 break;
 
             case 'suspend_user':
-                if (contentOwnerId) {
-                    await User.findByIdAndUpdate(contentOwnerId, {
+                if (contentcreatorId) {
+                    await User.findByIdAndUpdate(contentcreatorId, {
                         accountStatus: 'suspended',
                         suspensionReason: reason || 'Community guideline violation',
                         moderatedBy: req.user.id
@@ -1879,8 +1879,8 @@ router.post('/reports/:reportId/action', async (req, res) => {
                 break;
 
             case 'ban_user':
-                if (contentOwnerId) {
-                    await User.findByIdAndUpdate(contentOwnerId, {
+                if (contentcreatorId) {
+                    await User.findByIdAndUpdate(contentcreatorId, {
                         accountStatus: 'banned',
                         banReason: reason || 'Serious community guideline violation',
                         moderatedBy: req.user.id
@@ -2054,7 +2054,7 @@ router.patch('/animals/:animalId/hide', async (req, res) => {
             targetType: 'animal',
             targetId: animal._id,
             targetName: `${animal.name} (${animal.id_public || 'No ID'})`,
-            details: { ownerId: animal.ownerId },
+            details: { creatorId: animal.creatorId },
             reason: reason || 'Hidden by moderator',
             ipAddress: req.ip || req.connection.remoteAddress
         });
@@ -2078,7 +2078,7 @@ router.delete('/animals/:animalId', async (req, res) => {
         
         if (!animal) return res.status(404).json({ error: 'Animal not found' });
 
-        const animalData = { name: animal.name, id_public: animal.id_public, ownerId: animal.ownerId };
+        const animalData = { name: animal.name, id_public: animal.id_public, creatorId: animal.creatorId };
 
         // Remove from public collection
         await PublicAnimal.deleteOne({ id_public: animal.id_public });

@@ -33,17 +33,17 @@ function toCSV(records) {
 // --- Field strippers: remove internal MongoDB / ObjectId fields ---
 
 function stripAnimal(doc) {
-    const { _id, __v, ownerId, originalOwnerId, viewOnlyForUsers, hiddenForUsers, litterId, ...rest } = doc;
+    const { _id, __v, creatorId, originalcreatorId, viewOnlyForUsers, hiddenForUsers, litterId, ...rest } = doc;
     return rest;
 }
 
 function stripLitter(doc) {
-    const { _id, __v, ownerId, ...rest } = doc;
+    const { _id, __v, creatorId, ...rest } = doc;
     return rest;
 }
 
 function stripEnclosure(doc) {
-    const { _id, __v, ownerId, ...rest } = doc;
+    const { _id, __v, creatorId, ...rest } = doc;
     return rest;
 }
 
@@ -92,7 +92,7 @@ router.get('/', async (req, res) => {
         const data = {};
 
         if (sections.includes('animals')) {
-            const filter = { ownerId: userId };
+            const filter = { creatorId: userId };
             if (!includeArchived) filter.archived = { $ne: true };
             if (!includeSold) filter.soldStatus = { $ne: 'sold' };
             let animals = await Animal.find(filter).lean();
@@ -108,12 +108,12 @@ router.get('/', async (req, res) => {
         }
 
         if (sections.includes('litters')) {
-            const litters = await Litter.find({ ownerId: userId }).lean();
+            const litters = await Litter.find({ creatorId: userId }).lean();
             data.litters = litters.map(stripLitter);
         }
 
         if (sections.includes('enclosures')) {
-            const enclosures = await Enclosure.find({ ownerId: userId }).lean();
+            const enclosures = await Enclosure.find({ creatorId: userId }).lean();
             data.enclosures = enclosures.map(stripEnclosure);
         }
 

@@ -24,13 +24,13 @@ const litterUpload = multer({
 
 // Keep parent in-mating flags in sync with active litters.
 // Active litter = not planned, has matingDate, and not yet born.
-const syncParentsInMating = async (ownerId, parentIdsPublic = []) => {
+const syncParentsInMating = async (creatorId, parentIdsPublic = []) => {
     const parentIds = [...new Set((parentIdsPublic || []).filter(Boolean))];
     if (!parentIds.length) return;
 
     for (const id_public of parentIds) {
         const activeCount = await Litter.countDocuments({
-            ownerId,
+            creatorId,
             $or: [{ sireId_public: id_public }, { damId_public: id_public }],
             isPlanned: { $ne: true },
             matingDate: { $ne: null },
@@ -38,7 +38,7 @@ const syncParentsInMating = async (ownerId, parentIdsPublic = []) => {
         });
 
         await Animal.updateOne(
-            { ownerId, id_public },
+            { creatorId, id_public },
             { $set: { isInMating: activeCount > 0 } }
         );
     }
@@ -125,10 +125,10 @@ router.post('/', async (req, res) => {
                 ];
                 for (const { id_public, role } of parentRoles) {
                     if (!id_public) continue;
-                    const animal = await Animal.findOne({ id_public }).select('ownerId ownerId_public name species imageUrl photoUrl').lean();
-                    if (!animal || !animal.ownerId) continue;
-                    if (animal.ownerId.toString() === currentUserId) continue; // it's the creator's own animal
-                    const ownerUser = await User.findById(animal.ownerId).select('_id id_public').lean();
+                    const animal = await Animal.findOne({ id_public }).select('creatorId creatorId_public name species imageUrl photoUrl').lean();
+                    if (!animal || !animal.creatorId) continue;
+                    if (animal.creatorId.toString() === currentUserId) continue; // it's the creator's own animal
+                    const ownerUser = await User.findById(animal.creatorId).select('_id id_public').lean();
                     if (!ownerUser) continue;
                     await Notification.create({
                         userId: ownerUser._id,
@@ -232,7 +232,7 @@ router.put('/:id_backend', async (req, res) => {
         const litterId_backend = req.params.id_backend;
         const updates = req.body; // Updates object
 
-        const priorLitter = await Litter.findOne({ _id: litterId_backend, ownerId: appUserId_backend })
+        const priorLitter = await Litter.findOne({ _id: litterId_backend, creatorId: appUserId_backend })
             .select('sireId_public damId_public')
             .lean();
 
@@ -311,7 +311,7 @@ router.delete('/:id_backend', async (req, res) => {
 
         const { Litter } = require('../database/models');
         
-        const litter = await Litter.findOne({ _id: litterId_backend, ownerId: appUserId_backend });
+        const litter = await Litter.findOne({ _id: litterId_backend, creatorId: appUserId_backend });
         
         if (!litter) {
             return res.status(404).json({ message: 'Litter not found or does not belong to user.' });
@@ -344,7 +344,7 @@ router.post('/:id_backend/images', litterUpload.single('image'), async (req, res
     try {
         const litter = await Litter.findById(req.params.id_backend);
         if (!litter) return res.status(404).json({ message: 'Litter not found' });
-        if (String(litter.ownerId) !== String(req.user.id)) {
+        if (String(litter.creatorId) !== String(req.user.id)) {
             return res.status(403).json({ message: 'Not your litter' });
         }
         if (litter.isPlanned) {
@@ -376,7 +376,7 @@ router.delete('/:id_backend/images/:r2Key', async (req, res) => {
     try {
         const litter = await Litter.findById(req.params.id_backend);
         if (!litter) return res.status(404).json({ message: 'Litter not found' });
-        if (String(litter.ownerId) !== String(req.user.id)) {
+        if (String(litter.creatorId) !== String(req.user.id)) {
             return res.status(403).json({ message: 'Not your litter' });
         }
 

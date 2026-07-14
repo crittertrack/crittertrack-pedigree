@@ -229,7 +229,7 @@ router.post('/:id/assign-animal', async (req, res) => {
         // Find the animal and verify ownership
         const animal = await Animal.findOne({
             id_public: animalId_public,
-            ownerId: req.user._id
+            creatorId: req.user._id
         });
         
         if (!animal) {
@@ -315,7 +315,7 @@ router.get('/:id/animals', async (req, res) => {
         // Fetch full animal details
         const animals = await Animal.find({
             _id: { $in: animalIds },
-            ownerId: req.user._id
+            creatorId: req.user._id
         }).lean();
         
         // Combine animal data with assignment info
@@ -353,7 +353,7 @@ router.get('/:id/bred-animals', async (req, res) => {
         if (contact.linkedCTUID) {
             animals = await Animal.find({
                 breederId_public: contact.linkedCTUID,
-                ownerId: req.user._id,
+                creatorId: req.user._id,
                 archived: { $ne: true } // Exclude archived animals
             })
             .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
@@ -369,7 +369,7 @@ router.get('/:id/bred-animals', async (req, res) => {
         if (assignedBreederAnimals.length > 0) {
             const manualAnimals = await Animal.find({
                 id_public: { $in: assignedBreederAnimals },
-                ownerId: req.user._id,
+                creatorId: req.user._id,
                 archived: { $ne: true }
             })
             .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
@@ -409,10 +409,10 @@ router.get('/:id/own-animals', async (req, res) => {
         if (contact.linkedCTUID) {
             animals = await Animal.find({
                 breederId_public: req.user.id_public,
-                ownerId_public: contact.linkedCTUID,
+                creatorId_public: contact.linkedCTUID,
                 archived: { $ne: true } // Exclude archived animals
             })
-            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl ownerId_public')
+            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl creatorId_public')
             .sort({ birthDate: -1 })
             .lean();
         }
@@ -425,10 +425,10 @@ router.get('/:id/own-animals', async (req, res) => {
         if (assignedKeeperAnimals.length > 0) {
             const manualAnimals = await Animal.find({
                 id_public: { $in: assignedKeeperAnimals },
-                ownerId: req.user._id,
+                creatorId: req.user._id,
                 archived: { $ne: true }
             })
-            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl ownerId_public')
+            .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl creatorId_public')
             .sort({ birthDate: -1 })
             .lean();
             

@@ -863,14 +863,14 @@ app.delete('/api/users/account', authMiddleware, async (req, res) => {
         const { User, PublicProfile, Animal, PublicAnimal, Litter, Notification } = require('./database/models');
         
         // Delete all user's animals from both collections
-        await Animal.deleteMany({ ownerId: userId });
+        await Animal.deleteMany({ creatorId: userId });
         const userPublicId = await User.findById(userId).select('id_public');
         if (userPublicId) {
-            await PublicAnimal.deleteMany({ ownerId_public: userPublicId.id_public });
+            await PublicAnimal.deleteMany({ creatorId_public: userPublicId.id_public });
         }
         
         // Delete all user's litters
-        await Litter.deleteMany({ ownerId: userId });
+        await Litter.deleteMany({ creatorId: userId });
         
         // Delete all notifications for this user
         await Notification.deleteMany({ userId: userId });

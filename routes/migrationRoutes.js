@@ -399,7 +399,7 @@ router.post('/fix-animal-ownership', async (req, res) => {
 
         let query = {};
         if (userId_public) {
-            query.ownerId_public = userId_public;
+            query.creatorId_public = userId_public;
         }
 
         // Find all animals (for specific user or all)
@@ -413,9 +413,9 @@ router.post('/fix-animal-ownership', async (req, res) => {
 
         for (const animal of animals) {
             try {
-                // Animals with an ownerId_public should have isOwned: true
-                // Animals without an ownerId_public should have isOwned: false
-                const shouldBeOwned = !!animal.ownerId_public;
+                // Animals with an creatorId_public should have isOwned: true
+                // Animals without an creatorId_public should have isOwned: false
+                const shouldBeOwned = !!animal.creatorId_public;
                 
                 if (animal.isOwned !== shouldBeOwned) {
                     animal.isOwned = shouldBeOwned;
@@ -441,7 +441,7 @@ router.post('/fix-animal-ownership', async (req, res) => {
 
         for (const publicAnimal of publicAnimals) {
             try {
-                const shouldBeOwned = !!publicAnimal.ownerId_public;
+                const shouldBeOwned = !!publicAnimal.creatorId_public;
                 
                 if (publicAnimal.isOwned !== shouldBeOwned) {
                     publicAnimal.isOwned = shouldBeOwned;

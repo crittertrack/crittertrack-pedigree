@@ -69,7 +69,7 @@ router.param('id_backend', async (req, res, next, value) => {
             if (!appUserId_backend) {
                 return res.status(400).json({ message: 'User context required to resolve animal id.' });
             }
-            const animal = await Animal.findOne({ id_public: value, ownerId: appUserId_backend }).select('_id').lean();
+            const animal = await Animal.findOne({ id_public: value, creatorId: appUserId_backend }).select('_id').lean();
             if (!animal) return res.status(404).json({ message: 'Animal not found.' });
             req.resolvedAnimalId = animal._id.toString();
             return next();
@@ -193,8 +193,8 @@ async function fetchParentAnimalsWithOwners(sireId_public, damId_public) {
 
     const parents = await Animal.find(
         { id_public: { $in: parentIds } },
-        { id_public: 1, ownerId: 1 }
-    ).populate('ownerId', 'id_public').lean();
+        { id_public: 1, creatorId: 1 }
+    ).populate('creatorId', 'id_public').lean();
 
     const parentMap = new Map(parents.map(p => [p.id_public, p]));
     
@@ -274,7 +274,7 @@ router.post('/', upload.single('file'), async (req, res) => {
             const resolveParentPublicToBackend = async (pubVal) => {
                 if (!pubVal) return null;
                 // Handle both string (CTC1001) and legacy numeric IDs
-                const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
+                const found = await Animal.findOne({ id_public: pubVal, creatorId: appUserId_backend }).select('_id id_public').lean();
                 return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
             };
 
@@ -328,17 +328,17 @@ router.post('/', upload.single('file'), async (req, res) => {
             animalData.showOnPublicProfile = animalData.isDisplay;
         }
 
-// Apply old logic for sold status and view-only access if originalOwnerId is present
+// Apply old logic for sold status and view-only access if originalcreatorId is present
         // This ensures that if an animal is being created as part of a transfer process
-        // (where originalOwnerId would be set), its sold status and view access for the original owner are correctly configured.
-        if (animalData.originalOwnerId) {
+        // (where originalcreatorId would be set), its sold status and view access for the original owner are correctly configured.
+        if (animalData.originalcreatorId) {
             animalData.soldStatus = 'sold';
             if (!animalData.viewOnlyForUsers) {
                 animalData.viewOnlyForUsers = [];
             }
-            // Ensure originalOwnerId (backend ID) is in viewOnlyForUsers (backend IDs)
-            if (!animalData.viewOnlyForUsers.includes(animalData.originalOwnerId)) {
-                animalData.viewOnlyForUsers.push(animalData.originalOwnerId);
+            // Ensure originalcreatorId (backend ID) is in viewOnlyForUsers (backend IDs)
+            if (!animalData.viewOnlyForUsers.includes(animalData.originalcreatorId)) {
+                animalData.viewOnlyForUsers.push(animalData.originalcreatorId);
             }
         }
 
@@ -348,21 +348,21 @@ router.post('/', upload.single('file'), async (req, res) => {
         const newAnimal = await addAnimal(appUserId_backend, animalData);
 
         // Create notifications for breeder and parent linkages (if targeting other users' data)
-        // Ensure originalOwnerId is added to viewOnlyForUsers if set (e.g., from import)
-        if (newAnimal.originalOwnerId) {
-            if (!newAnimal.viewOnlyForUsers.includes(newAnimal.originalOwnerId)) {
-                newAnimal.viewOnlyForUsers.push(newAnimal.originalOwnerId);
+        // Ensure originalcreatorId is added to viewOnlyForUsers if set (e.g., from import)
+        if (newAnimal.originalcreatorId) {
+            if (!newAnimal.viewOnlyForUsers.includes(newAnimal.originalcreatorId)) {
+                newAnimal.viewOnlyForUsers.push(newAnimal.originalcreatorId);
                 await newAnimal.save(); // Save the document to persist the viewOnlyForUsers change
             }
         }
 
         const currentUserPublicId = req.user.id_public;
         
-        // Check if this animal was transferred (has originalOwnerId)
-        const isTransferred = !!newAnimal.originalOwnerId;
+        // Check if this animal was transferred (has originalcreatorId)
+        const isTransferred = !!newAnimal.originalcreatorId;
         let originalOwnerPublicId = null;
         if (isTransferred) {
-            const originalOwner = await User.findById(newAnimal.originalOwnerId).select('id_public');
+            const originalOwner = await User.findById(newAnimal.originalcreatorId).select('id_public');
             originalOwnerPublicId = originalOwner?.id_public;
             console.log(`[Notification Check] Animal was transferred, original owner: CT${originalOwnerPublicId}`);
         }
@@ -371,7 +371,7 @@ router.post('/', upload.single('file'), async (req, res) => {
         if (newAnimal.breederId_public && newAnimal.breederId_public !== currentUserPublicId) {
             console.log(`Checking breeder notification: breederId_public=${newAnimal.breederId_public}, currentUserPublicId=${currentUserPublicId}`);
             // Check if this user owns an animal with that ID (local ownership check)
-            const localCheck = await Animal.findOne({ id_public: newAnimal.breederId_public, ownerId: appUserId_backend });
+            const localCheck = await Animal.findOne({ id_public: newAnimal.breederId_public, creatorId: appUserId_backend });
             console.log(`Local check for breeder animal: ${localCheck ? 'found' : 'not found'}`);
             if (!localCheck) {
                 // Skip notification if animal was transferred and breeder is the original owner
@@ -403,15 +403,15 @@ router.post('/', upload.single('file'), async (req, res) => {
 
             // Check sire
             if (newAnimal.sireId_public) {
-                const localSire = await Animal.findOne({ id_public: newAnimal.sireId_public, ownerId: appUserId_backend });
-                if (!localSire && sireOwner && sireOwner.ownerId && sireOwner.ownerId.id_public) {
+                const localSire = await Animal.findOne({ id_public: newAnimal.sireId_public, creatorId: appUserId_backend });
+                if (!localSire && sireOwner && sireOwner.creatorId && sireOwner.creatorId.id_public) {
                     // Skip notification if animal was transferred and sire owner is the original owner
-                    const isOriginalOwnerAsSireOwner = isTransferred && sireOwner.ownerId.id_public === originalOwnerPublicId;
+                    const isOriginalOwnerAsSireOwner = isTransferred && sireOwner.creatorId.id_public === originalOwnerPublicId;
                     if (isOriginalOwnerAsSireOwner) {
                         console.log(`[Notification Skip] Sire owner is original owner of transferred animal - skipping notification`);
                     } else {
                         await createLinkageNotification(
-                            sireOwner.ownerId.id_public,
+                            sireOwner.creatorId.id_public,
                             req.user.id,
                             currentUserPublicId,
                             newAnimal.id_public,
@@ -426,15 +426,15 @@ router.post('/', upload.single('file'), async (req, res) => {
 
             // Check dam
             if (newAnimal.damId_public) {
-                const localDam = await Animal.findOne({ id_public: newAnimal.damId_public, ownerId: appUserId_backend });
-                if (!localDam && damOwner && damOwner.ownerId && damOwner.ownerId.id_public) {
+                const localDam = await Animal.findOne({ id_public: newAnimal.damId_public, creatorId: appUserId_backend });
+                if (!localDam && damOwner && damOwner.creatorId && damOwner.creatorId.id_public) {
                     // Skip notification if animal was transferred and dam owner is the original owner
-                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.ownerId.id_public === originalOwnerPublicId;
+                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.creatorId.id_public === originalOwnerPublicId;
                     if (isOriginalOwnerAsDamOwner) {
                         console.log(`[Notification Skip] Dam owner is original owner of transferred animal - skipping notification`);
                     } else {
                         await createLinkageNotification(
-                            damOwner.ownerId.id_public,
+                            damOwner.creatorId.id_public,
                             req.user.id,
                             currentUserPublicId,
                             newAnimal.id_public,
@@ -529,7 +529,7 @@ router.get('/any/:id_public', async (req, res) => {
         const viewFromNotification = req.query.viewFromNotification === 'true';
 
         // First check if user owns this animal
-        let animal = await Animal.findOne({ id_public, ownerId: userId }).lean();
+        let animal = await Animal.findOne({ id_public, creatorId: userId }).lean();
         
         if (animal) {
             // User owns it, return full data
@@ -571,15 +571,15 @@ router.get('/any/:id_public', async (req, res) => {
 
             // If user owns a litter that lists this animal as offspring, grant full visibility.
             // Covers cases where the animal was linked to the user's litter (e.g. transferred before
-            // originalOwnerId was recorded, or manually linked from another breeder).
-            const ownedLitterWithAnimal = await Litter.findOne({ ownerId: userId, offspringIds_public: id_public }).lean();
+            // originalcreatorId was recorded, or manually linked from another breeder).
+            const ownedLitterWithAnimal = await Litter.findOne({ creatorId: userId, offspringIds_public: id_public }).lean();
             if (ownedLitterWithAnimal) {
                 console.log(`[litterOwner] Allowing litter owner to view linked offspring ${id_public}`);
                 return res.status(200).json(await withBreederName(animal));
             }
 
             // Check if any of the user's animals are parents of this animal
-            const userAnimals = await Animal.find({ ownerId: userId }).select('id_public').lean();
+            const userAnimals = await Animal.find({ creatorId: userId }).select('id_public').lean();
             const userAnimalIds = userAnimals.map(a => a.id_public);
             
             // Check if this animal has user's animal as parent
@@ -592,7 +592,7 @@ router.get('/any/:id_public', async (req, res) => {
             
             // Check if this animal is offspring of user's animal
             const isOffspringOfUser = await Animal.findOne({
-                ownerId: userId,
+                creatorId: userId,
                 $or: [
                     { sireId_public: id_public },
                     { damId_public: id_public },
@@ -695,7 +695,7 @@ router.get('/duplicates', async (req, res) => {
         const dismissedPairs = new Set(user?.dismissedDuplicatePairs || []);
         
         // Get all user's animals (including sold/deceased)
-        const animals = await Animal.find({ ownerId_public: userId }).lean();
+        const animals = await Animal.find({ creatorId_public: userId }).lean();
         console.log('[Duplicates] Found animals:', animals.length);
         
         const duplicateGroups = [];
@@ -856,8 +856,8 @@ router.post('/duplicates/merge', async (req, res) => {
         }
         
         // Verify both animals belong to the user
-        const keepAnimal = await Animal.findOne({ id_public: keepId, ownerId_public: userId });
-        const deleteAnimal = await Animal.findOne({ id_public: deleteId, ownerId_public: userId });
+        const keepAnimal = await Animal.findOne({ id_public: keepId, creatorId_public: userId });
+        const deleteAnimal = await Animal.findOne({ id_public: deleteId, creatorId_public: userId });
         
         if (!keepAnimal || !deleteAnimal) {
             return res.status(404).json({ message: 'One or both animals not found or not owned by you.' });
@@ -905,7 +905,7 @@ router.post('/duplicates/merge', async (req, res) => {
         }
         
         // 5. Delete the duplicate animal
-        await Animal.deleteOne({ id_public: deleteId, ownerId_public: userId });
+        await Animal.deleteOne({ id_public: deleteId, creatorId_public: userId });
         
         // Log the merge
         await logUserActivity(userId, USER_ACTIONS.animal_delete, {
@@ -934,7 +934,7 @@ router.get('/archived', async (req, res) => {
         
         // Get archived animals (owned by user and archived)
         const archivedAnimals = await Animal.find({
-            ownerId: userId,
+            creatorId: userId,
             archived: true
         }).lean();
         
@@ -961,7 +961,7 @@ router.post('/:id_public/archive', async (req, res) => {
         const userId = req.user.id;
         const { id_public } = req.params;
         
-        const animal = await Animal.findOne({ id_public, ownerId: userId });
+        const animal = await Animal.findOne({ id_public, creatorId: userId });
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found or not owned by you.' });
         }
@@ -990,7 +990,7 @@ router.post('/:id_public/unarchive', async (req, res) => {
         const userId = req.user.id;
         const { id_public } = req.params;
         
-        const animal = await Animal.findOne({ id_public, ownerId: userId });
+        const animal = await Animal.findOne({ id_public, creatorId: userId });
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found or not owned by you.' });
         }
@@ -1024,7 +1024,7 @@ router.get('/:id_backend', async (req, res) => {
         // If viewing from notification, allow access to any animal's data
         if (viewFromNotification) {
             const animal = await Animal.findById(animalId_backend)
-                .populate('ownerId', 'id_public')
+                .populate('creatorId', 'id_public')
                 .lean();
             
             if (!animal) {
@@ -1089,7 +1089,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const resolveParentPublicToBackend = async (pubVal) => {
             if (!pubVal) return null;
             // Try string id_public match first (owned by this user), then accept as-is
-            const found = await Animal.findOne({ id_public: pubVal, ownerId: appUserId_backend }).select('_id id_public').lean();
+            const found = await Animal.findOne({ id_public: pubVal, creatorId: appUserId_backend }).select('_id id_public').lean();
             return found ? { backendId: found._id.toString(), id_public: found.id_public } : null;
         };
 
@@ -1178,17 +1178,17 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             updates.showOnPublicProfile = updates.isDisplay;
         }
 
-        // Apply old logic for sold status and view-only access if originalOwnerId is present
-        // This ensures that if an animal's originalOwnerId is set or updated (e.g., during a transfer),
+        // Apply old logic for sold status and view-only access if originalcreatorId is present
+        // This ensures that if an animal's originalcreatorId is set or updated (e.g., during a transfer),
         // its sold status and view access for the original owner are correctly configured.
-        if (updates.originalOwnerId) {
+        if (updates.originalcreatorId) {
             updates.soldStatus = 'sold';
             if (!updates.viewOnlyForUsers) {
                 updates.viewOnlyForUsers = [];
             }
-            // Ensure originalOwnerId (backend ID) is in viewOnlyForUsers (backend IDs)
-            if (!updates.viewOnlyForUsers.includes(updates.originalOwnerId)) {
-                updates.viewOnlyForUsers.push(updates.originalOwnerId);
+            // Ensure originalcreatorId (backend ID) is in viewOnlyForUsers (backend IDs)
+            if (!updates.viewOnlyForUsers.includes(updates.originalcreatorId)) {
+                updates.viewOnlyForUsers.push(updates.originalcreatorId);
             }
         }
 
@@ -1201,10 +1201,10 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const updatedAnimal = await updateAnimal(appUserId_backend, animalId_backend, updates);
 
         // --- Animal Changelog ---
-        // Ensure originalOwnerId is added to viewOnlyForUsers if set/changed
-        if (updatedAnimal.originalOwnerId) {
-            if (!updatedAnimal.viewOnlyForUsers.includes(updatedAnimal.originalOwnerId)) {
-                updatedAnimal.viewOnlyForUsers.push(updatedAnimal.originalOwnerId);
+        // Ensure originalcreatorId is added to viewOnlyForUsers if set/changed
+        if (updatedAnimal.originalcreatorId) {
+            if (!updatedAnimal.viewOnlyForUsers.includes(updatedAnimal.originalcreatorId)) {
+                updatedAnimal.viewOnlyForUsers.push(updatedAnimal.originalcreatorId);
                 await updatedAnimal.save(); // Save the document to persist the viewOnlyForUsers change
             }
         }
@@ -1260,11 +1260,11 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         const currentUserPublicId = req.user.id_public;
         console.log(`[UPDATE] Current user public ID from req.user: ${currentUserPublicId}`);
         
-        // Check if this animal was transferred (has originalOwnerId)
-        const isTransferred = !!updatedAnimal.originalOwnerId;
+        // Check if this animal was transferred (has originalcreatorId)
+        const isTransferred = !!updatedAnimal.originalcreatorId;
         let originalOwnerPublicId = null;
         if (isTransferred) {
-            const originalOwner = await User.findById(updatedAnimal.originalOwnerId).select('id_public');
+            const originalOwner = await User.findById(updatedAnimal.originalcreatorId).select('id_public');
             originalOwnerPublicId = originalOwner?.id_public;
             console.log(`[UPDATE][Notification Check] Animal was transferred, original owner: CT${originalOwnerPublicId}`);
         }
@@ -1274,7 +1274,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
         if (breederChanged && updatedAnimal.breederId_public && updatedAnimal.breederId_public !== currentUserPublicId) {
             console.log(`[UPDATE] Breeder changed from ${originalAnimal?.breederId_public || 'null'} to ${updatedAnimal.breederId_public}`);
             // Check if this user owns an animal with that ID (local ownership check)
-            const localCheck = await Animal.findOne({ id_public: updatedAnimal.breederId_public, ownerId: appUserId_backend });
+            const localCheck = await Animal.findOne({ id_public: updatedAnimal.breederId_public, creatorId: appUserId_backend });
             console.log(`[UPDATE] Local check for breeder animal: ${localCheck ? 'found' : 'not found'}`);
             if (!localCheck) {
                 // Skip notification if animal was transferred and breeder is the original owner
@@ -1310,15 +1310,15 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             // Check sire if changed
             if (sireChanged && updatedAnimal.sireId_public) {
                 console.log(`[UPDATE] Sire changed from ${originalAnimal?.sireId_public || 'null'} to ${updatedAnimal.sireId_public}`);
-                const localSire = await Animal.findOne({ id_public: updatedAnimal.sireId_public, ownerId: appUserId_backend });
-                if (!localSire && sireOwner && sireOwner.ownerId && sireOwner.ownerId.id_public) {
+                const localSire = await Animal.findOne({ id_public: updatedAnimal.sireId_public, creatorId: appUserId_backend });
+                if (!localSire && sireOwner && sireOwner.creatorId && sireOwner.creatorId.id_public) {
                     // Skip notification if animal was transferred and sire owner is the original owner
-                    const isOriginalOwnerAsSireOwner = isTransferred && sireOwner.ownerId.id_public === originalOwnerPublicId;
+                    const isOriginalOwnerAsSireOwner = isTransferred && sireOwner.creatorId.id_public === originalOwnerPublicId;
                     if (isOriginalOwnerAsSireOwner) {
                         console.log(`[UPDATE][Notification Skip] Sire owner is original owner of transferred animal - skipping notification`);
                     } else {
                         await createLinkageNotification(
-                            sireOwner.ownerId.id_public,
+                            sireOwner.creatorId.id_public,
                             req.user.id,
                             currentUserPublicId,
                             updatedAnimal.id_public,
@@ -1334,15 +1334,15 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             // Check dam if changed
             if (damChanged && updatedAnimal.damId_public) {
                 console.log(`[UPDATE] Dam changed from ${originalAnimal?.damId_public || 'null'} to ${updatedAnimal.damId_public}`);
-                const localDam = await Animal.findOne({ id_public: updatedAnimal.damId_public, ownerId: appUserId_backend });
-                if (!localDam && damOwner && damOwner.ownerId && damOwner.ownerId.id_public) {
+                const localDam = await Animal.findOne({ id_public: updatedAnimal.damId_public, creatorId: appUserId_backend });
+                if (!localDam && damOwner && damOwner.creatorId && damOwner.creatorId.id_public) {
                     // Skip notification if animal was transferred and dam owner is the original owner
-                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.ownerId.id_public === originalOwnerPublicId;
+                    const isOriginalOwnerAsDamOwner = isTransferred && damOwner.creatorId.id_public === originalOwnerPublicId;
                     if (isOriginalOwnerAsDamOwner) {
                         console.log(`[UPDATE][Notification Skip] Dam owner is original owner of transferred animal - skipping notification`);
                     } else {
                         await createLinkageNotification(
-                            damOwner.ownerId.id_public,
+                            damOwner.creatorId.id_public,
                             req.user.id,
                             currentUserPublicId,
                             updatedAnimal.id_public,
@@ -1522,7 +1522,7 @@ router.delete('/:id_backend', async (req, res) => {
 // Pass { skipped: true } to log a skip (advances next due date, no stock deduction)
 router.post('/:id_public/feeding', async (req, res) => {
     try {
-        const animal = await Animal.findOne({ id_public: req.params.id_public, ownerId: req.user.id });
+        const animal = await Animal.findOne({ id_public: req.params.id_public, creatorId: req.user.id });
         if (!animal) return res.status(404).json({ message: 'Animal not found or access denied' });
         const { supplyId, quantity, notes, skipped } = req.body;
         const now = new Date();
@@ -1597,7 +1597,7 @@ router.post('/:id_public/feeding', async (req, res) => {
 router.get('/:id_public/logs', async (req, res) => {
     try {
         const { AnimalLog } = require('../database/models');
-        const animal = await Animal.findOne({ id_public: req.params.id_public, ownerId: req.user.id }).select('_id').lean();
+        const animal = await Animal.findOne({ id_public: req.params.id_public, creatorId: req.user.id }).select('_id').lean();
         if (!animal) return res.status(404).json({ message: 'Animal not found or access denied' });
         const logs = await AnimalLog.find({ animalId: animal._id }).sort({ createdAt: -1 }).limit(200).lean();
         res.json(logs);
@@ -1623,7 +1623,7 @@ router.get('/:id_public/offspring', async (req, res) => {
         // Everyone else only sees public offspring + their own private offspring.
         const userOwnsParent = await Animal.findOne({
             id_public: animalIdPublic,
-            ownerId: authenticatedUserId
+            creatorId: authenticatedUserId
         }).lean();
 
         let allOffspring;
@@ -1652,7 +1652,7 @@ router.get('/:id_public/offspring', async (req, res) => {
                     {
                         $or: [
                             { showOnPublicProfile: true },
-                            { ownerId: authenticatedUserId }
+                            { creatorId: authenticatedUserId }
                         ]
                     }
                 ]
@@ -1707,7 +1707,7 @@ router.get('/:id_public/offspring', async (req, res) => {
                     // Try user's animals first
                     otherParent = await Animal.findOne({ 
                         id_public: group.otherParentId,
-                        ownerId: authenticatedUserId 
+                        creatorId: authenticatedUserId 
                     }); // Fetch full document
                     
                     // If not owned by user, search all animals globally
@@ -2022,7 +2022,7 @@ router.get('/:id_public/relationships', async (req, res) => {
         const fetchAnimal = async (animalId_public) => {
             if (!animalId_public) return null;
             const a = await Animal.findOne({ id_public: animalId_public })
-                .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern sireId_public damId_public ownerId ownerId_public')
+                .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern sireId_public damId_public creatorId creatorId_public')
                 .lean();
             return a;
         };
@@ -2031,7 +2031,7 @@ router.get('/:id_public/relationships', async (req, res) => {
         const hasViewAccess = (animal) => {
             if (!animal) return false;
             // User owns the animal
-            if (animal.ownerId.toString() === appUserId_backend) return true;
+            if (animal.creatorId.toString() === appUserId_backend) return true;
             // Animal is public
             if (animal.showOnPublicProfile) return true;
             // User has view-only access
@@ -2070,7 +2070,7 @@ router.get('/:id_public/relationships', async (req, res) => {
                     { $or: siblingOrConditions }
                 ]
             })
-            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern sireId_public damId_public ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern sireId_public damId_public creatorId creatorId_public showOnPublicProfile viewOnlyForUsers')
             .lean()
             : [];
 
@@ -2122,7 +2122,7 @@ router.get('/:id_public/relationships', async (req, res) => {
                     { $or: auOrConditions }
                 ]
             })
-                .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
+                .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern creatorId creatorId_public showOnPublicProfile viewOnlyForUsers')
                 .lean();
             
             auntsUncles.filter(hasViewAccess).forEach(au => {
@@ -2141,7 +2141,7 @@ router.get('/:id_public/relationships', async (req, res) => {
         };
         
         const children = await Animal.find(childrenQuery)
-            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern creatorId creatorId_public showOnPublicProfile viewOnlyForUsers')
             .lean();
         
         relationships.children = children.filter(hasViewAccess);
@@ -2154,7 +2154,7 @@ router.get('/:id_public/relationships', async (req, res) => {
                     { damId_public: sibling.id_public }
                 ]
             })
-            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern creatorId creatorId_public showOnPublicProfile viewOnlyForUsers')
             .lean();
             
             niblings.filter(hasViewAccess).forEach(n => {
@@ -2172,7 +2172,7 @@ router.get('/:id_public/relationships', async (req, res) => {
                     { damId_public: auntUncle.id_public }
                 ]
             })
-            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern ownerId ownerId_public showOnPublicProfile viewOnlyForUsers')
+            .select('id_public name prefix suffix species sex gender birthDate geneticCode imageUrl photoUrl color coat coatPattern creatorId creatorId_public showOnPublicProfile viewOnlyForUsers')
             .lean();
             
             cousins.filter(hasViewAccess).forEach(c => {
@@ -2185,7 +2185,7 @@ router.get('/:id_public/relationships', async (req, res) => {
         // Remove sensitive fields from all relationships
         const sanitizeAnimal = (a) => {
             if (!a) return null;
-            const { ownerId, showOnPublicProfile, viewOnlyForUsers, ...rest } = a;
+            const { creatorId, showOnPublicProfile, viewOnlyForUsers, ...rest } = a;
             return rest;
         };
         
@@ -2219,7 +2219,7 @@ router.post('/family-tree-batch', async (req, res) => {
         
         // Fetch all animals with the given IDs from the main Animal collection
         const animals = await Animal.find({ id_public: { $in: ids } })
-            .select('id_public name prefix suffix species sex dateOfBirth sireId_public damId_public images isOwned ownerId')
+            .select('id_public name prefix suffix species sex dateOfBirth sireId_public damId_public images isOwned creatorId')
             .lean();
         
         res.json(animals);
@@ -2245,7 +2245,7 @@ router.post('/family-tree-expand', async (req, res) => {
         const visibilityFilter = {
             $or: [
                 { showOnPublicProfile: true },
-                { ownerId: req.user?._id }
+                { creatorId: req.user?._id }
             ]
         };
         
@@ -2263,7 +2263,7 @@ router.post('/family-tree-expand', async (req, res) => {
                 visibilityFilter
             ]
         })
-        .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned ownerId ownerId_public showOnPublicProfile')
+        .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned creatorId creatorId_public showOnPublicProfile')
         .lean();
         
         childrenAndSiblings.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
@@ -2287,7 +2287,7 @@ router.post('/family-tree-expand', async (req, res) => {
                     visibilityFilter
                 ]
             })
-            .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned ownerId ownerId_public showOnPublicProfile')
+            .select('id_public name prefix suffix species gender sex birthDate color coat coatPattern sireId_public damId_public imageUrl photoUrl isOwned creatorId creatorId_public showOnPublicProfile')
             .lean();
             
             parents.forEach(animal => relatedAnimals.add(JSON.stringify(animal)));
@@ -2318,7 +2318,7 @@ router.post('/:animalId/breeding-records', async (req, res) => {
             return res.status(401).json({ message: 'Unauthorized' });
         }
         
-        const animal = await Animal.findOne({ _id: animalId, ownerId: userId });
+        const animal = await Animal.findOne({ _id: animalId, creatorId: userId });
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found' });
         }
@@ -2392,7 +2392,7 @@ router.put('/:animalId/breeding-records/:recordId', async (req, res) => {
             return res.status(401).json({ message: 'Unauthorized' });
         }
         
-        const animal = await Animal.findOne({ _id: animalId, ownerId: userId });
+        const animal = await Animal.findOne({ _id: animalId, creatorId: userId });
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found' });
         }
@@ -2477,7 +2477,7 @@ router.delete('/:animalId/breeding-records/:recordId', async (req, res) => {
             return res.status(401).json({ message: 'Unauthorized' });
         }
         
-        const animal = await Animal.findOne({ _id: animalId, ownerId: userId });
+        const animal = await Animal.findOne({ _id: animalId, creatorId: userId });
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found' });
         }
@@ -2521,46 +2521,46 @@ router.post('/:id_public/return', async (req, res) => {
         }
 
         // Must be current owner
-        if (String(animal.ownerId) !== String(userId)) {
+        if (String(animal.creatorId) !== String(userId)) {
             return res.status(403).json({ message: 'You do not own this animal.' });
         }
 
         // Must have an original owner to return to
-        if (!animal.originalOwnerId) {
+        if (!animal.originalcreatorId) {
             await session.abortTransaction();
             return res.status(400).json({ message: 'This animal was not transferred — nothing to return.' });
         }
 
-        const originalOwnerId = animal.originalOwnerId;
-        const originalOwner = await User.findById(originalOwnerId).select('_id id_public').session(session);
+        const originalcreatorId = animal.originalcreatorId;
+        const originalOwner = await User.findById(originalcreatorId).select('_id id_public').session(session);
         if (!originalOwner) {
             await session.abortTransaction();
             return res.status(404).json({ message: 'Original owner account not found.' });
         }
 
         // Reverse ownership
-        animal.ownerId = originalOwnerId;
-        animal.ownerId_public = originalOwner.id_public;
-        animal.originalOwnerId = null;
+        animal.creatorId = originalcreatorId;
+        animal.creatorId_public = originalOwner.id_public;
+        animal.originalcreatorId = null;
         animal.soldStatus = null;
 
         // Remove original owner from viewOnlyForUsers (they now own it again)
         animal.viewOnlyForUsers = (animal.viewOnlyForUsers || []).filter(
-            id => String(id) !== String(originalOwnerId)
+            id => String(id) !== String(originalcreatorId)
         );
 
         await animal.save({ session }); // Pass session
 
         // Update ownedAnimals arrays
         await User.findByIdAndUpdate(userId, { $pull: { ownedAnimals: animal._id } }, { session });
-        await User.findByIdAndUpdate(originalOwnerId, { $addToSet: { ownedAnimals: animal._id } }, { session });
+        await User.findByIdAndUpdate(originalcreatorId, { $addToSet: { ownedAnimals: animal._id } }, { session });
 
         // Update PublicAnimal if public
         if (animal.showOnPublicProfile) {
             const { PublicAnimal } = require('../database/models');
             await PublicAnimal.updateOne(
                 { id_public: animal.id_public },
-                { $set: { ownerId_public: originalOwner.id_public } },
+                { $set: { creatorId_public: originalOwner.id_public } },
                 { session } // Pass session
             );
         }
@@ -2568,10 +2568,10 @@ router.post('/:id_public/return', async (req, res) => {
         try {
             const { Notification, PublicProfile } = require('../database/models');
             const returnerProfile = await PublicProfile.findOne({ userId_backend: userId }).session(session);
-            const origProfile = await PublicProfile.findOne({ userId_backend: originalOwnerId }).session(session);
+            const origProfile = await PublicProfile.findOne({ userId_backend: originalcreatorId }).session(session);
             const returnerName = returnerProfile?.breederName || returnerProfile?.personalName || 'Someone';
             await Notification.create({
-                userId: originalOwnerId,
+                userId: originalcreatorId,
                 userId_public: origProfile?.id_public || '',
                 type: 'transfer_returned', // Specific type for returned transfers
                 status: 'returned', // Consistent status naming
@@ -2586,7 +2586,7 @@ router.post('/:id_public/return', async (req, res) => {
 
         // Remove the original owner from viewOnlyForUsers since they now own the animal again
         animal.viewOnlyForUsers = (animal.viewOnlyForUsers || []).filter(
-            id => String(id) !== String(originalOwnerId)
+            id => String(id) !== String(originalcreatorId)
         );
 
         await animal.save({ session }); // Pass session
@@ -2615,7 +2615,7 @@ router.post('/:id_public/gallery', async (req, res) => {
             return res.status(400).json({ message: 'url is required.' });
         }
 
-        const animal = await Animal.findOne({ id_public: idPublic, ownerId_public: userIdPublic });
+        const animal = await Animal.findOne({ id_public: idPublic, creatorId_public: userIdPublic });
         if (!animal) return res.status(404).json({ message: 'Animal not found.' });
 
         if ((animal.extraImages || []).length >= 20) {
@@ -2644,7 +2644,7 @@ router.delete('/:id_public/gallery', async (req, res) => {
             return res.status(400).json({ message: 'url is required.' });
         }
 
-        const animal = await Animal.findOne({ id_public: idPublic, ownerId_public: userIdPublic });
+        const animal = await Animal.findOne({ id_public: idPublic, creatorId_public: userIdPublic });
         if (!animal) return res.status(404).json({ message: 'Animal not found.' });
 
         animal.extraImages = (animal.extraImages || []).filter(u => u !== url);

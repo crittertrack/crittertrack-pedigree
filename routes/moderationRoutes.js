@@ -705,9 +705,9 @@ const reportModelMap = {
             { path: 'reporterId', select: 'personalName breederName email id_public' },
             { 
                 path: 'reportedAnimalId', 
-                select: 'name id_public ownerId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
+                select: 'name id_public creatorId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
                 populate: {
-                    path: 'ownerId',
+                    path: 'creatorId',
                     select: 'personalName breederName email id_public profileImage'
                 }
             },
@@ -764,9 +764,9 @@ router.get('/reports', async (req, res) => {
                     .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
                     .populate({ 
                         path: 'reportedAnimalId', 
-                        select: 'name id_public ownerId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
+                        select: 'name id_public creatorId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
                         populate: {
-                            path: 'ownerId',
+                            path: 'creatorId',
                             select: 'personalName breederName email id_public profileImage'
                         }
                     })
@@ -1642,9 +1642,9 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
             if (contentType === 'profile') {
                 notifyUserId = updated._id;
                 notifyUserIdPublic = updated.id_public;
-            } else if (contentType === 'animal' && updated.ownerId) {
+            } else if (contentType === 'animal' && updated.creatorId) {
                 // For animals, notify the owner
-                const owner = await User.findById(updated.ownerId).select('_id id_public');
+                const owner = await User.findById(updated.creatorId).select('_id id_public');
                 if (owner) {
                     notifyUserId = owner._id;
                     notifyUserIdPublic = owner.id_public;
