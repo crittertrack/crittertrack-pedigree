@@ -70,7 +70,7 @@ const ANIMAL_TEXT_FIELDS = {
     coat: 'animal coat',
     coatPattern: 'coat pattern',
     earset: 'earset',
-    keeperName: 'keeper name',
+    ownerName: 'keeper name',
     remarks: 'animal remarks',
     geneticCode: 'genetic code',
     lifeStage: 'life stage',
