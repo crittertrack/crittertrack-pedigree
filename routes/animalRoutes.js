@@ -1,4 +1,4 @@
-﻿const express = require('express');
+﻿﻿const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const mongoose = require('mongoose'); // Import mongoose for sessions
@@ -1777,23 +1777,26 @@ router.get('/:id_public/inbreeding', async (req, res) => {
             generations
         );
 
+        // Sanitize coefficient to ensure it's a finite number before saving
+        const finalCoefficient = (Number.isFinite(coefficient) && coefficient >= 0) ? coefficient : 0;
+
         // Update cached value if this is an owned animal
-        const animal = await Animal.findOne({ id_public });
+        const animal = await Animal.findOne({ id_public: id_public });
         if (animal) {
-            animal.inbreedingCoefficient = coefficient;
+            animal.inbreedingCoefficient = finalCoefficient;
             await animal.save();
 
             // Update public animal if it exists
-            const publicAnimal = await PublicAnimal.findOne({ id_public });
+            const publicAnimal = await PublicAnimal.findOne({ id_public: id_public });
             if (publicAnimal) {
-                publicAnimal.inbreedingCoefficient = coefficient;
+                publicAnimal.inbreedingCoefficient = finalCoefficient;
                 await publicAnimal.save();
             }
         }
 
         res.status(200).json({ 
             id_public,
-            inbreedingCoefficient: coefficient 
+            inbreedingCoefficient: finalCoefficient 
         });
     } catch (error) {
         console.error('Error calculating inbreeding:', error);
