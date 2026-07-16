@@ -318,7 +318,7 @@ const AnimalSchema = new mongoose.Schema({
     
     // Tab 3: Physical Profile Fields
     coatPattern: { type: String, default: null },
-    lifeStage: { type: String, default: null },
+    lifeStage: { type: String, enum: ['Neonate', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', null], default: null },
     carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
     phenotype: { type: String, default: null }, // Observable traits
@@ -578,7 +578,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     coat: { type: String, default: null },
     coatPattern: { type: String, default: null },
     earset: { type: String, default: null },
-    lifeStage: { type: String, default: null },
+    lifeStage: { type: String, enum: ['Neonate', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', null], default: null },
     carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
     phenotype: { type: String, default: null },
