@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿const mongoose = require('mongoose');
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿const mongoose = require('mongoose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -318,8 +318,7 @@ const AnimalSchema = new mongoose.Schema({
     
     // Tab 3: Physical Profile Fields
     coatPattern: { type: String, default: null },
-    lifeStage: { type: String, enum: ['Neonate', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', null], default: null },
-    carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
+    lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     // Universal animal appearance fields
     phenotype: { type: String, default: null }, // Observable traits
     morph: { type: String, default: null }, // Mutation/Morph (esp. reptiles/invertebrates)
@@ -575,7 +574,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     coat: { type: String, default: null },
     coatPattern: { type: String, default: null },
     earset: { type: String, default: null },
-    lifeStage: { type: String, enum: ['Neonate', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', null], default: null },
+    lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
     phenotype: { type: String, default: null },
