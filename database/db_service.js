@@ -1,4 +1,4 @@
-﻿﻿﻿﻿const mongoose = require('mongoose');
+﻿﻿﻿﻿﻿﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -1192,6 +1192,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Include Identification fields
             microchipNumber: updatedAnimal.microchipNumber || '',
             pedigreeRegistrationId: updatedAnimal.pedigreeRegistrationId || '',
+            identifiers: updatedAnimal.identifiers || null,
             ringId: updatedAnimal.ringId || '',
             eartagNumber: updatedAnimal.eartagNumber || '',
             breed: updatedAnimal.breed || null,
