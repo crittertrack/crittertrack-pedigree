@@ -167,7 +167,7 @@ function transformAnimalRow(row, species) {
 
     // Remarks: owner info + existing remarks + non-public remarks
     const remarksParts = [];
-    const ownerStr = [row['OwnerName'], row['OwnerBusinessName']]
+    const ownerStr = [row['manualownerName'], row['OwnerBusinessName']]
         .map(v => (v || '').trim()).filter(Boolean).join(' / ');
     if (ownerStr) remarksParts.push(`Owner: ${ownerStr}`);
     if (row['Remarks'] && row['Remarks'].trim()) remarksParts.push(row['Remarks'].trim());

@@ -21,7 +21,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 - `creatorId` - Backend owner reference
 - `creatorId_public` - Public owner ID
 - `originalCreatorId` - Original breeder
-- `ownerName` - Custom owner name
+- `manualownerName` - Custom owner name
 - `soldStatus` - Sale/transfer status
 
 **Lineage:**

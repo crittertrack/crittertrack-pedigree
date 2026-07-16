@@ -308,7 +308,7 @@ const AnimalSchema = new mongoose.Schema({
     geneticCode: { type: String, default: null },
     
     // Tab 2: Ownership Fields
-    ownerName: { type: String, default: null }, // Free-text keeper/custodian name
+    manualownerName: { type: String, default: null }, // Free-text keeper/custodian name
     groupRole: { type: String, default: null }, // Role in group/colony (e.g., alpha, beta, omega)
     keeperHistory: [{
         name: { type: String },
@@ -592,7 +592,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
     
     // Ownership and breeding status
-    ownerName: { type: String, default: null }, // Free-text keeper/custodian name
+    manualownerName: { type: String, default: null }, // Free-text keeper/custodian name
     groupRole: { type: String, default: null }, // Role in group/colony
     isOwned: { type: Boolean, default: true },
     isPregnant: { type: Boolean, default: false },
@@ -1153,7 +1153,7 @@ const FieldTemplateSchema = new mongoose.Schema({
         },
         
         // ===== TAB 2: OWNERSHIP =====
-        ownerName: { 
+        manualownerName: { 
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Keeper Name' },
             required: { type: Boolean, default: false }

@@ -70,7 +70,7 @@ const ANIMAL_TEXT_FIELDS = {
     coat: 'animal coat',
     coatPattern: 'coat pattern',
     earset: 'earset',
-    ownerName: 'keeper name',
+    manualownerName: 'keeper name',
     remarks: 'animal remarks',
     geneticCode: 'genetic code',
     lifeStage: 'life stage',
@@ -853,7 +853,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
             .filter(d => d.creatorId.toString() !== appUserId_backend.toString())
             .map(d => d.creatorId.toString())
     )];
-    let ownerNameMap = {}; // creatorId (string) -> display name
+    let manualownerNameMap = {}; // creatorId (string) -> display name
     let ownerAvatarMap = {}; // creatorId (string) -> profileImage URL
     let creatorIdPublicMap = {}; // creatorId (string) -> id_public
     if (viewOnlycreatorIds.length > 0) {
@@ -861,7 +861,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
             .select('_id id_public personalName breederName showBreederName profileImage profileImageUrl')
             .lean();
         owners.forEach(u => {
-            ownerNameMap[u._id.toString()] = u.showBreederName && u.breederName
+            manualownerNameMap[u._id.toString()] = u.showBreederName && u.breederName
                 ? u.breederName
                 : u.personalName || 'Unknown';
             ownerAvatarMap[u._id.toString()] = u.profileImage || u.profileImageUrl || null;
@@ -870,15 +870,15 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     }
 
     // Provide backward-compatible alias fields expected by the frontend
-    // Also add isViewOnly flag and ownerName to identify view-only animals
+    // Also add isViewOnly flag and manualownerName to identify view-only animals
     return docs.map(d => ({
         ...d,
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
         isDisplay: d.showOnPublicProfile ?? false,
         isViewOnly: d.creatorId.toString() !== appUserId_backend.toString(),
-        ownerName: d.creatorId.toString() !== appUserId_backend.toString()
-            ? (ownerNameMap[d.creatorId.toString()] || 'Unknown')
+        manualownerName: d.creatorId.toString() !== appUserId_backend.toString()
+            ? (manualownerNameMap[d.creatorId.toString()] || 'Unknown')
             : null,
         ownerAvatar: d.creatorId.toString() !== appUserId_backend.toString()
             ? (ownerAvatarMap[d.creatorId.toString()] || null)
@@ -1151,6 +1151,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             color: updatedAnimal.color,
             coat: updatedAnimal.coat,
             coatPattern: updatedAnimal.coatPattern || null,
+            manualownerName: updatedAnimal.manualownerName || null,
             earset: updatedAnimal.earset || null,
             status: updatedAnimal.status || null,
             lifeStage: updatedAnimal.lifeStage || null,
@@ -1312,6 +1313,7 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             name: animal.name,
             gender: animal.gender,
             birthDate: animal.birthDate,
+            manualownerName: animal.manualownerName || null,
             color: animal.color,
             coat: animal.coat,
             // Copy image URLs into the public record as well

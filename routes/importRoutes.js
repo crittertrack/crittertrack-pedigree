@@ -123,7 +123,7 @@ const ANIMAL_SAFE = new Set([
     'lastFedDate','feedingFrequencyDays','lastMaintenanceDate','maintenanceFrequencyDays',
     'careTasks','tags','imageUrl','photoUrl','extraImages',
     'sireId_public','damId_public',
-    'remarks','geneticCode','ownerName','groupRole','keeperHistory',
+    'remarks','geneticCode','manualownerName','groupRole','keeperHistory',
     'coatPattern','lifeStage','carrierTraits','phenotype','morph','markings',
     'eyeColor','nailColor','size','weight','length','heightAtWithers','bodyLength',
     'chestGirth','adultWeight','bodyConditionScore',
