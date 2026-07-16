@@ -1073,7 +1073,7 @@ router.put('/:id_backend', upload.single('file'), async (req, res) => {
             'tags', 'extraImages', 'careTasks', 'animalCareTasks', 'milestones',
             'vaccinations', 'dewormingRecords', 'parasiteControl', 'medicalConditions',
             'allergies', 'medications', 'medicalProcedures', 'labResults', 'vetVisits',
-            'keeperHistory', 'breedingRecords', 'growthRecords', 'identifiers'
+            'keeperHistory', 'breedingRecords', 'growthRecords'
         ];
  
         for (const field of arrayFields) {

@@ -7,20 +7,22 @@ const { Animal } = require('../database/models');
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://crittertrack_app_user_v2:lu4IQ6lt83ZsuFVI@crittertrack-dev.ds9ribj.mongodb.net/crittertrackdb?appName=crittertrack-dev';
 
 const identificationFields = [
+    // Core IDs
     'id_public',
     'breederAssignedId',
+    'sbId', // From SimpleBreed imports
+
+    // Physical IDs
     'microchipNumber',
-    'pedigreeRegistrationId',
-    'colonyId',
-    'rabiesTagNumber',
     'tattooId',
-    'eartagNumber',
-    'akcRegistrationNumber',
-    'fciRegistrationNumber',
-    'cfaRegistrationNumber',
-    'workingRegistryIds', // This is an array field
-    'dnaProfileId', // Added from your migration script's oldIdentificationFields
-    'litterRegNumber', // Added from your migration script's oldIdentificationFields
+    
+    // Registry IDs
+    'pedigreeRegistrationId',
+
+    // Other IDs
+    'colonyId',
+    'licenseNumber',
+    'licenseJurisdiction',
 ];
 
 async function analyzeIdentificationFields() {

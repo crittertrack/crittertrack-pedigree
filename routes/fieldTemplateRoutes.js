@@ -6,14 +6,14 @@ const { protect, checkRole } = require('../middleware/authMiddleware');
 // Feature flags for safe rollout - PHASE 1-3: Only safe templates enabled
 const FEATURE_FLAGS = {
     FIELD_TEMPLATES_UI_ENABLED: {
-        'Small Mammal Template': false,  // DISABLED - 950+ animals at risk
-        'Full Mammal Template': false,   // DISABLED - 5 animals at risk
-        'Reptile Template': false,       // DISABLED - 1 animal at risk
-        'Bird Template': true,           // ENABLED - 0 animals, safe to test
-        'Fish Template': true,           // ENABLED - 0 animals, safe to test
-        'Amphibian Template': true,      // ENABLED - 0 animals, safe to test
-        'Invertebrate Template': true,   // ENABLED - 0 animals, safe to test
-        'Other Template': false          // DISABLED - used as fallback
+        'Small Mammal Template': true,
+        'Full Mammal Template': true,
+        'Reptile Template': true,
+        'Bird Template': true,
+        'Fish Template': true,
+        'Amphibian Template': true,
+        'Invertebrate Template': true,
+        'Other Template': true
     }
 };
 

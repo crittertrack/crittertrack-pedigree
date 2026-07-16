@@ -346,12 +346,9 @@ const AnimalSchema = new mongoose.Schema({
     // Dog/Cat specific identification
     licenseNumber: { type: String, default: null },
     licenseJurisdiction: { type: String, default: null },
-    rabiesTagNumber: { type: String, default: null },
     tattooId: { type: String, default: null },
-    akcRegistrationNumber: { type: String, default: null },
-    fciRegistrationNumber: { type: String, default: null },
-    cfaRegistrationNumber: { type: String, default: null },
-    workingRegistryIds: { type: String, default: null }, // herding, hunting, service
+    RingId: { type: String, default: null },
+    eartagNumber: { type: String, default: null },
     
     // Tab 5: Lineage & Origin Fields
     origin: { type: String, default: 'Captive-bred' },
@@ -1150,7 +1147,7 @@ const FieldTemplateSchema = new mongoose.Schema({
         },
         breederAssignedId: { 
             enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Breeder ID' },
+            label: { type: String, default: 'Breeder Assigned ID' },
             required: { type: Boolean, default: false }
         },
         
@@ -1252,12 +1249,12 @@ const FieldTemplateSchema = new mongoose.Schema({
         // ===== TAB 4: IDENTIFICATION =====
         microchipNumber: { 
             enabled: { type: Boolean, default: false }, // Larger mammals
-            label: { type: String, default: 'Microchip #' },
+            label: { type: String, default: 'Microchip Number' },
             required: { type: Boolean, default: false }
         },
         pedigreeRegistrationId: { 
             enabled: { type: Boolean, default: true },
-            label: { type: String, default: 'Pedigree Registration #' },
+            label: { type: String, default: 'Pedigree Registration' },
             required: { type: Boolean, default: false }
         },
         colonyId: { 
@@ -1285,34 +1282,19 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'License Jurisdiction' },
             required: { type: Boolean, default: false }
         },
-        rabiesTagNumber: { 
-            enabled: { type: Boolean, default: false }, // Dogs/cats
-            label: { type: String, default: 'Rabies Tag #' },
-            required: { type: Boolean, default: false }
-        },
         tattooId: { 
             enabled: { type: Boolean, default: false }, // Dogs/cats
             label: { type: String, default: 'Tattoo ID' },
             required: { type: Boolean, default: false }
         },
-        akcRegistrationNumber: { 
-            enabled: { type: Boolean, default: false }, // Dogs
-            label: { type: String, default: 'AKC Registration #' },
+        RingId: {
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Ring ID' },
             required: { type: Boolean, default: false }
         },
-        fciRegistrationNumber: { 
-            enabled: { type: Boolean, default: false }, // Dogs
-            label: { type: String, default: 'FCI Registration #' },
-            required: { type: Boolean, default: false }
-        },
-        cfaRegistrationNumber: { 
-            enabled: { type: Boolean, default: false }, // Cats
-            label: { type: String, default: 'CFA Registration #' },
-            required: { type: Boolean, default: false }
-        },
-        workingRegistryIds: { 
-            enabled: { type: Boolean, default: false }, // Working dogs
-            label: { type: String, default: 'Working Registry IDs' },
+        eartagNumber: {
+            enabled: { type: Boolean, default: true },
+            label: { type: String, default: 'Eartag Number' },
             required: { type: Boolean, default: false }
         },
         

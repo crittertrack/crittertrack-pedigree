@@ -129,7 +129,6 @@ const ANIMAL_SAFE = new Set([
     'chestGirth','adultWeight','bodyConditionScore',
     'microchipNumber','pedigreeRegistrationId','colonyId','breed','strain',
     'licenseNumber','licenseJurisdiction','rabiesTagNumber','tattooId',
-    'akcRegistrationNumber','fciRegistrationNumber','cfaRegistrationNumber','workingRegistryIds',
     'origin','isNeutered','heatStatus','lastHeatDate','ovulationDate','matingDates',
     'expectedDueDate','litterCount','litterSizeBorn','litterSizeWeaned','stillbornCount',
     'nursingStartDate','weaningDate','breedingRole','lastMatingDate','successfulMatings',
