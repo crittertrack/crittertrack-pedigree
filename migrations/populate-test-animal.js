@@ -15,10 +15,10 @@ const generatedData = {
     species: 'Fancy Mouse',
     breed: 'Standard',
     strain: 'Black/Tan Line',
-    gender: 'Female',
+    gender: 'Mixed',
     birthDate: '2025-01-15T00:00:00.000Z',
     status: 'Breeder',
-    lifeStage: 'Adult',
+    lifeStage: 'Mixed',
     origin: 'Captive-bred',
     tags: ['Show Winner', 'Line A', 'High Yield'],
     imageUrl: 'https://critter-track-dev.s3.amazonaws.com/animal-images/6673624a63115edde0c3f5b0-1718837322839.jpg', // Example image
