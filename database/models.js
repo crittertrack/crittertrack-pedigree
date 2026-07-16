@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿const mongoose = require('mongoose');
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿const mongoose = require('mongoose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -347,7 +347,7 @@ const AnimalSchema = new mongoose.Schema({
     licenseNumber: { type: String, default: null },
     licenseJurisdiction: { type: String, default: null },
     tattooId: { type: String, default: null },
-    RingId: { type: String, default: null },
+    ringId: { type: String, default: null },
     eartagNumber: { type: String, default: null },
     
     // Tab 5: Lineage & Origin Fields
@@ -636,6 +636,8 @@ const PublicAnimalSchema = new mongoose.Schema({
     // Identification fields
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
+    ringId: { type: String, default: null },
+    eartagNumber: { type: String, default: null },
     colonyId: { type: String, default: null }, // Colony or group identifier
     breed: { type: String, default: null },
     strain: { type: String, default: null },
@@ -1287,7 +1289,7 @@ const FieldTemplateSchema = new mongoose.Schema({
             label: { type: String, default: 'Tattoo ID' },
             required: { type: Boolean, default: false }
         },
-        RingId: {
+        ringId: {
             enabled: { type: Boolean, default: true },
             label: { type: String, default: 'Ring ID' },
             required: { type: Boolean, default: false }

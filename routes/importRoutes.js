@@ -128,7 +128,7 @@ const ANIMAL_SAFE = new Set([
     'eyeColor','nailColor','size','weight','length','heightAtWithers','bodyLength',
     'chestGirth','adultWeight','bodyConditionScore',
     'microchipNumber','pedigreeRegistrationId','colonyId','breed','strain',
-    'licenseNumber','licenseJurisdiction','tattooId',
+    'licenseNumber','licenseJurisdiction','tattooId','ringId','eartagNumber',
     'origin','isNeutered','heatStatus','lastHeatDate','ovulationDate','matingDates',
     'expectedDueDate','litterCount','litterSizeBorn','litterSizeWeaned','stillbornCount',
     'nursingStartDate','weaningDate','breedingRole','lastMatingDate','successfulMatings',

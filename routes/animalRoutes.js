@@ -542,14 +542,16 @@ router.get('/any/:id_public', async (req, res) => {
         if (animal) {
             // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
             // collection are public by definition. Inject the field so frontend privacy checks work.
-            // Also fetch sireId_public/damId_public and manualPedigree from the private Animal record
+            // Also fetch some fields from the private Animal record
             // in case the PublicAnimal record is stale and missing parent IDs.
-            const privateForPedigree = await Animal.findOne({ id_public }).select('manualPedigree sireId_public damId_public fatherId_public motherId_public').lean();
+            const privateForPedigree = await Animal.findOne({ id_public }).select('manualPedigree sireId_public damId_public fatherId_public motherId_public ringId eartagNumber').lean();
             const manualPedigree = privateForPedigree?.manualPedigree ?? null;
             // Merge parent IDs from private record if public record is missing them
             const sireId_public = animal.sireId_public || privateForPedigree?.sireId_public || privateForPedigree?.fatherId_public || null;
             const damId_public = animal.damId_public || privateForPedigree?.damId_public || privateForPedigree?.motherId_public || null;
-            return res.status(200).json(await withBreederName({ ...animal, sireId_public, damId_public, showOnPublicProfile: true, manualPedigree }));
+            const ringId = animal.ringId || privateForPedigree?.ringId || null;
+            const eartagNumber = animal.eartagNumber || privateForPedigree?.eartagNumber || null;
+            return res.status(200).json(await withBreederName({ ...animal, sireId_public, damId_public, ringId, eartagNumber, showOnPublicProfile: true, manualPedigree }));
         }
 
         // Not public either, check if animal is related to user's animals

@@ -76,6 +76,8 @@ const ANIMAL_TEXT_FIELDS = {
     lifeStage: 'life stage',
     microchipNumber: 'microchip number',
     pedigreeRegistrationId: 'pedigree registration id',
+    ringId: 'ring ID',
+    eartagNumber: 'ear tag number',
     breed: 'breed',
     strain: 'strain',
     origin: 'origin',
@@ -838,7 +840,8 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
           'medicalConditions medications ' +
-          'color coat coatPattern earset phenotype morph markings eyeColor nailColor size carrierTraits geneticCode lifeStage'
+          'color coat coatPattern earset phenotype morph markings eyeColor nailColor size carrierTraits geneticCode lifeStage ' +
+          'ringId eartagNumber'
         : null;
     const baseFind = Animal.find(query).sort({ birthDate: -1 });
     const cappedFind = slimFields ? baseFind : baseFind.limit(2000);
@@ -1188,6 +1191,8 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             // Include Identification fields
             microchipNumber: updatedAnimal.microchipNumber || '',
             pedigreeRegistrationId: updatedAnimal.pedigreeRegistrationId || '',
+            ringId: updatedAnimal.ringId || '',
+            eartagNumber: updatedAnimal.eartagNumber || '',
             breed: updatedAnimal.breed || null,
             strain: updatedAnimal.strain || null,
             // Include Origin field
