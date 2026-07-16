@@ -161,12 +161,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `microchipNumber` | Microchip # |
 | `licenseNumber` | License Number |
 | `licenseJurisdiction` | License Jurisdiction |
-| `rabiesTagNumber` | Rabies Tag # |
 | `tattooId` | Tattoo ID |
-| `akcRegistrationNumber` | AKC Registration # |
-| `fciRegistrationNumber` | FCI Registration # |
-| `cfaRegistrationNumber` | CFA Registration # |
-| `workingRegistryIds` | Working Registry IDs |
 | `heightAtWithers` | Height at Withers |
 | `chestGirth` | Chest Girth |
 | `artificialInseminationUsed` | Artificial Insemination Used |
@@ -231,12 +226,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `breed` | Breed |  | Overview |
 | `licenseNumber` | License Number |  | Legal & Documentation |
 | `licenseJurisdiction` | License Jurisdiction |  | Legal & Documentation |
-| `rabiesTagNumber` | Rabies Tag # |  | Identification |
 | `tattooId` | Tattoo ID |  | Identification |
-| `akcRegistrationNumber` | AKC Registration # |  | Identification |
-| `fciRegistrationNumber` | FCI Registration # |  | Identification |
-| `cfaRegistrationNumber` | CFA Registration # |  | Identification |
-| `workingRegistryIds` | Working Registry IDs |  | Identification |
 | `origin` | Origin |  |Pedigree |
 | `isNeutered` | Neutered/Spayed |  | Breeding |
 | `spayNeuterDate` | Spay/Neuter Date |  | Breeding |
@@ -469,12 +459,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `chestGirth` | Chest Girth |
 | `breed` | Breed/Species Locality |
 | `strain` | Strain |
-| `rabiesTagNumber` | Rabies Tag # |
 | `tattooId` | Tattoo ID |
-| `akcRegistrationNumber` | AKC Registration # |
-| `fciRegistrationNumber` | FCI Registration # |
-| `cfaRegistrationNumber` | CFA Registration # |
-| `workingRegistryIds` | Working Registry IDs |
 | `isNeutered` | Neutered/Spayed |
 | `spayNeuterDate` | Spay/Neuter Date |
 | `heatStatus` | Heat Status |
@@ -638,12 +623,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `heightAtWithers` | Height at Withers |
 | `chestGirth` | Chest Girth |
 | `nailColor` | Nail Color |
-| `rabiesTagNumber` | Rabies Tag # |
 | `tattooId` | Tattoo ID |
-| `akcRegistrationNumber` | AKC Registration # |
-| `fciRegistrationNumber` | FCI Registration # |
-| `cfaRegistrationNumber` | CFA Registration # |
-| `workingRegistryIds` | Working Registry IDs |
 | `isNeutered` | Neutered/Spayed |
 | `spayNeuterDate` | Spay/Neuter Date |
 | `heatStatus` | Heat Status |
@@ -789,11 +769,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `earset` | Earset |
 | `heightAtWithers` | Height at Withers |
 | `chestGirth` | Chest Girth |
-| `rabiesTagNumber` | Rabies Tag # |
 | `tattooId` | Tattoo ID |
-| `akcRegistrationNumber` | AKC Registration # |
-| `fciRegistrationNumber` | FCI Registration # |
-| `cfaRegistrationNumber` | CFA Registration # |
 | `workingRegistryIds` | Working Registry IDs |
 | `isNeutered` | Neutered/Spayed |
 | `spayNeuterDate` | Spay/Neuter Date |
@@ -942,12 +918,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `heightAtWithers` | Height at Withers |
 | `chestGirth` | Chest Girth |
 | `microchipNumber` | Microchip # |
-| `rabiesTagNumber` | Rabies Tag # |
 | `tattooId` | Tattoo ID |
-| `akcRegistrationNumber` | AKC Registration # |
-| `fciRegistrationNumber` | FCI Registration # |
-| `cfaRegistrationNumber` | CFA Registration # |
-| `workingRegistryIds` | Working Registry IDs |
 | `isNeutered` | Neutered/Spayed |
 | `spayNeuterDate` | Spay/Neuter Date |
 | `heatStatus` | Heat Status |
@@ -1071,12 +1042,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `microchipNumber` | Microchip # |
 | `strain` | Strain |
 | `licenseJurisdiction` | Permit Jurisdiction |
-| `rabiesTagNumber` | Rabies Tag # |
 | `tattooId` | Tattoo ID |
-| `akcRegistrationNumber` | AKC Registration # |
-| `fciRegistrationNumber` | FCI Registration # |
-| `cfaRegistrationNumber` | CFA Registration # |
-| `workingRegistryIds` | Working Registry IDs |
 | `isNeutered` | Neutered/Spayed |
 | `spayNeuterDate` | Spay/Neuter Date |
 | `heatStatus` | Heat Status |
@@ -1180,12 +1146,7 @@ The following fields are **ALWAYS ENABLED** for all species and are NOT controll
 | `strain` | Strain/Line |  | Overview |
 | `licenseNumber` | License/Permit Number |  | Legal & Documentation |
 | `licenseJurisdiction` | License Jurisdiction |  | Legal & Documentation |
-| `rabiesTagNumber` | Rabies Tag # |  | Identification |
 | `tattooId` | Tattoo ID |  | Identification |
-| `akcRegistrationNumber` | AKC Registration # |  | Identification |
-| `fciRegistrationNumber` | FCI Registration # |  | Identification |
-| `cfaRegistrationNumber` | CFA Registration # |  | Identification |
-| `workingRegistryIds` | Working Registry IDs |  | Identification |
 | `origin` | Origin |  |Pedigree |
 | `isNeutered` | Neutered/Spayed |  | Breeding |
 | `spayNeuterDate` | Spay/Neuter Date |  | Breeding |
