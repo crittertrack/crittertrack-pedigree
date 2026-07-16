@@ -1721,20 +1721,38 @@ router.get('/:id_public/offspring', async (req, res) => {
                     }); // Fetch full litter document
                 }
 
-                // Fetch other parent data - search globally (user's animals first, then any other animal)
+                // Fetch other parent data - user's own animals first, then public, then sanitized private
                 let otherParent = null;
                 if (group.otherParentId) {
                     // Try user's animals first
                     otherParent = await Animal.findOne({ 
                         id_public: group.otherParentId,
                         creatorId: authenticatedUserId 
-                    }); // Fetch full document
+                    }).lean();
                     
-                    // If not owned by user, search all animals globally
+                    // If not owned by user, try public collection
                     if (!otherParent) {
-                        otherParent = await Animal.findOne({ 
-                            id_public: group.otherParentId 
-                        }); // Fetch full document
+                        otherParent = await PublicAnimal.findOne({ 
+                            id_public: group.otherParentId
+                        }).lean();
+                    }
+
+                    // If still not found, it's a private animal from another user.
+                    // Fetch and return a sanitized version.
+                    if (!otherParent) {
+                        const privateParent = await Animal.findOne({ id_public: group.otherParentId }).lean();
+                        if (privateParent) {
+                            otherParent = {
+                                id_public: privateParent.id_public,
+                                name: privateParent.name,
+                                prefix: privateParent.prefix,
+                                suffix: privateParent.suffix,
+                                gender: privateParent.gender,
+                                imageUrl: privateParent.imageUrl,
+                                photoUrl: privateParent.photoUrl,
+                                isHidden: true // Flag for frontend to know it's a private, non-owned animal
+                            };
+                        }
                     }
                 }
 
