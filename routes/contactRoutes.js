@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Contact = require('../database/contactModel');
+// Import User and PublicProfile for potential future use or debugging
 const { Animal, User, PublicProfile } = require('../database/models');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -85,6 +86,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/contacts - Create a new contact
 router.post('/', async (req, res) => {
     try {
+        console.log('[CONTACTS] POST /api/contacts - Request Body:', req.body);
         const {
             linkedCTUID,
             personalName,
@@ -121,8 +123,10 @@ router.post('/', async (req, res) => {
             assignedAnimals: []
         });
         
+        console.log('[CONTACTS] POST /api/contacts - New Contact Object before save:', newContact);
         await newContact.save();
         
+        console.log('[CONTACTS] POST /api/contacts - New Contact Object after save:', newContact);
         res.status(201).json(newContact);
     } catch (error) {
         console.error('[CONTACTS] Error creating contact:', error);
@@ -133,6 +137,7 @@ router.post('/', async (req, res) => {
 // PUT /api/contacts/:id - Update a contact
 router.put('/:id', async (req, res) => {
     try {
+        console.log('[CONTACTS] PUT /api/contacts/:id - Request Body:', req.body);
         const contact = await Contact.findOne({
             _id: req.params.id,
             userId: req.user._id
@@ -141,6 +146,7 @@ router.put('/:id', async (req, res) => {
         if (!contact) {
             return res.status(404).json({ message: 'Contact not found' });
         }
+        console.log('[CONTACTS] PUT /api/contacts/:id - Contact Object before update:', contact);
         
         const {
             linkedCTUID,
@@ -175,6 +181,7 @@ router.put('/:id', async (req, res) => {
         contact.isBreeder = !!isBreeder;
         contact.notes = notes || null;
         
+        console.log('[CONTACTS] PUT /api/contacts/:id - Contact Object before save:', contact);
         await contact.save();
         
         res.json(contact);
