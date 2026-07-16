@@ -8,7 +8,7 @@ const DATABASE_NAME = 'crittertrackdb';
 // --------------------------
 
 const generatedData = {
-    // Overview
+    //Dashboard
     name: 'Dashboard Demo',
     prefix: 'Test',
     suffix: 'v2',

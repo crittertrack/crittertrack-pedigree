@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿const mongoose = require('mongoose');
+﻿﻿const mongoose = require('mongoose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -339,6 +339,7 @@ const AnimalSchema = new mongoose.Schema({
     // Tab 4: Identification Fields
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
+    identifiers: { type: String, default: null }, // JSON string for custom identifiers
     colonyId: { type: String, default: null }, // Colony or group identifier
     breed: { type: String, default: null },
     strain: { type: String, default: null }, // "Bloodline" for dogs/cats
@@ -635,6 +636,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     // Identification fields
     microchipNumber: { type: String, default: null },
     pedigreeRegistrationId: { type: String, default: null },
+    identifiers: { type: String, default: null }, // JSON string for custom identifiers
     ringId: { type: String, default: null },
     eartagNumber: { type: String, default: null },
     colonyId: { type: String, default: null }, // Colony or group identifier
@@ -1134,7 +1136,7 @@ const FieldTemplateSchema = new mongoose.Schema({
     // Field configuration - defines what fields appear in forms and with what labels/requirements
     // Structure: { enabled: Boolean, label: String, required: Boolean }
     fields: {
-        // ===== TAB 1: OVERVIEW / IDENTITY =====
+        // ===== TAB 1: Dashboard / IDENTITY =====
         // Core identity fields (always required, not configurable)
         prefix: { 
             enabled: { type: Boolean, default: true },
