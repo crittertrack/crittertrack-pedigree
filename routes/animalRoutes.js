@@ -1,7 +1,8 @@
 ﻿﻿const express = require('express');
 const router = express.Router();
 const { Animal } = require('../database/models');
-const { addAnimal, updateAnimal, getUsersAnimals } = require('../database/db_service');
+const { addAnimal, updateAnimal, getUsersAnimals, getAnimalByIdAndUser } = require('../database/db_service');
+const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication to all routes
@@ -16,6 +17,104 @@ router.get('/', async (req, res) => {
     } catch (error) {
         console.error('[ANIMALS] Error fetching animals:', error);
         res.status(500).json({ message: 'Failed to fetch animals', error: error.message });
+    }
+});
+
+// GET /api/animals/:id_public - Get a single animal by public ID
+router.get('/:id_public', async (req, res) => {
+    try {
+        const animal = await Animal.findOne({
+            id_public: req.params.id_public,
+            creatorId: req.user.id
+        }).lean();
+
+        if (!animal) {
+            // Check for view-only access if not the owner
+            const viewOnlyAnimal = await Animal.findOne({
+                id_public: req.params.id_public,
+                viewOnlyForUsers: req.user.id
+            }).lean();
+
+            if (!viewOnlyAnimal) {
+                return res.status(404).json({ message: 'Animal not found or you do not have permission to view it.' });
+            }
+            // Add isViewOnly flag for frontend context
+            viewOnlyAnimal.isViewOnly = true;
+            return res.json(viewOnlyAnimal);
+        }
+
+        res.json(animal);
+    } catch (error) {
+        console.error(`[ANIMALS] Error fetching animal ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to fetch animal', error: error.message });
+    }
+});
+
+// GET /api/animals/any/:id_public - Get an animal by public ID, checking ownership, view-only, and public status
+router.get('/any/:id_public', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const userId = req.user.id;
+
+        // 1. Check if the user owns the animal or has view-only access to the full record
+        let animal = await Animal.findOne({
+            id_public,
+            $or: [{ creatorId: userId }, { viewOnlyForUsers: userId }]
+        }).lean();
+
+        if (animal) {
+            return res.json(animal);
+        }
+
+        // 2. If not, check if there's a public version of the animal
+        const { PublicAnimal } = require('../database/models');
+        const publicAnimal = await PublicAnimal.findOne({ id_public }).lean();
+
+        if (publicAnimal) {
+            return res.json(publicAnimal);
+        }
+
+        // 3. As a last resort, check if an animal with this ID exists at all, but return only public-safe fields
+        const anyAnimal = await Animal.findOne({ id_public }).select('id_public name prefix suffix species gender imageUrl photoUrl breederId_public sireId_public damId_public').lean();
+        if (anyAnimal) {
+            return res.json(anyAnimal);
+        }
+
+        return res.status(404).json({ message: 'Animal not found.' });
+    } catch (error) {
+        console.error(`[ANIMALS] Error fetching any animal ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to fetch animal', error: error.message });
+    }
+});
+
+// GET /api/animals/:id_public/offspring - Get all offspring for an animal
+router.get('/:id_public/offspring', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+
+        // Find all offspring where this animal is a parent.
+        const offspring = await Animal.find({
+            $or: [{ sireId_public: id_public }, { damId_public: id_public }]
+        }).lean();
+
+        // Group offspring by litter to match frontend expectation
+        const litterGroups = new Map();
+        for (const o of offspring) {
+            const birthDate = o.birthDate ? new Date(o.birthDate).toISOString().split('T')[0] : 'unknown';
+            const otherParentId = o.sireId_public === id_public ? o.damId_public : o.sireId_public;
+            const litterKey = `${birthDate}_${otherParentId || 'none'}`;
+
+            if (!litterGroups.has(litterKey)) {
+                litterGroups.set(litterKey, { birthDate: o.birthDate, otherParentId: otherParentId, offspring: [] });
+            }
+            litterGroups.get(litterKey).offspring.push(o);
+        }
+
+        const littersWithOffspring = Array.from(litterGroups.values()).sort((a, b) => new Date(b.birthDate) - new Date(a.birthDate));
+        res.json(littersWithOffspring);
+    } catch (error) {
+        console.error(`[ANIMALS] Error fetching offspring for ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to fetch offspring', error: error.message });
     }
 });
 
@@ -57,4 +156,27 @@ router.put('/:id_public', async (req, res) => {
     }
 });
 
+
+// GET /api/animals/:id_public/inbreeding - Calculate inbreeding coefficient
+router.get('/:id_public/inbreeding', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const generations = parseInt(req.query.generations) || 50;
+
+        const fetchAnimal = async (animalId) => {
+            // In a private context, we can see all animals for pedigree calculation.
+            return Animal.findOne({ id_public: animalId }).select('sireId_public damId_public').lean();
+        };
+
+        const coefficient = await calculateInbreedingCoefficient(id_public, fetchAnimal, generations);
+
+        // Update the animal's record with the cached value if the user owns it
+        await Animal.updateOne({ id_public, creatorId: req.user.id }, { inbreedingCoefficient: coefficient });
+
+        res.json({ id_public, inbreedingCoefficient: coefficient });
+    } catch (error) {
+        console.error(`[ANIMALS] Error calculating inbreeding for ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to calculate inbreeding coefficient', error: error.message });
+    }
+});
 module.exports = router;
