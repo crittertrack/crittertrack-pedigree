@@ -118,6 +118,93 @@ router.get('/:id_public/offspring', async (req, res) => {
     }
 });
 
+// GET /api/animals/:id_public/relationships - Get public relatives for an animal
+router.get('/:id_public/relationships', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+
+        const animalMap = new Map();
+        const fetchAndCache = async (ids) => {
+            const newIds = [...new Set(ids.filter(id => id && !animalMap.has(id)))];
+            if (newIds.length === 0) return;
+            const animals = await Animal.find({ id_public: { $in: newIds } }).lean();
+            animals.forEach(a => animalMap.set(a.id_public, a));
+        };
+
+        const subject = await Animal.findOne({ id_public }).lean();
+        if (!subject) {
+            return res.status(404).json({ message: 'Animal not found.' });
+        }
+        animalMap.set(id_public, subject);
+
+        const rels = {
+            parents: [],
+            grandparents: [],
+            greatGrandparents: [],
+            siblings: [],
+            auntsUncles: [],
+            cousins: [],
+            nephewsNieces: []
+        };
+
+        // --- ANCESTORS ---
+        const sireId = subject.sireId_public;
+        const damId = subject.damId_public;
+        await fetchAndCache([sireId, damId]);
+        const sire = animalMap.get(sireId);
+        const dam = animalMap.get(damId);
+
+        const pgsId = sire?.sireId_public, pgdId = sire?.damId_public;
+        const mgsId = dam?.sireId_public, mgdId = dam?.damId_public;
+        await fetchAndCache([pgsId, pgdId, mgsId, mgdId]);
+        const pgs = animalMap.get(pgsId), pgd = animalMap.get(pgdId);
+        const mgs = animalMap.get(mgsId), mgd = animalMap.get(mgdId);
+
+        const ggpIds = [
+            pgs?.sireId_public, pgs?.damId_public, pgd?.sireId_public, pgd?.damId_public,
+            mgs?.sireId_public, mgs?.damId_public, mgd?.sireId_public, mgd?.damId_public
+        ].filter(Boolean);
+        await fetchAndCache(ggpIds);
+
+        // Populate ancestors, adding side info
+        if (sire) rels.parents.push({ ...sire, _side: 'paternal' });
+        if (dam) rels.parents.push({ ...dam, _side: 'maternal' });
+        if (pgs) rels.grandparents.push({ ...pgs, _side: 'paternal' });
+        if (pgd) rels.grandparents.push({ ...pgd, _side: 'paternal' });
+        if (mgs) rels.grandparents.push({ ...mgs, _side: 'maternal' });
+        if (mgd) rels.grandparents.push({ ...mgd, _side: 'maternal' });
+        ggpIds.forEach(id => {
+            const ggp = animalMap.get(id);
+            if (ggp) {
+                const side = [pgs?.sireId_public, pgs?.damId_public, pgd?.sireId_public, pgd?.damId_public].includes(id) ? 'paternal' : 'maternal';
+                rels.greatGrandparents.push({ ...ggp, _side: side });
+            }
+        });
+
+        // --- COLLATERALS ---
+        // Siblings
+        if (sireId || damId) {
+            const query = { id_public: { $ne: id_public }, $or: [] };
+            if (sireId) query.$or.push({ sireId_public: sireId });
+            if (damId) query.$or.push({ damId_public: damId });
+            if (query.$or.length > 0) {
+                rels.siblings = await Animal.find(query).lean();
+            }
+        }
+
+        // Filter all results to only include public animals
+        const publicOnlyFilter = (animal) => animal.showOnPublicProfile || animal.isDisplay;
+        for (const key in rels) {
+            rels[key] = rels[key].filter(publicOnlyFilter);
+        }
+
+        res.json(rels);
+    } catch (error) {
+        console.error(`[ANIMALS] Error fetching relationships for ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to fetch relationships', error: error.message });
+    }
+});
+
 // POST /api/animals - Create a new animal
 router.post('/', async (req, res) => {
     try {
