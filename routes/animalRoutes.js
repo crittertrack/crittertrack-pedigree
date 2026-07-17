@@ -1,7 +1,7 @@
 ﻿﻿const express = require('express');
 const router = express.Router();
 const { Animal } = require('../database/models');
-const { addAnimal, updateAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
+const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
 const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -254,6 +254,32 @@ router.put('/:id_public', async (req, res) => {
     }
 });
 
+// DELETE /api/animals/:id_public - Delete an animal
+router.delete('/:id_public', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const userId = req.user.id;
+
+        // Find the animal by its public ID to verify ownership and get its internal _id
+        const animal = await Animal.findOne({
+            id_public: id_public,
+            creatorId: userId
+        });
+
+        if (!animal) {
+            // This matches the behavior of the PUT and GET endpoints.
+            return res.status(404).json({ message: 'Animal not found or you do not have permission to delete it.' });
+        }
+
+        // Call the service function with the internal _id.
+        const result = await deleteAnimal(userId, animal._id);
+
+        res.json(result);
+    } catch (error) {
+        console.error(`[ANIMALS] Error deleting animal ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to delete animal', error: error.message });
+    }
+});
 
 // GET /api/animals/:id_public/inbreeding - Calculate inbreeding coefficient
 router.get('/:id_public/inbreeding', async (req, res) => {
