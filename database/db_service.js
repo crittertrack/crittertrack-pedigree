@@ -688,6 +688,11 @@ const addAnimal = async (appUserId_backend, animalData) => {
 
     enforceCleanAnimalText(animalData);
 
+    // If lifeStage is an empty string, set it to the default 'Unknown' to avoid validation error.
+    if (animalData.lifeStage === '') {
+        animalData.lifeStage = 'Unknown';
+    }
+
     // Ensure creatorId_public is always present (required by schema)
     // It should be set by the route, but look it up as a fallback
     if (!animalData.creatorId_public) {
@@ -1048,6 +1053,11 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
 
     enforceCleanAnimalText(updates);
+
+    // If lifeStage is an empty string, set it to the default 'Unknown' to avoid validation error.
+    if (updates.lifeStage === '') {
+        updates.lifeStage = 'Unknown';
+    }
 
     // Use findOneAndUpdate to ensure ownership and get the updated document
     console.log('[updateAnimal] Updating with:', JSON.stringify({ 
