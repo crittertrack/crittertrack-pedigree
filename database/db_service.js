@@ -1288,6 +1288,33 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     return updatedAnimal;
 };
 
+/**
+ * Gets archived and sold/transferred animals for a user.
+ */
+const getArchivedAndSoldAnimals = async (appUserId_backend) => {
+    // 1. Fetch archived animals owned by the user
+    const archived = await Animal.find({
+        creatorId: appUserId_backend,
+        archived: true
+    }).lean();
+
+    // 2. Fetch sold/transferred animals (user has view-only access)
+    // This logic is similar to the view-only part of getUsersAnimals
+    const soldTransferred = await Animal.find({
+        viewOnlyForUsers: appUserId_backend,
+        hiddenForUsers: { $ne: appUserId_backend } // Exclude those hidden by the user
+    }).lean();
+
+    // Add backward-compatible alias fields before returning
+    const addAliases = (animal, isViewOnly = false) => ({
+        ...animal,
+        fatherId_public: animal.sireId_public || null,
+        motherId_public: animal.damId_public || null,
+        isViewOnly,
+    });
+
+    return { archived: archived.map(a => addAliases(a)), soldTransferred: soldTransferred.map(a => addAliases(a, true)) };
+};
 
 /**
  * Toggles an animal's public visibility and updates the PublicAnimal collection.
@@ -2102,6 +2129,7 @@ module.exports = {
     getUsersAnimals,
     getAnimalByIdAndUser,
     updateAnimal,
+    getArchivedAndSoldAnimals,
     toggleAnimalPublic,
     deleteAnimal,
     recallTransferredAnimal,

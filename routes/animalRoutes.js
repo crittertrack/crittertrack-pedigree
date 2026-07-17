@@ -1,7 +1,7 @@
 ﻿﻿const express = require('express');
 const router = express.Router();
 const { Animal } = require('../database/models');
-const { addAnimal, updateAnimal, getUsersAnimals, getAnimalByIdAndUser } = require('../database/db_service');
+const { addAnimal, updateAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
 const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -17,6 +17,17 @@ router.get('/', async (req, res) => {
     } catch (error) {
         console.error('[ANIMALS] Error fetching animals:', error);
         res.status(500).json({ message: 'Failed to fetch animals', error: error.message });
+    }
+});
+
+// GET /api/animals/archived - Get archived and sold/transferred animals for the user
+router.get('/archived', async (req, res) => {
+    try {
+        const data = await getArchivedAndSoldAnimals(req.user.id);
+        res.json(data);
+    } catch (error) {
+        console.error('[ANIMALS] Error fetching archived animals:', error);
+        res.status(500).json({ message: 'Failed to fetch archived animals', error: error.message });
     }
 });
 
