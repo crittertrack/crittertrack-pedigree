@@ -2254,6 +2254,12 @@ const EnclosureSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true, maxlength: 100 },
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
     size: { type: String, default: '', trim: true },           // e.g. 40 gallon, 48x24x24
+    dimensions: {
+        length: { type: String, default: '' },
+        width: { type: String, default: '' },
+        height: { type: String, default: '' },
+        unit: { type: String, default: 'cm', enum: ['cm', 'in'] }
+    },
     notes: { type: String, default: '', maxlength: 500 },
     purpose: { type: String, enum: ['general', 'reproduction', 'health', ''], default: 'general' }, // which tab this enclosure belongs to
     // Flexible cleaning/maintenance tasks for the enclosure (spot clean, full clean, bulb change, etc.)

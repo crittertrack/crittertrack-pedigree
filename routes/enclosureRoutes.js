@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 // POST create enclosure
 router.post('/', async (req, res) => {
     try {
-        const { name, enclosureType, size, notes, cleaningTasks } = req.body;
+        const { name, enclosureType, size, notes, cleaningTasks, dimensions } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
         const enc = new Enclosure({
             creatorId: req.user.id,
@@ -25,6 +25,7 @@ router.post('/', async (req, res) => {
             size: size?.trim() || '',
             notes: notes?.trim() || '',
             cleaningTasks: Array.isArray(cleaningTasks) ? cleaningTasks : [],
+            dimensions: dimensions || { length: '', width: '', height: '', unit: 'cm' }
         });
         await enc.save();
         res.status(201).json(enc);
@@ -37,7 +38,7 @@ router.post('/', async (req, res) => {
 // PUT update enclosure
 router.put('/:id', async (req, res) => {
     try {
-        const { name, enclosureType, size, notes, cleaningTasks } = req.body;
+        const { name, enclosureType, size, notes, cleaningTasks, dimensions } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
         const setData = {
             name: name.trim(),
@@ -46,6 +47,7 @@ router.put('/:id', async (req, res) => {
             notes: notes?.trim() || '',
         };
         if (Array.isArray(cleaningTasks)) setData.cleaningTasks = cleaningTasks;
+        if (dimensions) setData.dimensions = dimensions;
         const enc = await Enclosure.findOneAndUpdate(
             { _id: req.params.id, creatorId: req.user.id },
             { $set: setData },
