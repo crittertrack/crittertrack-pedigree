@@ -315,6 +315,15 @@ const AnimalSchema = new mongoose.Schema({
         userId_public: { type: String, default: null }, // Linked CritterTrack user (optional)
         country: { type: String, default: null }
     }],
+    // Structured ownership chain (replaces/extends keeperHistory with dates + ownership type)
+    ownershipHistory: [{
+        ownerName: { type: String, default: null },
+        userId_public: { type: String, default: null }, // Linked CritterTrack user (optional)
+        country: { type: String, default: null },
+        startDate: { type: String, default: null },
+        endDate: { type: String, default: null },
+        ownershipType: { type: String, default: null }
+    }],
     
     // Tab 3: Physical Profile Fields
     coatPattern: { type: String, default: null },
@@ -459,6 +468,11 @@ const AnimalSchema = new mongoose.Schema({
     dietType: { type: String, default: null },
     feedingSchedule: { type: String, default: null },
     supplements: { type: String, default: null },
+    // Structured diet/supplement supply entries (either linked to a Supply record {id,name,category} or free-form manual entries)
+    dietSupplies: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    supplementSupplies: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    // Structured nutrition schedule: { enabled, startDate, frequency, unit, timesPerDay, notes }
+    nutritionSchedule: { type: mongoose.Schema.Types.Mixed, default: null },
     housingType: { type: String, default: null },
     enclosureId: { type: String, default: null }, // References Enclosure._id
     bedding: { type: String, default: null },
@@ -532,6 +546,15 @@ const AnimalSchema = new mongoose.Schema({
         weight: { type: String, default: 'g' },
         length: { type: String, default: 'cm' }
     },
+
+    // Timeline notes (annotations attached to timeline events) & pinned event IDs
+    timelineNotes: [{
+        id: { type: String },
+        eventId: { type: String },
+        noteText: { type: String },
+        dateAdded: { type: String }
+    }],
+    pinnedEvents: [{ type: String }],
     
     // Inbreeding coefficient (cached value)
     inbreedingCoefficient: { type: Number, default: null },
