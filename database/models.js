@@ -461,7 +461,12 @@ const AnimalSchema = new mongoose.Schema({
     primaryVet: { type: String, default: null },
     // Dog/Cat specific health fields
     spayNeuterDate: { type: Date, default: null },
-    parasitePreventionSchedule: { type: String, default: null },
+    parasitePreventionSchedule: [{
+        treatment: { type: String },
+        startDate: { type: String },
+        interval: { type: Number },
+        intervalUnit: { type: String }
+    }],
     heartwormStatus: { type: String, default: null },
     hipElbowScores: { type: String, default: null },
     geneticTestResults: { type: String, default: null },
@@ -576,6 +581,8 @@ const AnimalSchema = new mongoose.Schema({
         date: { type: String },
         weight: { type: String },
         length: { type: String },
+        height: { type: String },
+        chestGirth: { type: String },
         bcs: { type: String },
         notes: { type: String }
     }],

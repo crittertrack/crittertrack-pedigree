@@ -1010,7 +1010,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         }
 
         // SYNC: When manualPedigree is updated, extract sire/dam CTC IDs and sync to sireId_public/damId_public
-        // This ensures beta pedigree entries automatically populate the canonical parent fields
+        // This ensures Pedigree entries automatically populate the canonical parent fields
         if (updates.manualPedigree && typeof updates.manualPedigree === 'object') {
             const mp = updates.manualPedigree;
             
