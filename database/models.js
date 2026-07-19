@@ -252,6 +252,7 @@ const AnimalSchema = new mongoose.Schema({
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
     archived: { type: Boolean, default: false, index: true }, // Hide from main lists but keep in pedigrees
+    isPlannedMating: { type: Boolean, default: false }, // Auto-computed: has an active Litter with isPlanned=true and no mating date yet (or a future one)
     isPregnant: { type: Boolean, default: false },
     isNursing: { type: Boolean, default: false },
     isInMating: { type: Boolean, default: false },
@@ -505,6 +506,33 @@ const AnimalSchema = new mongoose.Schema({
     behavioralIssues: { type: String, default: null },
     biteHistory: { type: String, default: null },
     reactivityNotes: { type: String, default: null },
+    // Temperament Assessment (1-5 scale sliders)
+    aggressionLevel: { type: Number, default: 3 },
+    aggressionTriggers: { type: String, default: null },
+    fearAnxietyLevel: { type: Number, default: 3 },
+    specificFears: { type: String, default: null },
+    boldnessLevel: { type: Number, default: 3 },
+    sociabilityLevel: { type: Number, default: 3 },
+    independenceLevel: { type: Number, default: 3 },
+    // Escape & flight risk
+    escapeRiskLevel: { type: String, default: 'Low' },
+    escapeBehavior: { type: String, default: null },
+    // Stereotypic & stress behaviors
+    stereotypicBehaviors: { type: String, default: null },
+    stressIndicators: { type: String, default: null },
+    // Specialized behavioral traits
+    preyDriveLevel: { type: String, default: 'Unknown' },
+    huntingBehavior: { type: String, default: null },
+    foodAggressionLevel: { type: String, default: 'None' },
+    eatingSpeed: { type: String, default: 'Normal' },
+    foodPreferences: { type: String, default: null },
+    attachmentStyle: { type: String, default: 'Unknown' },
+    bondingBehavior: { type: String, default: null },
+    // Sensory sensitivities
+    noiseSensitivity: { type: String, default: 'Normal' },
+    touchSensitivity: { type: String, default: 'Normal' },
+    lightSensitivity: { type: String, default: 'Normal' },
+    sensoryNotes: { type: String, default: null },
     
     // Tab 10: Show Tab (Universal for all species)
     showTitles: { type: String, default: null },
