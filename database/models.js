@@ -477,6 +477,13 @@ const AnimalSchema = new mongoose.Schema({
     cardiacClearance: { type: String, default: null },
     dentalRecords: { type: String, default: null },
     chronicConditions: { type: String, default: null },
+    healthClearances: [{
+        clearanceType: { type: String },
+        result: { type: String },
+        dateIssued: { type: String },
+        certificateId: { type: String },
+        notes: { type: String }
+    }],
     
     // Tab 8: Nutrition & Husbandry Fields
     dietType: { type: String, default: null },
