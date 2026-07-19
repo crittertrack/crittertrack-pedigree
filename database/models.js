@@ -208,6 +208,14 @@ const HealthRecordSchema = new mongoose.Schema({
     notes: { type: String },
 }, { _id: false });
 
+const ShowEventSchema = new mongoose.Schema({
+    date: { type: Date },
+    showName: { type: String }, // Event name (e.g., Westminster Dog Show 2024)
+    titleEarned: { type: String }, // Title or placement (e.g., Best in Show, Champion, Reserve)
+    judgeName: { type: String }, // Judge name
+    score: { type: String }, // Score or ranking (e.g., 95/100, 1st Place, Champion)
+    judgeComments: { type: String }, // Judge feedback or critique
+}, { _id: false });
 
 // --- 4. ANIMAL SCHEMA (Private Data) ---
 const AnimalSchema = new mongoose.Schema({
@@ -535,9 +543,10 @@ const AnimalSchema = new mongoose.Schema({
     sensoryNotes: { type: String, default: null },
     
     // Tab 10: Show Tab (Universal for all species)
-    showTitles: { type: String, default: null },
-    showRatings: { type: String, default: null },
-    judgeComments: { type: String, default: null },
+    shows: [ShowEventSchema], // Array of individual show events with full details
+    showTitles: { type: String, default: null }, // Legacy field for backward compatibility
+    showRatings: { type: String, default: null }, // Legacy field
+    judgeComments: { type: String, default: null }, // Legacy field
     workingTitles: { type: String, default: null },
     performanceScores: { type: String, default: null },
     
