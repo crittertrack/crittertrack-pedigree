@@ -87,22 +87,33 @@ router.post('/', async (req, res) => {
         // 3. Create Notification for the Recipient
         const sender = await User.findById(fromUserId).select('personalName breederName').session(session); // Pass session
         const senderName = sender.breederName || sender.personalName || 'A CritterTrack User';
+        
+        // Get recipient's public ID
+        const recipient = await User.findById(toUserId).select('id_public').session(session);
+        const recipientPublicId = recipient?.id_public || '';
 
-        await Notification.create([{ // Create with array for session
-            userId: toUserId,
-            type: 'transfer_request',
-            status: 'pending',
-            animalId_public,
-            animalName: animal.name,
-            animalImageUrl: animal.imageUrl || '',
-            transferId: createdTransfer._id,
-            message: `${senderName} wants to transfer ${animal.name} (${animalId_public}) to you.`,
-            metadata: {
+        try {
+            await Notification.create([{ // Create with array for session
+                userId: toUserId,
+                userId_public: recipientPublicId,
+                type: 'transfer_request',
+                status: 'pending',
+                animalId_public,
+                animalName: animal.name,
+                animalImageUrl: animal.imageUrl || '',
                 transferId: createdTransfer._id,
-                animalId: animalId_public,
-                price: price || 0
-            }
-        }], { session });
+                message: `${senderName} wants to transfer ${animal.name} (${animalId_public}) to you.`,
+                metadata: {
+                    transferId: createdTransfer._id,
+                    animalId: animalId_public,
+                    price: price || 0
+                }
+            }], { session });
+            console.log('[Transfer Create] Notification created for recipient:', recipientPublicId);
+        } catch (notifError) {
+            console.error('[Transfer Create] Failed to create notification:', notifError.message);
+            // Don't abort - notification is secondary to transfer
+        }
 
         await session.commitTransaction(); // Commit the transaction
         res.status(201).json({ message: 'Transfer request sent successfully.', transfer: createdTransfer });
@@ -450,10 +461,15 @@ router.post('/:id/withdraw', async (req, res) => {
             const senderProfile = await PublicProfile.findOne({
                 userId_backend: transfer.fromUserId
             }).session(session);
+            
+            // Get recipient's profile for the notification
+            const recipientProfile = await PublicProfile.findOne({
+                userId_backend: transfer.toUserId
+            }).session(session);
 
             await Notification.create([{ // Create with array for session
                 userId: transfer.toUserId, // Recipient of the cancellation notification
-                userId_public: senderProfile?.id_public || '', // --- NEW: Use senderProfile.id_public for consistency ---
+                userId_public: recipientProfile?.id_public || '', // Use recipient's ID, not sender's
                 type: 'transfer_cancelled',
                 status: 'cancelled',
                 animalId_public: transfer.animalId_public,
