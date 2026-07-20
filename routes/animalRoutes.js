@@ -2,7 +2,7 @@
 const router = express.Router();
 const { Animal } = require('../database/models');
 const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
-const { calculateInbreedingCoefficient, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
+const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication to all routes
@@ -336,12 +336,16 @@ router.get('/:id_public/inbreeding', async (req, res) => {
             return Animal.findOne({ id_public: animalId }).select('sireId_public damId_public').lean();
         };
 
-        const coefficient = await calculateInbreedingCoefficient(id_public, fetchAnimal, generations);
+        const result = await calculateInbreedingCoefficientWithDiagnostics(id_public, fetchAnimal, generations);
 
         // Update the animal's record with the cached value if the user owns it
-        await Animal.updateOne({ id_public, creatorId: req.user.id }, { inbreedingCoefficient: coefficient });
+        await Animal.updateOne({ id_public, creatorId: req.user.id }, { inbreedingCoefficient: result.inbreedingCoefficient });
 
-        res.json({ id_public, inbreedingCoefficient: coefficient });
+        res.json({ 
+            id_public, 
+            inbreedingCoefficient: result.inbreedingCoefficient,
+            commonAncestorCount: result.commonAncestorCount
+        });
     } catch (error) {
         console.error(`[ANIMALS] Error calculating inbreeding for ${req.params.id_public}:`, error);
         res.status(500).json({ message: 'Failed to calculate inbreeding coefficient', error: error.message });

@@ -46,6 +46,42 @@ async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations
 }
 
 /**
+ * Calculate inbreeding coefficient with diagnostic info (COI and common ancestor count)
+ * @returns {{ inbreedingCoefficient: Number, commonAncestorCount: Number }}
+ */
+async function calculateInbreedingCoefficientWithDiagnostics(animalId, fetchAnimal, generations = 50) {
+    if (!animalId) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
+
+    const pedigree = await buildPedigree(animalId, fetchAnimal, generations);
+    const commonAncestors = findCommonAncestors(pedigree);
+
+    if (commonAncestors.length === 0) {
+        return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
+    }
+
+    let coi = 0;
+    for (const ancestor of commonAncestors) {
+        const pathsToSire = findPathsToAncestor(pedigree.sire, ancestor.id, []);
+        const pathsToDam = findPathsToAncestor(pedigree.dam, ancestor.id, []);
+
+        for (const sPath of pathsToSire) {
+            for (const dPath of pathsToDam) {
+                const n1 = sPath.length;
+                const n2 = dPath.length;
+                const fa = ancestor.inbreeding || 0;
+
+                coi += Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
+            }
+        }
+    }
+
+    return {
+        inbreedingCoefficient: parseFloat((coi * 100).toFixed(2)),
+        commonAncestorCount: commonAncestors.length
+    };
+}
+
+/**
  * Build a pedigree tree recursively.
  *
  * Performance: nodeCache memoises completed subtrees keyed by `${animalId}:${depth}`.
@@ -351,6 +387,7 @@ async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations 
 
 module.exports = {
     calculateInbreedingCoefficient,
+    calculateInbreedingCoefficientWithDiagnostics,
     calculatePairingInbreeding,
     buildPedigree,
     buildPedigreeDAG,
