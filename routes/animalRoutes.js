@@ -73,27 +73,37 @@ router.get('/inbreeding/pairing', async (req, res) => {
 // GET /api/animals/:id_public - Get a single animal by public ID
 router.get('/:id_public', async (req, res) => {
     try {
-        const animal = await Animal.findOne({
-            id_public: req.params.id_public,
-            creatorId: req.user.id
+        const { id_public } = req.params;
+        const userId = req.user.id;
+        
+        // First check: user is the owner
+        let animal = await Animal.findOne({
+            id_public,
+            creatorId: userId
         }).lean();
 
-        if (!animal) {
-            // Check for view-only access if not the owner
-            const viewOnlyAnimal = await Animal.findOne({
-                id_public: req.params.id_public,
-                viewOnlyForUsers: req.user.id
-            }).lean();
-
-            if (!viewOnlyAnimal) {
-                return res.status(404).json({ message: 'Animal not found or you do not have permission to view it.' });
+        if (animal) {
+            // Ensure isViewOnly is NOT set for owned animals
+            if (animal.isViewOnly) {
+                delete animal.isViewOnly;
             }
+            return res.json(animal);
+        }
+
+        // Second check: user has view-only access (transferred to them)
+        const viewOnlyAnimal = await Animal.findOne({
+            id_public,
+            viewOnlyForUsers: userId
+        }).lean();
+
+        if (viewOnlyAnimal) {
             // Add isViewOnly flag for frontend context
             viewOnlyAnimal.isViewOnly = true;
             return res.json(viewOnlyAnimal);
         }
 
-        res.json(animal);
+        // Not found or no permission
+        return res.status(404).json({ message: 'Animal not found or you do not have permission to view it.' });
     } catch (error) {
         console.error(`[ANIMALS] Error fetching animal ${req.params.id_public}:`, error);
         res.status(500).json({ message: 'Failed to fetch animal', error: error.message });
