@@ -801,6 +801,97 @@ const PublicAnimalSchema = new mongoose.Schema({
     insurance: { type: String, default: null },
     legalStatus: { type: String, default: null },
     
+    // --- PROMOTED TO PUBLIC: Health Records ---
+    vaccinations: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    medications: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    medicalConditions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    allergies: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    labResults: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    vetVisits: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    parasiteControl: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    dewormingRecords: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    healthClearances: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    parasitePreventionSchedule: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    spayNeuterDate: { type: Date, default: null },
+    isNeutered: { type: Boolean, default: false },
+    heartwormStatus: { type: String, default: null },
+    hipElbowScores: { type: String, default: null },
+    geneticTestResults: { type: String, default: null },
+    eyeClearance: { type: String, default: null },
+    cardiacClearance: { type: String, default: null },
+    
+    // --- PROMOTED TO PUBLIC: Behavior & Safety ---
+    aggressionLevel: { type: Number, default: 3 },
+    aggressionTriggers: { type: String, default: null },
+    fearAnxietyLevel: { type: Number, default: 3 },
+    preyDriveLevel: { type: String, default: 'Unknown' },
+    biteHistory: { type: String, default: null },
+    foodAggressionLevel: { type: String, default: 'None' },
+    reactivityNotes: { type: String, default: null },
+    
+    // --- PROMOTED TO PUBLIC: Training & Certifications ---
+    trainingLevel: { type: String, default: null },
+    trainingDisciplines: { type: String, default: null },
+    certifications: { type: String, default: null },
+    workingRole: { type: String, default: null },
+    
+    // --- PROMOTED TO PUBLIC: Reproduction & Breeding ---
+    breedingRole: { type: String, enum: ['sire', 'dam', 'both', null], default: null },
+    lastMatingDate: { type: Date, default: null },
+    successfulMatings: { type: Number, default: null },
+    lastPregnancyDate: { type: Date, default: null },
+    offspringCount: { type: Number, default: null },
+    fertilityStatus: { type: String, default: 'Unknown' },
+    fertilityNotes: { type: String, default: null },
+    damFertilityStatus: { type: String, default: 'Unknown' },
+    damFertilityNotes: { type: String, default: null },
+    breedingRecords: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    artificialInseminationUsed: { type: Boolean, default: null },
+    reproductiveClearances: { type: String, default: null },
+    
+    // --- PROMOTED TO PUBLIC: Care & Husbandry ---
+    housingType: { type: String, default: null },
+    bedding: { type: String, default: null },
+    temperatureRange: { type: String, default: null },
+    humidity: { type: String, default: null },
+    lighting: { type: String, default: null },
+    exerciseRequirements: { type: String, default: null },
+    dailyExerciseMinutes: { type: Number, default: null },
+    groomingNeeds: { type: String, default: null },
+    sheddingLevel: { type: String, default: null },
+    crateTrained: { type: Boolean, default: null },
+    litterTrained: { type: Boolean, default: null },
+    leashTrained: { type: Boolean, default: null },
+    
+    // --- PROMOTED TO PUBLIC: Show & Awards ---
+    shows: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    workingTitles: { type: String, default: null },
+    
+    // --- PROMOTED TO PUBLIC: Legal & Restrictions ---
+    breedingRestrictions: { type: String, default: null },
+    exportRestrictions: { type: String, default: null },
+    breederBuybackClause: { type: String, default: null },
+    
+    // --- MARKETPLACE LISTING (PUBLIC) ---
+    // Availability & Pricing (part of public listing when animal is for sale/breeding)
+    isForSale: { type: Boolean, default: false },
+    availableForBreeding: { type: Boolean, default: false },
+    salePriceAmount: { type: Number, default: null },
+    salePriceCurrency: { type: String, default: 'USD' },
+    studFeeAmount: { type: Number, default: null },
+    studFeeCurrency: { type: String, default: 'USD' },
+    
+    // --- ADDITIONAL PUBLIC: List 3 Fields (Collaboration Features) ---
+    // Care Tasks and Maintenance
+    careTasks: [{ type: String }],
+    // Public-facing remarks (separate from private notes)
+    publicRemarks: { type: String, default: null },
+    // Tags for categorization
+    tags: [{ type: String, trim: true }],
+    // Original breeder information for pedigree clarity
+    originalCreatorId_public: { type: String, default: null },
+    originalBreederName: { type: String, default: null },
+    
     // Public display settings
     isDisplay: { type: Boolean, default: false }, // Main public visibility toggle
     
