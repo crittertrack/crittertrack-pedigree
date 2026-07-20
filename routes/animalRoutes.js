@@ -2,7 +2,7 @@
 const router = express.Router();
 const { Animal } = require('../database/models');
 const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
-const { calculateInbreedingCoefficient, calculatePairingInbreeding } = require('../utils/inbreeding');
+const { calculateInbreedingCoefficient, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication to all routes
@@ -42,22 +42,28 @@ router.get('/inbreeding/pairing', async (req, res) => {
 
         // Verify both animals exist
         const [sire, dam] = await Promise.all([
-            Animal.findOne({ id_public: sireId }).select('sireId_public damId_public').lean(),
-            Animal.findOne({ id_public: damId }).select('sireId_public damId_public').lean()
+            Animal.findOne({ id_public: sireId }).lean(),
+            Animal.findOne({ id_public: damId }).lean()
         ]);
 
         if (!sire || !dam) {
             return res.status(404).json({ message: 'One or both animals not found' });
         }
 
-        // Calculate COI for hypothetical offspring with these parents
+        // Calculate COI with ancestor breakdown
         const fetchAnimal = async (animalId) => {
-            return Animal.findOne({ id_public: animalId }).select('sireId_public damId_public').lean();
+            return Animal.findOne({ id_public: animalId }).select('sireId_public damId_public name').lean();
         };
 
-        const inbreedingCoefficient = await calculatePairingInbreeding(sireId, damId, fetchAnimal, parseInt(generations) || 20);
+        const result = await explainPairingInbreeding(sireId, damId, fetchAnimal, parseInt(generations) || 20);
 
-        res.json({ sireId, damId, inbreedingCoefficient });
+        res.json({ 
+            sireId, 
+            damId, 
+            inbreedingCoefficient: result.total,
+            generations: parseInt(generations) || 20,
+            breakdown: result.breakdown
+        });
     } catch (error) {
         console.error('[ANIMALS] Error calculating pairing COI:', error);
         res.status(500).json({ message: 'Failed to calculate COI for pairing', error: error.message });
@@ -115,7 +121,14 @@ router.get('/any/:id_public', async (req, res) => {
         const publicAnimal = await PublicAnimal.findOne({ id_public }).lean();
 
         if (publicAnimal) {
-            return res.json(publicAnimal);
+            // Backfill visibility fields from Animal collection (PublicAnimal doesn't store these)
+            const privateAnimal = await Animal.findOne({ id_public }).select('showOnPublicProfile isOwned archived').lean();
+            return res.json({
+                ...publicAnimal,
+                showOnPublicProfile: privateAnimal?.showOnPublicProfile ?? true,
+                isOwned: privateAnimal?.isOwned ?? true,
+                archived: privateAnimal?.archived ?? false
+            });
         }
 
         // 3. As a last resort, check if an animal with this ID exists at all, but return only public-safe fields
@@ -236,8 +249,8 @@ router.get('/:id_public/relationships', async (req, res) => {
             }
         }
 
-        // Filter all results to only include public animals
-        const publicOnlyFilter = (animal) => animal.showOnPublicProfile || animal.isDisplay;
+        // Filter all results to only include public animals (must be public, owned, and not archived)
+        const publicOnlyFilter = (animal) => (animal.showOnPublicProfile || animal.isDisplay) && animal.isOwned !== false && animal.archived !== true;
         for (const key in rels) {
             rels[key] = rels[key].filter(publicOnlyFilter);
         }
