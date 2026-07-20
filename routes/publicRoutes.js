@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
 const { PublicAnimal, Animal, PublicProfile, User, GeneticsData, Litter, BreederRating } = require('../database/models');
-const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
+const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics } = require('../utils/inbreeding');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
 
@@ -891,9 +891,9 @@ router.get('/animal/:id_public/inbreeding', async (req, res) => {
             return animal;
         };
 
-        const coefficient = await calculateInbreedingCoefficient(id_public, fetchAnimal, generations);
+        const result = await calculateInbreedingCoefficientWithDiagnostics(id_public, fetchAnimal, generations);
 
-        res.status(200).json({ id_public, inbreedingCoefficient: coefficient });
+        res.status(200).json({ id_public, inbreedingCoefficient: result.inbreedingCoefficient, commonAncestorCount: result.commonAncestorCount });
     } catch (error) {
         console.error('Error calculating public inbreeding:', error);
         res.status(500).json({ message: 'Internal server error while calculating inbreeding.' });
