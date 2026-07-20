@@ -2,7 +2,7 @@
 const router = express.Router();
 const { Animal } = require('../database/models');
 const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
-const { calculateInbreedingCoefficient } = require('../utils/inbreeding');
+const { calculateInbreedingCoefficient, calculatePairingInbreeding } = require('../utils/inbreeding');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication to all routes
@@ -28,6 +28,39 @@ router.get('/archived', async (req, res) => {
     } catch (error) {
         console.error('[ANIMALS] Error fetching archived animals:', error);
         res.status(500).json({ message: 'Failed to fetch archived animals', error: error.message });
+    }
+});
+
+// GET /api/animals/inbreeding/pairing - Calculate COI for a pairing (two animals as parents)
+router.get('/inbreeding/pairing', async (req, res) => {
+    try {
+        const { sireId, damId, generations = 20 } = req.query;
+        
+        if (!sireId || !damId) {
+            return res.status(400).json({ message: 'Both sireId and damId are required' });
+        }
+
+        // Verify both animals exist
+        const [sire, dam] = await Promise.all([
+            Animal.findOne({ id_public: sireId }).select('sireId_public damId_public').lean(),
+            Animal.findOne({ id_public: damId }).select('sireId_public damId_public').lean()
+        ]);
+
+        if (!sire || !dam) {
+            return res.status(404).json({ message: 'One or both animals not found' });
+        }
+
+        // Calculate COI for hypothetical offspring with these parents
+        const fetchAnimal = async (animalId) => {
+            return Animal.findOne({ id_public: animalId }).select('sireId_public damId_public').lean();
+        };
+
+        const inbreedingCoefficient = await calculatePairingInbreeding(sireId, damId, fetchAnimal, parseInt(generations) || 20);
+
+        res.json({ sireId, damId, inbreedingCoefficient });
+    } catch (error) {
+        console.error('[ANIMALS] Error calculating pairing COI:', error);
+        res.status(500).json({ message: 'Failed to calculate COI for pairing', error: error.message });
     }
 });
 
