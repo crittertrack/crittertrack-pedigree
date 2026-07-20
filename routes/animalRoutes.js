@@ -121,13 +121,11 @@ router.get('/any/:id_public', async (req, res) => {
         const publicAnimal = await PublicAnimal.findOne({ id_public }).lean();
 
         if (publicAnimal) {
-            // Backfill visibility fields from Animal collection (PublicAnimal doesn't store these)
-            const privateAnimal = await Animal.findOne({ id_public }).select('showOnPublicProfile isOwned archived').lean();
+            // Backfill isDisplay from Animal collection (PublicAnimal doesn't store this)
+            const privateAnimal = await Animal.findOne({ id_public }).select('isDisplay').lean();
             return res.json({
                 ...publicAnimal,
-                showOnPublicProfile: privateAnimal?.showOnPublicProfile ?? true,
-                isOwned: privateAnimal?.isOwned ?? true,
-                archived: privateAnimal?.archived ?? false
+                isDisplay: privateAnimal?.isDisplay ?? false
             });
         }
 
@@ -249,8 +247,8 @@ router.get('/:id_public/relationships', async (req, res) => {
             }
         }
 
-        // Filter all results to only include public animals (must be public, owned, and not archived)
-        const publicOnlyFilter = (animal) => (animal.showOnPublicProfile || animal.isDisplay) && animal.isOwned !== false && animal.archived !== true;
+        // Filter all results to only include displayable animals (based on isDisplay toggle only)
+        const publicOnlyFilter = (animal) => animal.isDisplay === true;
         for (const key in rels) {
             rels[key] = rels[key].filter(publicOnlyFilter);
         }
