@@ -921,6 +921,7 @@ const LitterSchema = new mongoose.Schema({
     breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
     breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
     matingDate: { type: Date, default: null }, // Unified mating date field (replaces pairingDate and matingDates)
+    pregnancyDate: { type: Date, default: null }, // Date when litter transitioned to pregnant state
     expectedDueDate: { type: Date, default: null },
     outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
     

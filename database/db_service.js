@@ -1189,6 +1189,8 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             isOwned: updatedAnimal.isOwned || false,
             isPregnant: updatedAnimal.isPregnant || false,
             isNursing: updatedAnimal.isNursing || false,
+            isInMating: updatedAnimal.isInMating || false,
+            isPlannedMating: updatedAnimal.isPlannedMating || false,
             // Include availability/sale fields (PUBLIC marketplace listing data)
             isForSale: updatedAnimal.isForSale || false,
             availableForBreeding: updatedAnimal.availableForBreeding || false,

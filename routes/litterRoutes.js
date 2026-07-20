@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
-const { Animal, User, Notification, Litter } = require('../database/models');
+const { Animal, User, Notification, Litter, PublicAnimal } = require('../database/models');
 const r2 = require('../storage/r2_client');
 // This router requires authMiddleware to be applied in index.js
 
@@ -53,8 +53,14 @@ const syncParentsInMating = async (creatorId, parentIdsPublic = []) => {
             }
         });
 
+        // Update both owned and public animal copies
         await Animal.updateOne(
             { creatorId, id_public },
+            { $set: { isPlannedMating, isInMating } }
+        );
+        
+        await PublicAnimal.updateOne(
+            { id_public },
             { $set: { isPlannedMating, isInMating } }
         );
     }
