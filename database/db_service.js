@@ -692,6 +692,11 @@ const addAnimal = async (appUserId_backend, animalData) => {
     if (animalData.lifeStage === '') {
         animalData.lifeStage = 'Unknown';
     }
+    
+    // Clean up invalid data before creating Animal instance
+    if (typeof animalData.parasitePreventionSchedule === 'string' && animalData.parasitePreventionSchedule === '') {
+        animalData.parasitePreventionSchedule = [];
+    }
 
     // Ensure creatorId_public is always present (required by schema)
     // It should be set by the route, but look it up as a fallback
@@ -710,12 +715,6 @@ const addAnimal = async (appUserId_backend, animalData) => {
         ...animalData,
     });
     console.log('[addAnimal] Creating animal with:', JSON.stringify({ breederAssignedId: newAnimal.breederAssignedId, geneticCode: newAnimal.geneticCode, remarks: newAnimal.remarks }));
-    
-    // Clean up invalid data before saving
-    if (typeof newAnimal.parasitePreventionSchedule === 'string' && newAnimal.parasitePreventionSchedule === '') {
-        newAnimal.parasitePreventionSchedule = [];
-    }
-    
     await newAnimal.save();
 
     // Update the User's ownedAnimals array
