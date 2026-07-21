@@ -710,6 +710,12 @@ const addAnimal = async (appUserId_backend, animalData) => {
         ...animalData,
     });
     console.log('[addAnimal] Creating animal with:', JSON.stringify({ breederAssignedId: newAnimal.breederAssignedId, geneticCode: newAnimal.geneticCode, remarks: newAnimal.remarks }));
+    
+    // Clean up invalid data before saving
+    if (typeof newAnimal.parasitePreventionSchedule === 'string' && newAnimal.parasitePreventionSchedule === '') {
+        newAnimal.parasitePreventionSchedule = [];
+    }
+    
     await newAnimal.save();
 
     // Update the User's ownedAnimals array
@@ -1098,6 +1104,11 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             mateAnimalId: updates.breedingRecords[0].mateAnimalId,
             id: updates.breedingRecords[0].id
         });
+    }
+    
+    // Clean up invalid data before saving
+    if (typeof updates.parasitePreventionSchedule === 'string' && updates.parasitePreventionSchedule === '') {
+        updates.parasitePreventionSchedule = [];
     }
     
     const updatedAnimal = await Animal.findOneAndUpdate(
