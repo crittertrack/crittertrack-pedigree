@@ -86,7 +86,7 @@ router.post('/', async (req, res) => {
 
         // 3. Create Notification for the Recipient
         const sender = await User.findById(fromUserId).select('personalName breederName').session(session); // Pass session
-        const senderName = sender.breederName || sender.personalName || 'A CritterTrack User';
+        const senderName = sender?.breederName || sender?.personalName || 'A CritterTrack User';
         
         // Get recipient's public ID
         const recipient = await User.findById(toUserId).select('id_public').session(session);
