@@ -70,12 +70,19 @@ router.post('/send', async (req, res) => {
             }
         }
 
+        // Validate that either message text or images are provided
+        const { images = [] } = req.body;
+        if (!normalizedMessage && (!Array.isArray(images) || images.length === 0)) {
+            return res.status(400).json({ error: 'Message text or at least one image is required' });
+        }
+
         // Prepare message data
         const messageData = {
             conversationId,
             senderId,
             receiverId,
             message: normalizedMessage,
+            images: Array.isArray(images) ? images : [],
             read: false
         };
 

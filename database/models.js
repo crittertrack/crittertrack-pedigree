@@ -1162,7 +1162,8 @@ const MessageSchema = new mongoose.Schema({
     conversationId: { type: String, required: true, index: true }, // Format: "userId1_userId2" (sorted)
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    message: { type: String, required: true },
+    message: { type: String, default: '' }, // Text message (can be empty if only images)
+    images: [{ type: String }], // Array of image URLs
     read: { type: Boolean, default: false, index: true },
     deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who have deleted this message
     // Moderator message fields
