@@ -103,7 +103,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
  * Send bug report notification to admin
  */
 const sendBugReportNotification = async (reportData) => {
-    const { userName, userEmail, category, description, page, createdAt } = reportData;
+    const { userName, userEmail, category, description, stepsToReproduce, hasImages, imageCount, page, createdAt } = reportData;
     
     try {
         await resend.emails.send({
@@ -117,10 +117,15 @@ const sendBugReportNotification = async (reportData) => {
                         <p><strong>Reporter:</strong> ${userName} (${userEmail})</p>
                         <p><strong>Category:</strong> <span style="background-color: #ec4899; color: white; padding: 3px 10px; border-radius: 3px;">${category}</span></p>
                         <p><strong>Page:</strong> ${page}</p>
+                        <p><strong>Images:</strong> ${hasImages ? `Yes (${imageCount})` : 'None'}</p>
                         <p><strong>Submitted:</strong> ${new Date(createdAt).toLocaleString()}</p>
                     </div>
                     <h3>Description:</h3>
                     <p style="background-color: #f9fafb; padding: 15px; border-left: 3px solid #ec4899;">${description}</p>
+                    ${stepsToReproduce ? `
+                    <h3>Steps to Reproduce:</h3>
+                    <p style="background-color: #f9fafb; padding: 15px; border-left: 3px solid #f59e0b; white-space: pre-wrap;">${stepsToReproduce}</p>
+                    ` : ''}
                     <hr style="margin-top: 30px; border: none; border-top: 1px solid #e5e7eb;">
                     <p style="color: #6b7280; font-size: 12px;">CritterTrack Admin Notification</p>
                 </div>

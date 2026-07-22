@@ -1080,6 +1080,14 @@ const BugReportSchema = new mongoose.Schema({
         required: true 
     },
     description: { type: String, required: true },
+    stepsToReproduce: { type: String, default: null },
+    images: [{ type: String }], // Array of image URLs from uploads
+    browserInfo: {
+        userAgent: { type: String, default: null },
+        platform: { type: String, default: null },
+        language: { type: String, default: null },
+        screenResolution: { type: String, default: null },
+    },
     page: { type: String, default: null },
     status: { 
         type: String, 

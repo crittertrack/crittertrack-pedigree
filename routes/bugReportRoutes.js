@@ -6,13 +6,34 @@ const { sendBugReportNotification } = require('../utils/emailService');
 // Submit a new bug report
 router.post('/', async (req, res) => {
     try {
-        const { category, description, page } = req.body;
-        const userId = req.user.id; // Fixed: auth middleware sets req.user.id, not req.user.userId
+        const { category, description, stepsToReproduce, images, browserInfo, page } = req.body;
+        const userId = req.user.id;
 
         // Validate required fields
         if (!category || !description) {
             return res.status(400).json({ 
                 error: 'Category and description are required' 
+            });
+        }
+
+        // Validate category
+        const validCategories = ['Bug', 'Feature Request', 'General Feedback'];
+        if (!validCategories.includes(category)) {
+            return res.status(400).json({ 
+                error: 'Invalid category. Must be: Bug, Feature Request, or General Feedback' 
+            });
+        }
+
+        // Validate images array
+        if (images && !Array.isArray(images)) {
+            return res.status(400).json({ 
+                error: 'Images must be an array of URLs' 
+            });
+        }
+
+        if (images && images.length > 5) {
+            return res.status(400).json({ 
+                error: 'Maximum 5 images allowed per report' 
             });
         }
 
@@ -24,25 +45,31 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Create the bug report
+        // Create the bug report with all new fields
         const bugReport = new BugReport({
             userId,
             userEmail: user.email,
             userName: user.personalName || user.breederName || 'Anonymous',
             category,
             description,
+            stepsToReproduce: stepsToReproduce || null,
+            images: images || [],
+            browserInfo: browserInfo || null,
             page: page || null
         });
 
         await bugReport.save();
 
-        // Send admin email notification
+        // Send admin email notification with extended info
         try {
             await sendBugReportNotification({
                 userName: user.personalName || user.breederName || 'Anonymous',
                 userEmail: user.email,
                 category,
                 description,
+                stepsToReproduce: stepsToReproduce || null,
+                hasImages: images && images.length > 0,
+                imageCount: images ? images.length : 0,
                 page: page || 'Not specified',
                 createdAt: bugReport.createdAt
             });
