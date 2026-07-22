@@ -168,7 +168,7 @@ const documentFileFilter = (req, file, cb) => {
 };
 
 const storage = multer.memoryStorage(); // Use memory storage to forward files to Worker
-const uploadSingle = multer({ storage, limits: { fileSize: 500 * 1024 }, fileFilter: imageFileFilter });
+const uploadSingle = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: imageFileFilter });
 const uploadDocument = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: documentFileFilter }); // 10MB for documents
 
 // Provide a guarded upload endpoint that enforces file type and size server-side
@@ -1001,7 +1001,7 @@ app.use((err, req, res, next) => {
     console.error(err && err.stack ? err.stack : err);
     // Multer file size exceeded
     if (err && err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ message: 'Uploaded file exceeds 500KB limit. Please compress the image (client will attempt compression automatically) or choose a smaller file.' });
+        return res.status(413).json({ message: 'Uploaded file exceeds 5MB limit. Please compress the image or choose a smaller file.' });
     }
     // Invalid file type from multer fileFilter
     if (err && err.message === 'INVALID_FILE_TYPE') {
@@ -1135,3 +1135,5 @@ setInterval(matingReminderCronJob, 60 * 60 * 1000);
 setTimeout(matingReminderCronJob, 10000);
 
 // Updated for mate data debug logging
+
+
