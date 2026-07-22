@@ -2146,6 +2146,7 @@ const AnimalTransferSchema = new mongoose.Schema(
             default: null,
         },
         price: { type: Number, default: 0 }, // Added for transfer price
+        notes: { type: String, default: '' }, // Notes/description for the transfer
         type: { type: String, enum: ['ownership', 'view_only_grant'], default: 'ownership' }, // New field to distinguish transfer types
         isLegacyMigration: { type: Boolean, default: false }, // New field to mark legacy migrations
     },

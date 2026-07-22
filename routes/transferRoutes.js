@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const { AnimalTransfer, Animal, Transaction, Notification, User, PublicProfile } = require('../database/models'); // PublicAnimal removed as accept-view-only route is removed
+const { AnimalTransfer, Animal, Notification, User, PublicProfile } = require('../database/models'); // PublicAnimal removed as accept-view-only route is removed
 
 // GET /api/transfers - Get all transfers for the logged-in user (sent and received)
 router.get('/', async (req, res) => {
@@ -48,23 +48,6 @@ router.post('/', async (req, res) => {
 
         // 2. Create the Transfer Record
         const transferType = req.body.transferType || 'gift'; // Ensure transferType is set
-        let transactionId = null;
-
-        // If transfer is a sale or purchase, create a transaction record
-        if (transferType === 'sale' || transferType === 'purchase') {
-            // Assuming a basic Transaction model with fields like amount, currency, status, etc.
-            // You would need to define the actual fields for your Transaction model.
-            const transaction = await Transaction.create([{
-                amount: price, // Use the price from the transfer request
-                currency: 'USD', // Example currency, adjust as needed
-                status: 'pending', // Initial status for the transaction
-                type: transferType,
-                fromUserId: fromUserId,
-                toUserId: toUserId,
-                animalId_public: animalId_public,
-            }], { session });
-            transactionId = transaction[0]._id;
-        }
 
         const transfer = await AnimalTransfer.create([{
             fromUserId,
@@ -74,7 +57,6 @@ router.post('/', async (req, res) => {
             notes: notes || '',
             status: 'pending',
             transferType: transferType,
-            transactionId: transactionId, // Link the created transaction,
             type: 'ownership', // Explicitly set type for new ownership transfers
         }], { session });
         const createdTransfer = transfer[0]; // Get the created document
