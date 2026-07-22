@@ -232,7 +232,6 @@ const AnimalSchema = new mongoose.Schema({
     pendingTransferId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'AnimalTransfer',
-        unique: true, // Ensures only one non-null value
         sparse: true, // Allows multiple documents to have null values
         index: true, // For efficient lookups
     },
