@@ -395,6 +395,98 @@ router.post('/:id/decline', async (req, res) => {
     }
 });
 
+// POST /api/transfers/return - Return an animal to its original breeder/creator
+router.post('/return', async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const userId = req.user.id;
+        const { animalId_public } = req.body;
+
+        if (!animalId_public) {
+            await session.abortTransaction();
+            return res.status(400).json({ message: 'animalId_public is required.' });
+        }
+
+        // Find the animal - current owner must be the one returning it
+        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: userId }).session(session);
+
+        if (!animal) {
+            await session.abortTransaction();
+            return res.status(404).json({ message: 'Animal not found or you are not the current owner.' });
+        }
+
+        // Must have an originalCreatorId to return to
+        if (!animal.originalCreatorId) {
+            await session.abortTransaction();
+            return res.status(400).json({ message: 'This animal has no original breeder/owner to return to.' });
+        }
+
+        // Prevent duplicate pending returns
+        if (animal.pendingTransferId) {
+            await session.abortTransaction();
+            return res.status(409).json({ message: 'This animal already has a pending transfer request.' });
+        }
+
+        const originalOwnerId = animal.originalCreatorId;
+
+        // Create the return transfer record
+        const transfer = await AnimalTransfer.create([{
+            fromUserId: userId,
+            toUserId: originalOwnerId,
+            animalId_public,
+            price: 0,
+            notes: 'Animal returned to original breeder',
+            status: 'pending',
+            transferType: 'return',
+            type: 'ownership',
+        }], { session });
+
+        const createdTransfer = transfer[0];
+
+        // Set pendingTransferId on animal
+        animal.pendingTransferId = createdTransfer._id;
+        await animal.save({ session });
+
+        // Notify the original owner
+        try {
+            const returnerProfile = await PublicProfile.findOne({ userId_backend: userId }).session(session);
+            const returnerName = returnerProfile?.breederName || returnerProfile?.personalName || 'A CritterTrack User';
+
+            const originalOwner = await User.findById(originalOwnerId).select('id_public').session(session);
+
+            await Notification.create([{
+                userId: originalOwnerId,
+                userId_public: originalOwner?.id_public || '',
+                type: 'transfer_request',
+                status: 'pending',
+                animalId_public,
+                animalName: animal.name,
+                animalImageUrl: animal.imageUrl || '',
+                transferId: createdTransfer._id,
+                message: `${returnerName} wants to return ${animal.name} (${animalId_public}) to you.`,
+                metadata: {
+                    transferId: createdTransfer._id,
+                    animalId: animalId_public,
+                    isReturn: true
+                }
+            }], { session });
+        } catch (notifError) {
+            console.error('[Return Transfer] Notification error:', notifError.message);
+        }
+
+        await session.commitTransaction();
+        res.status(201).json({ message: 'Return request sent successfully.', transfer: createdTransfer });
+
+    } catch (error) {
+        await session.abortTransaction();
+        console.error('Error returning animal:', error);
+        res.status(500).json({ message: 'Internal server error while returning animal.' });
+    } finally {
+        session.endSession();
+    }
+});
+
 router.post('/:id/withdraw', async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
