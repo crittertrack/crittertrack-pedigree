@@ -2354,21 +2354,33 @@ const EnclosureSchema = new mongoose.Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
-    size: { type: String, default: '', trim: true },           // e.g. 40 gallon, 48x24x24
+    purpose: { type: String, enum: ['general', 'reproduction', 'health', ''], default: 'general' },
+    location: { type: String, default: '', trim: true },
     dimensions: {
-        length: { type: String, default: '' },
-        width: { type: String, default: '' },
-        height: { type: String, default: '' },
-        unit: { type: String, default: 'cm', enum: ['cm', 'in'] }
+        length: { type: Number, default: null },
+        width: { type: Number, default: null },
+        height: { type: Number, default: null },
+        unit: { type: String, default: 'in', enum: ['cm', 'in'] }
     },
+    capacity: { type: Number, default: null },
+    tempMin: { type: Number, default: null },
+    tempMax: { type: Number, default: null },
+    temperatureUnit: { type: String, default: 'C', enum: ['C', 'F'] },
+    humidityMin: { type: Number, default: null },
+    humidityMax: { type: Number, default: null },
+    lightsOnTime: { type: String, default: null },
+    lightsOffTime: { type: String, default: null },
+    lightTimeFormat: { type: String, enum: ['12h', '24h'], default: '24h' },
     notes: { type: String, default: '', maxlength: 500 },
-    purpose: { type: String, enum: ['general', 'reproduction', 'health', ''], default: 'general' }, // which tab this enclosure belongs to
     // Flexible cleaning/maintenance tasks for the enclosure (spot clean, full clean, bulb change, etc.)
     cleaningTasks: [{
         taskName: { type: String, required: true, trim: true },
         lastDoneDate: { type: Date, default: null },
         frequencyDays: { type: Number, default: null },
     }],
+    tags: [{ type: String, trim: true }],
+    speciesLabels: [{ type: String, trim: true }],
+    imageUrl: { type: String, default: null },
 }, { timestamps: true });
 const Enclosure = mongoose.model('Enclosure', EnclosureSchema);
 
