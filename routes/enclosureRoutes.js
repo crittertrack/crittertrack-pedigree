@@ -16,16 +16,36 @@ router.get('/', async (req, res) => {
 // POST create enclosure
 router.post('/', async (req, res) => {
     try {
-        const { name, enclosureType, size, notes, cleaningTasks, dimensions } = req.body;
+        const {
+            name, enclosureType, purpose, location, dimensions, capacity,
+            tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
+            lightsOnTime, lightsOffTime, lightTimeFormat, notes,
+            cleaningTasks, tags, speciesLabels, imageUrl
+        } = req.body;
+
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
+
         const enc = new Enclosure({
             creatorId: req.user.id,
             name: name.trim(),
             enclosureType: enclosureType?.trim() || '',
-            size: size?.trim() || '',
+            purpose: purpose || 'general',
+            location: location?.trim() || '',
+            dimensions: dimensions || { length: null, width: null, height: null, unit: 'in' },
+            capacity: capacity ? Number(capacity) : null,
+            tempMin: tempMin ? Number(tempMin) : null,
+            tempMax: tempMax ? Number(tempMax) : null,
+            temperatureUnit: temperatureUnit || 'C',
+            humidityMin: humidityMin ? Number(humidityMin) : null,
+            humidityMax: humidityMax ? Number(humidityMax) : null,
+            lightsOnTime: lightsOnTime || null,
+            lightsOffTime: lightsOffTime || null,
+            lightTimeFormat: lightTimeFormat || '24h',
             notes: notes?.trim() || '',
             cleaningTasks: Array.isArray(cleaningTasks) ? cleaningTasks : [],
-            dimensions: dimensions || { length: '', width: '', height: '', unit: 'cm' }
+            tags: Array.isArray(tags) ? tags : [],
+            speciesLabels: Array.isArray(speciesLabels) ? speciesLabels : [],
+            imageUrl: imageUrl || null
         });
         await enc.save();
         res.status(201).json(enc);
@@ -38,16 +58,37 @@ router.post('/', async (req, res) => {
 // PUT update enclosure
 router.put('/:id', async (req, res) => {
     try {
-        const { name, enclosureType, size, notes, cleaningTasks, dimensions } = req.body;
+        const {
+            name, enclosureType, purpose, location, dimensions, capacity,
+            tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
+            lightsOnTime, lightsOffTime, lightTimeFormat, notes,
+            cleaningTasks, tags, speciesLabels, imageUrl
+        } = req.body;
+
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
+
         const setData = {
             name: name.trim(),
             enclosureType: enclosureType?.trim() || '',
-            size: size?.trim() || '',
+            purpose: purpose || 'general',
+            location: location?.trim() || '',
+            dimensions: dimensions || { length: null, width: null, height: null, unit: 'in' },
+            capacity: capacity ? Number(capacity) : null,
+            tempMin: tempMin ? Number(tempMin) : null,
+            tempMax: tempMax ? Number(tempMax) : null,
+            temperatureUnit: temperatureUnit || 'C',
+            humidityMin: humidityMin ? Number(humidityMin) : null,
+            humidityMax: humidityMax ? Number(humidityMax) : null,
+            lightsOnTime: lightsOnTime || null,
+            lightsOffTime: lightsOffTime || null,
+            lightTimeFormat: lightTimeFormat || '24h',
             notes: notes?.trim() || '',
+            cleaningTasks: Array.isArray(cleaningTasks) ? cleaningTasks : [],
+            tags: Array.isArray(tags) ? tags : [],
+            speciesLabels: Array.isArray(speciesLabels) ? speciesLabels : [],
+            imageUrl: imageUrl || null
         };
-        if (Array.isArray(cleaningTasks)) setData.cleaningTasks = cleaningTasks;
-        if (dimensions) setData.dimensions = dimensions;
+
         const enc = await Enclosure.findOneAndUpdate(
             { _id: req.params.id, creatorId: req.user.id },
             { $set: setData },
