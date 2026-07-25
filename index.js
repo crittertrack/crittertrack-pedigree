@@ -32,6 +32,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const moderationRoutes = require('./routes/moderationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const fieldTemplateRoutes = require('./routes/fieldTemplateRoutes');
+const locationsRoutes = require('./routes/locations');
 
 
 const app = express();
@@ -895,6 +896,9 @@ app.delete('/api/users/account', authMiddleware, async (req, res) => {
 app.use('/api/animals', authMiddleware, animalRoutes);
 app.use('/api/litters', authMiddleware, litterRoutes);
 
+// Location routes (for enclosures)
+app.use('/api/locations', authMiddleware, locationsRoutes);
+
 // Rating Routes (Require authMiddleware for submit/delete)
 const ratingRoutes = require('./routes/ratingRoutes');
 app.use('/api/ratings', authMiddleware, ratingRoutes);
@@ -1135,5 +1139,3 @@ setInterval(matingReminderCronJob, 60 * 60 * 1000);
 setTimeout(matingReminderCronJob, 10000);
 
 // Updated for mate data debug logging
-
-
