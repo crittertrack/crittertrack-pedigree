@@ -2349,13 +2349,23 @@ const SupplyItemSchema = new mongoose.Schema({
 }, { timestamps: true });
 const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
 
+// ── Location ──────────────────────────────────────────────────────────────────
+const LocationSchema = new mongoose.Schema({
+    creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    name: { type: String, required: true, trim: true },
+    type: { type: String, enum: ['building', 'room'], required: true },
+    parentLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },
+}, { timestamps: true });
+const Location = mongoose.model('Location', LocationSchema);
+
 // ── Enclosure ─────────────────────────────────────────────────────────────────
 const EnclosureSchema = new mongoose.Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
     purpose: { type: String, enum: ['general', 'reproduction', 'health', ''], default: 'general' },
-    location: { type: String, default: '', trim: true },
+    buildingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },
+    roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },
     dimensions: {
         length: { type: Number, default: null },
         width: { type: Number, default: null },
@@ -2501,4 +2511,5 @@ module.exports = {
     BreederRating,
     RatingReport,
     Favorite,
+    Location,
 };
