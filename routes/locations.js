@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 
 // POST a new location
 router.post('/', async (req, res) => {
-    const { name, type, parentLocationId } = req.body;
+    const { name, type, parentLocationId, address } = req.body;
     if (!name || !type) {
         return res.status(400).json({ message: 'Name and type are required' });
     }
@@ -30,6 +30,7 @@ router.post('/', async (req, res) => {
             name,
             type,
             parentLocationId: type === 'building' ? null : parentLocationId,
+            address: type === 'building' ? address : null,
         });
         await newLocation.save();
         res.status(201).json(newLocation);
@@ -41,7 +42,7 @@ router.post('/', async (req, res) => {
 
 // PUT (update) an existing location
 router.put('/:id', async (req, res) => {
-    const { name, parentLocationId } = req.body;
+    const { name, parentLocationId, address } = req.body;
     if (!name) {
         return res.status(400).json({ message: 'Name is required' });
     }
@@ -53,6 +54,10 @@ router.put('/:id', async (req, res) => {
         }
 
         location.name = name;
+        // Only allow updating address for buildings
+        if (location.type === 'building' && address) {
+            location.address = address;
+        }
         // Only allow updating parentLocationId for rooms
         if (location.type === 'room') {
             // A null parentLocationId is valid (making it an unassigned room)

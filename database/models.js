@@ -2355,6 +2355,13 @@ const LocationSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
     type: { type: String, enum: ['building', 'room'], required: true },
     parentLocationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },
+    address: {
+        street: { type: String, default: null, trim: true },
+        city: { type: String, default: null, trim: true },
+        state: { type: String, default: null, trim: true },
+        postalCode: { type: String, default: null, trim: true },
+        country: { type: String, default: null, trim: true },
+    },
 }, { timestamps: true });
 const Location = mongoose.model('Location', LocationSchema);
 
