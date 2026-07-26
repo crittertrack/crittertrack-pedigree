@@ -2312,6 +2312,18 @@ const GeneticsDataSchema = new mongoose.Schema({
 GeneticsDataSchema.index({ speciesName: 1, isPublished: 1 });
 const GeneticsData = mongoose.model('GeneticsData', GeneticsDataSchema);
 
+// ── Enclosure Changelog ─────────────────────────────────────────────────────
+const EnclosureLogSchema = new mongoose.Schema({
+    enclosureId: { type: mongoose.Schema.Types.ObjectId, ref: 'Enclosure', required: true, index: true },
+    enclosureName: { type: String, default: '' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userName: { type: String, default: '' },
+    action: { type: String, required: true }, // 'update', 'assign_animal', 'unassign_animal', 'task_complete', 'task_added', 'task_removed', 'note'
+    details: { type: mongoose.Schema.Types.Mixed, default: {} },
+}, { timestamps: true });
+EnclosureLogSchema.index({ enclosureId: 1, createdAt: -1 });
+const EnclosureLog = mongoose.model('EnclosureLog', EnclosureLogSchema);
+
 // ── Animal Changelog ────────────────────────────────────────────────────────
 const AnimalLogSchema = new mongoose.Schema({
     animalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Animal', required: true, index: true },
@@ -2535,6 +2547,7 @@ module.exports = {
     AnimalTransfer,
     ModChat,
     Enclosure,
+    EnclosureLog,
     SupplyItem,
     AnimalLog,
     BreederRating,

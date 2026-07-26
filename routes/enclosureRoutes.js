@@ -1,6 +1,163 @@
 const express = require('express');
 const router = express.Router();
-const { Enclosure, Animal, SupplyItem } = require('../database/models');
+const { Enclosure, Animal, SupplyItem, EnclosureLog, UserActivityLog } = require('../database/models');
+const { logUserActivity } = require('../utils/userActivityLogger');
+
+// ── Helper: Compute field diffs between old and new enclosure data ──────────
+const FIELD_LABELS = {
+    name: 'Name',
+    enclosureType: 'Type',
+    purpose: 'Purpose',
+    location: 'Location',
+    buildingId: 'Building',
+    roomId: 'Room',
+    capacity: 'Capacity',
+    tempMin: 'Min Temperature',
+    tempMax: 'Max Temperature',
+    temperatureUnit: 'Temperature Unit',
+    humidityMin: 'Min Humidity',
+    humidityMax: 'Max Humidity',
+    lightsOnTime: 'Lights On Time',
+    lightsOffTime: 'Lights Off Time',
+    lightTimeFormat: 'Time Format',
+    notes: 'Description',
+    tags: 'Tags',
+    speciesLabels: 'Suitable Species',
+    imageUrl: 'Image',
+    enclosureType: 'Enclosure Type',
+    purpose: 'Purpose',
+};
+
+const DIFF_FIELDS = Object.keys(FIELD_LABELS);
+
+function computeFieldDiffs(oldData, newData) {
+    const changes = [];
+    for (const field of DIFF_FIELDS) {
+        const oldVal = oldData[field];
+        const newVal = newData[field];
+        // Normalize for comparison — arrays to JSON, objects to JSON
+        const a = JSON.stringify(oldVal);
+        const b = JSON.stringify(newVal);
+        if (a !== b) {
+            changes.push({
+                field,
+                label: FIELD_LABELS[field],
+                oldValue: oldVal,
+                newValue: newVal,
+            });
+        }
+    }
+
+    // Also check nested fields: dimensions
+    if (JSON.stringify(oldData.dimensions) !== JSON.stringify(newData.dimensions)) {
+        const oldDims = oldData.dimensions || {};
+        const newDims = newData.dimensions || {};
+        changes.push({
+            field: 'dimensions',
+            label: 'Dimensions',
+            oldValue: oldDims.length ? `${oldDims.length}x${oldDims.width}x${oldDims.height} ${oldDims.unit || 'in'}` : null,
+            newValue: newDims.length ? `${newDims.length}x${newDims.width}x${newDims.height} ${newDims.unit || 'in'}` : null,
+        });
+    }
+
+    // Check cleaningTasks changes
+    const oldTaskNames = (oldData.cleaningTasks || []).map(t => t.taskName).sort().join(',');
+    const newTaskNames = (newData.cleaningTasks || []).map(t => t.taskName).sort().join(',');
+    if (oldTaskNames !== newTaskNames) {
+        changes.push({
+            field: 'cleaningTasks',
+            label: 'Cleaning Tasks',
+            oldValue: oldData.cleaningTasks || [],
+            newValue: newData.cleaningTasks || [],
+        });
+    }
+
+    return changes;
+}
+
+// ── Helper: Log to all systems ──────────────────────────────────────────────
+async function logEnclosureActivity({
+    userId,
+    id_public,
+    enclosure,
+    action,
+    targetType = 'enclosure',
+    details = {},
+    previousValue = null,
+    newValue = null,
+    changes = null,
+    ipAddress = null,
+    userAgent = null,
+}) {
+    const userName = details.userName || 'System';
+
+    // 1. Log to UserActivityLog (global activity feed)
+    await logUserActivity({
+        userId,
+        id_public,
+        action,
+        targetType,
+        targetId: enclosure._id,
+        targetId_public: enclosure.name,
+        details: { enclosureName: enclosure.name, ...details },
+        previousValue,
+        newValue,
+        ipAddress,
+        userAgent,
+        success: true,
+    }).catch(err => console.error('[enclosureRoutes] Failed to log user activity:', err.message));
+
+    // 2. Log to EnclosureLog (enclosure-specific changelog collection)
+    await EnclosureLog.create({
+        enclosureId: enclosure._id,
+        enclosureName: enclosure.name,
+        userId,
+        userName,
+        action,
+        details: changes ? { changes, ...details } : details,
+    }).catch(err => console.error('[enclosureRoutes] Failed to create EnclosureLog:', err.message));
+
+    // 3. Log to enclosure.history (embedded array on the enclosure document)
+    await Enclosure.updateOne(
+        { _id: enclosure._id },
+        {
+            $push: {
+                history: {
+                    timestamp: new Date(),
+                    userId,
+                    userName,
+                    action,
+                    details: changes ? { changes, ...details } : details,
+                }
+            }
+        }
+    ).catch(err => console.error('[enclosureRoutes] Failed to push history:', err.message));
+}
+
+// ── Helpers for cleaning-task diffing ──────────────────────────────────────
+function compareTaskLists(oldTasks = [], newTasks = []) {
+    const changes = [];
+    const oldMap = new Map(oldTasks.map(t => [t.taskName, t]));
+    const newMap = new Map(newTasks.map(t => [t.taskName, t]));
+
+    // Added tasks
+    for (const t of newTasks) {
+        if (!oldMap.has(t.taskName)) {
+            changes.push({ action: 'task_added', taskName: t.taskName, task: t });
+        }
+    }
+    // Removed tasks
+    for (const t of oldTasks) {
+        if (!newMap.has(t.taskName)) {
+            changes.push({ action: 'task_removed', taskName: t.taskName, task: t });
+        }
+    }
+    return changes;
+}
+
+// =============================================================================
+// ROUTES
+// =============================================================================
 
 // GET all enclosures for the authenticated user
 router.get('/', async (req, res) => {
@@ -10,6 +167,73 @@ router.get('/', async (req, res) => {
     } catch (err) {
         console.error('[GET /api/enclosures]', err);
         res.status(500).json({ message: 'Failed to fetch enclosures' });
+    }
+});
+
+// GET /:id — Get single enclosure
+router.get('/:id', async (req, res) => {
+    try {
+        const enc = await Enclosure.findOne({ _id: req.params.id, creatorId: req.user.id }).lean();
+        if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
+        res.json(enc);
+    } catch (err) {
+        console.error('[GET /api/enclosures/:id]', err);
+        res.status(500).json({ message: 'Failed to fetch enclosure' });
+    }
+});
+
+// GET /:id/activity — Get aggregated activity for this enclosure
+router.get('/:id/activity', async (req, res) => {
+    try {
+        const { page = 1, limit = 50 } = req.query;
+        const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+        const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+        const skip = (parsedPage - 1) * parsedLimit;
+
+        const enc = await Enclosure.findOne({ _id: req.params.id, creatorId: req.user.id }).select('name').lean();
+        if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
+
+        // Get from EnclosureLog collection
+        const [logs, total] = await Promise.all([
+            EnclosureLog.find({ enclosureId: req.params.id })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parsedLimit)
+                .lean(),
+            EnclosureLog.countDocuments({ enclosureId: req.params.id }),
+        ]);
+
+// Also get from UserActivityLog (enclosure-specific actions only)
+        const enclosureActions = [
+            'enclosure_create', 'enclosure_update', 'enclosure_delete',
+            'enclosure_assign', 'enclosure_unassign', 'enclosure_task_done',
+        ];
+        const [activityLogs, activityTotal] = await Promise.all([
+            UserActivityLog.find({
+                userId: req.user.id,
+                action: { $in: enclosureActions },
+                'details.enclosureName': enc.name,
+            })
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .lean(),
+            UserActivityLog.countDocuments({
+                userId: req.user.id,
+                action: { $in: enclosureActions },
+                'details.enclosureName': enc.name,
+            }),
+        ]);
+
+        res.json({
+            logs,
+            activityLogs,
+            total: total + activityTotal,
+            page: parsedPage,
+            limit: parsedLimit,
+        });
+    } catch (err) {
+        console.error('[GET /api/enclosures/:id/activity]', err);
+        res.status(500).json({ message: 'Failed to fetch enclosure activity' });
     }
 });
 
@@ -48,9 +272,31 @@ router.post('/', async (req, res) => {
             speciesLabels: Array.isArray(speciesLabels) ? speciesLabels : [],
             imageUrl: imageUrl || null,
             buildingId: buildingId || null,
-            roomId: roomId || null
+            roomId: roomId || null,
         });
+
+        // Add initial history entry
+        enc.history = [{
+            timestamp: new Date(),
+            userId: req.user.id,
+            userName: req.user.personalName || req.user.email || 'User',
+            action: 'create',
+            details: { created: true },
+        }];
+
         await enc.save();
+
+        // Log creation to UserActivityLog
+        await logEnclosureActivity({
+            userId: req.user.id,
+            id_public: req.user.id_public,
+            enclosure: enc,
+            action: 'enclosure_create',
+            details: { userName: req.user.personalName || req.user.email || 'User' },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+        });
+
         res.status(201).json(enc);
     } catch (err) {
         console.error('[POST /api/enclosures]', err);
@@ -58,7 +304,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT update enclosure
+// PUT update enclosure — with field-level diff tracking
 router.put('/:id', async (req, res) => {
     try {
         const {
@@ -70,6 +316,10 @@ router.put('/:id', async (req, res) => {
         } = req.body;
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
+
+        // Fetch old enclosure to compute diffs
+        const oldEnclosure = await Enclosure.findOne({ _id: req.params.id, creatorId: req.user.id }).lean();
+        if (!oldEnclosure) return res.status(404).json({ message: 'Enclosure not found' });
 
         const setData = {
             name: name.trim(),
@@ -92,7 +342,7 @@ router.put('/:id', async (req, res) => {
             speciesLabels: Array.isArray(speciesLabels) ? speciesLabels : [],
             imageUrl: imageUrl || null,
             buildingId: buildingId || null,
-            roomId: roomId || null
+            roomId: roomId || null,
         };
 
         const enc = await Enclosure.findOneAndUpdate(
@@ -101,9 +351,123 @@ router.put('/:id', async (req, res) => {
             { new: true }
         );
         if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
+
+        // Compute field diffs
+        const changes = computeFieldDiffs(oldEnclosure, setData);
+
+        // Also detect task additions/removals
+        const taskChanges = compareTaskLists(oldEnclosure.cleaningTasks, setData.cleaningTasks);
+        if (taskChanges.length > 0) {
+            changes.push({
+                field: 'cleaningTasks',
+                label: 'Cleaning Tasks',
+                oldValue: oldEnclosure.cleaningTasks?.length || 0,
+                newValue: setData.cleaningTasks.length,
+                _taskChanges: taskChanges,
+            });
+        }
+
+        // Log update activity
+        await logEnclosureActivity({
+            userId: req.user.id,
+            id_public: req.user.id_public,
+            enclosure: enc,
+            action: 'enclosure_update',
+            details: {
+                userName: req.user.personalName || req.user.email || 'User',
+                changes,
+                changeCount: changes.length,
+            },
+            previousValue: oldEnclosure,
+            newValue: setData,
+            changes,
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+        });
+
         res.json(enc);
     } catch (err) {
         console.error('[PUT /api/enclosures/:id]', err);
+        res.status(500).json({ message: 'Failed to update enclosure' });
+    }
+});
+
+// PATCH /:id — Partial update (used by frontend for notes, history entries, task updates)
+router.patch('/:id', async (req, res) => {
+    try {
+        const enc = await Enclosure.findOne({ _id: req.params.id, creatorId: req.user.id });
+        if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
+
+        const { $push, $set, $addToSet, $pull, cleaningTasks } = req.body;
+
+        const operations = {};
+        if ($push) operations.$push = $push;
+        if ($set) operations.$set = $set;
+        if ($addToSet) operations.$addToSet = $addToSet;
+        if ($pull) operations.$pull = $pull;
+        if (cleaningTasks) operations.$set = { ...operations.$set, cleaningTasks };
+
+        if (Object.keys(operations).length === 0) {
+            return res.status(400).json({ message: 'No valid update operations provided' });
+        }
+
+        // Detect the operation type for logging
+        if ($push?.history) {
+            // Frontend sent a history entry (e.g., task_complete)
+            const historyEntry = $push.history;
+            await logEnclosureActivity({
+                userId: req.user.id,
+                id_public: req.user.id_public,
+                enclosure: enc,
+                action: historyEntry.action || 'update',
+                details: {
+                    userName: historyEntry.userName || req.user.personalName || req.user.email || 'User',
+                    ...historyEntry.details,
+                },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
+            });
+        } else if ($push?.notesHistory) {
+            await logEnclosureActivity({
+                userId: req.user.id,
+                id_public: req.user.id_public,
+                enclosure: enc,
+                action: 'note',
+                details: {
+                    userName: req.user.personalName || req.user.email || 'You',
+                    text: $push.notesHistory.text,
+                },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
+            });
+        } else if (cleaningTasks) {
+            // Tasks updated — detect additions/removals
+            const taskChanges = compareTaskLists(enc.cleaningTasks, cleaningTasks);
+            for (const tc of taskChanges) {
+                await logEnclosureActivity({
+                    userId: req.user.id,
+                    id_public: req.user.id_public,
+                    enclosure: enc,
+                    action: tc.action, // 'task_added' or 'task_removed'
+                    details: {
+                        userName: req.user.personalName || req.user.email || 'User',
+                        taskName: tc.taskName,
+                    },
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                });
+            }
+        }
+
+        const updated = await Enclosure.findOneAndUpdate(
+            { _id: req.params.id, creatorId: req.user.id },
+            operations,
+            { new: true }
+        );
+
+        res.json(updated);
+    } catch (err) {
+        console.error('[PATCH /api/enclosures/:id]', err);
         res.status(500).json({ message: 'Failed to update enclosure' });
     }
 });
@@ -112,7 +476,7 @@ router.put('/:id', async (req, res) => {
 router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
     try {
         const { enclosureId, taskId } = req.params;
-        const { supplyUsage } = req.body; // e.g. [{ supplyId, quantityUsed }]
+        const { supplyUsage } = req.body;
 
         const enclosure = await Enclosure.findOne({ _id: enclosureId, creatorId: req.user.id });
         if (!enclosure) {
@@ -124,10 +488,8 @@ router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
             return res.status(404).json({ message: 'Task not found in this enclosure' });
         }
 
-        // Update lastDoneDate to reset the schedule
         task.lastDoneDate = new Date();
 
-        // Handle supply deduction if supplies were used
         if (Array.isArray(supplyUsage) && supplyUsage.length > 0) {
             for (const item of supplyUsage) {
                 if (item.supplyId && item.quantityUsed > 0) {
@@ -141,16 +503,20 @@ router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
 
         await enclosure.save();
 
-        // Log this action for history tracking
-        const { logUserActivity } = require('../utils/userActivityLogger');
-        logUserActivity({
+        // Log to all systems
+        await logEnclosureActivity({
             userId: req.user.id,
+            id_public: req.user.id_public,
+            enclosure,
             action: 'enclosure_task_done',
-            targetType: 'enclosure',
-            targetId: enclosure._id,
-            details: { enclosureName: enclosure.name, taskName: task.taskName, supplyUsage: supplyUsage || [] },
+            details: {
+                userName: req.user.personalName || req.user.email || 'User',
+                taskName: task.taskName,
+                taskType: task.type || 'Other',
+                supplyUsage: supplyUsage || [],
+            },
             ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
+            userAgent: req.get('User-Agent'),
         });
 
         res.json(enclosure);
@@ -161,22 +527,27 @@ router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
 });
 
 // PATCH assign (or unassign) a single animal to an enclosure
-// Body: { animalId_public: 'CTC123', enclosureId: '<id>' | null }
 router.patch('/assign-animal', async (req, res) => {
     try {
         const { animalId_public, enclosureId } = req.body;
         if (!animalId_public) return res.status(400).json({ message: 'animalId_public is required' });
-        // If assigning, verify the enclosure belongs to this user
-        if (enclosureId) {
-            const enc = await Enclosure.findOne({ _id: enclosureId, creatorId: req.user.id }).select('_id').lean();
-            if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
-        }
-        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: req.user.id }).select('_id status').lean();
+
+        // Fetch the animal to get its name
+        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: req.user.id }).select('_id name prefix suffix status').lean();
         if (!animal) return res.status(404).json({ message: 'Animal not found' });
 
         if (animal.status === 'Deceased' || animal.status === 'Rehomed') {
             return res.status(400).json({ message: `Cannot assign ${animal.status.toLowerCase()} animals to an enclosure` });
         }
+
+        // If assigning, verify the enclosure belongs to this user
+        let enc = null;
+        if (enclosureId) {
+            enc = await Enclosure.findOne({ _id: enclosureId, creatorId: req.user.id }).select('_id name').lean();
+            if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
+        }
+
+        const animalName = [animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ');
 
         const result = await Animal.findOneAndUpdate(
             { _id: animal._id },
@@ -184,6 +555,46 @@ router.patch('/assign-animal', async (req, res) => {
             { new: true }
         );
         if (!result) return res.status(404).json({ message: 'Animal not found' });
+
+        // Log to history
+        if (enclosureId && enc) {
+            // Assigning
+            const encFull = await Enclosure.findById(enclosureId);
+            if (encFull) {
+                await logEnclosureActivity({
+                    userId: req.user.id,
+                    id_public: req.user.id_public,
+                    enclosure: encFull,
+                    action: 'enclosure_assign',
+                    details: {
+                        userName: req.user.personalName || req.user.email || 'User',
+                        animalName,
+                        animalId: animalId_public,
+                    },
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                });
+            }
+        } else if (!enclosureId && animal.enclosureId) {
+            // Unassigning — need the old enclosure
+            const oldEnc = await Enclosure.findOne({ _id: animal.enclosureId, creatorId: req.user.id });
+            if (oldEnc) {
+                await logEnclosureActivity({
+                    userId: req.user.id,
+                    id_public: req.user.id_public,
+                    enclosure: oldEnc,
+                    action: 'enclosure_unassign',
+                    details: {
+                        userName: req.user.personalName || req.user.email || 'User',
+                        animalName,
+                        animalId: animalId_public,
+                    },
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                });
+            }
+        }
+
         res.json({ ok: true, enclosureId: result.enclosureId });
     } catch (err) {
         console.error('[PATCH /api/enclosures/assign-animal]', err);
@@ -196,11 +607,27 @@ router.delete('/:id', async (req, res) => {
     try {
         const enc = await Enclosure.findOneAndDelete({ _id: req.params.id, creatorId: req.user.id });
         if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
+
+        // Log deletion
+        await logEnclosureActivity({
+            userId: req.user.id,
+            id_public: req.user.id_public,
+            enclosure: enc,
+            action: 'enclosure_delete',
+            details: {
+                userName: req.user.personalName || req.user.email || 'User',
+                enclosureName: enc.name,
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+        });
+
         // Unassign all animals from this enclosure
         await Animal.updateMany(
             { creatorId: req.user.id, enclosureId: req.params.id },
             { $set: { enclosureId: null } }
         );
+
         res.json({ message: 'Enclosure deleted' });
     } catch (err) {
         console.error('[DELETE /api/enclosures/:id]', err);
