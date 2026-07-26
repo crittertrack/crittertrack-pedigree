@@ -2389,6 +2389,20 @@ const EnclosureSchema = new mongoose.Schema({
     lightsOffTime: { type: String, default: null },
     lightTimeFormat: { type: String, enum: ['12h', '24h'], default: '24h' },
     notes: { type: String, default: '', maxlength: 500 },
+    notesHistory: [{
+        text: { type: String, required: true },
+        category: { type: String, default: 'General' },
+        timestamp: { type: Date, default: Date.now },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        userName: { type: String }
+    }],
+    history: [{
+        timestamp: { type: Date, default: Date.now },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        userName: { type: String },
+        action: { type: String },
+        details: { type: mongoose.Schema.Types.Mixed }
+    }],
     // Flexible cleaning/maintenance tasks for the enclosure (spot clean, full clean, bulb change, etc.)
     cleaningTasks: [{
         type: { type: String, enum: ['Cleaning', 'Maintenance', 'Feeding', 'Other'], default: 'Other' },
