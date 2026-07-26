@@ -420,6 +420,83 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// PATCH assign (or unassign) a single animal to an enclosure
+// ⚠️ MUST be defined BEFORE /:id routes so Express doesn't match "assign-animal" as :id
+router.patch('/assign-animal', async (req, res) => {
+    try {
+        const { animalId_public, enclosureId } = req.body;
+        if (!animalId_public) return res.status(400).json({ message: 'animalId_public is required' });
+
+        // Fetch the animal to get its name
+        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: req.user.id }).select('_id name prefix suffix status').lean();
+        if (!animal) return res.status(404).json({ message: 'Animal not found' });
+
+        if (animal.status === 'Deceased' || animal.status === 'Rehomed') {
+            return res.status(400).json({ message: `Cannot assign ${animal.status.toLowerCase()} animals to an enclosure` });
+        }
+
+        // If assigning, verify the enclosure belongs to this user
+        let enc = null;
+        if (enclosureId) {
+            enc = await Enclosure.findOne({ _id: enclosureId, creatorId: req.user.id }).select('_id name').lean();
+            if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
+        }
+
+        const animalName = [animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ');
+
+        const result = await Animal.findOneAndUpdate(
+            { _id: animal._id },
+            { $set: { enclosureId: enclosureId || null } },
+            { new: true }
+        );
+        if (!result) return res.status(404).json({ message: 'Animal not found' });
+
+        // Log to history
+        if (enclosureId && enc) {
+            // Assigning
+            const encFull = await Enclosure.findById(enclosureId);
+            if (encFull) {
+                await logEnclosureActivity({
+                    userId: req.user.id,
+                    id_public: req.user.id_public,
+                    enclosure: encFull,
+                    action: 'enclosure_assign',
+                    details: {
+                        userName: req.user.personalName || req.user.email || 'User',
+                        animalName,
+                        animalId: animalId_public,
+                    },
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                });
+            }
+        } else if (!enclosureId && animal.enclosureId) {
+            // Unassigning — need the old enclosure
+            const oldEnc = await Enclosure.findOne({ _id: animal.enclosureId, creatorId: req.user.id });
+            if (oldEnc) {
+                await logEnclosureActivity({
+                    userId: req.user.id,
+                    id_public: req.user.id_public,
+                    enclosure: oldEnc,
+                    action: 'enclosure_unassign',
+                    details: {
+                        userName: req.user.personalName || req.user.email || 'User',
+                        animalName,
+                        animalId: animalId_public,
+                    },
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                });
+            }
+        }
+
+        res.json({ ok: true, enclosureId: result.enclosureId });
+    } catch (err) {
+        console.error('[PATCH /api/enclosures/assign-animal]', err);
+        res.status(500).json({ message: 'Failed to assign animal to enclosure' });
+    }
+});
+
 // PATCH /:id — Partial update (used by frontend for notes, history entries, task updates)
 router.patch('/:id', async (req, res) => {
     try {
@@ -551,82 +628,6 @@ router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
     } catch (err) {
         console.error('[POST /api/enclosures/.../complete]', err);
         res.status(500).json({ message: 'Failed to mark task as complete' });
-    }
-});
-
-// PATCH assign (or unassign) a single animal to an enclosure
-router.patch('/assign-animal', async (req, res) => {
-    try {
-        const { animalId_public, enclosureId } = req.body;
-        if (!animalId_public) return res.status(400).json({ message: 'animalId_public is required' });
-
-        // Fetch the animal to get its name
-        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: req.user.id }).select('_id name prefix suffix status').lean();
-        if (!animal) return res.status(404).json({ message: 'Animal not found' });
-
-        if (animal.status === 'Deceased' || animal.status === 'Rehomed') {
-            return res.status(400).json({ message: `Cannot assign ${animal.status.toLowerCase()} animals to an enclosure` });
-        }
-
-        // If assigning, verify the enclosure belongs to this user
-        let enc = null;
-        if (enclosureId) {
-            enc = await Enclosure.findOne({ _id: enclosureId, creatorId: req.user.id }).select('_id name').lean();
-            if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
-        }
-
-        const animalName = [animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ');
-
-        const result = await Animal.findOneAndUpdate(
-            { _id: animal._id },
-            { $set: { enclosureId: enclosureId || null } },
-            { new: true }
-        );
-        if (!result) return res.status(404).json({ message: 'Animal not found' });
-
-        // Log to history
-        if (enclosureId && enc) {
-            // Assigning
-            const encFull = await Enclosure.findById(enclosureId);
-            if (encFull) {
-                await logEnclosureActivity({
-                    userId: req.user.id,
-                    id_public: req.user.id_public,
-                    enclosure: encFull,
-                    action: 'enclosure_assign',
-                    details: {
-                        userName: req.user.personalName || req.user.email || 'User',
-                        animalName,
-                        animalId: animalId_public,
-                    },
-                    ipAddress: req.ip,
-                    userAgent: req.get('User-Agent'),
-                });
-            }
-        } else if (!enclosureId && animal.enclosureId) {
-            // Unassigning — need the old enclosure
-            const oldEnc = await Enclosure.findOne({ _id: animal.enclosureId, creatorId: req.user.id });
-            if (oldEnc) {
-                await logEnclosureActivity({
-                    userId: req.user.id,
-                    id_public: req.user.id_public,
-                    enclosure: oldEnc,
-                    action: 'enclosure_unassign',
-                    details: {
-                        userName: req.user.personalName || req.user.email || 'User',
-                        animalName,
-                        animalId: animalId_public,
-                    },
-                    ipAddress: req.ip,
-                    userAgent: req.get('User-Agent'),
-                });
-            }
-        }
-
-        res.json({ ok: true, enclosureId: result.enclosureId });
-    } catch (err) {
-        console.error('[PATCH /api/enclosures/assign-animal]', err);
-        res.status(500).json({ message: 'Failed to assign animal to enclosure' });
     }
 });
 
