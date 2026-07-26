@@ -6,8 +6,9 @@ const { logUserActivity } = require('../utils/userActivityLogger');
 // ── Helper: Compute field diffs between old and new enclosure data ──────────
 const FIELD_LABELS = {
     name: 'Name',
-    enclosureType: 'Type',
+    enclosureType: 'Enclosure Type',
     purpose: 'Purpose',
+    purposeDescription: 'Purpose Description',
     location: 'Location',
     buildingId: 'Building',
     roomId: 'Room',
@@ -24,17 +25,21 @@ const FIELD_LABELS = {
     tags: 'Tags',
     speciesLabels: 'Suitable Species',
     imageUrl: 'Image',
-    enclosureType: 'Enclosure Type',
-    purpose: 'Purpose',
 };
 
 const DIFF_FIELDS = Object.keys(FIELD_LABELS);
+
+function isEmpty(val) {
+    return val === null || val === undefined || val === '' || (Array.isArray(val) && val.length === 0);
+}
 
 function computeFieldDiffs(oldData, newData) {
     const changes = [];
     for (const field of DIFF_FIELDS) {
         const oldVal = oldData[field];
         const newVal = newData[field];
+        // Treat empty/null/undefined as equivalent to avoid phantom "empty → empty" changes
+        if (isEmpty(oldVal) && isEmpty(newVal)) continue;
         // Normalize for comparison — arrays to JSON, objects to JSON
         const a = JSON.stringify(oldVal);
         const b = JSON.stringify(newVal);
