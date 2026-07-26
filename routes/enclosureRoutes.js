@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Enclosure, Animal, SupplyItem, EnclosureLog, UserActivityLog } = require('../database/models');
+const { Enclosure, Animal, SupplyItem, EnclosureLog, UserActivityLog, Location } = require('../database/models');
 const { logUserActivity } = require('../utils/userActivityLogger');
 
 // ── Helper: Compute field diffs between old and new enclosure data ──────────
@@ -33,13 +33,45 @@ function isEmpty(val) {
     return val === null || val === undefined || val === '' || (Array.isArray(val) && val.length === 0);
 }
 
-function computeFieldDiffs(oldData, newData) {
+async function computeFieldDiffs(oldData, newData) {
     const changes = [];
+
+    // Resolve buildingId and roomId ObjectIDs to human-readable names
+    const resolved = { buildingId: {}, roomId: {} };
+    const oldBuildingId = oldData.buildingId;
+    const newBuildingId = newData.buildingId;
+    const oldRoomId = oldData.roomId;
+    const newRoomId = newData.roomId;
+
+    // Batch-fetch all referenced locations in one query
+    const allLocationIds = [oldBuildingId, newBuildingId, oldRoomId, newRoomId].filter(Boolean);
+    const locations = allLocationIds.length > 0
+        ? await Location.find({ _id: { $in: allLocationIds } }).select('name').lean()
+        : [];
+    const locationMap = {};
+    for (const loc of locations) {
+        locationMap[loc._id.toString()] = loc.name;
+    }
+
+    function resolveId(id) {
+        if (!id) return null;
+        return locationMap[id.toString()] || id.toString();
+    }
+
     for (const field of DIFF_FIELDS) {
-        const oldVal = oldData[field];
-        const newVal = newData[field];
+        let oldVal = oldData[field];
+        let newVal = newData[field];
         // Treat empty/null/undefined as equivalent to avoid phantom "empty → empty" changes
         if (isEmpty(oldVal) && isEmpty(newVal)) continue;
+        // Resolve building/room IDs to names for display
+        if (field === 'buildingId') {
+            oldVal = resolveId(oldVal);
+            newVal = resolveId(newVal);
+        }
+        if (field === 'roomId') {
+            oldVal = resolveId(oldVal);
+            newVal = resolveId(newVal);
+        }
         // Normalize for comparison — arrays to JSON, objects to JSON
         const a = JSON.stringify(oldVal);
         const b = JSON.stringify(newVal);
@@ -348,8 +380,8 @@ router.put('/:id', async (req, res) => {
         );
         if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
 
-        // Compute field diffs
-        const changes = computeFieldDiffs(oldEnclosure, setData);
+// Compute field diffs (now async — resolves building/room IDs to names)
+        const changes = await computeFieldDiffs(oldEnclosure, setData);
 
         // Also detect task additions/removals
         const taskChanges = compareTaskLists(oldEnclosure.cleaningTasks, setData.cleaningTasks);
