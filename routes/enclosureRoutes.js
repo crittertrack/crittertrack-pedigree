@@ -20,7 +20,8 @@ router.post('/', async (req, res) => {
             name, enclosureType, purpose, location, dimensions, capacity,
             tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
-            cleaningTasks, tags, speciesLabels, imageUrl
+            cleaningTasks, tags, speciesLabels, imageUrl,
+            buildingId, roomId
         } = req.body;
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
@@ -45,7 +46,9 @@ router.post('/', async (req, res) => {
             cleaningTasks: Array.isArray(cleaningTasks) ? cleaningTasks : [],
             tags: Array.isArray(tags) ? tags : [],
             speciesLabels: Array.isArray(speciesLabels) ? speciesLabels : [],
-            imageUrl: imageUrl || null
+            imageUrl: imageUrl || null,
+            buildingId: buildingId || null,
+            roomId: roomId || null
         });
         await enc.save();
         res.status(201).json(enc);
@@ -62,7 +65,8 @@ router.put('/:id', async (req, res) => {
             name, enclosureType, purpose, location, dimensions, capacity,
             tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
-            cleaningTasks, tags, speciesLabels, imageUrl
+            cleaningTasks, tags, speciesLabels, imageUrl,
+            buildingId, roomId
         } = req.body;
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
@@ -86,7 +90,9 @@ router.put('/:id', async (req, res) => {
             cleaningTasks: Array.isArray(cleaningTasks) ? cleaningTasks : [],
             tags: Array.isArray(tags) ? tags : [],
             speciesLabels: Array.isArray(speciesLabels) ? speciesLabels : [],
-            imageUrl: imageUrl || null
+            imageUrl: imageUrl || null,
+            buildingId: buildingId || null,
+            roomId: roomId || null
         };
 
         const enc = await Enclosure.findOneAndUpdate(
