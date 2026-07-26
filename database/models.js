@@ -2393,7 +2393,14 @@ const EnclosureSchema = new mongoose.Schema({
     cleaningTasks: [{
         taskName: { type: String, required: true, trim: true },
         lastDoneDate: { type: Date, default: null },
-        frequencyDays: { type: Number, default: null },
+        frequency: { type: Number, default: null },
+        frequencyUnit: { type: String, enum: ['days', 'weeks', 'months', 'years'], default: 'days' },
+        assignedSupplies: [{
+            supplyId: { type: mongoose.Schema.Types.ObjectId, ref: 'SupplyItem' },
+            supplyName: { type: String }, // Denormalized for display
+            quantity: { type: Number, default: 1 }
+        }],
+        notes: { type: String, default: '' }
     }],
     tags: [{ type: String, trim: true }],
     speciesLabels: [{ type: String, trim: true }],

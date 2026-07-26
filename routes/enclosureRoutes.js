@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Enclosure, Animal } = require('../database/models');
+const { Enclosure, Animal, SupplyItem } = require('../database/models');
 
 // GET all enclosures for the authenticated user
 router.get('/', async (req, res) => {
@@ -105,6 +105,58 @@ router.put('/:id', async (req, res) => {
     } catch (err) {
         console.error('[PUT /api/enclosures/:id]', err);
         res.status(500).json({ message: 'Failed to update enclosure' });
+    }
+});
+
+// POST /api/enclosures/:enclosureId/tasks/:taskId/complete - Mark a task as done
+router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
+    try {
+        const { enclosureId, taskId } = req.params;
+        const { supplyUsage } = req.body; // e.g. [{ supplyId, quantityUsed }]
+
+        const enclosure = await Enclosure.findOne({ _id: enclosureId, creatorId: req.user.id });
+        if (!enclosure) {
+            return res.status(404).json({ message: 'Enclosure not found' });
+        }
+
+        const task = enclosure.cleaningTasks.id(taskId);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found in this enclosure' });
+        }
+
+        // Update lastDoneDate to reset the schedule
+        task.lastDoneDate = new Date();
+
+        // Handle supply deduction if supplies were used
+        if (Array.isArray(supplyUsage) && supplyUsage.length > 0) {
+            for (const item of supplyUsage) {
+                if (item.supplyId && item.quantityUsed > 0) {
+                    await SupplyItem.updateOne(
+                        { _id: item.supplyId, userId: req.user.id },
+                        { $inc: { currentStock: -item.quantityUsed } }
+                    );
+                }
+            }
+        }
+
+        await enclosure.save();
+
+        // Log this action for history tracking
+        const { logUserActivity } = require('../utils/userActivityLogger');
+        logUserActivity({
+            userId: req.user.id,
+            action: 'enclosure_task_done',
+            targetType: 'enclosure',
+            targetId: enclosure._id,
+            details: { enclosureName: enclosure.name, taskName: task.taskName, supplyUsage: supplyUsage || [] },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+        });
+
+        res.json(enclosure);
+    } catch (err) {
+        console.error('[POST /api/enclosures/.../complete]', err);
+        res.status(500).json({ message: 'Failed to mark task as complete' });
     }
 });
 
