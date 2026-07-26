@@ -275,15 +275,6 @@ router.post('/', async (req, res) => {
             roomId: roomId || null,
         });
 
-        // Add initial history entry
-        enc.history = [{
-            timestamp: new Date(),
-            userId: req.user.id,
-            userName: req.user.personalName || req.user.email || 'User',
-            action: 'create',
-            details: { created: true },
-        }];
-
         await enc.save();
 
         // Log creation to UserActivityLog
