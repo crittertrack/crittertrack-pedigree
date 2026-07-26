@@ -2391,6 +2391,7 @@ const EnclosureSchema = new mongoose.Schema({
     notes: { type: String, default: '', maxlength: 500 },
     // Flexible cleaning/maintenance tasks for the enclosure (spot clean, full clean, bulb change, etc.)
     cleaningTasks: [{
+        type: { type: String, enum: ['Cleaning', 'Maintenance', 'Feeding', 'Other'], default: 'Other' },
         taskName: { type: String, required: true, trim: true },
         lastDoneDate: { type: Date, default: null },
         frequency: { type: Number, default: null },
