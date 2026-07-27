@@ -2382,7 +2382,8 @@ const EnclosureSchema = new mongoose.Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
-    purpose: { type: String, enum: ['general', 'reproduction', 'health', ''], default: 'general' },
+    purpose: { type: String, enum: ['general', 'reproduction', 'health', ''], default: 'general' }, // e.g. General holding, Breeding, Quarantine/Medical
+    purposeDescription: { type: String, default: '', trim: true, maxlength: 250 },
     buildingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },
     roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },
     dimensions: {
@@ -2400,6 +2401,9 @@ const EnclosureSchema = new mongoose.Schema({
     lightsOnTime: { type: String, default: null },
     lightsOffTime: { type: String, default: null },
     lightTimeFormat: { type: String, enum: ['12h', '24h'], default: '24h' },
+    lightingType: { type: String, default: '', trim: true },
+    bedding: { type: String, default: '', trim: true },
+    enrichment: { type: String, default: '', trim: true },
     notes: { type: String, default: '', maxlength: 500 },
     notesHistory: [{
         text: { type: String, required: true },
