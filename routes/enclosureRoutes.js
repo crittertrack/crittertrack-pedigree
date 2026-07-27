@@ -25,6 +25,9 @@ const FIELD_LABELS = {
     tags: 'Tags',
     speciesLabels: 'Suitable Species',
     imageUrl: 'Image',
+    bedding: 'Bedding/Substrate',
+    lightingType: 'Lighting Type',
+    enrichment: 'Enrichment',
 };
 
 const DIFF_FIELDS = Object.keys(FIELD_LABELS);
@@ -282,7 +285,8 @@ router.post('/', async (req, res) => {
             tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
             cleaningTasks, tags, speciesLabels, imageUrl,
-            buildingId, roomId
+            buildingId, roomId,
+            bedding, lightingType, enrichment
         } = req.body;
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
@@ -310,6 +314,9 @@ router.post('/', async (req, res) => {
             imageUrl: imageUrl || null,
             buildingId: buildingId || null,
             roomId: roomId || null,
+            bedding: bedding || null,
+            lightingType: lightingType || null,
+            enrichment: enrichment || null,
         });
 
         await enc.save();
@@ -340,7 +347,8 @@ router.put('/:id', async (req, res) => {
             tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
             cleaningTasks, tags, speciesLabels, imageUrl,
-            buildingId, roomId
+            buildingId, roomId,
+            bedding, lightingType, enrichment
         } = req.body;
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
@@ -371,6 +379,9 @@ router.put('/:id', async (req, res) => {
             imageUrl: imageUrl || null,
             buildingId: buildingId || null,
             roomId: roomId || null,
+            bedding: bedding || null,
+            lightingType: lightingType || null,
+            enrichment: enrichment || null,
         };
 
         const enc = await Enclosure.findOneAndUpdate(
