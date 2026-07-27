@@ -455,23 +455,15 @@ router.patch('/assign-animal', async (req, res) => {
 
         const animalName = [animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ');
 
-        const result = await Animal.findOneAndUpdate(
-            { _id: animal._id },
-            { $set: { enclosureId: enclosureId || null } },
-            { new: true }
-        );
-        if (!result) return res.status(404).json({ message: 'Animal not found' });
-
-        // Log to history
-        if (enclosureId && enc) {
-            // Assigning
-            const encFull = await Enclosure.findById(enclosureId);
-            if (encFull) {
+        // --- Two-way route logging: Handle un-assignment from the old enclosure if moving ---
+        if (animal.enclosureId && enclosureId && animal.enclosureId.toString() !== enclosureId) {
+            const oldEnc = await Enclosure.findById(animal.enclosureId);
+            if (oldEnc) {
                 await logEnclosureActivity({
                     userId: req.user.id,
                     id_public: req.user.id_public,
-                    enclosure: encFull,
-                    action: 'enclosure_assign',
+                    enclosure: oldEnc,
+                    action: 'enclosure_unassign',
                     details: {
                         userName: req.user.personalName || req.user.email || 'User',
                         animalName,
@@ -481,9 +473,34 @@ router.patch('/assign-animal', async (req, res) => {
                     userAgent: req.get('User-Agent'),
                 });
             }
+        }
+
+        const result = await Animal.findOneAndUpdate(
+            { _id: animal._id },
+            { $set: { enclosureId: enclosureId || null } },
+            { new: true }
+        );
+        if (!result) return res.status(404).json({ message: 'Animal not found' });
+
+        // --- Two-way route logging ---
+        // 1. Log assignment to the new enclosure
+        if (enclosureId && enc) {
+            await logEnclosureActivity({
+                userId: req.user.id,
+                id_public: req.user.id_public,
+                enclosure: enc,
+                action: 'enclosure_assign',
+                details: {
+                    userName: req.user.personalName || req.user.email || 'User',
+                    animalName,
+                    animalId: animalId_public,
+                },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
+            });
         } else if (!enclosureId && animal.enclosureId) {
-            // Unassigning — need the old enclosure
-            const oldEnc = await Enclosure.findOne({ _id: animal.enclosureId, creatorId: req.user.id });
+            // 2. Log unassignment if moving to no enclosure (this case is now also covered above, but this is a safeguard)
+            const oldEnc = await Enclosure.findById(animal.enclosureId);
             if (oldEnc) {
                 await logEnclosureActivity({
                     userId: req.user.id,
