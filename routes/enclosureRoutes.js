@@ -281,7 +281,7 @@ router.get('/:id/activity', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const {
-            name, enclosureType, purpose, location, dimensions, capacity,
+            name, enclosureType, purpose, purposeDescription, location, dimensions, capacity,
             tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
             cleaningTasks, tags, speciesLabels, imageUrl,
@@ -296,6 +296,7 @@ router.post('/', async (req, res) => {
             name: name.trim(),
             enclosureType: enclosureType?.trim() || '',
             purpose: purpose || 'general',
+            purposeDescription: purposeDescription?.trim() || '',
             location: location?.trim() || '',
             dimensions: dimensions || { length: null, width: null, height: null, unit: 'in' },
             capacity: capacity ? Number(capacity) : null,
@@ -343,7 +344,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const {
-            name, enclosureType, purpose, location, dimensions, capacity,
+            name, enclosureType, purpose, purposeDescription, location, dimensions, capacity,
             tempMin, tempMax, temperatureUnit, humidityMin, humidityMax,
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
             cleaningTasks, tags, speciesLabels, imageUrl,
@@ -361,6 +362,7 @@ router.put('/:id', async (req, res) => {
             name: name.trim(),
             enclosureType: enclosureType?.trim() || '',
             purpose: purpose || 'general',
+            purposeDescription: purposeDescription?.trim() || '',
             location: location?.trim() || '',
             dimensions: dimensions || { length: null, width: null, height: null, unit: 'in' },
             capacity: capacity ? Number(capacity) : null,
