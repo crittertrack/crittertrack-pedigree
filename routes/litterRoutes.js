@@ -5,6 +5,7 @@ const path = require('path');
 const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 const { Animal, User, Notification, Litter, PublicAnimal } = require('../database/models');
+const { syncParentReproStatus } = require('../utils/reproStatusSync');
 const r2 = require('../storage/r2_client');
 // This router requires authMiddleware to be applied in index.js
 
@@ -22,50 +23,6 @@ const litterUpload = multer({
     fileFilter: imageFileFilter,
 });
 
-// Keep parent planned-mating/in-mating flags in sync with active (not-yet-born) litters.
-// - isPlannedMating: litter has isPlanned=true and no matingDate yet, or a matingDate still in the future.
-// - isInMating: mating has actually occurred (matingDate has passed, or a legacy non-planned litter has a matingDate)
-//   but no birthDate has been recorded yet.
-const syncParentsInMating = async (creatorId, parentIdsPublic = []) => {
-    const parentIds = [...new Set((parentIdsPublic || []).filter(Boolean))];
-    if (!parentIds.length) return;
-
-    const today = new Date();
-
-    for (const id_public of parentIds) {
-        const activeLitters = await Litter.find({
-            creatorId,
-            $and: [
-                { $or: [{ sireId_public: id_public }, { damId_public: id_public }] },
-                { $or: [{ birthDate: null }, { birthDate: { $exists: false } }] },
-            ],
-        }).select('isPlanned matingDate').lean();
-
-        let isPlannedMating = false;
-        let isInMating = false;
-        activeLitters.forEach((litter) => {
-            const hasMatingDate = !!litter.matingDate;
-            const mated = hasMatingDate && new Date(litter.matingDate) <= today;
-            if (litter.isPlanned && !mated) {
-                isPlannedMating = true;
-            } else if (mated || (!litter.isPlanned && hasMatingDate)) {
-                isInMating = true;
-            }
-        });
-
-        // Update both owned and public animal copies
-        await Animal.updateOne(
-            { creatorId, id_public },
-            { $set: { isPlannedMating, isInMating } }
-        );
-        
-        await PublicAnimal.updateOne(
-            { id_public },
-            { $set: { isPlannedMating, isInMating } }
-        );
-    }
-};
-
 // --- Litter Route Controllers (PROTECTED) ---
 
 // POST /api/litters
@@ -78,11 +35,11 @@ router.post('/', async (req, res) => {
 
         const newLitter = await addLitter(appUserId_backend, litterData);
 
-        // Auto-sync sire/dam "In Mating" based on active litters.
+        // Auto-sync sire/dam reproductive flags (planned/mating/pregnant/nursing) based on litters.
         try {
-            await syncParentsInMating(appUserId_backend, [newLitter.sireId_public, newLitter.damId_public]);
-        } catch (inMatingErr) {
-            console.error('Warning: failed to sync parent in-mating flags:', inMatingErr);
+            await syncParentReproStatus(appUserId_backend, [newLitter.sireId_public, newLitter.damId_public]);
+        } catch (reproSyncErr) {
+            console.error('Warning: failed to sync parent reproductive status:', reproSyncErr);
         }
 
         // Log user activity
@@ -260,16 +217,17 @@ router.put('/:id_backend', async (req, res) => {
 
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
 
-        // Recompute in-mating for both old and new parents (covers parent changes/removals).
+        // Recompute reproductive flags for both old and new parents (covers parent changes/removals,
+        // as well as birthDate/weaningDate/pregnancyDate transitions edited via any UI).
         try {
-            await syncParentsInMating(appUserId_backend, [
+            await syncParentReproStatus(appUserId_backend, [
                 priorLitter?.sireId_public,
                 priorLitter?.damId_public,
                 updatedLitter?.sireId_public,
                 updatedLitter?.damId_public,
             ]);
-        } catch (inMatingErr) {
-            console.error('Warning: failed to sync parent in-mating flags on litter update:', inMatingErr);
+        } catch (reproSyncErr) {
+            console.error('Warning: failed to sync parent reproductive status on litter update:', reproSyncErr);
         }
 
         // Log user activity
@@ -341,11 +299,11 @@ router.delete('/:id_backend', async (req, res) => {
 
         await Litter.deleteOne({ _id: litterId_backend });
 
-        // Recompute planned-mating/in-mating flags for the (former) sire and dam.
+        // Recompute reproductive flags for the (former) sire and dam.
         try {
-            await syncParentsInMating(appUserId_backend, [litter.sireId_public, litter.damId_public]);
-        } catch (inMatingErr) {
-            console.error('Warning: failed to sync parent in-mating flags on litter delete:', inMatingErr);
+            await syncParentReproStatus(appUserId_backend, [litter.sireId_public, litter.damId_public]);
+        } catch (reproSyncErr) {
+            console.error('Warning: failed to sync parent reproductive status on litter delete:', reproSyncErr);
         }
 
         // Log user activity
