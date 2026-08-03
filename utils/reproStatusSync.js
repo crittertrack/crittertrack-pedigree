@@ -24,7 +24,7 @@ const DEFAULT_MAX_NURSING_DAYS = 90;
  * Returns one of: 'nursing' | 'pregnant' | 'mating' | 'planned' | null.
  *
  * A litter is considered "closed" (contributes no active status) once:
- *  - it has both a birthDate and a weaningDate (the litter has fully weaned),
+ *  - it has a birthDate and a weaningDate that has arrived (weaningDate <= today),
  *  - the pregnancy was recorded as lost (pregnancyLost === true) with no birth, or
  *  - it has a birthDate but no weaningDate and more than `maxNursingDays` have
  *    passed since birth — a safety-net cutoff so a litter the breeder forgot
@@ -32,12 +32,14 @@ const DEFAULT_MAX_NURSING_DAYS = 90;
  */
 function getLitterReproStatus(litter, today = new Date(), maxNursingDays = DEFAULT_MAX_NURSING_DAYS) {
     const hasBirth = !!litter.birthDate;
-    const hasWeaning = !!litter.weaningDate;
+    // A weaning date only closes the litter once it actually arrives — entering a future weaning
+    // date shouldn't immediately unassign nursing status before that date is reached.
+    const isWeaned = !!litter.weaningDate && new Date(litter.weaningDate) <= today;
     const hasPregnancy = !!litter.pregnancyDate;
     const hasMatingDate = !!litter.matingDate;
 
     if (litter.pregnancyLost && !hasBirth) return null;
-    if (hasBirth && hasWeaning) return null; // fully weaned — cycle complete
+    if (hasBirth && isWeaned) return null; // fully weaned — cycle complete
 
     if (hasBirth) {
         const daysSinceBirth = (today.getTime() - new Date(litter.birthDate).getTime()) / (1000 * 60 * 60 * 24);
