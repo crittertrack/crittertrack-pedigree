@@ -59,8 +59,39 @@ function computeIsInTreatment({ medications, medicalConditions }) {
     return hasActiveMedication(medications) || hasActiveCriticalCondition(medicalConditions);
 }
 
+// Per-type quarantine score deductions (see the Type/Reason dropdown in the frontend's
+// AnimalFormModalV2.jsx / AssignHealthStatusModal.jsx for the full option list) — mirrors
+// crittertrack-frontend/src/utils/medicalStatus.js. Preventive types don't deduct at all;
+// Contagious Disease and Aggression are weighted heaviest since they alone must reach Critical.
+const QUARANTINE_TYPE_PENALTIES = {
+    'Preventive - New Arrival': 0,
+    'Preventive - Intake': 0,
+    'Medical - Illness/URI': 1.75,
+    'Medical - Contagious Disease': 3.5,
+    'Medical - Recovery': 1,
+    'Behavioral - Aggression': 3.25,
+    'Behavioral - Fear/Stress': 0.75,
+    'Other': 1.6,
+};
+const DEFAULT_QUARANTINE_PENALTY = 1.25; // No type selected yet, or an unrecognized value
+
+// Animals saved before the Excellent/Good/Fair/Poor/Critical -> Healthy/Monitoring/Concern/
+// Critical rename still have old labels stored in healthStatus/healthStatusOverride. Remap on
+// read instead of a DB migration — Poor and Critical both collapse into the new Critical tier.
+const LEGACY_HEALTH_STATUS_MAP = {
+    Excellent: 'Healthy',
+    Good: 'Monitoring',
+    Fair: 'Concern',
+    Poor: 'Critical',
+    Critical: 'Critical',
+};
+function remapLegacyHealthStatus(status) {
+    if (!status) return status;
+    return LEGACY_HEALTH_STATUS_MAP[status] || status;
+}
+
 /**
- * Pure computation of the overall health status (Excellent/Good/Fair/Poor/Critical), mirroring
+ * Pure computation of the overall health status (Healthy/Monitoring/Concern/Critical), mirroring
  * crittertrack-frontend/src/utils/medicalStatus.js's calculateHealthStatus exactly. Returns just
  * the calculated status string (pre-override) — healthStatusOverride, if set, is applied by the
  * caller/frontend on top of this, since the override itself is stored/displayed separately.
@@ -74,14 +105,8 @@ function computeHealthStatus({ quarantineDetails, medications, medicalConditions
     let score = 5; // Start at excellent
 
     if (isStatusPeriodActive(quarantine)) {
-        const qType = quarantine.type || 'unknown';
-        if (qType.includes('Medical') || qType.includes('Illness') || qType.includes('Disease')) {
-            score -= 2;
-        } else if (qType.includes('Preventive') || qType.includes('New')) {
-            score -= 1;
-        } else {
-            score -= 1.5;
-        }
+        const penalty = QUARANTINE_TYPE_PENALTIES[quarantine.type] ?? DEFAULT_QUARANTINE_PENALTY;
+        score -= penalty;
     }
 
     if (computeIsInTreatment({ medications, medicalConditions })) {
@@ -92,11 +117,10 @@ function computeHealthStatus({ quarantineDetails, medications, medicalConditions
     if (conditionsArr.length > 0) score -= Math.min(conditionsArr.length, 2);
     if (allergiesArr.length > 2) score -= 0.5;
 
-    if (score >= 4.5) return 'Excellent';
-    if (score >= 3.5) return 'Good';
-    if (score >= 2.5) return 'Fair';
-    if (score >= 1.5) return 'Poor';
+    if (score >= 4.5) return 'Healthy';
+    if (score >= 3.5) return 'Monitoring';
+    if (score >= 2.0) return 'Concern';
     return 'Critical';
 }
 
-module.exports = { computeIsInTreatment, hasActiveMedication, hasActiveCriticalCondition, computeHealthStatus, isStatusPeriodActive };
+module.exports = { computeIsInTreatment, hasActiveMedication, hasActiveCriticalCondition, computeHealthStatus, isStatusPeriodActive, remapLegacyHealthStatus };

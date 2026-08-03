@@ -276,11 +276,11 @@ const AnimalSchema = new mongoose.Schema({
     isInMating: { type: Boolean, default: false },
     isQuarantine: { type: Boolean, default: false }, // Animal is in quarantine/isolation
     isInTreatment: { type: Boolean, default: false }, // Animal is actively undergoing treatment
-    // Derived overall health status pill (Excellent/Good/Fair/Poor/Critical) — recomputed on
+    // Derived overall health status pill (Healthy/Monitoring/Concern/Critical) — recomputed on
     // every save from quarantine/treatment/medications/conditions/allergies (see
     // utils/healthStatusSync.js's computeHealthStatus). healthStatusOverride, if set, takes
     // precedence for display but does not affect this stored calculated value.
-    healthStatus: { type: String, default: 'Excellent' },
+    healthStatus: { type: String, default: 'Healthy' },
     healthStatusOverride: { type: String, default: null },
     healthStatusOverrideNotes: { type: String, default: null },
     // Structured quarantine/isolation record — was previously accepted by the frontend
