@@ -2061,6 +2061,9 @@ const SpeciesSchema = new mongoose.Schema({
     fieldTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: 'FieldTemplate', default: null, index: true }, // Reference to field template
     isDefault: { type: Boolean, default: false, index: true }, // Built-in species vs user-added
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // User who added custom species
+    // Safety-net cutoff (days from birthDate) after which a dam auto-clears "Nursing" status
+    // if no weaningDate has been recorded, based on the species' realistic max weaning/independence age.
+    maxNursingDays: { type: Number, default: null },
     createdAt: { type: Date, default: Date.now, index: true }
 });
 const Species = mongoose.model('Species', SpeciesSchema);

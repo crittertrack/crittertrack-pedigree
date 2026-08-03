@@ -24,8 +24,10 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const mongoose = require('mongoose');
-const { Litter, User } = require('../database/models');
-const { syncParentReproStatus } = require('../utils/reproStatusSync');
+const { Litter, User, Animal } = require('../database/models');
+const { syncParentReproStatus, computeReproFlags, buildNursingCutoffMap } = require('../utils/reproStatusSync');
+
+const FLAG_KEYS = ['isPlannedMating', 'isInMating', 'isPregnant', 'isNursing'];
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crittertrack';
 const APPLY = process.argv.includes('--apply');
@@ -68,10 +70,31 @@ async function backfillReproStatus() {
         console.log(`Found ${litters.length} litters spanning ${parentsByCreator.size} breeder(s).`);
 
         let totalAnimals = 0;
+        let totalChanged = 0;
         for (const [creatorId, idSet] of parentsByCreator.entries()) {
             const idList = [...idSet];
             totalAnimals += idList.length;
-            console.log(`- Breeder ${creatorId}: recomputing status for ${idList.length} animal(s)...`);
+            console.log(`- Breeder ${creatorId}: checking ${idList.length} animal(s)...`);
+
+            for (const id_public of idList) {
+                const parentLitters = await Litter.find({
+                    creatorId,
+                    $or: [{ sireId_public: id_public }, { damId_public: id_public }],
+                }).select('sireId_public damId_public isPlanned matingDate pregnancyDate birthDate weaningDate pregnancyLost createdAt').lean();
+
+                const nursingCutoffByLitter = await buildNursingCutoffMap(parentLitters);
+                const newFlags = computeReproFlags(parentLitters, id_public, nursingCutoffByLitter);
+                const current = await Animal.findOne({ creatorId, id_public }).select(FLAG_KEYS.join(' ')).lean();
+                if (!current) continue; // animal referenced by a litter but no longer exists
+
+                const changedKeys = FLAG_KEYS.filter((key) => !!current[key] !== !!newFlags[key]);
+                if (changedKeys.length) {
+                    totalChanged++;
+                    const diff = changedKeys.map((key) => `${key}: ${!!current[key]} -> ${newFlags[key]}`).join(', ');
+                    console.log(`  * ${id_public}: ${diff}`);
+                }
+            }
+
             if (APPLY) {
                 await syncParentReproStatus(creatorId, idList);
             }
@@ -80,7 +103,8 @@ async function backfillReproStatus() {
         console.log('----------------------------------------');
         console.log('Backfill finished.');
         console.log(`- Breeders processed: ${parentsByCreator.size}`);
-        console.log(`- Animal reproductive-status records recomputed: ${totalAnimals}`);
+        console.log(`- Animals checked: ${totalAnimals}`);
+        console.log(`- Animals with changed flags: ${totalChanged}`);
         if (!APPLY) console.log('This was a DRY RUN — no data was changed. Re-run with --apply to write changes.');
         console.log('----------------------------------------');
     } catch (error) {
