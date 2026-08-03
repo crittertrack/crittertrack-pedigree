@@ -82,11 +82,17 @@ function computeReproFlags(litters, id_public, nursingCutoffByLitter = new Map()
         if (!status) continue; // this litter is closed/resolved — check the next most recent one
 
         const isDamRole = litter.damId_public === id_public;
+        // Pregnant/nursing only ever apply to the dam's own body — for a sire (or the non-dam
+        // side of the pairing), this litter carries no status for THIS animal, so it must not
+        // block older litters from being checked (e.g. a sire's separate, more recent planned
+        // mating elsewhere).
+        if ((status === 'pregnant' || status === 'nursing') && !isDamRole) continue;
+
         if (status === 'planned') isPlannedMating = true;
         else if (status === 'mating') isInMating = true;
-        else if (status === 'pregnant' && isDamRole) isPregnant = true;
-        else if (status === 'nursing' && isDamRole) isNursing = true;
-        break; // only the most recent unresolved litter determines current status
+        else if (status === 'pregnant') isPregnant = true;
+        else if (status === 'nursing') isNursing = true;
+        break; // only the most recent litter that actually applies to this animal's role determines its status
     }
 
     return { isPlannedMating, isInMating, isPregnant, isNursing };
