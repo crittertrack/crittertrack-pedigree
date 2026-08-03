@@ -846,7 +846,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Safety cap: only apply the 2000-doc limit for full (non-slim) calls to avoid OOM
     const slimFields = filters.slim === 'true' || filters.slim === true
         ? 'id_public creatorId creatorId_public originalCreatorId name prefix suffix species gender birthDate ' +
-          'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isQuarantine isInTreatment isStub archived ' +
+          'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isPlannedMating isQuarantine isInTreatment isStub archived ' +
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
           'medicalConditions medications ' +
