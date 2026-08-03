@@ -274,6 +274,19 @@ const AnimalSchema = new mongoose.Schema({
         startDate: { type: Date, default: null },
         endDate: { type: Date, default: null },
     },
+    // Structured treatment record — mirrors quarantineDetails; isInTreatment is derived
+    // from status + startDate/endDate rather than being set directly.
+    treatmentDetails: {
+        status: { type: String, default: 'None' },
+        type: { type: String, default: null },
+        reason: { type: String, default: null },
+        startDate: { type: Date, default: null },
+        endDate: { type: Date, default: null },
+    },
+    // Archive of completed quarantine/treatment periods, snapshotted when a new period
+    // is started so past cycles remain visible on the timeline instead of being overwritten.
+    quarantineHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    treatmentHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
 
     // Feeding schedule tracking (for Management view)
     lastFedDate: { type: Date, default: null },
