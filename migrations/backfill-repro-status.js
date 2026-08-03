@@ -80,7 +80,7 @@ async function backfillReproStatus() {
                 const parentLitters = await Litter.find({
                     creatorId,
                     $or: [{ sireId_public: id_public }, { damId_public: id_public }],
-                }).select('sireId_public damId_public isPlanned matingDate pregnancyDate birthDate weaningDate pregnancyLost createdAt').lean();
+                }).select('sireId_public damId_public isPlanned matingDate pregnancyDate birthDate weaningDate weaningConfirmed pregnancyLost createdAt').lean();
 
                 const nursingCutoffByLitter = await buildNursingCutoffMap(parentLitters);
                 const newFlags = computeReproFlags(parentLitters, id_public, nursingCutoffByLitter);

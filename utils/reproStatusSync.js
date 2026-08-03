@@ -23,18 +23,21 @@ const DEFAULT_MAX_NURSING_DAYS = 90;
  * Determine the single active reproductive status contributed by one litter.
  * Returns one of: 'nursing' | 'pregnant' | 'mating' | 'planned' | null.
  *
+ * Stage transitions (planned -> mating, nursing -> closed) are driven by explicit user
+ * actions (the "Mated Today" / "Wean Today" buttons), not merely by a date field being
+ * present or having arrived — a breeder must be able to record/correct a mating or
+ * weaning date without that alone silently flipping the animal's status.
+ *
  * A litter is considered "closed" (contributes no active status) once:
- *  - it has a birthDate and a weaningDate that has arrived (weaningDate <= today),
+ *  - it has a birthDate and weaning was explicitly confirmed (weaningConfirmed === true),
  *  - the pregnancy was recorded as lost (pregnancyLost === true) with no birth, or
- *  - it has a birthDate but no weaningDate and more than `maxNursingDays` have
+ *  - it has a birthDate but wasn't confirmed weaned and more than `maxNursingDays` have
  *    passed since birth — a safety-net cutoff so a litter the breeder forgot
  *    to mark as weaned doesn't leave the dam flagged "nursing" forever.
  */
 function getLitterReproStatus(litter, today = new Date(), maxNursingDays = DEFAULT_MAX_NURSING_DAYS) {
     const hasBirth = !!litter.birthDate;
-    // A weaning date only closes the litter once it actually arrives — entering a future weaning
-    // date shouldn't immediately unassign nursing status before that date is reached.
-    const isWeaned = !!litter.weaningDate && new Date(litter.weaningDate) <= today;
+    const isWeaned = !!litter.weaningConfirmed;
     const hasPregnancy = !!litter.pregnancyDate;
     const hasMatingDate = !!litter.matingDate;
 
@@ -48,9 +51,10 @@ function getLitterReproStatus(litter, today = new Date(), maxNursingDays = DEFAU
     }
     if (hasPregnancy) return 'pregnant';
 
-    const mated = hasMatingDate && new Date(litter.matingDate) <= today;
-    if (mated || (!litter.isPlanned && hasMatingDate)) return 'mating';
-    if (litter.isPlanned && (!hasMatingDate || new Date(litter.matingDate) > today)) return 'planned';
+    // isPlanned only clears via the explicit "Mated Today" action — a matingDate arriving
+    // (or being entered/corrected) on its own does not advance a planned mating to "mating".
+    if (!litter.isPlanned && hasMatingDate) return 'mating';
+    if (litter.isPlanned) return 'planned';
     return null;
 }
 
@@ -128,7 +132,7 @@ async function syncParentReproStatus(creatorId, parentIdsPublic = []) {
         const litters = await Litter.find({
             creatorId,
             $or: [{ sireId_public: id_public }, { damId_public: id_public }],
-        }).select('sireId_public damId_public isPlanned matingDate pregnancyDate birthDate weaningDate pregnancyLost createdAt').lean();
+        }).select('sireId_public damId_public isPlanned matingDate pregnancyDate birthDate weaningDate weaningConfirmed pregnancyLost createdAt').lean();
 
         const nursingCutoffByLitter = await buildNursingCutoffMap(litters);
         const flags = computeReproFlags(litters, id_public, nursingCutoffByLitter);

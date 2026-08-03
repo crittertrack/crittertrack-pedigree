@@ -959,6 +959,9 @@ const LitterSchema = new mongoose.Schema({
     stillbornCount: { type: Number, default: null }, // Number of stillborn
     lossesCount: { type: Number, default: null }, // Number of losses
     weaningDate: { type: Date, default: null },
+    // Set only via the explicit "Wean Today" action — distinguishes a confirmed weaning
+    // from merely recording/correcting a weaningDate value, which should not alone end nursing.
+    weaningConfirmed: { type: Boolean, default: false },
     
     // Optional administrative breakdown of males/females/unknown  
     maleCount: { type: Number, default: null },
