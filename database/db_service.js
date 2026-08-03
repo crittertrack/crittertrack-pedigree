@@ -861,6 +861,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
           'medicalConditions medications healthStatus healthStatusOverride ' +
+          'quarantineDetails quarantineHistory ' +
           'color coat coatPattern earset phenotype morph markings eyeColor nailColor size carrierTraits geneticCode lifeStage ' +
           'ringId eartagNumber'
         : null;

@@ -190,6 +190,7 @@ const PublicProfile = mongoose.model('PublicProfile', PublicProfileSchema, 'publ
 // --- Health Record Sub-schema (for use in AnimalSchema) ---
 const HealthRecordSchema = new mongoose.Schema({
     // Generic fields to accommodate different record types
+    id: { type: String },
     name: { type: String },
     date: { type: Date },
     medication: { type: String },
@@ -206,6 +207,16 @@ const HealthRecordSchema = new mongoose.Schema({
     status: { type: String },
     severity: { type: String },
     notes: { type: String },
+    // Medication-specific scheduling fields (see AnimalFormModalV2.jsx's addMedication()).
+    dose: { type: String },
+    startDate: { type: Date, default: null },
+    stopDate: { type: Date, default: null },
+    intervalValue: { type: Number, default: null },
+    intervalUnit: { type: String, default: null },
+    supplyId: { type: String, default: null },
+    supplyName: { type: String, default: null },
+    source: { type: String, default: null },
+    administrations: [{ date: { type: Date } }],
 }, { _id: false });
 
 const ShowEventSchema = new mongoose.Schema({
