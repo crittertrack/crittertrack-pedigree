@@ -15,18 +15,22 @@
  * from the current Litter data, never accumulates or guesses).
  *
  * Usage:
- *   node migrations/backfill-repro-status.js            (dry run — logs only)
- *   node migrations/backfill-repro-status.js --apply    (writes changes)
+ *   node migrations/backfill-repro-status.js                  (dry run, all breeders)
+ *   node migrations/backfill-repro-status.js --apply          (writes changes, all breeders)
+ *   node migrations/backfill-repro-status.js --user=CTU2       (dry run, one breeder only)
+ *   node migrations/backfill-repro-status.js --user=CTU2 --apply
  */
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const mongoose = require('mongoose');
-const { Litter } = require('../database/models');
+const { Litter, User } = require('../database/models');
 const { syncParentReproStatus } = require('../utils/reproStatusSync');
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crittertrack';
 const APPLY = process.argv.includes('--apply');
+const userArg = process.argv.find((arg) => arg.startsWith('--user='));
+const USER_PUBLIC_ID = userArg ? userArg.split('=')[1] : null;
 
 async function backfillReproStatus() {
     let connection;
@@ -35,8 +39,19 @@ async function backfillReproStatus() {
         console.log('Successfully connected to MongoDB.');
         console.log(APPLY ? 'Running in APPLY mode — changes will be written.' : 'Running in DRY-RUN mode — no changes will be written. Pass --apply to write.');
 
+        let litterFilter = {};
+        if (USER_PUBLIC_ID) {
+            const user = await User.findOne({ id_public: USER_PUBLIC_ID }).select('_id').lean();
+            if (!user) {
+                console.log(`No user found with id_public "${USER_PUBLIC_ID}". Nothing to do.`);
+                return;
+            }
+            litterFilter = { creatorId: user._id };
+            console.log(`Scoping backfill to user "${USER_PUBLIC_ID}" only.`);
+        }
+
         // Group every distinct (creatorId, id_public) parent pair referenced by any litter.
-        const litters = await Litter.find({})
+        const litters = await Litter.find(litterFilter)
             .select('creatorId sireId_public damId_public')
             .lean();
 
