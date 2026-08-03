@@ -274,8 +274,9 @@ const AnimalSchema = new mongoose.Schema({
         startDate: { type: Date, default: null },
         endDate: { type: Date, default: null },
     },
-    // Structured treatment record — mirrors quarantineDetails; isInTreatment is derived
-    // from status + startDate/endDate rather than being set directly.
+    // Structured treatment record — descriptive metadata only (type/reason/dates for the
+    // timeline). isInTreatment is derived from active medications/critical conditions
+    // (see utils/healthStatusSync.js), not from this record's status/dates.
     treatmentDetails: {
         status: { type: String, default: 'None' },
         type: { type: String, default: null },

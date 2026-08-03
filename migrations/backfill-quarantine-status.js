@@ -1,8 +1,12 @@
 /**
  * backfill-quarantine-status.js
  *
- * One-time script that recomputes isQuarantine / isInTreatment for EVERY animal that has
- * quarantineDetails or treatmentDetails set, using the corrected date-comparison logic.
+ * One-time script that recomputes isQuarantine for EVERY animal that has
+ * quarantineDetails set, using the corrected date-comparison logic.
+ *
+ * NOTE: This script no longer touches isInTreatment. That flag is now derived from active
+ * medications/critical conditions (see utils/healthStatusSync.js) rather than from
+ * treatmentDetails periods — see migrations/backfill-treatment-status.js instead.
  *
  * Bug fixed: isStatusPeriodActive() (crittertrack-frontend/src/components/AnimalForm/
  * AnimalFormModalV2.jsx) used to compare the stored UTC-midnight startDate/endDate against a
@@ -10,12 +14,12 @@
  * startDate is literally today got treated as "not yet started" (start > today), so isQuarantine
  * was saved as false even though the user had just set status to "Quarantine" starting today.
  *
- * This script recomputes both flags from quarantineDetails/treatmentDetails using calendar-date
+ * This script recomputes isQuarantine from quarantineDetails using calendar-date
  * (UTC) string comparison, matching the corrected frontend logic, and fixes any animal whose
- * saved isQuarantine/isInTreatment no longer matches what its own details say it should be.
+ * saved isQuarantine no longer matches what its own details say it should be.
  *
- * Safe to re-run at any time — fully idempotent (always recomputes from quarantineDetails/
- * treatmentDetails, never accumulates or guesses).
+ * Safe to re-run at any time — fully idempotent (always recomputes from quarantineDetails,
+ * never accumulates or guesses).
  *
  * Usage:
  *   node migrations/backfill-quarantine-status.js                  (dry run, all animals)
@@ -58,10 +62,7 @@ async function backfillQuarantineStatus() {
         console.log(APPLY ? 'Running in APPLY mode — changes will be written.' : 'Running in DRY-RUN mode — no changes will be written. Pass --apply to write.');
 
         let filter = {
-            $or: [
-                { 'quarantineDetails.status': { $exists: true, $ne: 'None' } },
-                { 'treatmentDetails.status': { $exists: true, $ne: 'None' } },
-            ],
+            'quarantineDetails.status': { $exists: true, $ne: 'None' },
         };
         if (USER_PUBLIC_ID) {
             const user = await User.findOne({ id_public: USER_PUBLIC_ID }).select('_id').lean();
@@ -74,24 +75,23 @@ async function backfillQuarantineStatus() {
         }
 
         const animals = await Animal.find(filter)
-            .select('id_public creatorId isQuarantine isInTreatment quarantineDetails treatmentDetails')
+            .select('id_public creatorId isQuarantine quarantineDetails')
             .lean();
 
-        console.log(`Found ${animals.length} animal(s) with an active-or-past quarantine/treatment record set.`);
+        console.log(`Found ${animals.length} animal(s) with an active-or-past quarantine record set.`);
 
         let totalChanged = 0;
         for (const animal of animals) {
             const newIsQuarantine = isStatusPeriodActive(animal.quarantineDetails);
-            const newIsInTreatment = isStatusPeriodActive(animal.treatmentDetails);
-            const changed = !!animal.isQuarantine !== newIsQuarantine || !!animal.isInTreatment !== newIsInTreatment;
+            const changed = !!animal.isQuarantine !== newIsQuarantine;
 
             if (changed) {
                 totalChanged++;
-                console.log(`  * ${animal.id_public}: isQuarantine: ${!!animal.isQuarantine} -> ${newIsQuarantine}, isInTreatment: ${!!animal.isInTreatment} -> ${newIsInTreatment}`);
+                console.log(`  * ${animal.id_public}: isQuarantine: ${!!animal.isQuarantine} -> ${newIsQuarantine}`);
                 if (APPLY) {
                     await Animal.updateOne(
                         { _id: animal._id },
-                        { $set: { isQuarantine: newIsQuarantine, isInTreatment: newIsInTreatment } }
+                        { $set: { isQuarantine: newIsQuarantine } }
                     );
                 }
             }

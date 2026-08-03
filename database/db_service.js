@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { assertCleanText } = require('../utils/profanityFilter');
+const { computeIsInTreatment, computeHealthStatus } = require('../utils/healthStatusSync');
 
 const {
     User,
@@ -698,6 +699,16 @@ const addAnimal = async (appUserId_backend, animalData) => {
         animalData.parasitePreventionSchedule = [];
     }
 
+    // isInTreatment is derived from active medical records, not a manually-set flag.
+    animalData.isInTreatment = computeIsInTreatment({ medications: animalData.medications, medicalConditions: animalData.medicalConditions });
+    // healthStatus is likewise derived (healthStatusOverride, if set, is applied on top by the frontend).
+    animalData.healthStatus = computeHealthStatus({
+        quarantineDetails: animalData.quarantineDetails,
+        medications: animalData.medications,
+        medicalConditions: animalData.medicalConditions,
+        allergies: animalData.allergies,
+    });
+
     // Ensure creatorId_public is always present (required by schema)
     // It should be set by the route, but look it up as a fallback
     if (!animalData.creatorId_public) {
@@ -849,7 +860,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isPlannedMating isQuarantine isInTreatment isStub archived ' +
           'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
-          'medicalConditions medications ' +
+          'medicalConditions medications healthStatus healthStatusOverride ' +
           'color coat coatPattern earset phenotype morph markings eyeColor nailColor size carrierTraits geneticCode lifeStage ' +
           'ringId eartagNumber'
         : null;
@@ -1109,6 +1120,21 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     if (typeof updates.parasitePreventionSchedule === 'string' && updates.parasitePreventionSchedule === '') {
         updates.parasitePreventionSchedule = [];
     }
+
+    // isInTreatment/healthStatus are derived from active medical records, not manually-set —
+    // recompute both on every save using the post-merge state so they never drift from the
+    // actual data (healthStatusOverride, if set, is applied on top by the frontend when displaying).
+    const mergedMedications = updates.medications !== undefined ? updates.medications : originalAnimal.medications;
+    const mergedMedicalConditions = updates.medicalConditions !== undefined ? updates.medicalConditions : originalAnimal.medicalConditions;
+    const mergedQuarantineDetails = updates.quarantineDetails !== undefined ? updates.quarantineDetails : originalAnimal.quarantineDetails;
+    const mergedAllergies = updates.allergies !== undefined ? updates.allergies : originalAnimal.allergies;
+    updates.isInTreatment = computeIsInTreatment({ medications: mergedMedications, medicalConditions: mergedMedicalConditions });
+    updates.healthStatus = computeHealthStatus({
+        quarantineDetails: mergedQuarantineDetails,
+        medications: mergedMedications,
+        medicalConditions: mergedMedicalConditions,
+        allergies: mergedAllergies,
+    });
     
     const updatedAnimal = await Animal.findOneAndUpdate(
         { _id: animalId_backend, creatorId: appUserId_backend },
