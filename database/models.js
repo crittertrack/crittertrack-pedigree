@@ -265,6 +265,15 @@ const AnimalSchema = new mongoose.Schema({
     isInMating: { type: Boolean, default: false },
     isQuarantine: { type: Boolean, default: false }, // Animal is in quarantine/isolation
     isInTreatment: { type: Boolean, default: false }, // Animal is actively undergoing treatment
+    // Structured quarantine/isolation record — was previously accepted by the frontend
+    // form but silently dropped on save since it wasn't declared on this schema.
+    quarantineDetails: {
+        status: { type: String, default: 'None' },
+        type: { type: String, default: null },
+        reason: { type: String, default: null },
+        startDate: { type: Date, default: null },
+        endDate: { type: Date, default: null },
+    },
 
     // Feeding schedule tracking (for Management view)
     lastFedDate: { type: Date, default: null },
