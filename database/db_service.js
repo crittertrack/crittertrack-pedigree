@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { assertCleanText } = require('../utils/profanityFilter');
 const { computeIsInTreatment, computeHealthStatus } = require('../utils/healthStatusSync');
+const { logFieldEdits, logCareUpdates, logAnimalCreated } = require('../utils/animalLogger');
 
 const {
     User,
@@ -835,6 +836,14 @@ const addAnimal = async (appUserId_backend, animalData) => {
 
     await notifyLinkageChanges(appUserId_backend, null, saved);
 
+    // Log the creation itself so it shows up in the animal's Timeline tab.
+    await logAnimalCreated({
+        userId: appUserId_backend,
+        animalId: newAnimal._id,
+        animalId_public: saved.id_public,
+        name: saved.name,
+    });
+
     return saved;
 };
 
@@ -963,7 +972,12 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           'medicalConditions medications healthStatus healthStatusOverride ' +
           'quarantineDetails quarantineHistory ' +
           'color coat coatPattern earset phenotype morph markings eyeColor nailColor size carrierTraits geneticCode lifeStage ' +
-          'ringId eartagNumber'
+          'ringId eartagNumber ' +
+          // Feeding & Care management view (Feeding, Scheduled Care, Grooming & Special Care, Training clusters)
+          'lastFedDate feedingFrequencyDays dietType nutritionSchedule animalCareTasks ' +
+          'groomingSchedule brushingSchedule bathingSchedule specializedCareSchedule specialCareSchedule ' +
+          'exerciseSchedule crateTrainingSchedule litterTrainingSchedule leashTrainingSchedule freeFlightTrainingSchedule ' +
+          'workingRoleTrainingSchedule behavioralIssueTrainingSchedule reactivityTrainingSchedule flightRiskTrainingSchedule'
         : null;
     const baseFind = Animal.find(query).sort({ birthDate: -1 });
     const cappedFind = slimFields ? baseFind : baseFind.limit(2000);
@@ -1339,7 +1353,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             studFeeCurrency: updatedAnimal.studFeeCurrency || 'USD',
             
             // List 3: Collaboration Features (PUBLIC)
-            careTasks: updatedAnimal.careTasks || [],
             publicRemarks: updatedAnimal.publicRemarks || null,
             tags: updatedAnimal.tags || [],
             originalCreatorId_public: updatedAnimal.originalCreatorId_public || null,
@@ -1497,6 +1510,24 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     // Add backward-compatible alias fields before returning
     updatedAnimal.fatherId_public = updatedAnimal.sireId_public || null;
     updatedAnimal.motherId_public = updatedAnimal.damId_public || null;
+
+    // Log whatever changed (core fields vs. care schedule) so the animal's Timeline tab
+    // stays up to date. Each helper is a no-op if nothing relevant changed.
+    await logFieldEdits({
+        userId: appUserId_backend,
+        animalId: updatedAnimal._id,
+        animalId_public: updatedAnimal.id_public,
+        before: originalAnimal,
+        after: updatedAnimal,
+    });
+    await logCareUpdates({
+        userId: appUserId_backend,
+        animalId: updatedAnimal._id,
+        animalId_public: updatedAnimal.id_public,
+        before: originalAnimal,
+        after: updatedAnimal,
+    });
+
     return updatedAnimal;
 };
 
@@ -1670,7 +1701,6 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             studFeeCurrency: animal.studFeeCurrency || 'USD',
             
             // List 3: Collaboration Features (PUBLIC)
-            careTasks: animal.careTasks || [],
             publicRemarks: animal.publicRemarks || null,
             tags: animal.tags || [],
             originalCreatorId_public: animal.originalCreatorId_public || null,

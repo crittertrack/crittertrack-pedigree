@@ -1,8 +1,9 @@
 ﻿﻿const express = require('express');
 const router = express.Router();
-const { Animal } = require('../database/models');
+const { Animal, AnimalLog, SupplyItem } = require('../database/models');
 const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
+const { logFeedingEvent } = require('../utils/animalLogger');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication to all routes
@@ -316,6 +317,79 @@ router.put('/:id_public', async (req, res) => {
     } catch (error) {
         console.error(`[ANIMALS] Error updating animal ${req.params.id_public}:`, error);
         res.status(500).json({ message: 'Failed to update animal', error: error.message });
+    }
+});
+
+// POST /api/animals/:id_public/feeding - Mark an animal as fed (or skip a feeding)
+router.post('/:id_public/feeding', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const userId = req.user.id;
+        const { supplyId, quantity, notes, skipped } = req.body;
+
+        const animal = await Animal.findOne({ id_public, creatorId: userId });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found or you do not have permission to edit it.' });
+        }
+
+        animal.lastFedDate = new Date();
+        await animal.save();
+
+        let supply = null;
+        let foodName = null;
+        if (supplyId) {
+            supply = await SupplyItem.findOne({ _id: supplyId, userId });
+            if (supply) {
+                foodName = supply.name;
+                if (quantity !== undefined && quantity !== null && quantity !== '') {
+                    const qty = Number(quantity) || 0;
+                    supply.currentStock = Math.max(0, (supply.currentStock || 0) - qty);
+                    await supply.save();
+                }
+            }
+        }
+
+        await logFeedingEvent({
+            userId,
+            animalId: animal._id,
+            animalId_public: animal.id_public,
+            foodName,
+            quantity,
+            notes,
+            skipped: !!skipped,
+        });
+
+        res.json({ animal, supply });
+    } catch (error) {
+        console.error(`[ANIMALS] Error logging feeding for ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to log feeding', error: error.message });
+    }
+});
+
+// GET /api/animals/:id_public/logs - Get the change log (Logs tab) for an animal
+router.get('/:id_public/logs', async (req, res) => {
+    try {
+        const { id_public } = req.params;
+        const userId = req.user.id;
+
+        const animal = await Animal.findOne({
+            id_public,
+            $or: [{ creatorId: userId }, { viewOnlyForUsers: userId }]
+        }).select('_id').lean();
+
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found or you do not have permission to view its logs.' });
+        }
+
+        const logs = await AnimalLog.find({ animalId: animal._id })
+            .sort({ createdAt: -1 })
+            .limit(500)
+            .lean();
+
+        res.json(logs);
+    } catch (error) {
+        console.error(`[ANIMALS] Error fetching logs for ${req.params.id_public}:`, error);
+        res.status(500).json({ message: 'Failed to fetch animal logs', error: error.message });
     }
 });
 

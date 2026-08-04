@@ -120,8 +120,8 @@ const ANIMAL_SAFE = new Set([
     'id_public','species','prefix','suffix','name','gender','birthDate','deceasedDate',
     'breederId_public','manualBreederName','status','color','coat','earset',
     'isOwned','archived','soldStatus','isPregnant','isNursing','isInMating','isQuarantine',
-    'lastFedDate','feedingFrequencyDays','lastMaintenanceDate','maintenanceFrequencyDays',
-    'careTasks','tags','imageUrl','photoUrl','extraImages',
+    'lastFedDate','feedingFrequencyDays',
+    'animalCareTasks','tags','imageUrl','photoUrl','extraImages',
     'sireId_public','damId_public',
     'remarks','geneticCode','manualownerName','groupRole','keeperHistory',
     'coatPattern','lifeStage','carrierTraits','phenotype','morph','markings',
@@ -144,8 +144,17 @@ const ANIMAL_SAFE = new Set([
     'geneticTestResults','eyeClearance','cardiacClearance','dentalRecords','chronicConditions',
     'dietType','feedingSchedule','supplements','housingType','enclosureId',
     'bedding','temperatureRange','humidity','lighting','noise','enrichment',
+    'nutritionSchedule','dietSupplies','supplementSupplies',
     'exerciseRequirements','dailyExerciseMinutes','groomingNeeds','sheddingLevel',
     'crateTrained','litterTrained','leashTrained','freeFlightTrained',
+    'brushingFrequency','bathingFrequency','coatCareNotes','nailCareRequirements',
+    'beakHoofScaleMaintenance','skinEarCareNeeds','dentalCareRequirements','groomingNotes',
+    'dietaryRestrictions','dietaryPreferences','specialCareNeeds','healthMonitoringNotes',
+    'additionalSpecialRequirements',
+    'groomingSchedule','brushingSchedule','bathingSchedule','specializedCareSchedule','specialCareSchedule',
+    'exerciseSchedule','crateTrainingSchedule','litterTrainingSchedule','leashTrainingSchedule',
+    'freeFlightTrainingSchedule','workingRoleTrainingSchedule','behavioralIssueTrainingSchedule',
+    'reactivityTrainingSchedule','flightRiskTrainingSchedule',
     'temperament','handlingTolerance','socialStructure','activityCycle',
     'trainingLevel','trainingDisciplines','certifications','workingRole',
     'behavioralIssues','biteHistory','reactivityNotes',
@@ -308,9 +317,6 @@ router.post('/', upload.single('file'), async (req, res) => {
             // --- VALIDATION: Filter out invalid array entries ---
             // Mongoose validation fails on save if arrays contain empty objects `{}`
             // where a subdocument with required fields is expected.
-            if (rec.careTasks && Array.isArray(rec.careTasks)) {
-                rec.careTasks = rec.careTasks.filter(t => t && typeof t === 'object' && t.taskName);
-            }
             if (rec.animalCareTasks && Array.isArray(rec.animalCareTasks)) {
                 rec.animalCareTasks = rec.animalCareTasks.filter(t => t && typeof t === 'object' && t.taskName);
             }

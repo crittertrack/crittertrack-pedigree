@@ -311,22 +311,14 @@ const AnimalSchema = new mongoose.Schema({
     lastFedDate: { type: Date, default: null },
     feedingFrequencyDays: { type: Number, default: null }, // Feed every N days
 
-    // Maintenance schedule tracking (for Management view)
-    lastMaintenanceDate: { type: Date, default: null },
-    maintenanceFrequencyDays: { type: Number, default: null }, // Maintenance every N days
-
-    // Flexible per-animal care tasks (nail trim, weight check, health check, etc.)
-    careTasks: [{
-        taskName: { type: String, required: true, trim: true },
-        lastDoneDate: { type: Date, default: null },
-        frequencyDays: { type: Number, default: null },
-    }],
-
     // Animal-specific care tasks (weigh, nail trim, health check, handling, etc.)
     animalCareTasks: [{
+        id: { type: String, default: null },
         taskName: { type: String, required: true, trim: true },
+        notes: { type: String, default: null },
         lastDoneDate: { type: Date, default: null },
         frequencyDays: { type: Number, default: null },
+        lastSkipped: { type: Boolean, default: false },
     }],
 
     // Custom milestones — one-time or recurring events tracked per animal
@@ -552,6 +544,30 @@ const AnimalSchema = new mongoose.Schema({
     litterTrained: { type: Boolean, default: null },
     leashTrained: { type: Boolean, default: null },
     freeFlightTrained: { type: Boolean, default: null },
+
+    // Grooming & Coat Care — descriptive fields (Routine Care tab)
+    brushingFrequency: { type: String, default: null },
+    bathingFrequency: { type: String, default: null },
+    coatCareNotes: { type: String, default: null },
+    nailCareRequirements: { type: String, default: null },
+    beakHoofScaleMaintenance: { type: String, default: null },
+    skinEarCareNeeds: { type: String, default: null },
+    dentalCareRequirements: { type: String, default: null },
+    groomingNotes: { type: String, default: null },
+    // Grooming & Coat Care — optional recurring schedules (each tracked independently; shown in Feeding & Care management view)
+    groomingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    brushingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    bathingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    specializedCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+
+    // Special Requirements & Preferences (Routine Care tab)
+    dietaryRestrictions: { type: String, default: null },
+    dietaryPreferences: { type: String, default: null },
+    specialCareNeeds: { type: String, default: null },
+    healthMonitoringNotes: { type: String, default: null },
+    additionalSpecialRequirements: { type: String, default: null },
+    // Special Care Needs — optional recurring schedule
+    specialCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     
     // Tab 9: Behavior & Welfare Fields
     temperament: { type: String, default: null },
@@ -577,6 +593,17 @@ const AnimalSchema = new mongoose.Schema({
     // Escape & flight risk
     escapeRiskLevel: { type: String, default: 'Low' },
     escapeBehavior: { type: String, default: null },
+    // Training schedules (Behavior tab) — optional recurring schedules, each tracked independently;
+    // shown clustered in the Feeding & Care management view (no separate Behavior management view).
+    exerciseSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    crateTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    litterTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    leashTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    freeFlightTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    workingRoleTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    behavioralIssueTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    reactivityTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    flightRiskTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     // Stereotypic & stress behaviors
     stereotypicBehaviors: { type: String, default: null },
     stressIndicators: { type: String, default: null },
@@ -738,10 +765,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     lastFedDate: { type: Date, default: null },
     feedingFrequencyDays: { type: Number, default: null },
 
-    // Maintenance schedule tracking (for Management view)
-    lastMaintenanceDate: { type: Date, default: null },
-    maintenanceFrequencyDays: { type: Number, default: null },
-    
     // Availability for sale/stud (for showcase)
     isForSale: { type: Boolean, default: false },
     salePriceCurrency: { type: String, default: 'USD' },
@@ -922,8 +945,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     studFeeCurrency: { type: String, default: 'USD' },
     
     // --- ADDITIONAL PUBLIC: List 3 Fields (Collaboration Features) ---
-    // Care Tasks and Maintenance
-    careTasks: [{ type: String }],
     // Public-facing remarks (separate from private notes)
     publicRemarks: { type: String, default: null },
     // Tags for categorization
