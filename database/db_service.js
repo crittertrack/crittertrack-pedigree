@@ -11,7 +11,8 @@ const {
     Animal,
     PublicAnimal,
     Litter,
-    Counter
+    Counter,
+    Notification
 } = require('./models.js'); // Finds /app/database/models.js 
 
 // Load environment variables (Only JWT secret and constants are read here)
@@ -638,6 +639,102 @@ const updateUserProfile = async (appUserId_backend, updates) => {
 /**
  * Adds a new animal to the user's private collection.
  */
+/**
+ * Notifies the owners of animals/users referenced via sireId_public, damId_public, or
+ * breederId_public whenever a save points one of those links at someone else's record.
+ * The link is applied immediately (optimistic); the notified owner can reject it via
+ * POST /notifications/:id/reject, which strips the link back off (see notificationRoutes.js).
+ * Only fires for links that actually changed in this save, and never for self-links.
+ */
+const notifyLinkageChanges = async (requesterId_backend, originalAnimal, animal) => {
+    try {
+        const changed = (field) => !!animal[field] && animal[field] !== (originalAnimal?.[field] || null);
+        const sireChanged = changed('sireId_public');
+        const damChanged = changed('damId_public');
+        const breederChanged = changed('breederId_public');
+        if (!sireChanged && !damChanged && !breederChanged) return;
+
+        const requester = await User.findById(requesterId_backend).select('id_public personalName breederName showBreederName').lean();
+        if (!requester) return;
+        const requesterName = (requester.showBreederName && requester.breederName) ? requester.breederName : requester.personalName;
+        const animalDisplayName = [animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ') || animal.name;
+
+        const notifyOwner = async ({ targetUserBackendId, targetUserPublicId, type, parentType = null, targetAnimalId_public = null, message }) => {
+            if (!targetUserBackendId || targetUserBackendId.toString() === requesterId_backend.toString()) return; // no self-notifications
+            const existing = await Notification.findOne({
+                userId: targetUserBackendId,
+                animalId_public: animal.id_public,
+                type,
+                status: 'pending',
+                parentType,
+                targetAnimalId_public,
+            });
+            if (existing) return; // already pending, don't spam
+            await Notification.create({
+                userId: targetUserBackendId,
+                userId_public: targetUserPublicId,
+                type,
+                status: 'pending',
+                requestedBy_id: requesterId_backend,
+                requestedBy_public: requester.id_public,
+                requestedBy_name: requesterName,
+                animalId_public: animal.id_public,
+                animalName: animalDisplayName,
+                animalPrefix: animal.prefix || '',
+                animalImageUrl: animal.imageUrl || animal.photoUrl || '',
+                parentType,
+                targetAnimalId_public,
+                message,
+                read: false,
+            });
+        };
+
+        if (breederChanged) {
+            const breederUser = await User.findOne({ id_public: animal.breederId_public }).select('_id id_public').lean();
+            if (breederUser) {
+                await notifyOwner({
+                    targetUserBackendId: breederUser._id,
+                    targetUserPublicId: breederUser.id_public,
+                    type: 'breeder_request',
+                    message: `${requesterName} has listed you as the breeder of ${animalDisplayName} (${animal.id_public}).`,
+                });
+            }
+        }
+
+        if (sireChanged) {
+            const sireAnimal = await Animal.findOne({ id_public: animal.sireId_public }).select('creatorId creatorId_public name prefix suffix').lean();
+            if (sireAnimal) {
+                const sireDisplayName = [sireAnimal.prefix, sireAnimal.name, sireAnimal.suffix].filter(Boolean).join(' ') || sireAnimal.name;
+                await notifyOwner({
+                    targetUserBackendId: sireAnimal.creatorId,
+                    targetUserPublicId: sireAnimal.creatorId_public,
+                    type: 'parent_request',
+                    parentType: 'sire',
+                    targetAnimalId_public: animal.sireId_public,
+                    message: `${requesterName} has used your animal ${sireDisplayName} (${animal.sireId_public}) as the sire (father) of ${animalDisplayName} (${animal.id_public}).`,
+                });
+            }
+        }
+
+        if (damChanged) {
+            const damAnimal = await Animal.findOne({ id_public: animal.damId_public }).select('creatorId creatorId_public name prefix suffix').lean();
+            if (damAnimal) {
+                const damDisplayName = [damAnimal.prefix, damAnimal.name, damAnimal.suffix].filter(Boolean).join(' ') || damAnimal.name;
+                await notifyOwner({
+                    targetUserBackendId: damAnimal.creatorId,
+                    targetUserPublicId: damAnimal.creatorId_public,
+                    type: 'parent_request',
+                    parentType: 'dam',
+                    targetAnimalId_public: animal.damId_public,
+                    message: `${requesterName} has used your animal ${damDisplayName} (${animal.damId_public}) as the dam (mother) of ${animalDisplayName} (${animal.id_public}).`,
+                });
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to create linkage notification:', err && err.message ? err.message : err);
+    }
+};
+
 const addAnimal = async (appUserId_backend, animalData) => {
     const id_public = await getNextSequence('animalId');
 
@@ -735,6 +832,9 @@ const addAnimal = async (appUserId_backend, animalData) => {
     const saved = newAnimal.toObject();
     saved.fatherId_public = saved.sireId_public || null;
     saved.motherId_public = saved.damId_public || null;
+
+    await notifyLinkageChanges(appUserId_backend, null, saved);
+
     return saved;
 };
 
@@ -1146,6 +1246,8 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     if (!updatedAnimal) {
         throw new Error('Animal not found or user does not own this animal.');
     }
+
+    await notifyLinkageChanges(appUserId_backend, originalAnimal, updatedAnimal);
     
     console.log('[updateAnimal] MongoDB returned document with size:', updatedAnimal.size);
     
@@ -1600,14 +1702,52 @@ const addLitter = async (appUserId_backend, litterData) => {
             throw new Error('Parents must be the same species');
         }
     }
-    
+
+    // Duplicate detection: warn instead of silently creating a second Litter document for a
+    // pairing/date that's already tracked — same-user re-submits are almost always accidental,
+    // and cross-user pairs should "adopt" the existing record (see adoptLitter) rather than fork it.
+    // Skipped once the caller has explicitly confirmed ("create anyway").
+    if (!litterData.confirmDuplicate && litterData.sireId_public && litterData.damId_public) {
+        const dateRange = (d) => {
+            const start = new Date(d); start.setHours(0, 0, 0, 0);
+            const end = new Date(d); end.setHours(23, 59, 59, 999);
+            return { $gte: start, $lte: end };
+        };
+        const { sireId_public, damId_public } = litterData;
+        let existing = null;
+        if (litterData.birthDate) {
+            existing = await Litter.findOne({ sireId_public, damId_public, birthDate: dateRange(litterData.birthDate) })
+                .select('litter_id_public creatorId birthDate matingDate').lean();
+        }
+        if (!existing && litterData.matingDate) {
+            existing = await Litter.findOne({ sireId_public, damId_public, matingDate: dateRange(litterData.matingDate) })
+                .select('litter_id_public creatorId birthDate matingDate').lean();
+        }
+        if (existing) {
+            const isOwnRecord = !!(existing.creatorId && existing.creatorId.toString() === appUserId_backend.toString());
+            const creator = isOwnRecord ? null : await User.findById(existing.creatorId).select('personalName breederName').lean();
+            const err = new Error('A litter for this pairing already exists around this date.');
+            err.code = 'DUPLICATE_LITTER';
+            err.duplicate = {
+                litterId_backend: existing._id,
+                litter_id_public: existing.litter_id_public,
+                birthDate: existing.birthDate,
+                matingDate: existing.matingDate,
+                isOwnRecord,
+                creatorName: creator ? (creator.breederName || creator.personalName) : null,
+            };
+            throw err;
+        }
+    }
+
     // Auto-assign CTL-ID if not already provided
     const litter_id_public = litterData.litter_id_public || await getNextSequence('litterId');
-    
+
+    const { confirmDuplicate, ...cleanLitterData } = litterData;
     const newLitter = new Litter({
         creatorId: appUserId_backend,
         litter_id_public,
-        ...litterData,
+        ...cleanLitterData,
     });
     await newLitter.save();
 
@@ -1618,11 +1758,32 @@ const addLitter = async (appUserId_backend, litterData) => {
 };
 
 /**
+ * Links an existing litter (created by another user for the same pairing) into this user's
+ * own Litter Management, instead of them creating a duplicate record. Grants full edit rights
+ * alongside the original creator; does not grant delete rights.
+ */
+const adoptLitter = async (appUserId_backend, litterId_backend) => {
+    const litter = await Litter.findById(litterId_backend);
+    if (!litter) throw new Error('Litter not found.');
+
+    const uid = appUserId_backend.toString();
+    if (litter.creatorId.toString() !== uid && !litter.linkedOwners.some(id => id.toString() === uid)) {
+        litter.linkedOwners.push(appUserId_backend);
+        await litter.save();
+    }
+
+    await User.findByIdAndUpdate(appUserId_backend, { $addToSet: { ownedLitters: litter._id } });
+
+    return litter;
+};
+
+/**
  * Gets a list of litters owned by the logged-in user.
  */
 const getUsersLitters = async (appUserId_backend) => {
     // Sort: planned matings (no birthDate) first, then by birthDate descending
-    const litters = await Litter.find({ creatorId: appUserId_backend }).sort({ isPlanned: -1, birthDate: -1 }).lean();
+    // Includes litters adopted from another user's pairing (linkedOwners), not just ones created here.
+    const litters = await Litter.find({ $or: [{ creatorId: appUserId_backend }, { linkedOwners: appUserId_backend }] }).sort({ isPlanned: -1, birthDate: -1 }).lean();
     
     if (!litters.length) return [];
 
@@ -1669,6 +1830,42 @@ const getUsersLitters = async (appUserId_backend) => {
 };
 
 /**
+ * Returns ALL litters referencing this animal as sire or dam, regardless of who created
+ * the litter — this lets an animal's owner see planned matings/litters that other users
+ * registered using their animal, not just litters they created themselves.
+ * The other parent is always resolved to safe display fields, even if privately owned.
+ */
+const getLittersForAnimal = async (animalId_public) => {
+    const litters = await Litter.find({
+        $or: [{ sireId_public: animalId_public }, { damId_public: animalId_public }]
+    }).sort({ isPlanned: -1, birthDate: -1 }).lean();
+
+    if (!litters.length) return [];
+
+    const parentIdSet = new Set();
+    litters.forEach(l => {
+        if (l.sireId_public) parentIdSet.add(l.sireId_public);
+        if (l.damId_public) parentIdSet.add(l.damId_public);
+    });
+    const parentIds = [...parentIdSet];
+
+    const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId';
+    const [anyAnimals, publicAnimals] = await Promise.all([
+        Animal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
+        PublicAnimal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
+    ]);
+    const anyMap = new Map(anyAnimals.map(a => [a.id_public, a]));
+    const publicMap = new Map(publicAnimals.map(a => [a.id_public, a]));
+    const getParent = (id_public) => (id_public && (anyMap.get(id_public) || publicMap.get(id_public))) || null;
+
+    return litters.map(litter => ({
+        ...litter,
+        sire: getParent(litter.sireId_public),
+        dam: getParent(litter.damId_public),
+    }));
+};
+
+/**
  * Updates a specific litter's record.
  */
 const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
@@ -1689,7 +1886,7 @@ const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
     }
 
     const updatedLitter = await Litter.findOneAndUpdate(
-        { _id: litterId_backend, creatorId: appUserId_backend },
+        { _id: litterId_backend, $or: [{ creatorId: appUserId_backend }, { linkedOwners: appUserId_backend }] },
         { $set: sanitizedUpdates },
         { new: true, runValidators: true }
     );
@@ -2345,7 +2542,9 @@ module.exports = {
     getHiddenViewOnlyAnimals,
     // Litter functions
     addLitter,
+    adoptLitter,
     getUsersLitters,
+    getLittersForAnimal,
     updateLitter,
     // Pedigree functions
     generatePedigree,

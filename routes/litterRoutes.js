@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { addLitter, getUsersLitters, updateLitter } = require('../database/db_service');
+const { addLitter, adoptLitter, getUsersLitters, getLittersForAnimal, updateLitter } = require('../database/db_service');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 const { Animal, User, Notification, Litter, PublicAnimal } = require('../database/models');
 const { syncParentReproStatus } = require('../utils/reproStatusSync');
@@ -136,11 +136,55 @@ router.post('/', async (req, res) => {
             }
         })();
     } catch (error) {
+        if (error.code === 'DUPLICATE_LITTER') {
+            return res.status(409).json({ message: error.message, duplicate: error.duplicate });
+        }
         console.error('Error registering litter:', error);
         res.status(500).json({ message: 'Internal server error during litter registration.' });
     }
 });
 
+
+// POST /api/litters/:litterId_backend/adopt
+// Links an existing litter (created by another user for the same pairing) into the requesting
+// user's own Litter Management instead of creating a duplicate record. Full edit rights are
+// granted alongside the original creator; only the creator can delete the litter.
+router.post('/:litterId_backend/adopt', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const litter = await adoptLitter(appUserId_backend, req.params.litterId_backend);
+        res.status(200).json({ message: 'Litter adopted into your Litter Management!', litter });
+    } catch (error) {
+        console.error('Error adopting litter:', error);
+        if (error.message.includes('not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error while adopting litter.' });
+    }
+});
+
+
+// GET /api/litters/for-animal/:id_public
+// Returns ALL litters (registered by ANY user) that reference this animal as sire or dam —
+// lets an owner see planned matings/litters other users created using their animal.
+// Restricted to animals the requester actually owns.
+router.get('/for-animal/:id_public', async (req, res) => {
+    try {
+        const appUserId_backend = req.user.id;
+        const { id_public } = req.params;
+
+        const animal = await Animal.findOne({ id_public }).select('creatorId').lean();
+        if (!animal || !animal.creatorId || animal.creatorId.toString() !== appUserId_backend.toString()) {
+            return res.status(403).json({ message: 'You can only view cross-user litters for animals you own.' });
+        }
+
+        const litters = await getLittersForAnimal(id_public);
+        res.status(200).json(litters);
+    } catch (error) {
+        console.error('Error fetching litters for animal:', error);
+        res.status(500).json({ message: 'Internal server error while fetching litters for animal.' });
+    }
+});
 
 // GET /api/litters/:id_public/offspring
 // Returns all offspring animals for a litter with display-safe fields.
@@ -211,7 +255,7 @@ router.put('/:id_backend', async (req, res) => {
         const litterId_backend = req.params.id_backend;
         const updates = req.body; // Updates object
 
-        const priorLitter = await Litter.findOne({ _id: litterId_backend, creatorId: appUserId_backend })
+        const priorLitter = await Litter.findOne({ _id: litterId_backend, $or: [{ creatorId: appUserId_backend }, { linkedOwners: appUserId_backend }] })
             .select('sireId_public damId_public')
             .lean();
 
@@ -331,7 +375,7 @@ router.post('/:id_backend/images', litterUpload.single('image'), async (req, res
     try {
         const litter = await Litter.findById(req.params.id_backend);
         if (!litter) return res.status(404).json({ message: 'Litter not found' });
-        if (String(litter.creatorId) !== String(req.user.id)) {
+        if (String(litter.creatorId) !== String(req.user.id) && !litter.linkedOwners.some(id => String(id) === String(req.user.id))) {
             return res.status(403).json({ message: 'Not your litter' });
         }
         if (litter.isPlanned) {
@@ -363,7 +407,7 @@ router.delete('/:id_backend/images/:r2Key', async (req, res) => {
     try {
         const litter = await Litter.findById(req.params.id_backend);
         if (!litter) return res.status(404).json({ message: 'Litter not found' });
-        if (String(litter.creatorId) !== String(req.user.id)) {
+        if (String(litter.creatorId) !== String(req.user.id) && !litter.linkedOwners.some(id => String(id) === String(req.user.id))) {
             return res.status(403).json({ message: 'Not your litter' });
         }
 

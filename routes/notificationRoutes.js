@@ -88,27 +88,46 @@ router.patch('/:notificationId/read', async (req, res) => {
     }
 });
 
-// Approve a notification (breeder or parent request)
+// Approve a notification (breeder or parent request) — the link was already applied
+// optimistically when the request was created, so approving just confirms it and lets
+// the requester know.
 router.post('/:notificationId/approve', async (req, res) => {
     try {
         const { notificationId } = req.params;
         const userId = req.user.id;
-        
+        const userPublicId = req.user.id_public;
+
         const notification = await Notification.findOne({ _id: notificationId, userId });
-        
+
         if (!notification) {
             return res.status(404).json({ message: 'Notification not found' });
         }
-        
+
         if (notification.status !== 'pending') {
             return res.status(400).json({ message: 'Notification already processed' });
         }
-        
-        // Update notification status
+
         notification.status = 'approved';
         notification.read = true;
         await notification.save();
-        
+
+        if (notification.type === 'breeder_request' || notification.type === 'parent_request') {
+            await Notification.create({
+                userId: notification.requestedBy_id,
+                userId_public: notification.requestedBy_public,
+                type: notification.type,
+                status: 'approved',
+                requestedBy_id: userId,
+                requestedBy_public: userPublicId,
+                animalId_public: notification.animalId_public,
+                animalName: notification.animalName,
+                parentType: notification.parentType,
+                targetAnimalId_public: notification.targetAnimalId_public,
+                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was approved.`,
+                read: false
+            });
+        }
+
         return res.status(200).json({ message: 'Request approved', notification });
     } catch (error) {
         console.error('Error approving notification:', error);
@@ -150,6 +169,11 @@ router.post('/:notificationId/reject', async (req, res) => {
                     animal.damId_public = null;
                     animal.motherId_public = null;
                 }
+                // Clearing a parent link invalidates any auto-matched litter link and the
+                // cached inbreeding coefficient, mirroring the cleanup updateAnimal() performs
+                // when parents change through the normal edit form (see db_service.js).
+                if (animal.litterId) animal.litterId = null;
+                animal.inbreedingCoefficient = null;
             }
             await animal.save();
             
@@ -165,6 +189,7 @@ router.post('/:notificationId/reject', async (req, res) => {
                     } else if (notification.parentType === 'dam') {
                         publicAnimal.damId_public = null;
                     }
+                    publicAnimal.inbreedingCoefficient = null;
                 }
                 await publicAnimal.save();
             }
@@ -181,7 +206,7 @@ router.post('/:notificationId/reject', async (req, res) => {
                 animalName: notification.animalName,
                 parentType: notification.parentType,
                 targetAnimalId_public: notification.targetAnimalId_public,
-                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : 'parent'} request for ${notification.animalName} was not approved.`,
+                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was not approved.`,
                 read: false
             });
         }

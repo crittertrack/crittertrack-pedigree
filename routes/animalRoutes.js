@@ -162,9 +162,20 @@ router.get('/:id_public/offspring', async (req, res) => {
             $or: [{ sireId_public: id_public }, { damId_public: id_public }]
         }).lean();
 
+        // Exclude offspring already tracked by a real Litter Management record for this
+        // parent — those are represented by GET /litters/for-animal instead. Without this,
+        // every managed litter's offspring were ALSO regrouped here, showing each litter twice
+        // in the frontend's combined Offspring & Litters list.
+        const { Litter } = require('../database/models');
+        const managedLitters = await Litter.find({
+            $or: [{ sireId_public: id_public }, { damId_public: id_public }]
+        }).select('offspringIds_public').lean();
+        const managedOffspringIds = new Set(managedLitters.flatMap(l => l.offspringIds_public || []));
+        const unmanagedOffspring = offspring.filter(o => !o.litterId && !managedOffspringIds.has(o.id_public));
+
         // Group offspring by litter to match frontend expectation
         const litterGroups = new Map();
-        for (const o of offspring) {
+        for (const o of unmanagedOffspring) {
             const birthDate = o.birthDate ? new Date(o.birthDate).toISOString().split('T')[0] : 'unknown';
             const otherParentId = o.sireId_public === id_public ? o.damId_public : o.sireId_public;
             const litterKey = `${birthDate}_${otherParentId || 'none'}`;

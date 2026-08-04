@@ -944,6 +944,10 @@ const PublicAnimal = mongoose.model('PublicAnimal', PublicAnimalSchema, 'publica
 // --- 6. LITTER SCHEMA ---
 const LitterSchema = new mongoose.Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    // Other users (typically the other parent's owner) who "adopted" this same litter into
+    // their own Litter Management instead of creating a duplicate record for the same pairing.
+    // Granted full edit rights alongside creatorId; only creatorId may delete the litter.
+    linkedOwners: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     
     // System-assigned litter ID (e.g., CTL1001) - used for system linkage to breeding records
     litter_id_public: { type: String, unique: true, sparse: true, index: true, default: null },
