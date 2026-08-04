@@ -234,15 +234,15 @@ const logCareUpdates = async ({ userId, animalId, animalId_public, before, after
                 if (newDone && oldDone !== newDone) {
                     changes.push({
                         field: groupLabel,
-                        label: task.lastSkipped ? `${name}: Skipped` : `${name}: Completed`,
+                        label: name,
                         oldValue: null,
-                        newValue: name,
+                        newValue: task.lastSkipped ? 'Skipped' : 'Completed',
                     });
                 }
             }
             for (const [name] of oldMap) {
                 if (!newMap.has(name)) {
-                    changes.push({ field: groupLabel, label: `${groupLabel} Removed`, oldValue: name, newValue: null });
+                    changes.push({ field: groupLabel, label: `${groupLabel} Removed`, oldValue: null, newValue: name });
                 }
             }
         };
@@ -265,9 +265,9 @@ const logCareUpdates = async ({ userId, animalId, animalId_public, before, after
             if (newDone && oldDone !== newDone) {
                 changes.push({
                     field,
-                    label: newSched?.lastSkipped ? `${label}: Skipped` : `${label}: Completed`,
+                    label,
                     oldValue: null,
-                    newValue: label,
+                    newValue: newSched?.lastSkipped ? 'Skipped' : 'Completed',
                 });
             }
         }
