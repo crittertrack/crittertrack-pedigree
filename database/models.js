@@ -556,7 +556,12 @@ const AnimalSchema = new mongoose.Schema({
     groomingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     brushingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     bathingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
-    specializedCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    specializedCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } }, // deprecated — superseded by the 4 schedules below
+    nailCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    beakHoofScaleSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    skinEarCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    dentalCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
+    healthMonitoringSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
 
     // Special Requirements & Preferences (Routine Care tab)
     dietaryRestrictions: { type: String, default: null },
