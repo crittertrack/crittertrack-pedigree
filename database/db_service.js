@@ -1504,18 +1504,26 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
  * Gets archived and sold/transferred animals for a user.
  */
 const getArchivedAndSoldAnimals = async (appUserId_backend) => {
+    // Archive list cards only need enough fields to render MgmtAnimalCard —
+    // fetching full documents (breeding/health/growth history, etc.) for users
+    // with thousands of archived animals made this endpoint extremely slow to transfer/render.
+    const archiveSlimFields = 'id_public creatorId creatorId_public originalCreatorId name prefix suffix ' +
+        'species gender birthDate imageUrl photoUrl status archived soldStatus manualownerName ' +
+        'sireId_public damId_public viewOnlyForUsers hiddenForUsers ' +
+        'color coat coatPattern phenotype morph markings';
+
     // 1. Fetch archived animals owned by the user
     const archived = await Animal.find({
         creatorId: appUserId_backend,
         archived: true
-    }).lean();
+    }).select(archiveSlimFields).lean();
 
     // 2. Fetch sold/transferred animals (user has view-only access)
     // This logic is similar to the view-only part of getUsersAnimals
     const soldTransferred = await Animal.find({
         viewOnlyForUsers: appUserId_backend,
         hiddenForUsers: { $ne: appUserId_backend } // Exclude those hidden by the user
-    }).lean();
+    }).select(archiveSlimFields).lean();
 
     // Add backward-compatible alias fields before returning
     const addAliases = (animal, isViewOnly = false) => ({

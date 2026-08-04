@@ -2564,6 +2564,10 @@ AnimalSchema.index({ creatorId: 1, isDisplay: 1 });
 AnimalSchema.index({ creatorId: 1, archived: 1 });
 AnimalSchema.index({ viewOnlyForUsers: 1 });
 
+// 2c. "All Animals" dashboard query's third $or branch (transferred-out animals) —
+// was unindexed, forcing a full collection scan on every dashboard load.
+AnimalSchema.index({ originalCreatorId: 1 });
+
 // 3. Message unread filtering (dashboard badge counts)
 MessageSchema.index({ conversationId: 1, read: 1 }); // Already present
 
