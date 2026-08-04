@@ -62,7 +62,7 @@ const FIELD_LABELS = {
 const FIELD_EDIT_TRACKED_FIELDS = Object.keys(FIELD_LABELS);
 
 const CARE_LABELS = {
-    feedingFrequencyDays: 'Feeding Frequency (days)',
+    feedingIntervalHours: 'Feeding Interval (hours)',
 };
 const CARE_SCALAR_FIELDS = Object.keys(CARE_LABELS);
 

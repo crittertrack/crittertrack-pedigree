@@ -309,7 +309,7 @@ const AnimalSchema = new mongoose.Schema({
 
     // Feeding schedule tracking (for Management view)
     lastFedDate: { type: Date, default: null },
-    feedingFrequencyDays: { type: Number, default: null }, // Feed every N days
+    feedingIntervalHours: { type: Number, default: null }, // Feed every N hours (supports multiple feedings/day)
 
     // Animal-specific care tasks (weigh, nail trim, health check, handling, etc.)
     animalCareTasks: [{
@@ -524,8 +524,6 @@ const AnimalSchema = new mongoose.Schema({
     // Structured diet/supplement supply entries (either linked to a Supply record {id,name,category} or free-form manual entries)
     dietSupplies: { type: [mongoose.Schema.Types.Mixed], default: [] },
     supplementSupplies: { type: [mongoose.Schema.Types.Mixed], default: [] },
-    // Structured nutrition schedule: { enabled, startDate, frequency, unit, timesPerDay, notes }
-    nutritionSchedule: { type: mongoose.Schema.Types.Mixed, default: null },
     housingType: { type: String, default: null },
     enclosureId: { type: String, default: null }, // References Enclosure._id
     bedding: { type: String, default: null },
@@ -763,7 +761,7 @@ const PublicAnimalSchema = new mongoose.Schema({
 
     // Feeding schedule tracking (for Management view)
     lastFedDate: { type: Date, default: null },
-    feedingFrequencyDays: { type: Number, default: null },
+    feedingIntervalHours: { type: Number, default: null },
 
     // Availability for sale/stud (for showcase)
     isForSale: { type: Boolean, default: false },

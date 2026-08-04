@@ -686,4 +686,38 @@ router.post('/enable-microchip-field', async (req, res) => {
     }
 });
 
+// Migration: convert legacy feedingFrequencyDays (days) to feedingIntervalHours (hours),
+// so feeding schedules can express multiple feedings/day (e.g. 12h = 2x/day). Also drops
+// the now-unused structured nutritionSchedule object (superseded by feedingIntervalHours).
+router.post('/convert-feeding-frequency-to-hours', async (req, res) => {
+    try {
+        const animals = await Animal.find({
+            $or: [
+                { feedingFrequencyDays: { $ne: null } },
+                { nutritionSchedule: { $ne: null } },
+            ]
+        });
+
+        let updated = 0;
+        for (const animal of animals) {
+            const raw = animal.toObject();
+            const update = {};
+            if (raw.feedingFrequencyDays != null) {
+                update.feedingIntervalHours = Number(raw.feedingFrequencyDays) * 24;
+            }
+            await Animal.updateOne(
+                { _id: animal._id },
+                { $set: update, $unset: { feedingFrequencyDays: '', nutritionSchedule: '' } }
+            );
+            updated++;
+        }
+
+        console.log(`[Migration] convert-feeding-frequency-to-hours: updated ${updated} animals`);
+        res.json({ success: true, updated });
+    } catch (error) {
+        console.error('[Migration] convert-feeding-frequency-to-hours error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
