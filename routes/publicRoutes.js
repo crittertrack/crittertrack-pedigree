@@ -908,7 +908,7 @@ router.get('/litters/user/:id_public', async (req, res) => {
         const profile = await PublicProfile.findOne({ id_public }).select('userId_backend').lean();
         if (!profile) return res.status(404).json({ message: 'User not found.' });
         const litters = await Litter.find({ creatorId: profile.userId_backend, showOnPublicProfile: true })
-            .select('litter_id_public breedingPairCodeName sireId_public sirePrefixName damId_public damPrefixName isPlanned birthDate expectedDueDate matingDate litterSizeBorn maleCount femaleCount unknownCount notes images inbreedingCoefficient')
+            .select('litter_id_public breedingPairCodeName sireId_public sirePrefixName damId_public damPrefixName isPlanned birthDate pregnancyDate expectedDueDate matingDate litterSizeBorn maleCount femaleCount unknownCount notes images inbreedingCoefficient')
             .sort({ isPlanned: -1, birthDate: -1 })
             .lean();
 
