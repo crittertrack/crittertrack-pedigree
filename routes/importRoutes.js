@@ -152,6 +152,7 @@ const ANIMAL_SAFE = new Set([
     'dietaryRestrictions','dietaryPreferences','specialCareNeeds','healthMonitoringNotes',
     'additionalSpecialRequirements',
     'groomingSchedule','brushingSchedule','bathingSchedule','specializedCareSchedule','specialCareSchedule',
+    'nailCareSchedule','beakHoofScaleSchedule','skinEarCareSchedule','dentalCareSchedule','healthMonitoringSchedule',
     'exerciseSchedule','crateTrainingSchedule','litterTrainingSchedule','leashTrainingSchedule',
     'freeFlightTrainingSchedule','workingRoleTrainingSchedule','behavioralIssueTrainingSchedule',
     'reactivityTrainingSchedule','flightRiskTrainingSchedule',

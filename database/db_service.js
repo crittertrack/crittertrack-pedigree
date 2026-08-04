@@ -976,6 +976,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           // Feeding & Care management view (Feeding, Scheduled Care, Grooming & Special Care, Training clusters)
           'lastFedDate feedingIntervalHours dietType animalCareTasks ' +
           'groomingSchedule brushingSchedule bathingSchedule specializedCareSchedule specialCareSchedule ' +
+          'nailCareSchedule beakHoofScaleSchedule skinEarCareSchedule dentalCareSchedule healthMonitoringSchedule ' +
           'exerciseSchedule crateTrainingSchedule litterTrainingSchedule leashTrainingSchedule freeFlightTrainingSchedule ' +
           'workingRoleTrainingSchedule behavioralIssueTrainingSchedule reactivityTrainingSchedule flightRiskTrainingSchedule'
         : null;
