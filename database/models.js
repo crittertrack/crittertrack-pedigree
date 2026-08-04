@@ -2559,6 +2559,11 @@ AnimalSchema.index({ id_public: 1, creatorId: 1 });
 // 2. Public display filtering  
 AnimalSchema.index({ creatorId: 1, isDisplay: 1 });
 
+// 2b. Archive screen: owned+archived lookup, and view-only/sold-transferred lookup
+// (viewOnlyForUsers is an array, so this is a multikey index).
+AnimalSchema.index({ creatorId: 1, archived: 1 });
+AnimalSchema.index({ viewOnlyForUsers: 1 });
+
 // 3. Message unread filtering (dashboard badge counts)
 MessageSchema.index({ conversationId: 1, read: 1 }); // Already present
 
