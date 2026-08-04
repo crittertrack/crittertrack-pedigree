@@ -2098,6 +2098,12 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
     // Remove from the owner's ownedAnimals array
     await User.findByIdAndUpdate(appUserId_backend, { $pull: { ownedAnimals: animal._id } });
 
+    // Prevent dangling sire/dam links on any offspring that referenced this animal.
+    await Animal.updateMany({ sireId_public: animal.id_public }, { $set: { sireId_public: null } });
+    await Animal.updateMany({ damId_public: animal.id_public }, { $set: { damId_public: null } });
+    await Litter.updateMany({ sireId_public: animal.id_public }, { $set: { sireId_public: null } });
+    await Litter.updateMany({ damId_public: animal.id_public }, { $set: { damId_public: null } });
+
     // If a public record exists for this animal, remove it
     try {
         await PublicAnimal.deleteOne({ id_public: animal.id_public });
