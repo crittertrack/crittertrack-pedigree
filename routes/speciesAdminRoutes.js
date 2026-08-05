@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Species, SpeciesConfig, GeneticsData, Animal, User, PublicProfile } = require('../database/models');
+const { Species, GeneticsData, Animal, User, PublicProfile } = require('../database/models');
 
 // Middleware to check admin/moderator access
 const requireAdmin = async (req, res, next) => {
@@ -39,11 +39,6 @@ router.get('/species', requireAdmin, async (req, res) => {
         const countMap = {};
         speciesCounts.forEach(s => { countMap[s._id] = s.count; });
         
-        // Get species configs
-        const configs = await SpeciesConfig.find({});
-        const configMap = {};
-        configs.forEach(c => { configMap[c.speciesName] = c; });
-        
         // Get user information for custom species
         const userIds = species.filter(s => s.userId).map(s => s.userId);
         const publicProfiles = await PublicProfile.find({ userId_backend: { $in: userIds } });
@@ -66,9 +61,7 @@ router.get('/species', requireAdmin, async (req, res) => {
             userId: s.userId,
             createdBy: s.userId ? userMap[s.userId.toString()] : null,
             createdAt: s.createdAt,
-            animalCount: countMap[s.name] || 0,
-            hasConfig: !!configMap[s.name],
-            config: configMap[s.name] || null
+            animalCount: countMap[s.name] || 0
         }));
         
         res.json(result);
@@ -128,12 +121,6 @@ router.patch('/species/:id', requireAdmin, async (req, res) => {
                 { $set: { species: name.trim() } }
             );
             
-            // Update species config if exists
-            await SpeciesConfig.updateOne(
-                { speciesName: oldName },
-                { $set: { speciesName: name.trim() } }
-            );
-            
             // Update genetics data if exists
             await GeneticsData.updateMany(
                 { speciesName: oldName },
@@ -191,8 +178,7 @@ router.delete('/species/:id', requireAdmin, async (req, res) => {
             );
         }
         
-        // Delete associated config and genetics data
-        await SpeciesConfig.deleteOne({ speciesName: species.name });
+        // Delete associated genetics data
         await GeneticsData.deleteMany({ speciesName: species.name });
         
         await Species.findByIdAndDelete(id);
@@ -204,74 +190,6 @@ router.delete('/species/:id', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error deleting species:', error);
         res.status(500).json({ error: 'Failed to delete species' });
-    }
-});
-
-// ============================================
-// SPECIES CONFIG ROUTES (Field Replacements)
-// ============================================
-
-// GET /api/admin/species-config/:speciesName - Get config for a species
-router.get('/species-config/:speciesName', requireAdmin, async (req, res) => {
-    try {
-        const { speciesName } = req.params;
-        
-        let config = await SpeciesConfig.findOne({ speciesName });
-        
-        if (!config) {
-            // Return empty config structure
-            config = {
-                speciesName,
-                fieldReplacements: {},
-                customFields: [],
-                hiddenFields: [],
-                adminNotes: null,
-                isActive: true
-            };
-        }
-        
-        res.json(config);
-    } catch (error) {
-        console.error('Error fetching species config:', error);
-        res.status(500).json({ error: 'Failed to fetch species config' });
-    }
-});
-
-// PUT /api/admin/species-config/:speciesName - Create or update config
-router.put('/species-config/:speciesName', requireAdmin, async (req, res) => {
-    try {
-        const { speciesName } = req.params;
-        const { fieldReplacements, customFields, hiddenFields, adminNotes, isActive } = req.body;
-        
-        let config = await SpeciesConfig.findOne({ speciesName });
-        
-        if (config) {
-            // Update existing
-            if (fieldReplacements !== undefined) config.fieldReplacements = fieldReplacements;
-            if (customFields !== undefined) config.customFields = customFields;
-            if (hiddenFields !== undefined) config.hiddenFields = hiddenFields;
-            if (adminNotes !== undefined) config.adminNotes = adminNotes;
-            if (isActive !== undefined) config.isActive = isActive;
-            config.modifiedBy = req.user.userId;
-            config.updatedAt = new Date();
-        } else {
-            // Create new
-            config = new SpeciesConfig({
-                speciesName,
-                fieldReplacements: fieldReplacements || {},
-                customFields: customFields || [],
-                hiddenFields: hiddenFields || [],
-                adminNotes: adminNotes || null,
-                isActive: isActive !== false,
-                modifiedBy: req.user.userId
-            });
-        }
-        
-        await config.save();
-        res.json(config);
-    } catch (error) {
-        console.error('Error saving species config:', error);
-        res.status(500).json({ error: 'Failed to save species config' });
     }
 });
 

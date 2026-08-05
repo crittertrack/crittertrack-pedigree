@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { Species, SpeciesConfig, FieldTemplate } = require('../database/models');
+const { Species } = require('../database/models');
 
 /**
  * GET /api/species
  * Get all species, optionally filtered by category
- * Includes field template data if includeTemplate=true query param is provided
  */
 router.get('/', async (req, res) => {
     try {
-        const { category, search, includeTemplate } = req.query;
+        const { category, search } = req.query;
         let query = {};
         
         if (category) {
@@ -20,14 +19,7 @@ router.get('/', async (req, res) => {
             query.name = { $regex: search, $options: 'i' }; // Case-insensitive search
         }
         
-        // Optionally populate field template data
-        let speciesQuery = Species.find(query).sort({ isDefault: -1, name: 1 });
-        
-        if (includeTemplate === 'true') {
-            speciesQuery = speciesQuery.populate('fieldTemplateId');
-        }
-        
-        const species = await speciesQuery;
+        const species = await Species.find(query).sort({ isDefault: -1, name: 1 });
         res.json(species);
     } catch (error) {
         console.error('Error fetching species:', error);
@@ -90,144 +82,6 @@ router.post('/', async (req, res) => {
 router.get('/categories', (req, res) => {
     const categories = ['Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'];
     res.json(categories);
-});
-
-/**
- * GET /api/species/config/:speciesName
- * Get public config for a species (fieldReplacements and hiddenFields only)
- * This is a public endpoint for the frontend to use for dynamic labels
- */
-router.get('/config/:speciesName', async (req, res) => {
-    try {
-        const { speciesName } = req.params;
-        
-        const config = await SpeciesConfig.findOne({ speciesName, isActive: true });
-        
-        if (!config) {
-            // Return empty config - frontend will use default labels
-            return res.json({
-                speciesName,
-                fieldReplacements: {},
-                hiddenFields: []
-            });
-        }
-        
-        // Only return public-safe fields
-        res.json({
-            speciesName: config.speciesName,
-            fieldReplacements: config.fieldReplacements || {},
-            hiddenFields: config.hiddenFields || []
-        });
-    } catch (error) {
-        console.error('Error fetching species config:', error);
-        res.status(500).json({ message: 'Failed to fetch species config' });
-    }
-});
-
-/**
- * GET /api/species/configs
- * Get all species configs in one call (for caching on frontend)
- */
-router.get('/configs', async (req, res) => {
-    try {
-        const configs = await SpeciesConfig.find({ isActive: true });
-        
-        // Convert to a map keyed by speciesName
-        const configMap = {};
-        configs.forEach(config => {
-            configMap[config.speciesName] = {
-                fieldReplacements: config.fieldReplacements || {},
-                hiddenFields: config.hiddenFields || []
-            };
-        });
-        
-        res.json(configMap);
-    } catch (error) {
-        console.error('Error fetching species configs:', error);
-        res.status(500).json({ message: 'Failed to fetch species configs' });
-    }
-});
-
-/**
- * GET /api/species/with-template/:speciesName
- * Get a specific species with its field template populated
- * This is the main endpoint for the frontend to get template configuration
- * Falls back to category-based template mapping if species has no template assigned
- */
-router.get('/with-template/:speciesName', async (req, res) => {
-    try {
-        const { speciesName } = req.params;
-        
-        const species = await Species.findOne({ name: speciesName }).populate('fieldTemplateId');
-        
-        if (!species) {
-            return res.status(404).json({ message: `Species "${speciesName}" not found` });
-        }
-        
-        let fieldTemplate = species.fieldTemplateId;
-        
-        // If no template assigned, map by category
-        if (!fieldTemplate) {
-            // Category to template mapping (use Other as default for any edge cases)
-            const categoryTemplateMap = {
-                'Small Mammal': 'Small Mammal Template',
-                'Mammal': 'Full Mammal Template',
-                'Reptile': 'Reptile Template',
-                'Bird': 'Bird Template',
-                'Fish': 'Fish Template',
-                'Amphibian': 'Amphibian Template',
-                'Invertebrate': 'Invertebrate Template',
-                'Other': 'Other Template'
-            };
-            
-            // Default to 'Other Template' if category is missing or unknown
-            const templateName = categoryTemplateMap[species.category] || 'Other Template';
-            
-            // Fetch the template by name - GRACEFULLY handle if templates don't exist yet
-            try {
-                fieldTemplate = await FieldTemplate.findOne({ name: templateName });
-                
-                if (!fieldTemplate) {
-                    // Final fallback: try to get 'Other Template' directly
-                    fieldTemplate = await FieldTemplate.findOne({ name: 'Other Template' });
-                }
-            } catch (templateError) {
-                console.warn('Field templates not yet seeded in database:', templateError.message);
-                // Continue without template - legacy UI will be used
-                fieldTemplate = null;
-            }
-        }
-        
-        // Return species with populated field template (or null if not available)
-        res.json({
-            name: species.name,
-            latinName: species.latinName,
-            category: species.category,
-            isDefault: species.isDefault,
-            fieldTemplate: fieldTemplate || null,
-            mappedByCategory: !species.fieldTemplateId  // Indicates if template was mapped by category
-        });
-    } catch (error) {
-        console.error('Error fetching species with template:', error);
-        // Return species data even if template fetch fails
-        try {
-            const species = await Species.findOne({ name: req.params.speciesName });
-            if (species) {
-                res.json({
-                    name: species.name,
-                    latinName: species.latinName,
-                    category: species.category,
-                    isDefault: species.isDefault,
-                    fieldTemplate: null,
-                    mappedByCategory: false
-                });
-            } else {
-                res.status(500).json({ message: 'Failed to fetch species template' });
-            }
-        } catch (fallbackError) {
-            res.status(500).json({ message: 'Failed to fetch species template' });
-        }
-    }
 });
 
 /**
