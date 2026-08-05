@@ -198,8 +198,7 @@ router.post('/transactions', async (req, res) => {
                     animalId_public: animalId,
                     transactionId: newTransaction._id,
                     transferType: 'purchase',
-                    status: 'pending',
-                    offerViewOnly: true
+                    status: 'pending'
                 });
                 
                 console.log('[Budget] ✓ Transfer created with ID:', transfer._id);

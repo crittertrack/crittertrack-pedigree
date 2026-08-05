@@ -28,7 +28,6 @@ const FIELD_LABELS = {
     coat: 'Coat',
     coatPattern: 'Coat Pattern',
     earset: 'Earset',
-    phenotype: 'Phenotype',
     morph: 'Morph',
     markings: 'Markings',
     eyeColor: 'Eye Color',

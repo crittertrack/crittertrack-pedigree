@@ -705,7 +705,7 @@ const reportModelMap = {
             { path: 'reporterId', select: 'personalName breederName email id_public' },
             { 
                 path: 'reportedAnimalId', 
-                select: 'name id_public creatorId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
+                select: 'name id_public creatorId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes temperament causeOfDeath necropsyResults birthDate status',
                 populate: {
                     path: 'creatorId',
                     select: 'personalName breederName email id_public profileImage'
@@ -764,7 +764,7 @@ router.get('/reports', async (req, res) => {
                     .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
                     .populate({ 
                         path: 'reportedAnimalId', 
-                        select: 'name id_public creatorId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes damFertilityNotes temperament causeOfDeath necropsyResults birthDate status',
+                        select: 'name id_public creatorId species gender imageUrl prefix suffix breederAssignedId remarks geneticCode color coat coatPattern earset breed strain microchipNumber pedigreeRegistrationId fertilityNotes temperament causeOfDeath necropsyResults birthDate status',
                         populate: {
                             path: 'creatorId',
                             select: 'personalName breederName email id_public profileImage'

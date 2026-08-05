@@ -28,6 +28,8 @@ const UserSchema = new mongoose.Schema({
     showBio: { type: Boolean, default: true },
     showStatsTab: { type: Boolean, default: true },
     showEmailPublic: { type: Boolean, default: false },
+    showGeneticCodePublic: { type: Boolean, default: false },
+    showRemarksPublic: { type: Boolean, default: false },
     creationDate: { type: Date, default: Date.now },
     // Email verification
     emailVerified: { type: Boolean, default: false },
@@ -133,6 +135,8 @@ const PublicProfileSchema = new mongoose.Schema({
     createdAt: { type: Date, default: null }, // Member since date
     email: { type: String, default: null },
     showEmailPublic: { type: Boolean, default: false },
+    showGeneticCodePublic: { type: Boolean, default: false },
+    showRemarksPublic: { type: Boolean, default: false },
     websiteURL: { type: String, default: null },
     showWebsiteURL: { type: Boolean, default: false },
     socialMediaURL: { type: String, default: null },
@@ -370,12 +374,12 @@ const AnimalSchema = new mongoose.Schema({
     coatPattern: { type: String, default: null },
     lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     // Universal animal appearance fields
-    phenotype: { type: String, default: null }, // Observable traits
     morph: { type: String, default: null }, // Mutation/Morph (esp. reptiles/invertebrates)
     markings: { type: String, default: null }, // Body markings/patterns
     eyeColor: { type: String, default: null }, // Eye color
     nailColor: { type: String, default: null }, // Nail/claw color (mammals)
     size: { type: String, default: null }, // General size description (Small, Medium, Large, etc.)
+    carrierTraits: { type: String, default: null }, // Genetics calculator: recessive/het traits carried
     // Current measurements (snapshot - growth records track history)
     weight: { type: String, default: null }, // Current weight
     length: { type: String, default: null }, // Current length/wingspan/snout-vent length
@@ -383,7 +387,6 @@ const AnimalSchema = new mongoose.Schema({
     heightAtWithers: { type: String, default: null },
     bodyLength: { type: String, default: null },
     chestGirth: { type: String, default: null },
-    adultWeight: { type: String, default: null },
     bodyConditionScore: { type: String, default: null }, // 1-9 canine / 1-5 feline
     
     // Tab 4: Identification Fields
@@ -408,13 +411,11 @@ const AnimalSchema = new mongoose.Schema({
     heatStatus: { type: String, default: null },
     lastHeatDate: { type: Date, default: null },
     ovulationDate: { type: Date, default: null },
-    matingDates: { type: String, default: null },
     expectedDueDate: { type: Date, default: null },
     litterCount: { type: String, default: null },
     litterSizeBorn: { type: Number, default: null }, // Number of offspring born
     litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
-    lossesCount: { type: Number, default: null }, // Number of offspring losses post-birth
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
@@ -432,15 +433,10 @@ const AnimalSchema = new mongoose.Schema({
     fertilityStatus: { type: String, default: 'Unknown' },
     fertilityNotes: { type: String, default: null },
     
-    // Dam/Fertility fields (dam role)
-    damFertilityStatus: { type: String, default: 'Unknown' },
-    damFertilityNotes: { type: String, default: null },
     // Dog/Cat specific reproduction fields
     estrusCycleLength: { type: Number, default: null }, // days
     gestationLength: { type: Number, default: null }, // days
     artificialInseminationUsed: { type: Boolean, default: null },
-    whelpingDate: { type: Date, default: null }, // Dog delivery
-    queeningDate: { type: Date, default: null }, // Cat delivery
     deliveryMethod: { type: String, default: null }, // Natural, C-section
     reproductiveComplications: { type: String, default: null },
     reproductiveClearances: { type: String, default: null },
@@ -449,13 +445,11 @@ const AnimalSchema = new mongoose.Schema({
     breedingRecords: [{
         // ID and metadata
         id: { type: String, default: () => Date.now().toString() },
-        recordDate: { type: Date, default: Date.now },
         
         // Common fields for all genders
         breedingMethod: { type: String, enum: ['Natural', 'AI', 'Assisted', 'Unknown'], default: 'Unknown' },
         breedingConditionAtTime: { type: String, enum: ['Good', 'Okay', 'Poor'], default: null },
-        matingDate: { type: Date, default: null }, // Unified mating date field (replaces matingDates)
-        matingDates: { type: String, default: null }, // DEPRECATED: Use matingDate instead (kept for backward compatibility)
+        matingDate: { type: Date, default: null }, // Unified mating date field
         mate: { type: String, default: null }, // Manual text entry or selected animal name
         mateAnimalId: { type: String, default: null }, // Reference to selected animal ID if chosen from modal
         outcome: { type: String, enum: ['Successful', 'Unsuccessful', 'Unknown'], default: 'Unknown' },
@@ -471,7 +465,6 @@ const AnimalSchema = new mongoose.Schema({
         
         // Link to created litter (if this breeding record resulted in a litter)
         litterId: { type: String, default: null }, // Reference to Litter.litter_id_public (CTL-ID)
-        litterName: { type: String, default: null }, // User-assigned litter name (cached from breedingPairCodeName)
     }],
     
     // Sale fields
@@ -740,7 +733,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
-    phenotype: { type: String, default: null },
     morph: { type: String, default: null },
     markings: { type: String, default: null },
     eyeColor: { type: String, default: null },
@@ -768,17 +760,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     lastFedDate: { type: Date, default: null },
     feedingIntervalHours: { type: Number, default: null },
 
-    // Availability for sale/stud (for showcase)
-    isForSale: { type: Boolean, default: false },
-    salePriceCurrency: { type: String, default: 'USD' },
-    salePriceAmount: { type: Number, default: null },
-    availableForBreeding: { type: Boolean, default: false },
-    studFeeCurrency: { type: String, default: 'USD' },
-    studFeeAmount: { type: Number, default: null },
-    
-    // Tags for local organization (lines, enclosures, etc)
-    tags: [{ type: String, trim: true }],
-
     // Public-facing image URLs
     imageUrl: { type: String, default: null },
     photoUrl: { type: String, default: null },
@@ -805,17 +786,14 @@ const PublicAnimalSchema = new mongoose.Schema({
     origin: { type: String, default: null },
     
     // Reproduction fields
-    isNeutered: { type: Boolean, default: false },
     heatStatus: { type: String, default: null },
     lastHeatDate: { type: Date, default: null },
     ovulationDate: { type: Date, default: null },
-    matingDates: { type: Date, default: null },
     expectedDueDate: { type: Date, default: null },
     litterCount: { type: Number, default: null },
     litterSizeBorn: { type: Number, default: null }, // Number of offspring born
     litterSizeWeaned: { type: Number, default: null }, // Number of offspring successfully weaned
     stillbornCount: { type: Number, default: null }, // Number of stillborn offspring
-    lossesCount: { type: Number, default: null }, // Number of offspring losses post-birth
     nursingStartDate: { type: Date, default: null },
     weaningDate: { type: Date, default: null },
     
@@ -830,26 +808,13 @@ const PublicAnimalSchema = new mongoose.Schema({
     dietType: { type: String, default: null },
     feedingSchedule: { type: String, default: null },
     supplements: { type: String, default: null },
-    housingType: { type: String, default: null },
     enclosureId: { type: String, default: null }, // References Enclosure._id
-    bedding: { type: String, default: null },
     enrichment: { type: String, default: null },
-    temperatureRange: { type: String, default: null },
     lastBulbChange: { type: Date, default: null },
-    humidity: { type: String, default: null },
-    lighting: { type: String, default: null },
     noise: { type: String, default: null },
     
     // Health Records (stored as JSON strings)
-    vaccinations: { type: String, default: null },
-    dewormingRecords: { type: String, default: null },
-    parasiteControl: { type: String, default: null },
-    medicalConditions: { type: String, default: null },
-    allergies: { type: String, default: null },
-    medications: { type: String, default: null },
     medicalProcedures: { type: String, default: null },
-    labResults: { type: String, default: null },
-    vetVisits: { type: String, default: null },
     sheddingRecords: { type: String, default: null },
     moltingRecords: { type: String, default: null },
     waterParameterChecks: { type: String, default: null },
@@ -909,8 +874,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     offspringCount: { type: Number, default: null },
     fertilityStatus: { type: String, default: 'Unknown' },
     fertilityNotes: { type: String, default: null },
-    damFertilityStatus: { type: String, default: 'Unknown' },
-    damFertilityNotes: { type: String, default: null },
     breedingRecords: { type: [mongoose.Schema.Types.Mixed], default: [] },
     artificialInseminationUsed: { type: Boolean, default: null },
     reproductiveClearances: { type: String, default: null },
@@ -1395,6 +1358,7 @@ const SpeciesSchema = new mongoose.Schema({
     category: { type: String, required: true, index: true }, // e.g., 'Mammal', 'Reptile', 'Bird', 'Amphibian', 'Fish', 'Invertebrate', 'Other'
     isDefault: { type: Boolean, default: false, index: true }, // Built-in species vs user-added
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // User who added custom species
+    createdBy_public: { type: String, default: null }, // Public-facing id_public of the user who added a custom species
     // Safety-net cutoff (days from birthDate) after which a dam auto-clears "Nursing" status
     // if no weaningDate has been recorded, based on the species' realistic max weaning/independence age.
     maxNursingDays: { type: Number, default: null },
