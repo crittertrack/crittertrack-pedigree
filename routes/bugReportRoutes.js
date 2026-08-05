@@ -68,8 +68,7 @@ router.post('/', async (req, res) => {
                 category,
                 description,
                 stepsToReproduce: stepsToReproduce || null,
-                hasImages: images && images.length > 0,
-                imageCount: images ? images.length : 0,
+                images: images || [],
                 page: page || 'Not specified',
                 createdAt: bugReport.createdAt
             });
