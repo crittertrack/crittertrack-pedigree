@@ -1044,4 +1044,16 @@ router.get('/animals/recent-edits', async (req, res) => {
     }
 });
 
+// GET /api/public/resources - list all helpful external resource links (no auth required)
+router.get('/resources', async (req, res) => {
+    try {
+        const { Resource } = require('../database/models');
+        const resources = await Resource.find({}).sort({ title: 1 }).lean();
+        res.status(200).json(resources);
+    } catch (error) {
+        console.error('Error fetching resources:', error);
+        res.status(500).json({ message: 'Failed to fetch resources' });
+    }
+});
+
 module.exports = router;

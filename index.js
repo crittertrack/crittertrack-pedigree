@@ -146,6 +146,10 @@ app.use('/api/admin', authMiddleware, legacyAdminRoutes);
 const speciesAdminRoutes = require('./routes/speciesAdminRoutes');
 app.use('/api/admin', authMiddleware, speciesAdminRoutes);
 
+// Resources admin routes (CRUD for the public Resources page)
+const resourcesAdminRoutes = require('./routes/resourcesAdminRoutes');
+app.use('/api/admin', authMiddleware, resourcesAdminRoutes);
+
 // Multer instance for optional multipart handling on profile route
 // Only accept PNG and JPEG/JPG files server-side
 const imageFileFilter = (req, file, cb) => {

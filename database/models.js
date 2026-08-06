@@ -1382,6 +1382,19 @@ const SpeciesSchema = new mongoose.Schema({
 });
 const Species = mongoose.model('Species', SpeciesSchema);
 
+// --- 15b. RESOURCE SCHEMA (external helpful links, e.g. care guides, vendors, communities) ---
+const ResourceSchema = new mongoose.Schema({
+    title: { type: String, required: true, trim: true },
+    url: { type: String, required: true, trim: true },
+    description: { type: String, default: '', trim: true },
+    subject: { type: String, default: '', trim: true, index: true }, // optional single freeform topic, e.g. 'Genetics', 'Nutrition'
+    species: { type: [String], default: [] }, // empty = applies to all/general
+    tags: { type: [String], default: [], index: true }, // freeform keywords, e.g. 'health', 'genetics', 'vendor'
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+const Resource = mongoose.model('Resource', ResourceSchema);
+
 
 // --- 15. SYSTEM SETTINGS SCHEMA ---
 const SystemSettingsSchema = new mongoose.Schema({
@@ -1827,6 +1840,7 @@ module.exports = {
     UserActivityLog,
     SystemSettings,
     Species,
+    Resource,
     GeneticsData,
     Transaction,
     AnimalTransfer,
