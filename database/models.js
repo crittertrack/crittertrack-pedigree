@@ -1388,6 +1388,7 @@ const ResourceSchema = new mongoose.Schema({
     url: { type: String, required: true, trim: true },
     description: { type: String, default: '', trim: true },
     subject: { type: String, default: '', trim: true, index: true }, // optional single freeform topic, e.g. 'Genetics', 'Nutrition'
+    language: { type: String, default: '', trim: true, index: true }, // optional, e.g. 'English', 'Dutch', 'French'
     species: { type: [String], default: [] }, // empty = applies to all/general
     tags: { type: [String], default: [], index: true }, // freeform keywords, e.g. 'health', 'genetics', 'vendor'
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

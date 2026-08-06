@@ -41,7 +41,7 @@ router.get('/resources', requireAdmin, async (req, res) => {
 // POST /api/admin/resources - Add a new resource
 router.post('/resources', requireAdmin, async (req, res) => {
     try {
-        const { title, url, description, subject, species, tags } = req.body;
+        const { title, url, description, subject, language, species, tags } = req.body;
 
         if (!title?.trim() || !url?.trim()) {
             return res.status(400).json({ error: 'Title and URL are required' });
@@ -52,6 +52,7 @@ router.post('/resources', requireAdmin, async (req, res) => {
             url: url.trim(),
             description: description?.trim() || '',
             subject: subject?.trim() || '',
+            language: language?.trim() || '',
             species: Array.isArray(species) ? species.filter(Boolean) : [],
             tags: Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()).filter(Boolean) : [],
             createdBy: req.user._id || req.user.id
@@ -69,7 +70,7 @@ router.post('/resources', requireAdmin, async (req, res) => {
 router.patch('/resources/:id', requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, url, description, subject, species, tags } = req.body;
+        const { title, url, description, subject, language, species, tags } = req.body;
 
         const resource = await Resource.findById(id);
         if (!resource) {
@@ -80,6 +81,7 @@ router.patch('/resources/:id', requireAdmin, async (req, res) => {
         if (url !== undefined) resource.url = url.trim();
         if (description !== undefined) resource.description = description?.trim() || '';
         if (subject !== undefined) resource.subject = subject?.trim() || '';
+        if (language !== undefined) resource.language = language?.trim() || '';
         if (species !== undefined) resource.species = Array.isArray(species) ? species.filter(Boolean) : [];
         if (tags !== undefined) resource.tags = Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()).filter(Boolean) : [];
 
