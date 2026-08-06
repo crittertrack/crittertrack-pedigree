@@ -1048,6 +1048,8 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
             const reporterUser = type === 'bug' ? report.userId : report.reporterId;
             if (reporterUser && reporterUser._id) {
                 const reportLabel = type === 'bug' ? (report.category || 'Bug') : `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+                // Short human-readable reference so users with multiple reports can tell notifications apart.
+                const reportRef = report._id.toString().slice(-6).toUpperCase();
                 const statusLabels = { pending: 'Pending', in_progress: 'In Progress', reviewed: 'Reviewed', resolved: 'Resolved', dismissed: 'Dismissed' };
                 const statusChanged = status && status !== previousStatus;
                 const notesChanged = adminNotes !== undefined && adminNotes !== previousAdminNotes && adminNotes && adminNotes.trim().length > 0;
@@ -1058,7 +1060,7 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
                         userId_public: reporterUser.id_public || null,
                         type: 'report_status_update',
                         status: 'pending',
-                        message: `Your ${reportLabel} report has been marked as ${statusLabels[report.status] || report.status}.`
+                        message: `Your ${reportLabel} report (#${reportRef}) has been marked as ${statusLabels[report.status] || report.status}.`
                     });
                 }
                 if (notesChanged) {
@@ -1067,7 +1069,7 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
                         userId_public: reporterUser.id_public || null,
                         type: 'report_feedback',
                         status: 'pending',
-                        message: `The moderation team added feedback to your ${reportLabel} report: "${adminNotes.trim()}"`
+                        message: `The moderation team added feedback to your ${reportLabel} report (#${reportRef}): "${adminNotes.trim()}"`
                     });
                 }
             }

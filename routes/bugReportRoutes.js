@@ -15,7 +15,7 @@ const parseReasonForDisplay = (reason = '') => {
 // Submit a new bug report
 router.post('/', async (req, res) => {
     try {
-        const { category, description, stepsToReproduce, images, browserInfo, page } = req.body;
+        const { category, description, stepsToReproduce, referenceId, images, browserInfo, page } = req.body;
         const userId = req.user.id;
 
         // Validate required fields
@@ -62,6 +62,7 @@ router.post('/', async (req, res) => {
             category,
             description,
             stepsToReproduce: stepsToReproduce || null,
+            referenceId: (referenceId && String(referenceId).trim().slice(0, 50)) || null,
             images: images || [],
             browserInfo: browserInfo || null,
             page: page || null
@@ -209,6 +210,7 @@ router.get('/my-reports', async (req, res) => {
             subjectLabel: null,
             description: r.description,
             stepsToReproduce: r.stepsToReproduce || null,
+            referenceId: r.referenceId || null,
             images: r.images || [],
             status: r.status,
             adminNotes: r.adminNotes || null,

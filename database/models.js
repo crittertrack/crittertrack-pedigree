@@ -1116,6 +1116,7 @@ const BugReportSchema = new mongoose.Schema({
     },
     description: { type: String, required: true },
     stepsToReproduce: { type: String, default: null },
+    referenceId: { type: String, default: null }, // User-supplied code (from a prior report) linking this as a follow-up
     images: [{ type: String }], // Array of image URLs from uploads
     browserInfo: {
         userAgent: { type: String, default: null },
