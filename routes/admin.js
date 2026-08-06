@@ -2492,3 +2492,6 @@ router.post('/maintenance/toggle', async (req, res) => {
 });
 
 module.exports = router;
+// Exposed so other route modules (e.g. dashboard-stats) can read the real backup
+// metadata instead of duplicating/mocking it.
+module.exports.getBackupMetadata = getBackupMetadata;

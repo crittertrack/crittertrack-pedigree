@@ -1237,7 +1237,18 @@ router.get('/dashboard-stats', async (req, res) => {
             receiverId: { $in: moderatorIds },
             read: false
         });
-        
+
+        // Read the real backup metadata (shared with the Backup Management tab) instead
+        // of mocking it, so the dashboard always reflects the actual last backup.
+        let lastBackup = null;
+        try {
+            const { getBackupMetadata } = require('./admin');
+            const metadata = await getBackupMetadata();
+            lastBackup = metadata?.backups?.[0]?.createdAt || metadata?.lastAutoBackup || null;
+        } catch (backupErr) {
+            console.error('Error fetching backup metadata for dashboard stats:', backupErr);
+        }
+
         res.json({
             totalUsers,
             activeUsers,
@@ -1245,7 +1256,7 @@ router.get('/dashboard-stats', async (req, res) => {
             pendingReports,
             newModReplies,
             systemHealth: 'good',
-            lastBackup: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Mock last backup
+            lastBackup
         });
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);

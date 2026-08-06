@@ -1111,171 +1111,6 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
     }
 });
 
-// POST /api/moderation/reports/:type/:reportId/assign - Assign report to a moderator
-router.post('/reports/:type/:reportId/assign', requireModerator, async (req, res) => {
-    try {
-        const { type, reportId } = req.params;
-        const { moderatorId } = req.body; // null to unassign
-        const config = reportModelMap[type];
-
-        if (!config) {
-            return res.status(400).json({ message: 'Invalid report type.' });
-        }
-
-        const report = await config.model.findById(reportId);
-        if (!report) {
-            return res.status(404).json({ message: 'Report not found.' });
-        }
-
-        // If moderatorId provided, verify the user exists and is a moderator
-        let assignedModerator = null;
-        if (moderatorId) {
-            assignedModerator = await User.findById(moderatorId);
-            if (!assignedModerator) {
-                return res.status(404).json({ message: 'Moderator not found.' });
-            }
-            if (!['moderator', 'admin'].includes(assignedModerator.role)) {
-                return res.status(400).json({ message: 'User is not a moderator.' });
-            }
-        }
-
-        const previousAssignment = report.assignedTo;
-        
-        // Update assignment
-        report.assignedTo = moderatorId || null;
-        report.assignedBy = moderatorId ? req.user.id : null;
-        report.assignedAt = moderatorId ? new Date() : null;
-        
-        // Auto-set status to in_progress when assigned (if currently pending)
-        if (moderatorId && report.status === 'pending') {
-            report.status = 'in_progress';
-        }
-        // Reset to pending if unassigned and was in_progress
-        if (!moderatorId && report.status === 'in_progress') {
-            report.status = 'pending';
-        }
-
-        await report.save();
-
-        // Populate for response
-        await report.populate(config.populate);
-        const targetInfo = buildReportTargetInfo(type, report);
-
-        await createAuditLog({
-            ...buildAuditMetadata(req),
-            action: moderatorId ? 'report_assigned' : 'report_unassigned',
-            targetType: `${type}_report`,
-            targetId: report._id,
-            ...targetInfo,
-            details: {
-                assignedTo: assignedModerator ? {
-                    id: assignedModerator._id,
-                    name: assignedModerator.breederName || assignedModerator.personalName || assignedModerator.email
-                } : null,
-                previousAssignment: previousAssignment || null,
-                newStatus: report.status
-            }
-        });
-
-        res.json({
-            message: moderatorId ? 'Report assigned successfully.' : 'Report unassigned.',
-            report
-        });
-    } catch (error) {
-        console.error('Failed to assign report:', error);
-        
-        await logFailedAction({
-            ...buildAuditMetadata(req),
-            attemptedAction: 'report_assignment',
-            targetType: `${req.params.type}_report`,
-            targetId: req.params.reportId,
-            details: { attemptedAssignment: req.body.moderatorId },
-            error
-        });
-        
-        const { code, userMessage, isRetryable } = categorizeError(error);
-        res.status(500).json({ 
-            message: userMessage,
-            errorCode: code,
-            isRetryable,
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-});
-
-// POST /api/moderation/reports/:type/:reportId/claim - Moderator claims a report for themselves
-router.post('/reports/:type/:reportId/claim', requireModerator, async (req, res) => {
-    try {
-        const { type, reportId } = req.params;
-        const config = reportModelMap[type];
-
-        if (!config) {
-            return res.status(400).json({ message: 'Invalid report type.' });
-        }
-
-        const report = await config.model.findById(reportId);
-        if (!report) {
-            return res.status(404).json({ message: 'Report not found.' });
-        }
-
-        // Check if already assigned to someone else
-        if (report.assignedTo && report.assignedTo.toString() !== req.user.id) {
-            const assignee = await User.findById(report.assignedTo).select('personalName breederName email');
-            return res.status(409).json({ 
-                message: 'Report is already assigned to another moderator.',
-                assignedTo: assignee ? {
-                    name: assignee.breederName || assignee.personalName || assignee.email
-                } : null
-            });
-        }
-
-        // Claim the report
-        report.assignedTo = req.user.id;
-        report.assignedBy = req.user.id;
-        report.assignedAt = new Date();
-        
-        if (report.status === 'pending') {
-            report.status = 'in_progress';
-        }
-
-        await report.save();
-        await report.populate(config.populate);
-        const targetInfo = buildReportTargetInfo(type, report);
-
-        await createAuditLog({
-            ...buildAuditMetadata(req),
-            action: 'report_claimed',
-            targetType: `${type}_report`,
-            targetId: report._id,
-            ...targetInfo,
-            details: { newStatus: report.status }
-        });
-
-        res.json({
-            message: 'Report claimed successfully.',
-            report
-        });
-    } catch (error) {
-        console.error('Failed to claim report:', error);
-        
-        await logFailedAction({
-            ...buildAuditMetadata(req),
-            attemptedAction: 'report_claim',
-            targetType: `${req.params.type}_report`,
-            targetId: req.params.reportId,
-            error
-        });
-        
-        const { code, userMessage, isRetryable } = categorizeError(error);
-        res.status(500).json({ 
-            message: userMessage,
-            errorCode: code,
-            isRetryable,
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-});
-
 // ============================================
 // DISCUSSION NOTES ENDPOINTS
 // ============================================
@@ -1468,67 +1303,52 @@ router.delete('/reports/:type/:reportId/notes/:noteId', requireModerator, async 
     }
 });
 
-// GET /api/moderation/moderators/workload - Get moderator workload stats
-router.get('/moderators/workload', requireModerator, async (req, res) => {
+// DELETE /api/moderation/reports/:type/:reportId - Permanently delete a report
+router.delete('/reports/:type/:reportId', requireAdmin, async (req, res) => {
     try {
-        // Get all moderators
-        const moderators = await User.find({ 
-            role: { $in: ['moderator', 'admin'] } 
-        }).select('personalName breederName email role id_public');
+        const { type, reportId } = req.params;
+        const config = reportModelMap[type];
 
-        // Get assignment counts per moderator
-        const workloadStats = await Promise.all(moderators.map(async (mod) => {
-            const [profileCount, animalCount, messageCount] = await Promise.all([
-                ProfileReport.countDocuments({ assignedTo: mod._id, status: { $in: ['pending', 'in_progress'] } }),
-                AnimalReport.countDocuments({ assignedTo: mod._id, status: { $in: ['pending', 'in_progress'] } }),
-                MessageReport.countDocuments({ assignedTo: mod._id, status: { $in: ['pending', 'in_progress'] } })
-            ]);
+        if (!config) {
+            return res.status(400).json({ message: 'Invalid report type.' });
+        }
 
-            return {
-                moderator: {
-                    _id: mod._id,
-                    id_public: mod.id_public,
-                    name: mod.breederName || mod.personalName || mod.email,
-                    email: mod.email,
-                    role: mod.role
-                },
-                assignedReports: {
-                    profile: profileCount,
-                    animal: animalCount,
-                    message: messageCount,
-                    total: profileCount + animalCount + messageCount
-                }
-            };
-        }));
+        const report = await config.model.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found.' });
+        }
 
-        // Also get unassigned report counts
-        const [unassignedProfile, unassignedAnimal, unassignedMessage] = await Promise.all([
-            ProfileReport.countDocuments({ assignedTo: null, status: 'pending' }),
-            AnimalReport.countDocuments({ assignedTo: null, status: 'pending' }),
-            MessageReport.countDocuments({ assignedTo: null, status: 'pending' })
-        ]);
+        // Populate + capture target info before deletion for the audit log
+        await report.populate(config.populate);
+        const targetInfo = buildReportTargetInfo(type, report);
+
+        await config.model.findByIdAndDelete(reportId);
+
+        await createAuditLog({
+            ...buildAuditMetadata(req),
+            action: 'report_deleted',
+            targetType: `${type}_report`,
+            targetId: report._id,
+            ...targetInfo,
+            details: { status: report.status, reason: report.reason }
+        });
 
         res.json({
-            moderators: workloadStats,
-            unassigned: {
-                profile: unassignedProfile,
-                animal: unassignedAnimal,
-                message: unassignedMessage,
-                total: unassignedProfile + unassignedAnimal + unassignedMessage
-            }
+            message: 'Report deleted successfully.'
         });
     } catch (error) {
-        console.error('Failed to fetch moderator workload:', error);
-        
+        console.error('Failed to delete report:', error);
+
         await logFailedAction({
             ...buildAuditMetadata(req),
-            attemptedAction: 'get_moderator_workload',
-            targetType: 'system',
+            attemptedAction: 'report_delete',
+            targetType: `${req.params.type}_report`,
+            targetId: req.params.reportId,
             error
         });
-        
+
         const { code, userMessage, isRetryable } = categorizeError(error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: userMessage,
             errorCode: code,
             isRetryable,
@@ -2266,6 +2086,8 @@ router.get('/analytics/overview', requireModerator, async (req, res) => {
             totalReportsProfile,
             totalReportsAnimal,
             totalReportsMessage,
+            totalReportsRating,
+            totalReportsBug,
             pendingReports,
             activeWarnings,
             suspendedUsers,
@@ -2276,6 +2098,8 @@ router.get('/analytics/overview', requireModerator, async (req, res) => {
             ProfileReport.countDocuments({}),
             AnimalReport.countDocuments({}),
             MessageReport.countDocuments({}),
+            RatingReport.countDocuments({}),
+            BugReport.countDocuments({}),
             Promise.all([
                 ProfileReport.countDocuments({ status: 'pending' }),
                 AnimalReport.countDocuments({ status: 'pending' }),
@@ -2291,10 +2115,12 @@ router.get('/analytics/overview', requireModerator, async (req, res) => {
         // Get counts in date range
         const [
             newUsersInRange,
+            newAnimalsInRange,
             newReportsInRange,
             resolvedReportsInRange
         ] = await Promise.all([
             User.countDocuments({ creationDate: { $gte: startDate } }),
+            Animal.countDocuments({ createdAt: { $gte: startDate } }),
             Promise.all([
                 ProfileReport.countDocuments({ createdAt: { $gte: startDate } }),
                 AnimalReport.countDocuments({ createdAt: { $gte: startDate } }),
@@ -2311,7 +2137,7 @@ router.get('/analytics/overview', requireModerator, async (req, res) => {
             overview: {
                 totalUsers,
                 totalAnimals,
-                totalReports: totalReportsProfile + totalReportsAnimal + totalReportsMessage,
+                totalReports: totalReportsProfile + totalReportsAnimal + totalReportsMessage + totalReportsRating + totalReportsBug,
                 pendingReports,
                 activeWarnings,
                 suspendedUsers,
@@ -2324,6 +2150,7 @@ router.get('/analytics/overview', requireModerator, async (req, res) => {
             },
             rangeStats: {
                 newUsers: newUsersInRange,
+                newAnimals: newAnimalsInRange,
                 newReports: newReportsInRange,
                 resolvedReports: resolvedReportsInRange
             }
