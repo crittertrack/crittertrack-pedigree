@@ -93,9 +93,9 @@ const EXCLUDED_FIELDS = new Set([
     'viewOnlyForUsers', 'pendingTransferId', 'hiddenForUsers', 'healthStatus', 'isInTreatment',
     'isPlannedMating', 'inbreedingCoefficient', 'sbId', 'litterId', 'timelineNotes', 'pinnedEvents',
     'measurementUnits', 'manualPedigree', 'createdAt', 'updatedAt',
-    // isOwned/showOnPublicProfile flip frequently (transfers, batch visibility toggles) and were
-    // crowding the timeline with noise — excluded from field-edit logging entirely.
-    'isOwned', 'showOnPublicProfile',
+    // isOwned/showOnPublicProfile/isDisplay flip frequently (transfers, batch visibility toggles)
+    // and were crowding the timeline with noise — excluded from field-edit logging entirely.
+    'isOwned', 'showOnPublicProfile', 'isDisplay',
 ]);
 
 // Scalar fields already surfaced via their own derived timeline-event types (health/breeding/
