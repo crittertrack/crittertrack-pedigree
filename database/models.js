@@ -1396,6 +1396,13 @@ const ResourceSchema = new mongoose.Schema({
 });
 const Resource = mongoose.model('Resource', ResourceSchema);
 
+// --- 15c. RESOURCE SUGGESTION SCHEMA (unauthenticated visitors submit a link for admin review) ---
+const ResourceSuggestionSchema = new mongoose.Schema({
+    text: { type: String, required: true, trim: true }, // freeform — usually a URL, admin reviews and manually adds it as a Resource
+    createdAt: { type: Date, default: Date.now, index: true }
+});
+const ResourceSuggestion = mongoose.model('ResourceSuggestion', ResourceSuggestionSchema);
+
 
 // --- 15. SYSTEM SETTINGS SCHEMA ---
 const SystemSettingsSchema = new mongoose.Schema({
@@ -1842,6 +1849,7 @@ module.exports = {
     SystemSettings,
     Species,
     Resource,
+    ResourceSuggestion,
     GeneticsData,
     Transaction,
     AnimalTransfer,

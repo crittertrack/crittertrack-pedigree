@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Resource, User } = require('../database/models');
+const { Resource, ResourceSuggestion, User } = require('../database/models');
 
 // Middleware to check admin/moderator access
 const requireAdmin = async (req, res, next) => {
@@ -105,6 +105,36 @@ router.delete('/resources/:id', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error deleting resource:', error);
         res.status(500).json({ error: 'Failed to delete resource' });
+    }
+});
+
+// ============================================
+// RESOURCE SUGGESTIONS (submitted by visitors, reviewed manually)
+// ============================================
+
+// GET /api/admin/resource-suggestions - Get all pending suggestions
+router.get('/resource-suggestions', requireAdmin, async (req, res) => {
+    try {
+        const suggestions = await ResourceSuggestion.find({}).sort({ createdAt: -1 });
+        res.json(suggestions);
+    } catch (error) {
+        console.error('Error fetching resource suggestions:', error);
+        res.status(500).json({ error: 'Failed to fetch resource suggestions' });
+    }
+});
+
+// DELETE /api/admin/resource-suggestions/:id - Dismiss/remove a suggestion once handled
+router.delete('/resource-suggestions/:id', requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const suggestion = await ResourceSuggestion.findByIdAndDelete(id);
+        if (!suggestion) {
+            return res.status(404).json({ error: 'Suggestion not found' });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting resource suggestion:', error);
+        res.status(500).json({ error: 'Failed to delete resource suggestion' });
     }
 });
 

@@ -149,6 +149,8 @@ app.use('/api/admin', authMiddleware, speciesAdminRoutes);
 // Resources admin routes (CRUD for the public Resources page)
 const resourcesAdminRoutes = require('./routes/resourcesAdminRoutes');
 app.use('/api/admin', authMiddleware, resourcesAdminRoutes);
+const resourceSuggestionRoutes = require('./routes/resourceSuggestionRoutes');
+app.use('/api/resource-suggestions', authMiddleware, resourceSuggestionRoutes);
 
 // Multer instance for optional multipart handling on profile route
 // Only accept PNG and JPEG/JPG files server-side
