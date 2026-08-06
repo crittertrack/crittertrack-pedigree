@@ -42,7 +42,6 @@ const FIELD_LABELS = {
     sireId_public: 'Sire (Father)',
     damId_public: 'Dam (Mother)',
     origin: 'Origin',
-    isOwned: 'Currently Owned',
     archived: 'Archived',
     enclosureId: 'Enclosure',
     isNeutered: 'Neutered / Spayed',
@@ -56,7 +55,6 @@ const FIELD_LABELS = {
     pedigreeRegistrationId: 'Pedigree Registration ID',
     ringId: 'Ring ID',
     eartagNumber: 'Eartag Number',
-    showOnPublicProfile: 'Public Profile Visibility',
 };
 
 const CARE_LABELS = {
@@ -95,6 +93,9 @@ const EXCLUDED_FIELDS = new Set([
     'viewOnlyForUsers', 'pendingTransferId', 'hiddenForUsers', 'healthStatus', 'isInTreatment',
     'isPlannedMating', 'inbreedingCoefficient', 'sbId', 'litterId', 'timelineNotes', 'pinnedEvents',
     'measurementUnits', 'manualPedigree', 'createdAt', 'updatedAt',
+    // isOwned/showOnPublicProfile flip frequently (transfers, batch visibility toggles) and were
+    // crowding the timeline with noise — excluded from field-edit logging entirely.
+    'isOwned', 'showOnPublicProfile',
 ]);
 
 // Scalar fields already surfaced via their own derived timeline-event types (health/breeding/
@@ -115,12 +116,20 @@ const getFieldLabel = (field) => FIELD_LABELS[field] || toTitleCase(field);
 
 // Auto-derive every trackable top-level scalar field straight from the Mongoose schema instead of
 // hand-maintaining a small allowlist, so newly added Animal fields get logged automatically.
+// Also captures each field's static schema default (if any) — needed so a field that was never
+// actually stored in the DB (before = undefined) isn't falsely diffed against Mongoose's
+// auto-applied default on the freshly-hydrated `after` document (see FIELD_DEFAULTS usage below).
+const FIELD_DEFAULTS = {};
 const buildTrackedFieldList = () => {
     const fields = [];
     Animal.schema.eachPath((path, schemaType) => {
         if (path.includes('.') || EXCLUDED_FIELDS.has(path) || DERIVED_EVENT_FIELDS.has(path) || SCHEDULE_FIELDS.has(path) || CARE_OR_FEEDING_TRACKED_FIELDS.has(path)) return;
         if (!SCALAR_TYPES.has(schemaType.instance)) return;
         fields.push(path);
+        const def = schemaType.options?.default;
+        if (def !== undefined && typeof def !== 'function') {
+            FIELD_DEFAULTS[path] = def;
+        }
     });
     return fields;
 };
@@ -142,7 +151,10 @@ const GENERIC_ARRAY_FIELDS = {
 };
 
 const toComparable = (value) => {
-    if (value === undefined) return null;
+    // Treat "no value" consistently regardless of whether it arrived as undefined, null, or an
+    // empty string (forms routinely send '' for untouched text fields while the DB has the field
+    // as missing/null) — otherwise these compare as "different" forever, on every save.
+    if (value === undefined || value === null || value === '') return null;
     if (value instanceof Date) return value.getTime();
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
         const t = new Date(value).getTime();
@@ -161,14 +173,20 @@ const valuesEqual = (a, b) => {
 /**
  * Diffs `before` vs `after` for every trackable core "field edit" field (auto-derived from the
  * Animal schema, see FIELD_EDIT_TRACKED_FIELDS) plus quarantine/treatment status and the generic
- * array/list fields, and if anything changed, writes a single AnimalLog entry with category 'field'.
+ * array/list fields. Each individual change gets its OWN AnimalLog document (category 'field') —
+ * never piled together into one entry — so the Timeline shows one card per actual change.
  */
 const logFieldEdits = async ({ userId, animalId, animalId_public, before, after }) => {
     try {
         const changes = [];
         for (const field of FIELD_EDIT_TRACKED_FIELDS) {
-            const oldValue = before?.[field] ?? null;
-            const newValue = after?.[field] ?? null;
+            // Fall back to the field's own schema default (not a hardcoded null) when a value is
+            // missing, so a never-touched field doesn't falsely diff against Mongoose's auto-applied
+            // default on the hydrated `after` document (before is always fetched via .lean(), which
+            // never applies defaults, so an untouched field would otherwise look like undefined -> default).
+            const fallback = FIELD_DEFAULTS[field] !== undefined ? FIELD_DEFAULTS[field] : null;
+            const oldValue = before?.[field] ?? fallback;
+            const newValue = after?.[field] ?? fallback;
             if (!valuesEqual(oldValue, newValue)) {
                 changes.push({ field, label: getFieldLabel(field), oldValue, newValue });
             }
@@ -195,7 +213,9 @@ const logFieldEdits = async ({ userId, animalId, animalId_public, before, after 
         }
 
         if (changes.length === 0) return null;
-        return await AnimalLog.create({ animalId, animalId_public, userId, category: 'field', changes });
+        return await AnimalLog.insertMany(
+            changes.map(change => ({ animalId, animalId_public, userId, category: 'field', changes: [change] }))
+        );
     } catch (err) {
         console.error('[animalLogger] Failed to log field edits:', err && err.message ? err.message : err);
         return null;
@@ -204,8 +224,8 @@ const logFieldEdits = async ({ userId, animalId, animalId_public, before, after 
 
 /**
  * Diffs `before` vs `after` for care-schedule fields (feeding/maintenance frequency)
- * and animalCareTasks array (added/removed/frequency-changed/completed tasks),
- * and if anything changed, writes a single AnimalLog entry with category 'care'.
+ * and animalCareTasks array (added/removed/frequency-changed/completed tasks). Each individual
+ * change gets its OWN AnimalLog document (category 'care') rather than being piled together.
  */
 const logCareUpdates = async ({ userId, animalId, animalId_public, before, after }) => {
     try {
@@ -277,7 +297,9 @@ const logCareUpdates = async ({ userId, animalId, animalId_public, before, after
         }
 
         if (changes.length === 0) return null;
-        return await AnimalLog.create({ animalId, animalId_public, userId, category: 'care', changes });
+        return await AnimalLog.insertMany(
+            changes.map(change => ({ animalId, animalId_public, userId, category: 'care', changes: [change] }))
+        );
     } catch (err) {
         console.error('[animalLogger] Failed to log care updates:', err && err.message ? err.message : err);
         return null;

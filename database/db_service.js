@@ -1506,19 +1506,25 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
     // Log whatever changed (core fields vs. care schedule) so the animal's Timeline tab
     // stays up to date. Each helper is a no-op if nothing relevant changed.
+    // IMPORTANT: `updatedAnimal` above is a hydrated Mongoose document, and Mongoose auto-applies
+    // schema defaults to any field missing from the raw DB doc during hydration — comparing it
+    // directly against `originalAnimal` (fetched via .lean(), so it never gets defaults applied)
+    // produces false-positive diffs for every untouched field. Re-fetch a lean copy here so both
+    // sides of every diff reflect the animal's true stored state, guaranteeing only real changes get logged.
+    const updatedAnimalForLog = await Animal.findById(updatedAnimal._id).lean();
     await logFieldEdits({
         userId: appUserId_backend,
         animalId: updatedAnimal._id,
         animalId_public: updatedAnimal.id_public,
         before: originalAnimal,
-        after: updatedAnimal,
+        after: updatedAnimalForLog,
     });
     await logCareUpdates({
         userId: appUserId_backend,
         animalId: updatedAnimal._id,
         animalId_public: updatedAnimal.id_public,
         before: originalAnimal,
-        after: updatedAnimal,
+        after: updatedAnimalForLog,
     });
 
     return updatedAnimal;
