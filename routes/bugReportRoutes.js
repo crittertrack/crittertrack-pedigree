@@ -1,7 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { BugReport } = require('../database/models');
+const { BugReport, Notification, User, ProfileReport, AnimalReport, MessageReport, RatingReport } = require('../database/models');
 const { sendBugReportNotification } = require('../utils/emailService');
+
+// Parses the "Category · Field :: Description" reason format used by ReportModal
+// (profile/animal/message/rating reports) so it can be displayed like a bug report.
+const parseReasonForDisplay = (reason = '') => {
+    if (!reason) return { category: 'Report', description: '' };
+    const [headerPart, detailPart] = reason.split('::').map((part) => (part || '').trim());
+    const [category] = (headerPart || '').split('\u00b7').map((part) => (part || '').trim());
+    return { category: category || 'Report', description: detailPart || reason };
+};
 
 // Submit a new bug report
 router.post('/', async (req, res) => {
@@ -117,6 +126,12 @@ router.patch('/:id/status', async (req, res) => {
         const { id } = req.params;
         const { status, adminNotes } = req.body;
 
+        const existing = await BugReport.findById(id).select('status userId category');
+        if (!existing) {
+            return res.status(404).json({ error: 'Bug report not found' });
+        }
+        const statusChanged = status !== undefined && status !== existing.status;
+
         const updateData = { status };
         if (adminNotes !== undefined) {
             updateData.adminNotes = adminNotes;
@@ -135,6 +150,24 @@ router.patch('/:id/status', async (req, res) => {
             return res.status(404).json({ error: 'Bug report not found' });
         }
 
+        // Let the submitter know their report's status changed
+        if (statusChanged) {
+            try {
+                const user = await User.findById(report.userId).select('id_public');
+                const statusLabels = { pending: 'Pending', 'in-progress': 'In Progress', resolved: 'Resolved', dismissed: 'Dismissed' };
+                await Notification.create({
+                    userId: report.userId,
+                    userId_public: user?.id_public || null,
+                    type: 'bug_report_update',
+                    status: 'pending',
+                    message: `Your ${report.category} report has been marked as ${statusLabels[status] || status}.${adminNotes ? ` Note: ${adminNotes}` : ''}`,
+                });
+            } catch (notifyError) {
+                console.error('Failed to create bug report status notification:', notifyError);
+                // Don't fail the request if notification creation fails, status is still saved
+            }
+        }
+
         res.json(report);
     } catch (error) {
         console.error('Error updating bug report status:', error);
@@ -142,20 +175,117 @@ router.patch('/:id/status', async (req, res) => {
     }
 });
 
-// Get user's own bug reports
+// Get user's own reports (bug reports plus any profile/animal/message/rating reports they've filed)
 router.get('/my-reports', async (req, res) => {
     try {
         const userId = req.user.id; // Fixed: use req.user.id, not req.user._id
 
-        const reports = await BugReport.find({ userId })
-            .sort({ createdAt: -1 })
-            .select('-userEmail -userName')
-            .lean();
+        const [bugReports, profileReports, animalReports, messageReports, ratingReports] = await Promise.all([
+            BugReport.find({ userId })
+                .sort({ createdAt: -1 })
+                .select('-userEmail -userName')
+                .lean(),
+            ProfileReport.find({ reporterId: userId })
+                .populate({ path: 'reportedUserId', select: 'personalName breederName id_public' })
+                .sort({ createdAt: -1 })
+                .lean(),
+            AnimalReport.find({ reporterId: userId })
+                .populate({ path: 'reportedAnimalId', select: 'name id_public' })
+                .sort({ createdAt: -1 })
+                .lean(),
+            MessageReport.find({ reporterId: userId })
+                .sort({ createdAt: -1 })
+                .lean(),
+            RatingReport.find({ reporterId: userId })
+                .populate({ path: 'ratingId', select: 'targetId_public' })
+                .sort({ createdAt: -1 })
+                .lean()
+        ]);
 
-        res.json(reports);
+        const normalizedBug = bugReports.map((r) => ({
+            _id: r._id,
+            _reportType: 'bug',
+            category: r.category,
+            subjectLabel: null,
+            description: r.description,
+            status: r.status,
+            adminNotes: r.adminNotes || null,
+            createdAt: r.createdAt
+        }));
+
+        const normalizedProfile = profileReports.map((r) => {
+            const { category, description } = parseReasonForDisplay(r.reason);
+            const user = r.reportedUserId;
+            const name = user?.breederName || user?.personalName || user?.id_public || 'a profile';
+            return {
+                _id: r._id,
+                _reportType: 'profile',
+                category,
+                subjectLabel: `Profile: ${name}`,
+                description,
+                status: r.status,
+                adminNotes: r.adminNotes || null,
+                createdAt: r.createdAt
+            };
+        });
+
+        const normalizedAnimal = animalReports.map((r) => {
+            const { category, description } = parseReasonForDisplay(r.reason);
+            const animal = r.reportedAnimalId;
+            const name = animal?.name || animal?.id_public || 'an animal';
+            return {
+                _id: r._id,
+                _reportType: 'animal',
+                category,
+                subjectLabel: `Animal: ${name}`,
+                description,
+                status: r.status,
+                adminNotes: r.adminNotes || null,
+                createdAt: r.createdAt
+            };
+        });
+
+        const normalizedMessage = messageReports.map((r) => {
+            const { category, description } = parseReasonForDisplay(r.reason);
+            return {
+                _id: r._id,
+                _reportType: 'message',
+                category,
+                subjectLabel: r.reportType === 'conversation' ? 'Conversation' : 'Direct Message',
+                description,
+                status: r.status,
+                adminNotes: r.adminNotes || null,
+                createdAt: r.createdAt
+            };
+        });
+
+        const normalizedRating = ratingReports.map((r) => {
+            const { category, description } = parseReasonForDisplay(r.reason);
+            const target = r.ratingId?.targetId_public;
+            return {
+                _id: r._id,
+                _reportType: 'rating',
+                category,
+                subjectLabel: target ? `Rating for ${target}` : 'Rating',
+                description,
+                status: r.status,
+                adminNotes: r.adminNotes || null,
+                createdAt: r.createdAt
+            };
+        });
+
+        const allReports = [
+            ...normalizedBug,
+            ...normalizedProfile,
+            ...normalizedAnimal,
+            ...normalizedMessage,
+            ...normalizedRating
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        res.json(allReports);
     } catch (error) {
-        console.error('Error fetching user bug reports:', error);
-        res.status(500).json({ error: 'Failed to fetch your bug reports' });
+        console.error('Error fetching user reports:', error);
+        res.status(500).json({ error: 'Failed to fetch your reports' });
     }
 });
 

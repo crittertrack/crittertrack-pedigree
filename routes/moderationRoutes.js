@@ -3,7 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const { checkRole, protect } = require('../middleware/authMiddleware');
 const { validateModerationInput } = require('../middleware/validationMiddleware');
-const { createAuditLog, getAuditLogs, logFailedAction, categorizeError } = require('../utils/auditLogger');
+const { createAuditLog, logFailedAction, categorizeError } = require('../utils/auditLogger');
 const {
     User,
     ProfileReport,
@@ -214,6 +214,13 @@ const buildReportTargetInfo = (type, report) => {
             targetUserId: report.reportedUserId?._id || null
         };
     }
+    if (type === 'bug') {
+        const reporterName = report.userId?.breederName || report.userId?.personalName || report.userEmail || 'Unknown';
+        return {
+            targetName: `${report.category || 'Bug'} report from ${reporterName}`,
+            targetUserId: report.userId?._id || report.userId || null
+        };
+    }
     // Fallback for unpopulated reports
     return {
         targetName: `${type} report ${report._id}`
@@ -401,6 +408,40 @@ router.post('/users/:userId/status', requireModerator, validateModerationInput, 
         // Check if this is lifting a suspension (changing from suspended to active)
         const wasLiftingSuspension = status === 'normal' && updates.suspensionReason === null;
 
+        // Notify the user of the status change (best-effort, non-blocking)
+        try {
+            if (status === 'suspended') {
+                await Notification.create({
+                    userId: user._id,
+                    userId_public: user.id_public,
+                    type: 'account_suspended',
+                    message: `Your account has been suspended${durationDays ? ` for ${durationDays} day${durationDays !== 1 ? 's' : ''}` : ''}.${reason ? ` Reason: ${reason}` : ''}`,
+                    status: 'pending',
+                    read: false
+                });
+            } else if (status === 'banned') {
+                await Notification.create({
+                    userId: user._id,
+                    userId_public: user.id_public,
+                    type: 'account_banned',
+                    message: `Your account has been permanently banned.${reason ? ` Reason: ${reason}` : ''}`,
+                    status: 'pending',
+                    read: false
+                });
+            } else if (status === 'normal') {
+                await Notification.create({
+                    userId: user._id,
+                    userId_public: user.id_public,
+                    type: 'moderator_message',
+                    message: 'Your account restriction has been lifted. You may now log in and use CritterTrack normally.',
+                    status: 'pending',
+                    read: false
+                });
+            }
+        } catch (notifyError) {
+            console.error('[MODERATION STATUS] Failed to create status notification:', notifyError);
+        }
+
         res.json({
             message: `User status updated to ${status}.`,
             user,
@@ -519,6 +560,31 @@ router.post('/users/:userId/warn', requireModerator, validateModerationInput, as
             warningCount: user.warningCount, 
             newStatus: user.accountStatus 
         });
+
+        // Notify the user of the warning (best-effort, non-blocking)
+        try {
+            await Notification.create({
+                userId: user._id,
+                userId_public: user.id_public,
+                type: 'moderator_warning',
+                message: reason ? `You have received a warning from the moderation team: ${reason}` : 'You have received a warning from the moderation team.',
+                status: 'pending',
+                read: false,
+                metadata: { category: category || 'general' }
+            });
+            if (user.accountStatus === 'suspended') {
+                await Notification.create({
+                    userId: user._id,
+                    userId_public: user.id_public,
+                    type: 'account_suspended',
+                    message: 'Your account has been automatically suspended after receiving 3 warnings.',
+                    status: 'pending',
+                    read: false
+                });
+            }
+        } catch (notifyError) {
+            console.error('[MODERATION WARN] Failed to create warning notification:', notifyError);
+        }
 
         await createAuditLog({
             ...buildAuditMetadata(req),
@@ -648,6 +714,20 @@ router.post('/users/:userId/lift-warning', requireModerator, validateModerationI
             warningCount: user.warningCount
         });
 
+        // Notify the user their warning was lifted (best-effort, non-blocking)
+        try {
+            await Notification.create({
+                userId: user._id,
+                userId_public: user.id_public,
+                type: 'moderator_message',
+                message: 'A warning on your account has been lifted by the moderation team.',
+                status: 'pending',
+                read: false
+            });
+        } catch (notifyError) {
+            console.error('[MODERATION LIFT_WARNING] Failed to create notification:', notifyError);
+        }
+
         await createAuditLog({
             ...buildAuditMetadata(req),
             action: 'warning_lifted',
@@ -733,6 +813,14 @@ const reportModelMap = {
             { path: 'assignedTo', select: 'personalName breederName email id_public' },
             { path: 'assignedBy', select: 'personalName breederName email id_public' }
         ]
+    },
+    bug: {
+        model: BugReport,
+        populate: [
+            { path: 'userId', select: 'personalName breederName email id_public' },
+            { path: 'assignedTo', select: 'personalName breederName email id_public' },
+            { path: 'assignedBy', select: 'personalName breederName email id_public' }
+        ]
     }
 };
 
@@ -752,8 +840,8 @@ router.get('/reports', async (req, res) => {
         if (!type || type === 'all') {
             console.log('[MODERATION REPORTS] Fetching all report types with filter:', filter);
 
-            // Fetch from all four report models
-            const [profileReports, animalReports, messageReports, ratingReports] = await Promise.all([
+            // Fetch from all five report models
+            const [profileReports, animalReports, messageReports, ratingReports, bugReports] = await Promise.all([
                 ProfileReport.find(filter)
                     .populate({ path: 'reporterId', select: 'personalName breederName email id_public' })
                     .populate({ path: 'reportedUserId', select: 'personalName breederName email id_public profileImage bio websiteUrl showPersonalName showBreederName' })
@@ -785,6 +873,11 @@ router.get('/reports', async (req, res) => {
                     .populate({ path: 'ratingId', select: 'score comment raterName raterId_public targetId_public createdAt' })
                     .populate({ path: 'assignedTo', select: 'personalName breederName email id_public' })
                     .populate({ path: 'assignedBy', select: 'personalName breederName email id_public' })
+                    .lean(),
+                BugReport.find(filter)
+                    .populate({ path: 'userId', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'assignedTo', select: 'personalName breederName email id_public' })
+                    .populate({ path: 'assignedBy', select: 'personalName breederName email id_public' })
                     .lean()
             ]);
 
@@ -793,16 +886,24 @@ router.get('/reports', async (req, res) => {
             const markedAnimalReports = animalReports.map(r => ({ ...r, _reportType: 'animal' }));
             const markedMessageReports = messageReports.map(r => ({ ...r, _reportType: 'message' }));
             const markedRatingReports = ratingReports.map(r => ({ ...r, _reportType: 'rating' }));
+            // Bug reports don't have reporterId/reason fields - alias them so the shared
+            // frontend rendering (formatReporter, parseReason, search/sort) works unmodified.
+            const markedBugReports = bugReports.map(r => ({
+                ...r,
+                _reportType: 'bug',
+                reporterId: r.userId,
+                reason: `${r.category || 'Bug'} :: ${r.description || ''}`
+            }));
 
             // Combine and sort by createdAt descending
-            const allReports = [...markedProfileReports, ...markedAnimalReports, ...markedMessageReports, ...markedRatingReports]
+            const allReports = [...markedProfileReports, ...markedAnimalReports, ...markedMessageReports, ...markedRatingReports, ...markedBugReports]
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             // Apply pagination
             const paginatedReports = allReports.slice(parseInt(skip, 10), parseInt(skip, 10) + parseInt(limit, 10));
             const total = allReports.length;
 
-            console.log(`[MODERATION REPORTS] Found ${total} total reports (profile: ${profileReports.length}, animal: ${animalReports.length}, message: ${messageReports.length}, rating: ${ratingReports.length})`);
+            console.log(`[MODERATION REPORTS] Found ${total} total reports (profile: ${profileReports.length}, animal: ${animalReports.length}, message: ${messageReports.length}, rating: ${ratingReports.length}, bug: ${bugReports.length})`);
 
             return res.json({
                 reports: paginatedReports,
@@ -829,8 +930,18 @@ router.get('/reports', async (req, res) => {
 
         config.populate.forEach((pop) => query.populate(pop));
 
-        const reports = await query.lean();
+        const rawReports = await query.lean();
         const total = await config.model.countDocuments(filter);
+
+        // Normalize bug reports the same way as the all-types branch above
+        const reports = type === 'bug'
+            ? rawReports.map(r => ({
+                ...r,
+                _reportType: 'bug',
+                reporterId: r.userId,
+                reason: `${r.category || 'Bug'} :: ${r.description || ''}`
+            }))
+            : rawReports.map(r => ({ ...r, _reportType: type }));
 
         console.log(`[MODERATION REPORTS] Found ${reports.length} ${type} reports (total: ${total})`);
         console.log('[MODERATION REPORTS] First report sample:', reports[0] || 'No reports');
@@ -915,6 +1026,9 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
             return res.status(404).json({ message: 'Report not found.' });
         }
 
+        const previousStatus = report.status;
+        const previousAdminNotes = report.adminNotes;
+
         if (status) {
             report.status = status;
         }
@@ -928,6 +1042,38 @@ router.post('/reports/:type/:reportId/status', requireModerator, validateModerat
         // Populate for audit log target info
         await report.populate(config.populate);
         const targetInfo = buildReportTargetInfo(type, report);
+
+        // Notify the reporter of status changes / new feedback (best-effort, non-blocking)
+        try {
+            const reporterUser = type === 'bug' ? report.userId : report.reporterId;
+            if (reporterUser && reporterUser._id) {
+                const reportLabel = type === 'bug' ? (report.category || 'Bug') : `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+                const statusLabels = { pending: 'Pending', in_progress: 'In Progress', reviewed: 'Reviewed', resolved: 'Resolved', dismissed: 'Dismissed' };
+                const statusChanged = status && status !== previousStatus;
+                const notesChanged = adminNotes !== undefined && adminNotes !== previousAdminNotes && adminNotes && adminNotes.trim().length > 0;
+
+                if (statusChanged) {
+                    await Notification.create({
+                        userId: reporterUser._id,
+                        userId_public: reporterUser.id_public || null,
+                        type: 'report_status_update',
+                        status: 'pending',
+                        message: `Your ${reportLabel} report has been marked as ${statusLabels[report.status] || report.status}.`
+                    });
+                }
+                if (notesChanged) {
+                    await Notification.create({
+                        userId: reporterUser._id,
+                        userId_public: reporterUser.id_public || null,
+                        type: 'report_feedback',
+                        status: 'pending',
+                        message: `The moderation team added feedback to your ${reportLabel} report: "${adminNotes.trim()}"`
+                    });
+                }
+            }
+        } catch (notifyError) {
+            console.error('Failed to create report status/feedback notification:', notifyError);
+        }
 
         await createAuditLog({
             ...buildAuditMetadata(req),
@@ -1715,54 +1861,6 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
     }
 });
 
-// GET /api/moderation/audit-logs - admins only
-router.get('/audit-logs', requireAdmin, async (req, res) => {
-    try {
-        const {
-            moderatorId,
-            action,
-            targetType,
-            targetId,
-            startDate,
-            endDate,
-            limit = 50,
-            skip = 0,
-            page = 1,
-            sortBy = 'createdAt',
-            sortOrder = 'desc',
-            failedOnly,
-            search
-        } = req.query;
-
-        const filters = {};
-        if (moderatorId) filters.moderatorId = moderatorId;
-        if (action) filters.action = action;
-        if (targetType) filters.targetType = targetType;
-        if (targetId) filters.targetId = targetId;
-        if (startDate) filters.startDate = startDate;
-        if (endDate) filters.endDate = endDate;
-        if (failedOnly === 'true') filters.failedOnly = true;
-        if (search) filters.search = search;
-
-        // Calculate skip from page if page is provided
-        const calculatedSkip = page > 1 ? (page - 1) * Number(limit) : Number(skip);
-
-        // Build sort string (prefix with - for descending)
-        const sortString = sortOrder === 'asc' ? sortBy : `-${sortBy}`;
-
-        const auditData = await getAuditLogs(filters, {
-            limit: Number(limit) || 50,
-            skip: calculatedSkip,
-            sort: sortString
-        });
-
-        res.json(auditData);
-    } catch (error) {
-        console.error('Failed to fetch audit logs:', error);
-        res.status(500).json({ message: 'Unable to fetch audit logs.' });
-    }
-});
-
 // POST /api/moderation/broadcast - Send system-wide broadcast message (Admin only)
 router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res) => {
     try {
@@ -1989,10 +2087,12 @@ router.delete('/broadcasts/:id', requireAdmin, async (req, res) => {
             action: 'broadcast_deleted',
             moderatorId: req.user._id,
             moderatorEmail: req.user.email,
+            targetType: 'system',
+            targetName: broadcastTitle || 'Broadcast',
             details: {
                 deletedBroadcastId: id,
                 originalTitle: broadcastTitle,
-                originalCreatedAt: broadcastCreatedAt,
+                originalCreatedAt: broadcast.createdAt,
                 deletedNotificationsCount
             }
         });

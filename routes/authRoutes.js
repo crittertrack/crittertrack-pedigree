@@ -17,9 +17,29 @@ const { ProfanityError } = require('../utils/profanityFilter');
 const { createAuditLog } = require('../utils/auditLogger');
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 const { protect } = require('../middleware/authMiddleware');
-const { User } = require('../database/models');
+const { User, SystemSettings } = require('../database/models');
+
+// Accounts that can always log in, even while maintenance mode is active
+const MAINTENANCE_BYPASS_IDS = ['CTU1', 'CTU2'];
 
 // --- Authentication Route Controllers (NO AUTH REQUIRED) ---
+
+// GET /api/auth/maintenance-status
+// Public check so the login screen can show a maintenance banner before authenticating
+router.get('/maintenance-status', async (req, res) => {
+    try {
+        const enabledSetting = await SystemSettings.findOne({ key: 'maintenance_mode_enabled' }).lean();
+        const messageSetting = await SystemSettings.findOne({ key: 'maintenance_mode_message' }).lean();
+
+        res.json({
+            active: enabledSetting?.value || false,
+            message: messageSetting?.value || 'System is under maintenance. Please check back later.'
+        });
+    } catch (error) {
+        console.error('Error fetching maintenance status:', error);
+        res.status(500).json({ error: 'Failed to fetch maintenance status' });
+    }
+});
 
 // POST /api/auth/register-request
 // Step 1: Request email verification code
@@ -197,6 +217,18 @@ router.post('/login', async (req, res) => {
 
         // Call the service function to log in and return the token
         const { token, userProfile } = await loginUser(email, password, req);
+
+        // Block non-essential logins while maintenance mode is active
+        if (!MAINTENANCE_BYPASS_IDS.includes(userProfile.id_public)) {
+            const maintenanceSetting = await SystemSettings.findOne({ key: 'maintenance_mode_enabled' }).lean();
+            if (maintenanceSetting?.value) {
+                const messageSetting = await SystemSettings.findOne({ key: 'maintenance_mode_message' }).lean();
+                return res.status(503).json({
+                    message: messageSetting?.value || 'System is under maintenance. Please check back later.',
+                    maintenanceActive: true
+                });
+            }
+        }
 
         // Log admin/moderator logins
         console.log(`[AUTH] Login successful for ${userProfile.email}, role: ${userProfile.role}`);

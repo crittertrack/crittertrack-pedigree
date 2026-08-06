@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const { LoginAuditLog } = require('../database/2faModels');
-const { Animal, PublicProfile, PublicAnimal, User, ProfileReport, AnimalReport, MessageReport, AuditLog, ModChat } = require('../database/models');
+const { Animal, PublicProfile, PublicAnimal, User, ProfileReport, AnimalReport, MessageReport, AuditLog } = require('../database/models');
 const { createAuditLog, getAuditLogs } = require('../utils/auditLogger');
 
 // Helper: Check if user is admin
@@ -67,21 +67,26 @@ router.get('/users/moderation-overview', async (req, res) => {
 
         // BATCH LOAD 2: Fetch all profile reports for all users in one query
         const profileReports = await ProfileReport.find({
-            $or: [
-                { reportedUserId: { $in: userIds } },
-                { reportedBy: { $in: userIds } }
-            ]
+            reportedUserId: { $in: userIds }
         })
-            .select('reason status createdAt category reportedUserId reportedBy')
+            .select('reason status createdAt reportedUserId')
             .lean();
+
+        // Reports don't have a separate category field - it's embedded in "Category · Field :: Description"
+        const parseReportCategory = (reason = '') => {
+            const [headerPart] = reason.split('::');
+            const [category] = (headerPart || '').split('\u00b7');
+            return category?.trim() || 'Report';
+        };
 
         // Index reports by reportedUserId for fast lookup
         const reportsByUser = {};
         for (const report of profileReports) {
-            if (!reportsByUser[report.reportedUserId]) {
-                reportsByUser[report.reportedUserId] = [];
+            const key = report.reportedUserId;
+            if (!reportsByUser[key]) {
+                reportsByUser[key] = [];
             }
-            reportsByUser[report.reportedUserId].push(report);
+            reportsByUser[key].push({ ...report, category: parseReportCategory(report.reason) });
         }
 
         // BATCH LOAD 3: Aggregate animal and message counts for all users
@@ -858,8 +863,7 @@ const getCollectionStats = async () => {
         auditLogs: await AuditLog.countDocuments(),
         profileReports: await ProfileReport.countDocuments(),
         animalReports: await AnimalReport.countDocuments(),
-        messageReports: await MessageReport.countDocuments(),
-        modChats: await ModChat.countDocuments()
+        messageReports: await MessageReport.countDocuments()
     };
     return stats;
 };
@@ -2482,99 +2486,6 @@ router.post('/maintenance/toggle', async (req, res) => {
                 message
             }
         });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// =============================================
-// MOD CHAT ENDPOINTS
-// =============================================
-
-// GET /api/admin/mod-chat - Get mod chat messages
-router.get('/mod-chat', async (req, res) => {
-    try {
-        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
-
-        const { limit = 50, before } = req.query;
-
-        const query = { isDeleted: false };
-        if (before) {
-            query.createdAt = { $lt: new Date(before) };
-        }
-
-        const messages = await ModChat.find(query)
-            .populate('senderId', 'email personalName role id_public')
-            .sort({ createdAt: -1 })
-            .limit(parseInt(limit))
-            .lean();
-
-        // Return in chronological order (oldest first)
-        res.json({
-            messages: messages.reverse(),
-            hasMore: messages.length === parseInt(limit)
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// POST /api/admin/mod-chat - Send a mod chat message
-router.post('/mod-chat', async (req, res) => {
-    try {
-        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
-
-        const { message } = req.body;
-
-        if (!message || message.trim().length === 0) {
-            return res.status(400).json({ error: 'Message is required' });
-        }
-
-        if (message.length > 2000) {
-            return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
-        }
-
-        const newMessage = await ModChat.create({
-            senderId: req.user.id,
-            message: message.trim()
-        });
-
-        // Populate sender info for response
-        const populatedMessage = await ModChat.findById(newMessage._id)
-            .populate('senderId', 'email personalName role id_public')
-            .lean();
-
-        res.json({
-            success: true,
-            message: populatedMessage
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// DELETE /api/admin/mod-chat/:messageId - Delete a mod chat message (own messages only, or admin can delete any)
-router.delete('/mod-chat/:messageId', async (req, res) => {
-    try {
-        if (!isModerator(req)) return res.status(403).json({ error: 'Moderator only' });
-
-        const { messageId } = req.params;
-
-        const message = await ModChat.findById(messageId);
-        if (!message) {
-            return res.status(404).json({ error: 'Message not found' });
-        }
-
-        // Only the sender or an admin can delete
-        if (message.senderId.toString() !== req.user.id && req.user.role !== 'admin') {
-            return res.status(403).json({ error: 'You can only delete your own messages' });
-        }
-
-        message.isDeleted = true;
-        message.deletedAt = new Date();
-        await message.save();
-
-        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

@@ -1037,7 +1037,7 @@ const Litter = mongoose.model('Litter', LitterSchema);
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     userId_public: { type: String, index: true },
-    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'transfer_accepted', 'transfer_declined', 'transfer_cancelled', 'animal_returned', 'animal_recalled', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder', 'new_rating'], index: true },
+    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'transfer_accepted', 'transfer_declined', 'transfer_cancelled', 'animal_returned', 'animal_recalled', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder', 'new_rating', 'bug_report_update', 'report_status_update', 'report_feedback'], index: true },
     status: { type: String, enum: ['pending', 'accepted', 'rejected', 'read', 'declined', 'cancelled', 'returned'], default: 'pending', index: true }, // Added 'returned' for consistency
     
     // Request details
@@ -1126,11 +1126,26 @@ const BugReportSchema = new mongoose.Schema({
     page: { type: String, default: null },
     status: { 
         type: String, 
-        enum: ['pending', 'in-progress', 'resolved', 'dismissed'], 
+        // 'in-progress' (hyphen) kept for legacy records; 'in_progress'/'reviewed' added for parity
+        // with the unified moderation reports system (see ModOversightPanel)
+        enum: ['pending', 'in-progress', 'in_progress', 'reviewed', 'resolved', 'dismissed'], 
         default: 'pending',
         index: true 
     },
-    adminNotes: { type: String, default: null },
+    // Assignment fields (for parity with other report types in the unified moderation panel)
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    assignedAt: { type: Date, default: null },
+    adminNotes: { type: String, default: null }, // Legacy single note field
+    discussionNotes: [{
+        text: { type: String, required: true },
+        authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        authorName: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+        editedAt: { type: Date, default: null }
+    }],
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null },
     resolvedAt: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
@@ -1465,19 +1480,6 @@ AnimalTransferSchema.index({ fromUserId: 1, status: 1 });
 const AnimalTransfer = mongoose.model('AnimalTransfer', AnimalTransferSchema);
 
 module.exports = AnimalTransfer;
-
-
-// --- 18. MOD CHAT SCHEMA ---
-const ModChatSchema = new mongoose.Schema({
-    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    message: { type: String, required: true, maxlength: 2000 },
-    isEdited: { type: Boolean, default: false },
-    editedAt: { type: Date, default: null },
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date, default: null },
-    createdAt: { type: Date, default: Date.now, index: true }
-}, { timestamps: true });
-const ModChat = mongoose.model('ModChat', ModChatSchema);
 
 
 // --- 22. GENETICS DATA SCHEMA (calculator data per species) ---
@@ -1827,7 +1829,6 @@ module.exports = {
     GeneticsData,
     Transaction,
     AnimalTransfer,
-    ModChat,
     Enclosure,
     EnclosureLog,
     SupplyItem,

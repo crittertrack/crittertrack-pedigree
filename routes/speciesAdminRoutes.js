@@ -91,7 +91,7 @@ router.post('/species', requireAdmin, async (req, res) => {
             latinName: latinName?.trim() || null,
             category,
             isDefault: isDefault || false,
-            userId: req.user.userId
+            userId: req.user._id || req.user.id
         });
         
         await newSpecies.save();
@@ -268,7 +268,7 @@ router.post('/genetics', requireAdmin, async (req, res) => {
             adminNotes: adminNotes || null,
             isPublished: false,
             version: 1,
-            lastEditedBy: req.user.userId
+            lastEditedBy: req.user._id
         });
         
         await geneticsData.save();
@@ -300,7 +300,7 @@ router.put('/genetics/:id', requireAdmin, async (req, res) => {
         if (otherGenes !== undefined) geneticsData.otherGenes = otherGenes;
         if (phenotypeRules !== undefined) geneticsData.phenotypeRules = phenotypeRules;
         if (adminNotes !== undefined) geneticsData.adminNotes = adminNotes;
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         geneticsData.updatedAt = new Date();
         
         await geneticsData.save();
@@ -339,7 +339,7 @@ router.post('/genetics/:id/publish', requireAdmin, async (req, res) => {
         // Publish the draft
         draft.isPublished = true;
         draft.publishedAt = new Date();
-        draft.publishedBy = req.user.userId;
+        draft.publishedBy = req.user._id;
         draft.version = (currentPublished?.version || 0) + 1;
         
         await draft.save();
@@ -380,7 +380,7 @@ router.post('/genetics/:id/duplicate', requireAdmin, async (req, res) => {
             adminNotes: source.adminNotes,
             isPublished: false,
             version: source.version,
-            lastEditedBy: req.user.userId
+            lastEditedBy: req.user._id
         });
         
         await draft.save();
@@ -458,7 +458,7 @@ router.post('/genetics/:id/genes', requireAdmin, async (req, res) => {
             geneticsData.genes.push(newGene);
         }
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.status(201).json(geneticsData);
@@ -522,7 +522,7 @@ router.put('/genetics/:id/genes/reorder', requireAdmin, async (req, res) => {
         
         console.log('After assignment, genes[0-3]:', geneticsData.genes?.slice(0, 4).map(g => g.symbol));
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -559,7 +559,7 @@ router.put('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) => {
         if (description !== undefined) geneArray[index].description = description;
         if (alleles) geneArray[index].alleles = alleles;
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -597,7 +597,7 @@ router.delete('/genetics/:id/genes/:geneIndex', requireAdmin, async (req, res) =
         
         geneArray.splice(index, 1);
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -657,7 +657,7 @@ router.post('/genetics/:id/loci/:locusIndex/alleles', requireAdmin, async (req, 
         
         locus.alleles.push(newAllele);
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.status(201).json(geneticsData);
@@ -704,7 +704,7 @@ router.delete('/genetics/:id/loci/:locusIndex/alleles/:alleleIndex', requireAdmi
         
         locus.alleles.splice(alleleIdx, 1);
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -763,7 +763,7 @@ router.put('/genetics/:id/loci/:locusIndex/alleles/reorder', requireAdmin, async
         
         locus.alleles = allelesCopy;
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -822,7 +822,7 @@ router.put('/genetics/:id/loci/:locusIndex/alleles/:alleleIndex', requireAdmin, 
             dominance: dominance || 'recessive'
         };
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -884,7 +884,7 @@ router.post('/genetics/:id/loci/:locusIndex/combinations', requireAdmin, async (
         // Mark the combination array as modified so Mongoose detects the change
         locus.markModified('combinations');
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.status(201).json(geneticsData);
@@ -931,7 +931,7 @@ router.delete('/genetics/:id/loci/:locusIndex/combinations/:combinationIndex', r
         
         locus.combinations.splice(combIdx, 1);
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -994,7 +994,7 @@ router.put('/genetics/:id/loci/:locusIndex/combinations/:combinationIndex', requ
         // Mark the combination array as modified so Mongoose detects the change
         locus.markModified('combinations');
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);
@@ -1055,7 +1055,7 @@ router.post('/genetics/:id/loci/:locusIndex/generate-combinations', requireAdmin
         
         locus.combinations = combinations;
         
-        geneticsData.lastEditedBy = req.user.userId;
+        geneticsData.lastEditedBy = req.user._id;
         await geneticsData.save();
         
         res.json(geneticsData);

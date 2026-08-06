@@ -11,7 +11,7 @@ const { sendGeneticsFeedbackNotification } = require('../utils/emailService');
 router.post('/', async (req, res) => {
     try {
         const { phenotype, genotype, feedback } = req.body;
-        const userId = req.user?.userId;
+        const userId = req.user?._id || req.user?.id;
 
         // Validation
         if (!phenotype || !genotype || !feedback) {

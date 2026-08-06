@@ -1201,7 +1201,7 @@ router.post('/regenerate-admin-password/:userId', async (req, res) => {
  */
 router.get('/dashboard-stats', async (req, res) => {
     try {
-        const { User, Animal, Message } = require('../database/models');
+        const { User, Animal, Message, ProfileReport, AnimalReport, MessageReport, RatingReport, BugReport } = require('../database/models');
         
         // Get total users
         const totalUsers = await User.countDocuments({});
@@ -1215,13 +1215,20 @@ router.get('/dashboard-stats', async (req, res) => {
         // Get total animals
         const totalAnimals = await Animal.countDocuments({});
         
-        // Get pending reports (placeholder - adjust based on your report model)
-        const pendingReports = 0; // Update if you have a Reports model
+        // Get pending reports across all report types
+        const pendingReportCounts = await Promise.all([
+            ProfileReport.countDocuments({ status: 'pending' }),
+            AnimalReport.countDocuments({ status: 'pending' }),
+            MessageReport.countDocuments({ status: 'pending' }),
+            RatingReport.countDocuments({ status: 'pending' }),
+            BugReport.countDocuments({ status: 'pending' })
+        ]);
+        const pendingReports = pendingReportCounts.reduce((a, b) => a + b, 0);
         
         // Get new mod replies: unread messages sent by users to moderators/admins
         // First, get all moderators and admins
         const moderators = await User.find({
-            $or: [{ isModerator: true }, { isAdmin: true }]
+            role: { $in: ['moderator', 'admin'] }
         }).select('_id');
         const moderatorIds = moderators.map(m => m._id);
         
