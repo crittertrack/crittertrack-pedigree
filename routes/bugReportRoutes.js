@@ -208,6 +208,8 @@ router.get('/my-reports', async (req, res) => {
             category: r.category,
             subjectLabel: null,
             description: r.description,
+            stepsToReproduce: r.stepsToReproduce || null,
+            images: r.images || [],
             status: r.status,
             adminNotes: r.adminNotes || null,
             createdAt: r.createdAt
