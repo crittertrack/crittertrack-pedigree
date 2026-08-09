@@ -30,6 +30,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^9.0.1",
     "resend": "^6.5.2",
-    "validator": "^13.15.26"
+    "validator": "^13.15.26",
+    "web-push": "^3.6.7"
   }
 }

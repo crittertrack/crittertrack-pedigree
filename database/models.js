@@ -44,6 +44,18 @@ const UserSchema = new mongoose.Schema({
     // Messaging preferences
     allowMessages: { type: Boolean, default: true },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users blocked from messaging
+    // Web Push subscriptions (one per browser/device the user has enabled push on)
+    pushSubscriptions: [{
+        endpoint: { type: String, required: true },
+        keys: {
+            p256dh: { type: String, required: true },
+            auth: { type: String, required: true }
+        },
+        userAgent: { type: String, default: null },
+        createdAt: { type: Date, default: Date.now }
+    }],
+    // Per-category push notification opt-out (missing key = enabled by default)
+    pushCategoryPreferences: { type: Map, of: Boolean, default: {} },
     // Email notification preferences
     emailNotificationPreference: { 
         type: String, 
@@ -1082,6 +1094,21 @@ const NotificationSchema = new mongoose.Schema({
     read: { type: Boolean, default: false, index: true },
     
 }, { timestamps: true });
+
+// Track whether this doc was newly created, so the post-save hook below only fires
+// a push on first creation (not on later status/read updates) — scheduled/pending
+// broadcasts are pushed explicitly by the broadcast cron job when they actually go out.
+NotificationSchema.pre('save', function(next) {
+    this._wasNew = this.isNew;
+    next();
+});
+NotificationSchema.post('save', function(doc) {
+    if (doc._wasNew && !doc.isPending) {
+        require('../utils/pushService').sendPushForNotification(doc).catch(err => {
+            console.error('[push] Failed to send push for notification', doc._id?.toString(), err.message || err);
+        });
+    }
+});
 const Notification = mongoose.model('Notification', NotificationSchema);
 
 

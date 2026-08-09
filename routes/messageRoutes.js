@@ -3,6 +3,7 @@ const router = express.Router();
 const { Message, MessageReport, User, PublicProfile } = require('../database/models');
 const { assertCleanText, ProfanityError } = require('../utils/profanityFilter');
 const { sendModConversationReplyNotification } = require('../utils/emailService');
+const { sendPushToUser } = require('../utils/pushService');
 
 // Helper function to generate conversation ID (consistent ordering)
 const getConversationId = (userId1, userId2) => {
@@ -97,6 +98,15 @@ router.post('/send', async (req, res) => {
         const newMessage = new Message(messageData);
 
         await newMessage.save();
+
+        // Push notification to the receiver — fire-and-forget, don't delay the response
+        const senderDisplayName = sender.breederName || sender.personalName || 'Someone';
+        sendPushToUser(receiver, {
+            title: senderDisplayName,
+            body: normalizedMessage || 'Sent you a photo',
+            url: '/messages',
+            tag: conversationId
+        }, 'messages').catch(err => console.error('[push] Failed to send message push:', err.message || err));
 
         // Email CTU1 when a non-mod user replies to a mod conversation
         if (isReplyToModConversation && !isAdminOrMod) {

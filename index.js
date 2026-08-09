@@ -290,6 +290,16 @@ setTimeout(() => {
     }
 }, 5000);
 
+// --- Initialize daily animal-care/health/reproduction alert push digest ---
+const { startAnimalAlertsCron } = require('./utils/animalAlertsCron');
+setTimeout(() => {
+    try {
+        startAnimalAlertsCron();
+    } catch (err) {
+        console.error('[Server] Failed to initialize animal alerts cron:', err);
+    }
+}, 5000);
+
 
 // --- UNPROTECTED Routes ---
 
@@ -454,7 +464,7 @@ app.post('/api/users/tutorial-complete', authMiddleware, async (req, res) => {
         }
 
         // Add tutorial to completedTutorials if not already there
-        if (!userProfile.completedTutorials.includes(tutorialId)) {
+        if (tutorialId && !userProfile.completedTutorials.includes(tutorialId)) {
             userProfile.completedTutorials.push(tutorialId);
         }
 
@@ -952,6 +962,18 @@ app.use('/api/surveys', authMiddleware, surveyRoutes);
 const messageRoutes = require('./routes/messageRoutes');
 app.use('/api/messages', authMiddleware, messageRoutes);
 
+// Push Notification Routes — vapid-public-key must stay unauthenticated (needed before subscribing),
+// so it's handled directly here; the rest of the router (subscribe/preferences) requires auth.
+const pushRoutes = require('./routes/pushRoutes');
+const { vapidPublicKey } = require('./utils/pushService');
+app.get('/api/push/vapid-public-key', (req, res) => {
+    if (!vapidPublicKey) {
+        return res.status(503).json({ message: 'Push notifications are not configured on this server.' });
+    }
+    res.status(200).json({ publicKey: vapidPublicKey });
+});
+app.use('/api/push', authMiddleware, pushRoutes);
+
 // Activity Log Routes (Require authMiddleware)
 const activityLogRoutes = require('./routes/activityLogRoutes');
 app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
@@ -1063,6 +1085,11 @@ const broadcastCronJob = async () => {
                     notification.isPending = false;
                     notification.sentAt = new Date();
                     await notification.save();
+
+                    // Push notification (not sent on creation for pending broadcasts — send it now that it's due)
+                    require('./utils/pushService').sendPushForNotification(notification).catch(err => {
+                        console.error('[BROADCAST CRON] Push send failed:', err.message || err);
+                    });
 
                     // Log to audit
                     const { createAuditLog } = require('./utils/auditLogger');
