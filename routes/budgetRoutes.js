@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Transaction, AnimalTransfer, Animal, Notification, User, PublicProfile } = require('../database/models');
+const { Transaction, AnimalTransfer } = require('../database/models');
 
 // Middleware to verify authentication is assumed to be applied at the app level
 // req.user.id should contain the authenticated user's MongoDB ObjectId
@@ -25,20 +25,13 @@ router.get('/transactions', async (req, res) => {
 router.post('/transactions', async (req, res) => {
     try {
         const userId = req.user.id;
-        console.log('[Budget] === NEW TRANSACTION REQUEST ===');
-        console.log('[Budget] User ID:', userId);
-        console.log('[Budget] Request body:', JSON.stringify(req.body, null, 2));
-        
-        const { type, animalId, animalName, price, date, buyer, seller, notes, buyerUserId, sellerUserId, category, description } = req.body;
-        
-        console.log('[Budget] Extracted values:', { type, animalId, animalName, buyerUserId, sellerUserId });
-        
+        const { type, animalId, animalName, price, date, buyer, seller, notes, category, description } = req.body;
+
         // Validation
         if (!type || !['sale', 'purchase', 'expense', 'income'].includes(type)) {
             return res.status(400).json({ message: 'Invalid transaction type. Must be "sale", "purchase", "expense", or "income".' });
         }
-        
-        const isNotifySellerMode = type === 'purchase' && req.body.mode === 'transfer';
+
         const effectivePrice = (price === undefined || price === null || price === '') ? 0 : price;
         if (isNaN(effectivePrice) || parseFloat(effectivePrice) < 0) {
             return res.status(400).json({ message: 'Invalid price. Must be 0 or greater.' });
@@ -57,8 +50,6 @@ router.post('/transactions', async (req, res) => {
             date: new Date(date),
             buyer: type === 'sale' ? (buyer || null) : null,
             seller: type === 'purchase' ? (seller || null) : null,
-            buyerUserId: buyerUserId || null,
-            sellerUserId: sellerUserId || null,
             category: (type === 'expense' || type === 'income') ? (category || null) : null,
             description: (type === 'expense' || type === 'income') ? (description || null) : null,
             notes: notes || null
@@ -67,189 +58,9 @@ router.post('/transactions', async (req, res) => {
         await newTransaction.save();
         console.log('[Budget] Transaction saved with ID:', newTransaction._id);
         
-        // Check if this should create a transfer
-        let transfer = null;
-        
-        console.log('[Budget] Checking transfer conditions:', { 
-            type, 
-            buyerUserId, 
-            animalId, 
-            userId,
-            typeCheck: type === 'sale',
-            buyerCheck: !!buyerUserId,
-            animalCheck: !!animalId,
-            allCheck: type === 'sale' && buyerUserId && animalId
-        });
-        
-        // SALE with existing user (buyer) and existing animal
-        if (type === 'sale' && buyerUserId && animalId) {
-            console.log('[Budget] ✓ Conditions met for sale transfer, looking for animal...');
-            console.log('[Budget] Searching for animal with id_public:', animalId, 'and creatorId:', userId);
-            
-            // Verify the animal exists and belongs to the seller
-            const animal = await Animal.findOne({ id_public: animalId, creatorId: userId });
-            
-            console.log('[Budget] Animal lookup result:', animal ? {
-                found: true,
-                id_public: animal.id_public,
-                name: animal.name,
-                creatorId: animal.creatorId,
-                creatorIdMatches: String(animal.creatorId) === String(userId),
-                soldStatus: animal.soldStatus
-            } : { found: false });
-            
-            if (!animal) {
-                console.log('[Budget] ✗ Animal not found, skipping transfer creation');
-            } else if (animal.soldStatus === 'sold') {
-                console.log('[Budget] ✗ Animal already sold, cannot sell again');
-                return res.status(400).json({ 
-                    message: `Cannot sell ${animal.name} - this animal has already been sold. You can only view it.` 
-                });
-            } else {
-                console.log('[Budget] ✓ Creating transfer...');
-                // Create pending transfer
-                transfer = await AnimalTransfer.create({
-                    fromUserId: userId,
-                    toUserId: buyerUserId,
-                    animalId_public: animalId,
-                    transactionId: newTransaction._id,
-                    transferType: 'sale',
-                    status: 'pending'
-                });
-                
-                console.log('[Budget] ✓ Transfer created with ID:', transfer._id);
-                
-                // Create notification for buyer
-                try {
-                    console.log('[Budget] Looking up buyer profile for userId:', buyerUserId);
-                    const buyerProfile = await PublicProfile.findOne({ userId_backend: buyerUserId });
-                    console.log('[Budget] Buyer profile found:', buyerProfile ? buyerProfile.id_public : 'NOT FOUND');
-                    
-                    // Get seller (requestedBy) profile and name
-                    console.log('[Budget] Looking up seller profile for userId:', userId);
-                    const sellerProfile = await PublicProfile.findOne({ userId_backend: userId });
-                    const sellerName = sellerProfile?.breederName || sellerProfile?.personalName || '';
-                    console.log('[Budget] Seller profile found:', sellerProfile ? sellerProfile.id_public : 'NOT FOUND', 'Name:', sellerName);
-                    
-                    console.log('[Budget] Creating notification for buyer...');
-                    const notificationData = {
-                        userId: buyerUserId,
-                        userId_public: buyerProfile?.id_public || '',
-                        type: 'transfer_request',
-                        status: 'pending',
-                        requestedBy_id: userId,
-                        requestedBy_public: sellerProfile?.id_public || '',
-                        requestedBy_name: sellerName,
-                        animalId_public: animal.id_public,
-                        animalName: animal.name,
-                        animalImageUrl: animal.imageUrl || '',
-                        transferId: transfer._id,
-                        message: `${sellerName} has sent you an animal transfer request for ${animal.name} (${animal.id_public}).`,
-                        metadata: {
-                            transferId: transfer._id,
-                            animalId: animal.id_public,
-                            animalName: animal.name,
-                            fromUserId: userId
-                        }
-                    };
-                    console.log('[Budget] Notification data:', JSON.stringify(notificationData, null, 2));
-                    
-                    const notification = await Notification.create(notificationData);
-                    console.log('[Budget] ✓ Notification created with ID:', notification._id);
-                } catch (notifError) {
-                    console.error('[Budget] ✗ Error creating notification:', notifError);
-                    console.error('[Budget] Notification error details:', notifError.message);
-                }
-            }
-        } else {
-            console.log('[Budget] ✗ Transfer conditions not met');
-        }
-        
-        // PURCHASE with existing user (seller) and existing animal
-        if (type === 'purchase' && sellerUserId && animalId) {
-            console.log('[Budget] ✓ Conditions met for purchase with view-only offer');
-            console.log('[Budget] Searching for animal with id_public:', animalId, 'owned by buyer:', userId);
-            
-            // Check if the animal exists and is owned by the BUYER (current user)
-            const animal = await Animal.findOne({ id_public: animalId, creatorId: userId });
-            
-            console.log('[Budget] Animal lookup result:', animal ? {
-                found: true,
-                id_public: animal.id_public,
-                name: animal.name,
-                creatorId: animal.creatorId,
-                creatorIdMatches: String(animal.creatorId) === String(userId),
-                soldStatus: animal.soldStatus
-            } : { found: false });
-            
-            if (!animal) {
-                console.log('[Budget] ✗ Animal not found or not owned by buyer, skipping view-only offer');
-            } else if (animal.soldStatus === 'sold') {
-                console.log('[Budget] ✗ Animal already marked as sold, cannot create duplicate view-only offer');
-                return res.status(400).json({ 
-                    message: `${animal.name} is already marked as sold. Cannot create duplicate transfer record.` 
-                });
-            } else {
-                console.log('[Budget] ✓ Creating transfer with view-only offer...');
-                // Create transfer with view-only offer
-                transfer = await AnimalTransfer.create({
-                    fromUserId: userId, // buyer (current owner)
-                    toUserId: sellerUserId, // seller/breeder (will get view-only)
-                    animalId_public: animalId,
-                    transactionId: newTransaction._id,
-                    transferType: 'purchase',
-                    status: 'pending'
-                });
-                
-                console.log('[Budget] ✓ Transfer created with ID:', transfer._id);
-                
-                // Create notification for seller/breeder
-                try {
-                    console.log('[Budget] Looking up seller/breeder profile for userId:', sellerUserId);
-                    const sellerProfile = await PublicProfile.findOne({ userId_backend: sellerUserId });
-                    console.log('[Budget] Seller profile found:', sellerProfile ? sellerProfile.id_public : 'NOT FOUND');
-                    
-                    // Get buyer profile for requestedBy fields
-                    console.log('[Budget] Looking up buyer profile for userId:', userId);
-                    const buyerProfile = await PublicProfile.findOne({ userId_backend: userId });
-                    const buyerName = buyerProfile?.breederName || buyerProfile?.personalName || '';
-                    console.log('[Budget] Buyer profile found:', buyerProfile ? buyerProfile.id_public : 'NOT FOUND', 'Name:', buyerName);
-                    
-                    console.log('[Budget] Creating view-only notification for seller/breeder...');
-                    const notificationData = {
-                        userId: sellerUserId,
-                        userId_public: sellerProfile?.id_public || '',
-                        type: 'view_only_offer',
-                        status: 'pending',
-                        requestedBy_id: userId,
-                        requestedBy_public: buyerProfile?.id_public || '',
-                        requestedBy_name: buyerName,
-                        animalId_public: animal.id_public,
-                        animalName: animal.name,
-                        animalImageUrl: animal.imageUrl || '',
-                        transferId: transfer._id,
-                        message: `${buyerName} has logged a purchase of your animal ${animal.name} (${animal.id_public}). Would you like view-only access?`,
-                        metadata: {
-                            transferId: transfer._id,
-                            animalId: animal.id_public,
-                            animalName: animal.name,
-                            fromUserId: userId
-                        }
-                    };
-                    console.log('[Budget] Notification data:', JSON.stringify(notificationData, null, 2));
-                    
-                    const notification = await Notification.create(notificationData);
-                    console.log('[Budget] ✓ Notification created with ID:', notification._id);
-                } catch (notifError) {
-                    console.error('[Budget] ✗ Error creating notification:', notifError);
-                    console.error('[Budget] Notification error details:', notifError.message);
-                }
-            }
-        }
-        
         res.status(201).json({ 
             transaction: newTransaction,
-            transfer: transfer || null
+            transfer: null
         });
     } catch (error) {
         console.error('[Budget] ✗ Error creating transaction:', error);

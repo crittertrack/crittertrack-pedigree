@@ -165,12 +165,8 @@ router.post('/:id/accept', async (req, res) => {
         // Transfer ownership logic
         const previousOwner = animal.creatorId;
         const previousOwnerPublic = animal.creatorId_public;
-        
-        // Set original owner if not already set
-        if (!animal.originalCreatorId) {
-            animal.originalCreatorId = previousOwner;
-        }
-        
+        const isReturn = transfer.transferType === 'return';
+
         // Get the new owner's public ID
         let newOwner = await User.findById(userId).select('id_public').session(session); // Pass session
         if (!newOwner) {
@@ -179,24 +175,49 @@ router.post('/:id/accept', async (req, res) => {
             newOwner = { id_public: 'UNKNOWN' };
         }
         console.log('[Transfer Accept] New owner found:', newOwner?.id_public);
-        
-        // Update animal ownership
-        animal.creatorId = userId;
-        animal.creatorId_public = newOwner.id_public;
-        animal.soldStatus = 'sold';
-        animal.isOwned = true; // Mark animal as owned by new owner (not view-only)
-        animal.isForSale = false; // Clear for-sale flag on transfer
-        animal.availableForBreeding = false; // Clear stud flag on transfer
-        
-        // Add the previous owner to viewOnlyForUsers so they can see the live animal record
-        // in their "Sold Animals" archive, reflecting all changes.
-        if (previousOwner) {
+
+        if (isReturn) {
+            // A return fully restores ownership to the original breeder — no transfer
+            // relationship remains, so originalCreatorId/soldStatus must be cleared (matching
+            // the revert-on-delete logic in db_service.js), otherwise the recipient keeps
+            // showing up as "received" (arrows) and loses their own Transfer button.
+            animal.creatorId = userId;
+            animal.creatorId_public = newOwner.id_public;
+            animal.originalCreatorId = null;
+            animal.soldStatus = null;
+            animal.isOwned = true;
+            if (Array.isArray(animal.viewOnlyForUsers)) {
+                animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(
+                    vid => vid.toString() !== userId.toString() && (!previousOwner || vid.toString() !== previousOwner.toString())
+                );
+            }
+        } else {
+            // Set original owner if not already set
+            if (!animal.originalCreatorId) {
+                animal.originalCreatorId = previousOwner;
+            }
+
+            // Update animal ownership
+            animal.creatorId = userId;
+            animal.creatorId_public = newOwner.id_public;
+            animal.soldStatus = 'sold';
+            animal.isOwned = true; // Mark animal as owned by new owner (not view-only)
+            animal.isForSale = false; // Clear for-sale flag on transfer
+            animal.availableForBreeding = false; // Clear stud flag on transfer
+
+            // Add the previous owner to viewOnlyForUsers so they can see the live animal record
+            // in their "Sold Animals" archive, reflecting all changes.
             if (!Array.isArray(animal.viewOnlyForUsers)) {
                 animal.viewOnlyForUsers = [];
             }
-            animal.viewOnlyForUsers.push(previousOwner);
+            // The new owner can never legitimately be in their own view-only list (e.g. if this
+            // animal cycled back to them through an earlier hop in a multi-owner chain).
+            animal.viewOnlyForUsers = animal.viewOnlyForUsers.filter(vid => vid.toString() !== userId.toString());
+            if (previousOwner) {
+                animal.viewOnlyForUsers.push(previousOwner);
+            }
         }
-        
+
         animal.pendingTransferId = undefined; // --- NEW: Clear pendingTransferId on animal ---
         await animal.save({ session }); // Pass session
         console.log('[Transfer Accept] Animal ownership transferred, viewOnly access added');
