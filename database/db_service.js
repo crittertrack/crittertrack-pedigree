@@ -2060,6 +2060,12 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
         throw new Error('Animal not found or does not own this animal.');
     }
 
+    // Block deletion while a transfer is pending — otherwise the recipient is left with a
+    // notification/transfer record pointing at an animal that no longer exists.
+    if (animal.pendingTransferId) {
+        throw new Error('This animal has a pending transfer request. Withdraw it before deleting.');
+    }
+
     // Check if this is a transferred animal (has originalCreatorId and it's not the current owner)
     if (animal.originalCreatorId && animal.originalCreatorId.toString() !== appUserId_backend.toString()) {
         console.log(`[deleteAnimal] Reverting transferred animal ${animal.id_public} back to original owner`);
