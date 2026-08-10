@@ -209,6 +209,7 @@ const registerUser = async (userData) => {
         email: userData.email,
         password: hashedPassword,
         personalName: userData.personalName,
+        showPersonalName: true, // New users show their Personal Name by default (opt-out, not opt-in)
         breederName: userData.breederName || userData.personalName,
         showBreederName: userData.showBreederName || false,
         allowMessages: true, // Enable messages by default
@@ -2373,6 +2374,7 @@ const requestEmailVerification = async (email, personalName, breederName, showBr
             email,
             password: hashedPassword,
             personalName: normalizedPersonalName,
+            showPersonalName: true, // New users show their Personal Name by default (opt-out, not opt-in)
             breederName: normalizedBreederName || normalizedPersonalName,
             showBreederName: showBreederName || false,
             emailVerified: false,

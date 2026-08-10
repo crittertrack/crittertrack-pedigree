@@ -1,5 +1,5 @@
-// One-off: reset CTU8's onboarding flags to false so the "first-time login" flow
-// (auto-redirect to /tutorials + WelcomeGuideModal) can be re-tested.
+// One-off: reset CTU8's onboarding flag to false so the WelcomeGuideModal
+// first-login flow can be re-tested. (hasCompletedOnboarding field was removed since.)
 require('dotenv').config();
 const mongoose = require('mongoose');
 const { User, PublicProfile } = require('../database/models');
@@ -11,8 +11,8 @@ const { User, PublicProfile } = require('../database/models');
 
     const r = await PublicProfile.updateOne(
         { userId_backend: user._id },
-        { $set: { hasCompletedOnboarding: false, hasSeenProfileSetupGuide: false } }
+        { $set: { hasSeenProfileSetupGuide: false } }
     );
-    console.log(`CTU8 (${user._id}) onboarding flags reset, modified: ${r.modifiedCount}`);
+    console.log(`CTU8 (${user._id}) onboarding flag reset, modified: ${r.modifiedCount}`);
     await mongoose.disconnect();
 })();
