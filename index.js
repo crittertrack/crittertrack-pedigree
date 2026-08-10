@@ -946,6 +946,10 @@ app.use('/api/transfers', authMiddleware, transferRoutes);
 const geneticsFeedbackRoutes = require('./routes/geneticsFeedbackRoutes');
 app.use('/api/genetics-feedback', authMiddleware, geneticsFeedbackRoutes);
 
+// Species Genetics Submission Routes (Require authMiddleware)
+const speciesGeneticsSubmissionRoutes = require('./routes/speciesGeneticsSubmissionRoutes');
+app.use('/api/species-genetics-feedback', authMiddleware, speciesGeneticsSubmissionRoutes);
+
 // Bug Report Routes (Require authMiddleware)
 const bugReportRoutes = require('./routes/bugReportRoutes');
 app.use('/api/bug-reports', authMiddleware, bugReportRoutes);

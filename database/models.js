@@ -1131,6 +1131,28 @@ const GeneticsFeedbackSchema = new mongoose.Schema({
 const GeneticsFeedback = mongoose.model('GeneticsFeedback', GeneticsFeedbackSchema);
 
 
+// --- 7b. SPECIES GENETICS SUBMISSION SCHEMA ---
+// Community-submitted genetics info for species without a built-in visual gene builder.
+const SpeciesGeneticsSubmissionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    species: { type: String, required: true, index: true },
+    genes: { type: String, required: true },
+    alleles: { type: String, required: true },
+    phenotypeInfo: { type: String, default: null },
+    references: { type: String, default: null },
+    contactEmail: { type: String, default: null },
+    status: {
+        type: String,
+        enum: ['pending', 'reviewed', 'resolved', 'dismissed'],
+        default: 'pending',
+        index: true
+    },
+    adminNotes: { type: String, default: null },
+    reviewedAt: { type: Date, default: null }
+}, { timestamps: true });
+const SpeciesGeneticsSubmission = mongoose.model('SpeciesGeneticsSubmission', SpeciesGeneticsSubmissionSchema);
+
+
 // --- 8. BUG REPORT SCHEMA ---
 const BugReportSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -1864,6 +1886,7 @@ module.exports = {
     Litter,
     Notification,
     GeneticsFeedback,
+    SpeciesGeneticsSubmission,
     BugReport,
     Feedback,
     BetaSurvey,
