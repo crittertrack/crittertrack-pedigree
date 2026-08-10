@@ -169,10 +169,6 @@ const PublicProfileSchema = new mongoose.Schema({
         of: String, // Values: 'breeder', 'retired', 'hobbyist', or null
         default: new Map()
     },
-    completedTutorials: { type: [String], default: [] }, // Array of completed tutorial IDs
-    hasCompletedOnboarding: { type: Boolean, default: false }, // Track if user completed initial onboarding
-    hasCompletedAdvancedFeatures: { type: Boolean, default: false }, // Track if user completed advanced features
-    hasSeenWelcomeBanner: { type: Boolean, default: false }, // Track if user has dismissed the welcome banner
     hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
     speciesOrder: { type: [String], default: [] }, // User's custom order for species display
     speciesFavorites: { type: [String], default: [] }, // User's favorite species (starred)
