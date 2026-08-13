@@ -1463,15 +1463,15 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
             if (notifyUserId) {
                 let notificationMessage;
                 if (contentType === 'profile') {
-                    notificationMessage = `A moderator has edited your profile. Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`;
+                    notificationMessage = `An admin has edited your profile. Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`;
                 } else if (ownerChanged) {
                     notificationMessage = changedFields
-                        ? `A moderator has assigned the animal "${updated.name}" to your account and made the following changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
-                        : `A moderator has assigned the animal "${updated.name}" to your account. Reason: ${reason || 'Content policy violation'}`;
+                        ? `An admin has assigned the animal "${updated.name}" to your account and made the following changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
+                        : `An admin has assigned the animal "${updated.name}" to your account. Reason: ${reason || 'Content policy violation'}`;
                 } else {
                     notificationMessage = changedFields
-                        ? `A moderator has edited your animal "${updated.name}". Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
-                        : `A moderator has updated your animal "${updated.name}". Reason: ${reason || 'Content policy violation'}`;
+                        ? `An admin has edited your animal "${updated.name}". Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
+                        : `An admin has updated your animal "${updated.name}". Reason: ${reason || 'Content policy violation'}`;
                 }
 
                 await Notification.create({
@@ -1500,7 +1500,7 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                     userId: previousOwnerId,
                     userId_public: previousOwnerIdPublic,
                     type: 'content_edited',
-                    message: `A moderator has transferred your animal "${updated.name}" to another owner. Reason: ${reason || 'Content policy violation'}`,
+                    message: `An admin has transferred your animal "${updated.name}" to another owner. Reason: ${reason || 'Content policy violation'}`,
                     metadata: {
                         contentType,
                         contentId: updated._id || contentId,
