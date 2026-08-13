@@ -1091,65 +1091,57 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             updates.showOnPublicProfile = updates.isDisplay;
         }
 
-        // Map parent alias fields to schema's sireId_public/damId_public
-        // Use === undefined to allow null values through (for clearing parents)
-        if (updates.sireId_public === undefined) {
-            const candidate = updates.fatherId_public ?? updates.fatherId ?? updates.father_id ?? updates.father_public;
-            if (candidate !== undefined) {
-                if (candidate === null) {
-                    updates.sireId_public = null;
-                    if (originalAnimal.sireId_public !== null) {
-                        shouldRemoveLitterLink = true;
-                    }
-                } else {
-                    const resolved = await resolveParentPublicToBackend(candidate);
-                    if (resolved) {
-                        updates.sireId_public = resolved.id_public;
-                        if (originalAnimal.sireId_public !== resolved.id_public) {
-                            shouldRemoveLitterLink = true;
-                        }
-                    } else {
-                        updates.sireId_public = candidate;
-                        if (originalAnimal.sireId_public !== candidate) {
-                            shouldRemoveLitterLink = true;
-                        }
-                    }
+        // Map parent alias fields to schema's sireId_public/damId_public.
+        // NOTE: the animal edit form always echoes back the animal's last-known sireId_public/
+        // damId_public in the same payload as any fatherId_public/motherId_public change (its
+        // formData is seeded by spreading the whole existing animal record), so gating this sync
+        // on "updates.sireId_public === undefined" would almost never fire and silently discard
+        // every real fatherId_public/motherId_public edit. Trust the alias field whenever it's
+        // present instead, regardless of whatever sireId_public/damId_public was also sent.
+        const fatherCandidate = updates.fatherId_public ?? updates.fatherId ?? updates.father_id ?? updates.father_public;
+        if (fatherCandidate !== undefined) {
+            if (fatherCandidate === null) {
+                updates.sireId_public = null;
+                if (originalAnimal.sireId_public !== null) {
+                    shouldRemoveLitterLink = true;
+                }
+            } else {
+                const resolved = await resolveParentPublicToBackend(fatherCandidate);
+                const resolvedId = resolved ? resolved.id_public : fatherCandidate;
+                updates.sireId_public = resolvedId;
+                if (originalAnimal.sireId_public !== resolvedId) {
+                    shouldRemoveLitterLink = true;
                 }
             }
         }
 
-        if (updates.damId_public === undefined) {
-            const candidateM = updates.motherId_public ?? updates.motherId ?? updates.mother_id ?? updates.mother_public;
-            if (candidateM !== undefined) {
-                if (candidateM === null) {
-                    updates.damId_public = null;
-                    if (originalAnimal.damId_public !== null) {
-                        shouldRemoveLitterLink = true;
-                    }
-                } else {
-                    const resolvedM = await resolveParentPublicToBackend(candidateM);
-                    if (resolvedM) {
-                        updates.damId_public = resolvedM.id_public;
-                        if (originalAnimal.damId_public !== resolvedM.id_public) {
-                            shouldRemoveLitterLink = true;
-                        }
-                    } else {
-                        updates.damId_public = candidateM;
-                        if (originalAnimal.damId_public !== candidateM) {
-                            shouldRemoveLitterLink = true;
-                        }
-                    }
+        const motherCandidate = updates.motherId_public ?? updates.motherId ?? updates.mother_id ?? updates.mother_public;
+        if (motherCandidate !== undefined) {
+            if (motherCandidate === null) {
+                updates.damId_public = null;
+                if (originalAnimal.damId_public !== null) {
+                    shouldRemoveLitterLink = true;
+                }
+            } else {
+                const resolvedM = await resolveParentPublicToBackend(motherCandidate);
+                const resolvedMId = resolvedM ? resolvedM.id_public : motherCandidate;
+                updates.damId_public = resolvedMId;
+                if (originalAnimal.damId_public !== resolvedMId) {
+                    shouldRemoveLitterLink = true;
                 }
             }
         }
 
         // SYNC: When manualPedigree is updated, extract sire/dam CTC IDs and sync to sireId_public/damId_public
-        // This ensures Pedigree entries automatically populate the canonical parent fields
+        // This ensures Pedigree entries automatically populate the canonical parent fields.
+        // Runs unconditionally (taking precedence over the fatherId_public/motherId_public alias
+        // above) since manualPedigree.sire/dam.ctcId comes from the Pedigree tab's own CTC picker —
+        // the most specific and freshest source of intent when present.
         if (updates.manualPedigree && typeof updates.manualPedigree === 'object') {
             const mp = updates.manualPedigree;
             
             // Extract sire CTC ID from manualPedigree.sire
-            if (mp.sire && mp.sire.ctcId && updates.sireId_public === undefined) {
+            if (mp.sire && mp.sire.ctcId) {
                 const sireId = mp.sire.ctcId;
                 if (originalAnimal.sireId_public !== sireId) {
                     shouldRemoveLitterLink = true;
@@ -1159,7 +1151,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             }
             
             // Extract dam CTC ID from manualPedigree.dam
-            if (mp.dam && mp.dam.ctcId && updates.damId_public === undefined) {
+            if (mp.dam && mp.dam.ctcId) {
                 const damId = mp.dam.ctcId;
                 if (originalAnimal.damId_public !== damId) {
                     shouldRemoveLitterLink = true;
