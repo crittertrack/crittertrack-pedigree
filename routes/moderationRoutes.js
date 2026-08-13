@@ -1306,6 +1306,20 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
         const mongoose = require('mongoose');
         const isObjectId = mongoose.Types.ObjectId.isValid(contentId);
 
+        // Capture the animal's owner BEFORE the update so we can tell if this edit
+        // reassigned ownership (needed to build an accurate notification below).
+        let previousOwnerId = null;
+        let previousOwnerIdPublic = null;
+        if (contentType === 'animal') {
+            const existingAnimal = isObjectId
+                ? await Animal.findById(contentId).select('creatorId creatorId_public')
+                : await Animal.findOne({ id_public: contentId }).select('creatorId creatorId_public');
+            if (existingAnimal) {
+                previousOwnerId = existingAnimal.creatorId;
+                previousOwnerIdPublic = existingAnimal.creatorId_public;
+            }
+        }
+
         if (contentType === 'profile') {
             // Process field edits - convert empty strings to null for clearing fields
             const processedEdits = { ...fieldEdits };
@@ -1427,9 +1441,18 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                 }
             }
 
-            if (notifyUserId) {
-                // Build a human-readable list of what was changed
-                const changedFields = Object.entries(fieldEdits).map(([field, value]) => {
+            // Internal-bookkeeping fields that shouldn't be described as "edits" to the user
+            const INTERNAL_ONLY_FIELDS = ['creatorId', 'creatorId_public', 'isOwned', 'showOnPublicProfile'];
+
+            const ownerChanged = contentType === 'animal'
+                && fieldEdits.creatorId_public
+                && previousOwnerIdPublic
+                && fieldEdits.creatorId_public !== previousOwnerIdPublic;
+
+            // Build a human-readable list of what was changed, excluding internal-only fields
+            const changedFields = Object.entries(fieldEdits)
+                .filter(([field]) => !INTERNAL_ONLY_FIELDS.includes(field))
+                .map(([field, value]) => {
                     const fieldLabel = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                     if (value === '' || value === null) {
                         return `${fieldLabel} was removed`;
@@ -1437,9 +1460,19 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                     return `${fieldLabel} was edited`;
                 }).join(', ');
 
-                const notificationMessage = contentType === 'profile' 
-                    ? `A moderator has edited your profile. Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
-                    : `A moderator has edited your animal "${updated.name}". Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`;
+            if (notifyUserId) {
+                let notificationMessage;
+                if (contentType === 'profile') {
+                    notificationMessage = `A moderator has edited your profile. Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`;
+                } else if (ownerChanged) {
+                    notificationMessage = changedFields
+                        ? `A moderator has assigned the animal "${updated.name}" to your account and made the following changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
+                        : `A moderator has assigned the animal "${updated.name}" to your account. Reason: ${reason || 'Content policy violation'}`;
+                } else {
+                    notificationMessage = changedFields
+                        ? `A moderator has edited your animal "${updated.name}". Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
+                        : `A moderator has updated your animal "${updated.name}". Reason: ${reason || 'Content policy violation'}`;
+                }
 
                 await Notification.create({
                     userId: notifyUserId,
@@ -1451,12 +1484,34 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                         contentId: updated._id || contentId,
                         contentIdPublic: updated.id_public,
                         fieldsEdited: Object.keys(fieldEdits),
+                        ownerChanged,
                         reason: reason || 'Content policy violation'
                     },
                     status: 'pending', // Pending until user acknowledges
                     read: false
                 });
                 console.log('[MODERATION EDIT] Notification sent to user:', notifyUserIdPublic);
+            }
+
+            // If ownership was reassigned, also notify the previous owner so they know
+            // the animal left their account.
+            if (ownerChanged && previousOwnerId) {
+                await Notification.create({
+                    userId: previousOwnerId,
+                    userId_public: previousOwnerIdPublic,
+                    type: 'content_edited',
+                    message: `A moderator has transferred your animal "${updated.name}" to another owner. Reason: ${reason || 'Content policy violation'}`,
+                    metadata: {
+                        contentType,
+                        contentId: updated._id || contentId,
+                        contentIdPublic: updated.id_public,
+                        ownerChanged: true,
+                        reason: reason || 'Content policy violation'
+                    },
+                    status: 'pending',
+                    read: false
+                });
+                console.log('[MODERATION EDIT] Notification sent to previous owner:', previousOwnerIdPublic);
             }
         } catch (notifError) {
             // Don't fail the edit if notification fails
