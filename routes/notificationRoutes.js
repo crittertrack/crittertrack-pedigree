@@ -123,7 +123,9 @@ router.post('/:notificationId/approve', async (req, res) => {
                 animalName: notification.animalName,
                 parentType: notification.parentType,
                 targetAnimalId_public: notification.targetAnimalId_public,
-                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was approved.`,
+                // Wording matters here: the link was already applied when the request was sent,
+                // not just now — "approved" would wrongly imply it only just took effect.
+                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was acknowledged.`,
                 read: false
             });
         }
@@ -206,7 +208,7 @@ router.post('/:notificationId/reject', async (req, res) => {
                 animalName: notification.animalName,
                 parentType: notification.parentType,
                 targetAnimalId_public: notification.targetAnimalId_public,
-                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was not approved.`,
+                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was rejected and the link was removed.`,
                 read: false
             });
         }
