@@ -1551,6 +1551,38 @@ const getArchivedAndSoldAnimals = async (appUserId_backend) => {
         hiddenForUsers: { $ne: appUserId_backend } // Exclude those hidden by the user
     }).select(archiveSlimFields).lean();
 
+    // Bulk-resolve the CURRENT owner's actual CTU-ID profile (PublicProfile, keyed by
+    // userId_backend) for each transferred animal, so the recipient shown here always
+    // matches what's shown on their public profile page (/user/:id_public). This has
+    // nothing to do with the animal's own static manualownerName/manualBreederName
+    // fields — those are unrelated free-text fields, not the transfer recipient.
+    const recipientIds = [...new Set(
+        soldTransferred
+            .filter(a => a.creatorId && a.creatorId.toString() !== appUserId_backend.toString())
+            .map(a => a.creatorId.toString())
+    )];
+    let recipientNameMap = {};
+    let recipientAvatarMap = {};
+    let recipientIdPublicMap = {};
+    if (recipientIds.length > 0) {
+        const { PublicProfile } = require('./models');
+        const recipients = await PublicProfile.find({ userId_backend: { $in: recipientIds } })
+            .select('userId_backend id_public personalName showPersonalName breederName showBreederName profileImage')
+            .lean();
+        recipients.forEach(p => {
+            const key = p.userId_backend.toString();
+            // Same display-name precedence used everywhere else in the app (see
+            // NotificationBar.jsx's getSenderDisplayName / MessagesView's getDisplayName).
+            recipientNameMap[key] = (p.showBreederName && p.breederName)
+                ? p.breederName
+                : (p.showPersonalName && p.personalName)
+                    ? p.personalName
+                    : `User ${p.id_public}`;
+            recipientAvatarMap[key] = p.profileImage || null;
+            recipientIdPublicMap[key] = p.id_public || null;
+        });
+    }
+
     // Add backward-compatible alias fields before returning
     const addAliases = (animal, isViewOnly = false) => ({
         ...animal,
@@ -1559,7 +1591,23 @@ const getArchivedAndSoldAnimals = async (appUserId_backend) => {
         isViewOnly,
     });
 
-    return { archived: archived.map(a => addAliases(a)), soldTransferred: soldTransferred.map(a => addAliases(a, true)) };
+    const addRecipientInfo = (animal) => {
+        const creatorIdStr = animal.creatorId ? animal.creatorId.toString() : null;
+        return {
+            ...animal,
+            // Recipient's resolved PublicProfile name only — never fall back to the
+            // animal's own manualownerName/manualBreederName fields, which are unrelated
+            // free-text fields, not the transfer recipient. Leave empty if unresolved.
+            manualownerName: creatorIdStr ? (recipientNameMap[creatorIdStr] || null) : null,
+            ownerAvatar: creatorIdStr ? (recipientAvatarMap[creatorIdStr] || null) : null,
+            creatorIdPublic: creatorIdStr ? (recipientIdPublicMap[creatorIdStr] || null) : null,
+        };
+    };
+
+    return {
+        archived: archived.map(a => addAliases(a)),
+        soldTransferred: soldTransferred.map(a => addRecipientInfo(addAliases(a, true)))
+    };
 };
 
 /**

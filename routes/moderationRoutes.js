@@ -1293,9 +1293,9 @@ router.delete('/animals/:animalId/image', async (req, res) => {
 router.patch('/content/:contentType/:contentId/edit', requireModerator, validateModerationInput, async (req, res) => {
     try {
         const { contentType, contentId } = req.params;
-        const { fieldEdits, reason } = req.body;
+        const { fieldEdits, reason, treatAsTransfer } = req.body;
 
-        console.log('[MODERATION EDIT] Editing content:', { contentType, contentId, fieldEdits, reason });
+        console.log('[MODERATION EDIT] Editing content:', { contentType, contentId, fieldEdits, reason, treatAsTransfer });
 
         if (!fieldEdits || typeof fieldEdits !== 'object') {
             return res.status(400).json({ message: 'fieldEdits object is required' });
@@ -1307,18 +1307,29 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
         const isObjectId = mongoose.Types.ObjectId.isValid(contentId);
 
         // Capture the animal's owner BEFORE the update so we can tell if this edit
-        // reassigned ownership (needed to build an accurate notification below).
+        // reassigned ownership (needed to build an accurate notification below, and to
+        // apply true-transfer side effects if requested).
         let previousOwnerId = null;
         let previousOwnerIdPublic = null;
+        let previousOriginalCreatorId = null;
+        let previousViewOnlyForUsers = [];
         if (contentType === 'animal') {
             const existingAnimal = isObjectId
-                ? await Animal.findById(contentId).select('creatorId creatorId_public')
-                : await Animal.findOne({ id_public: contentId }).select('creatorId creatorId_public');
+                ? await Animal.findById(contentId).select('creatorId creatorId_public originalCreatorId viewOnlyForUsers')
+                : await Animal.findOne({ id_public: contentId }).select('creatorId creatorId_public originalCreatorId viewOnlyForUsers');
             if (existingAnimal) {
                 previousOwnerId = existingAnimal.creatorId;
                 previousOwnerIdPublic = existingAnimal.creatorId_public;
+                previousOriginalCreatorId = existingAnimal.originalCreatorId;
+                previousViewOnlyForUsers = Array.isArray(existingAnimal.viewOnlyForUsers) ? existingAnimal.viewOnlyForUsers : [];
             }
         }
+
+        // Whether this edit reassigns the animal's owner (compared to before the update)
+        const ownerChanged = contentType === 'animal'
+            && fieldEdits.creatorId_public
+            && previousOwnerIdPublic
+            && fieldEdits.creatorId_public !== previousOwnerIdPublic;
 
         if (contentType === 'profile') {
             // Process field edits - convert empty strings to null for clearing fields
@@ -1373,6 +1384,26 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                     processedEdits[key] = fieldEdits[key] === '' ? null : fieldEdits[key];
                 }
             }
+
+            // "True transfer" — mirrors what happens when a user accepts a real transfer
+            // (transferRoutes.js): previous owner becomes the permanent originalCreatorId
+            // (if not already set), animal is marked sold, and the previous owner keeps
+            // view-only access so it still shows up in their Sold Animals archive.
+            if (ownerChanged && treatAsTransfer) {
+                processedEdits.soldStatus = 'sold';
+                processedEdits.isForSale = false;
+                processedEdits.availableForBreeding = false;
+                if (!previousOriginalCreatorId) {
+                    processedEdits.originalCreatorId = previousOwnerId;
+                }
+                const newOwnerId = fieldEdits.creatorId;
+                const newViewOnlyForUsers = previousViewOnlyForUsers
+                    .filter(vid => vid.toString() !== String(newOwnerId));
+                if (previousOwnerId && !newViewOnlyForUsers.some(vid => vid.toString() === previousOwnerId.toString())) {
+                    newViewOnlyForUsers.push(previousOwnerId);
+                }
+                processedEdits.viewOnlyForUsers = newViewOnlyForUsers;
+            }
             
             // Try to find by ObjectId first, then by public ID
             let animal = null;
@@ -1397,6 +1428,14 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                 return res.status(404).json({ message: 'Animal not found' });
             }
 
+            // If ownership was reassigned as a true transfer, keep each user's
+            // ownedAnimals array in sync (matching transferRoutes.js's accept route).
+            if (ownerChanged && treatAsTransfer && previousOwnerId && fieldEdits.creatorId) {
+                await User.findByIdAndUpdate(previousOwnerId, { $pull: { ownedAnimals: animal._id } });
+                await User.findByIdAndUpdate(fieldEdits.creatorId, { $addToSet: { ownedAnimals: animal._id } });
+                console.log('[MODERATION EDIT] Synced ownedAnimals arrays for true transfer');
+            }
+
             // Sync to publicanimals collection based on showOnPublicProfile
             const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
             await syncAnimalToPublic(animal);
@@ -1418,7 +1457,9 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
             targetName,
             details: { 
                 fieldsEdited: Object.keys(fieldEdits),
-                changes: fieldEdits
+                changes: fieldEdits,
+                ownerChanged,
+                treatAsTransfer: ownerChanged ? !!treatAsTransfer : undefined
             },
             reason: reason || 'Content moderation edit'
         });
@@ -1444,11 +1485,6 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
             // Internal-bookkeeping fields that shouldn't be described as "edits" to the user
             const INTERNAL_ONLY_FIELDS = ['creatorId', 'creatorId_public', 'isOwned', 'showOnPublicProfile'];
 
-            const ownerChanged = contentType === 'animal'
-                && fieldEdits.creatorId_public
-                && previousOwnerIdPublic
-                && fieldEdits.creatorId_public !== previousOwnerIdPublic;
-
             // Build a human-readable list of what was changed, excluding internal-only fields
             const changedFields = Object.entries(fieldEdits)
                 .filter(([field]) => !INTERNAL_ONLY_FIELDS.includes(field))
@@ -1465,9 +1501,10 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                 if (contentType === 'profile') {
                     notificationMessage = `An admin has edited your profile. Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`;
                 } else if (ownerChanged) {
+                    const transferNote = treatAsTransfer ? ' as a full transfer' : '';
                     notificationMessage = changedFields
-                        ? `An admin has assigned the animal "${updated.name}" to your account and made the following changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
-                        : `An admin has assigned the animal "${updated.name}" to your account. Reason: ${reason || 'Content policy violation'}`;
+                        ? `An admin has assigned the animal "${updated.name}" to your account${transferNote} and made the following changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
+                        : `An admin has assigned the animal "${updated.name}" to your account${transferNote}. Reason: ${reason || 'Content policy violation'}`;
                 } else {
                     notificationMessage = changedFields
                         ? `An admin has edited your animal "${updated.name}". Changes: ${changedFields}. Reason: ${reason || 'Content policy violation'}`
@@ -1485,6 +1522,7 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                         contentIdPublic: updated.id_public,
                         fieldsEdited: Object.keys(fieldEdits),
                         ownerChanged,
+                        treatAsTransfer: ownerChanged ? !!treatAsTransfer : undefined,
                         reason: reason || 'Content policy violation'
                     },
                     status: 'pending', // Pending until user acknowledges
@@ -1500,12 +1538,15 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                     userId: previousOwnerId,
                     userId_public: previousOwnerIdPublic,
                     type: 'content_edited',
-                    message: `An admin has transferred your animal "${updated.name}" to another owner. Reason: ${reason || 'Content policy violation'}`,
+                    message: treatAsTransfer
+                        ? `An admin has transferred your animal "${updated.name}" to another owner. It will now appear in your Sold Animals archive. Reason: ${reason || 'Content policy violation'}`
+                        : `An admin has transferred your animal "${updated.name}" to another owner. Reason: ${reason || 'Content policy violation'}`,
                     metadata: {
                         contentType,
                         contentId: updated._id || contentId,
                         contentIdPublic: updated.id_public,
                         ownerChanged: true,
+                        treatAsTransfer: !!treatAsTransfer,
                         reason: reason || 'Content policy violation'
                     },
                     status: 'pending',
