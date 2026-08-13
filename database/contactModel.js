@@ -52,6 +52,13 @@ const ContactSchema = new mongoose.Schema({
     // Contact type - can be both keeper and breeder
     isKeeper: { type: Boolean, default: false },
     isBreeder: { type: Boolean, default: false },
+
+    // Only meaningful when isBreeder is true
+    breederStatus: {
+        type: String,
+        enum: ['active', 'retired'],
+        default: 'active'
+    },
     
     // Animals assigned to this contact
     // Each entry contains the animal ID and the role (keeper/breeder)

@@ -189,6 +189,7 @@ router.post('/', async (req, res) => {
             address,
             isKeeper,
             isBreeder,
+            breederStatus,
             notes
         } = req.body;
         
@@ -212,6 +213,7 @@ router.post('/', async (req, res) => {
             address: address || {},
             isKeeper: !!isKeeper,
             isBreeder: !!isBreeder,
+            breederStatus: breederStatus === 'retired' ? 'retired' : 'active',
             notes: notes || null,
             assignedAnimals: []
         });
@@ -250,6 +252,7 @@ router.put('/:id', async (req, res) => {
             address,
             isKeeper,
             isBreeder,
+            breederStatus,
             notes
         } = req.body;
         
@@ -272,6 +275,7 @@ router.put('/:id', async (req, res) => {
         contact.address = address || {};
         contact.isKeeper = !!isKeeper;
         contact.isBreeder = !!isBreeder;
+        contact.breederStatus = breederStatus === 'retired' ? 'retired' : 'active';
         contact.notes = notes || null;
         
         console.log('[CONTACTS] PUT /api/contacts/:id - Contact Object before save:', contact);
