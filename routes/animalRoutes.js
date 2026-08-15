@@ -319,6 +319,7 @@ router.get('/:id_public/offspring', async (req, res) => {
     try {
         const { id_public } = req.params;
         const includeManaged = req.query.includeManaged === 'true';
+        const viewerId = req.user.id.toString();
 
         // Find all offspring where this animal is a parent.
         const offspring = await Animal.find({
@@ -327,16 +328,34 @@ router.get('/:id_public/offspring', async (req, res) => {
 
         let relevantOffspring = offspring;
         if (!includeManaged) {
-            // Exclude offspring already tracked by a real Litter Management record for this
-            // parent — those are represented by GET /litters/for-animal instead. Without this,
-            // every managed litter's offspring were ALSO regrouped here, showing each litter twice
-            // in the frontend's combined Offspring & Litters list.
+            // Exclude offspring only if they're tracked by a Litter Management record the
+            // viewer can actually see (own litters, or another user's litter marked
+            // isDisplayLitter) — that litter is represented by GET /litters/for-animal instead.
+            // Offspring whose only litter link is someone else's PRIVATE litter fall through
+            // and are shown here instead, so a public offspring is never hidden behind another
+            // user's private litter record.
             const { Litter } = require('../database/models');
             const managedLitters = await Litter.find({
                 $or: [{ sireId_public: id_public }, { damId_public: id_public }]
-            }).select('offspringIds_public').lean();
-            const managedOffspringIds = new Set(managedLitters.flatMap(l => l.offspringIds_public || []));
-            relevantOffspring = offspring.filter(o => !o.litterId && !managedOffspringIds.has(o.id_public));
+            }).select('creatorId isDisplayLitter offspringIds_public').lean();
+
+            const litterVisibility = new Map();
+            const visibleOffspringIds = new Set();
+            for (const litter of managedLitters) {
+                const isVisible = (litter.creatorId && litter.creatorId.toString() === viewerId) || litter.isDisplayLitter === true;
+                litterVisibility.set(litter._id.toString(), isVisible);
+                if (isVisible) {
+                    (litter.offspringIds_public || []).forEach(id => visibleOffspringIds.add(id));
+                }
+            }
+
+            relevantOffspring = offspring.filter(o => {
+                const excludedByVisibleLitter = visibleOffspringIds.has(o.id_public)
+                    || (o.litterId && litterVisibility.get(o.litterId.toString()) === true);
+                if (excludedByVisibleLitter) return false;
+                // Only show if the viewer owns this offspring or it's public.
+                return (o.creatorId && o.creatorId.toString() === viewerId) || o.isDisplay === true;
+            });
         }
 
         // Group offspring by litter to match frontend expectation

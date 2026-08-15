@@ -653,7 +653,7 @@ const AnimalSchema = new mongoose.Schema({
     sellerContact: { type: String, default: null },
     saleDate: { type: Date, default: null },
     salePrice: { type: Number, default: null },
-    salePriceCurrency: { type: String, default: 'USD' },
+    saleRecordCurrency: { type: String, default: 'USD' },
     buyerName: { type: String, default: null },
     buyerContact: { type: String, default: null },
     breedingRightsPurchased: { type: String, default: null },
@@ -704,14 +704,6 @@ const AnimalSchema = new mongoose.Schema({
     
     // Public visibility toggle — single source of truth, do not add another field for this.
     isDisplay: { type: Boolean, default: false, index: true },
-    
-    // Availability for sale/stud (for showcase)
-    isForSale: { type: Boolean, default: false },
-    salePriceCurrency: { type: String, default: 'USD' },
-    salePriceAmount: { type: Number, default: null },
-    availableForBreeding: { type: Boolean, default: false },
-    studFeeCurrency: { type: String, default: 'USD' },
-    studFeeAmount: { type: Number, default: null },
 
 }, { timestamps: true });
 const Animal = mongoose.model('Animal', AnimalSchema);

@@ -173,20 +173,25 @@ router.post('/:litterId_backend/adopt', async (req, res) => {
 
 
 // GET /api/litters/for-animal/:id_public
-// Returns ALL litters (registered by ANY user) that reference this animal as sire or dam —
+// Returns litters (registered by ANY user) that reference this animal as sire or dam —
 // lets an owner see planned matings/litters other users created using their animal.
-// Restricted to animals the requester actually owns.
+// Non-owners only see litters the litter's own creator has marked isDisplayLitter (public),
+// so a private litter management record never leaks to anyone besides its owner.
 router.get('/for-animal/:id_public', async (req, res) => {
     try {
         const appUserId_backend = req.user.id;
         const { id_public } = req.params;
 
         const animal = await Animal.findOne({ id_public }).select('creatorId').lean();
-        if (!animal || !animal.creatorId || animal.creatorId.toString() !== appUserId_backend.toString()) {
-            return res.status(403).json({ message: 'You can only view cross-user litters for animals you own.' });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found.' });
         }
+        const isOwner = animal.creatorId && animal.creatorId.toString() === appUserId_backend.toString();
 
-        const litters = await getLittersForAnimal(id_public);
+        let litters = await getLittersForAnimal(id_public);
+        if (!isOwner) {
+            litters = litters.filter(l => l.isDisplayLitter === true);
+        }
         res.status(200).json(litters);
     } catch (error) {
         console.error('Error fetching litters for animal:', error);
