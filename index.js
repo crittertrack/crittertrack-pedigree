@@ -437,9 +437,9 @@ app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
         if (!Array.isArray(breedingLineDefs) || typeof animalBreedingLines !== 'object' || animalBreedingLines === null) {
             return res.status(400).json({ message: 'Invalid data format' });
         }
-        // Enforce size limits to prevent abuse
-        if (breedingLineDefs.length > 10) {
-            return res.status(400).json({ message: 'Maximum 10 breeding lines allowed' });
+        // Enforce size limits to prevent abuse (11 allows the dev-only 11th "Legacy" combo line)
+        if (breedingLineDefs.length > 11) {
+            return res.status(400).json({ message: 'Maximum 11 breeding lines allowed' });
         }
         await PublicProfile.findOneAndUpdate(
             { userId_backend: req.user.id },
