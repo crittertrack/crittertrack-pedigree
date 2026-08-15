@@ -7,7 +7,7 @@ router.post('/sync-privacy-settings', async (req, res) => {
     // This endpoint is deprecated - using single privacy toggle now
     res.json({
         success: false,
-        message: 'This endpoint is deprecated. Privacy is now controlled with a single showOnPublicProfile/isDisplay toggle.'
+        message: 'This endpoint is deprecated. Privacy is now controlled with a single isDisplay (Animal) / isDisplayLitter (Litter) toggle.'
     });
 });
 

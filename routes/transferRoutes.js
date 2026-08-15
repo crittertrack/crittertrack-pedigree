@@ -223,7 +223,7 @@ router.post('/:id/accept', async (req, res) => {
         console.log('[Transfer Accept] Animal ownership transferred, viewOnly access added');
         
         // Update PublicAnimal if this animal is public
-        if (animal.showOnPublicProfile) {
+        if (animal.isDisplay) {
             // PublicAnimal model was removed, so this block is no longer relevant.
             // If PublicAnimal functionality is still desired, it needs to be re-implemented
             // and the model re-imported.

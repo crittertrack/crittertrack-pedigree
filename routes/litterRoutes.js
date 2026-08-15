@@ -71,15 +71,23 @@ router.post('/', async (req, res) => {
             };
             const parentIds = [newLitter.sireId_public, newLitter.damId_public].filter(Boolean);
             if (ctlId && parentIds.length) {
+                const breedingRecordUpdate = { $set: {
+                    'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
+                    'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
+                    'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
+                    'breedingRecords.$[rec].lossesCount': syncFields.lossesCount,
+                }};
+                const arrayFilters = { arrayFilters: [{ 'rec.litterId': ctlId }] };
                 await Animal.updateMany(
                     { id_public: { $in: parentIds }, 'breedingRecords.litterId': ctlId },
-                    { $set: {
-                        'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
-                        'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
-                        'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
-                        'breedingRecords.$[rec].lossesCount': syncFields.lossesCount,
-                    }},
-                    { arrayFilters: [{ 'rec.litterId': ctlId }] }
+                    breedingRecordUpdate,
+                    arrayFilters
+                );
+                // Keep PublicAnimal's mirrored breedingRecords in sync too (no-ops for non-public animals).
+                await PublicAnimal.updateMany(
+                    { id_public: { $in: parentIds }, 'breedingRecords.litterId': ctlId },
+                    breedingRecordUpdate,
+                    arrayFilters
                 );
             }
         } catch (syncErr) {
@@ -297,15 +305,23 @@ router.put('/:id_backend', async (req, res) => {
             };
             const parentIds = [updatedLitter.sireId_public, updatedLitter.damId_public].filter(Boolean);
             if (ctlId && parentIds.length) {
+                const breedingRecordUpdate = { $set: {
+                    'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
+                    'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
+                    'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
+                    'breedingRecords.$[rec].lossesCount': syncFields.lossesCount,
+                }};
+                const arrayFilters = { arrayFilters: [{ 'rec.litterId': ctlId }] };
                 await Animal.updateMany(
                     { id_public: { $in: parentIds }, 'breedingRecords.litterId': ctlId },
-                    { $set: {
-                        'breedingRecords.$[rec].litterSizeBorn': syncFields.litterSizeBorn,
-                        'breedingRecords.$[rec].litterSizeWeaned': syncFields.litterSizeWeaned,
-                        'breedingRecords.$[rec].stillbornCount': syncFields.stillbornCount,
-                        'breedingRecords.$[rec].lossesCount': syncFields.lossesCount,
-                    }},
-                    { arrayFilters: [{ 'rec.litterId': ctlId }] }
+                    breedingRecordUpdate,
+                    arrayFilters
+                );
+                // Keep PublicAnimal's mirrored breedingRecords in sync too (no-ops for non-public animals).
+                await PublicAnimal.updateMany(
+                    { id_public: { $in: parentIds }, 'breedingRecords.litterId': ctlId },
+                    breedingRecordUpdate,
+                    arrayFilters
                 );
             }
         } catch (syncErr) {

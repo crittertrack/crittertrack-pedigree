@@ -163,7 +163,7 @@ const ANIMAL_SAFE = new Set([
     'causeOfDeath','necropsyResults','insurance','legalStatus','endOfLifeCareNotes',
     'coOwnership','transferHistory','breedingRestrictions','exportRestrictions',
     'growthRecords','measurementUnits','inbreedingCoefficient',
-    'showOnPublicProfile','isDisplay',
+    'isDisplay',
 ]);
 
 const LITTER_SAFE = new Set([
@@ -344,6 +344,9 @@ router.post('/', upload.single('file'), async (req, res) => {
                         skipped.animals++;
                     } else if (action === 'overwrite') {
                         await Animal.updateOne({ id_public: raw.id_public, creatorId: userId }, { $set: rec });
+                        // Keep PublicAnimal in sync since overwrite can touch already-public animals.
+                        const { resyncAnimalToPublicById } = require('../utils/syncPublicAnimals');
+                        await resyncAnimalToPublicById(raw.id_public);
                         written.animals++;
                     } else if (action === 'createNew') {
                         const newId = await getNextSequence('animalId');

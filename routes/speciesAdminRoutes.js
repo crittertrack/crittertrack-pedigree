@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Species, GeneticsData, Animal, User, PublicProfile } = require('../database/models');
+const { Species, GeneticsData, Animal, User, PublicProfile, PublicAnimal } = require('../database/models');
 
 // Middleware to check admin/moderator access
 const requireAdmin = async (req, res, next) => {
@@ -117,6 +117,11 @@ router.patch('/species/:id', requireAdmin, async (req, res) => {
         if (name && name !== species.name) {
             const oldName = species.name;
             await Animal.updateMany(
+                { species: oldName },
+                { $set: { species: name.trim() } }
+            );
+            // Keep PublicAnimal's mirrored species field in sync (no-ops for non-public animals).
+            await PublicAnimal.updateMany(
                 { species: oldName },
                 { $set: { species: name.trim() } }
             );

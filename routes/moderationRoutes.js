@@ -1436,7 +1436,7 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                 console.log('[MODERATION EDIT] Synced ownedAnimals arrays for true transfer');
             }
 
-            // Sync to publicanimals collection based on showOnPublicProfile
+            // Sync to publicanimals collection based on isDisplay
             const { syncAnimalToPublic } = require('../utils/syncPublicAnimals');
             await syncAnimalToPublic(animal);
 
@@ -1483,7 +1483,7 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
             }
 
             // Internal-bookkeeping fields that shouldn't be described as "edits" to the user
-            const INTERNAL_ONLY_FIELDS = ['creatorId', 'creatorId_public', 'isOwned', 'showOnPublicProfile'];
+            const INTERNAL_ONLY_FIELDS = ['creatorId', 'creatorId_public', 'isOwned'];
 
             // Build a human-readable list of what was changed, excluding internal-only fields
             const changedFields = Object.entries(fieldEdits)

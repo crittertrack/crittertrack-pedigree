@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { Animal } = require('../database/models');
+const { Animal, PublicAnimal } = require('../database/models');
 const { getNextSequence } = require('../database/db_service');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -765,6 +765,9 @@ router.post('/import', async (req, res) => {
             const uploadedUrl = await uploadSbImage(d.sbImageUrl, existingId);
             if (uploadedUrl) {
                 await Animal.updateOne({ id_public: existingId }, { $set: { imageUrl: uploadedUrl } });
+                // existingId may already be a public animal — keep its mirror's imageUrl in sync
+                // (no-op if it isn't public since no matching PublicAnimal doc exists).
+                await PublicAnimal.updateOne({ id_public: existingId }, { $set: { imageUrl: uploadedUrl } });
                 imagesUploaded++;
             }
         });

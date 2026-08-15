@@ -702,9 +702,8 @@ const AnimalSchema = new mongoose.Schema({
     // Manual Pedigree (Beta) — free-text ancestor entries not linked to registered animals
     manualPedigree: { type: mongoose.Schema.Types.Mixed, default: null },
     
-    // Public visibility toggles
-    showOnPublicProfile: { type: Boolean, default: false, index: true },
-    isDisplay: { type: Boolean, default: false }, // Main toggle for public profile visibility
+    // Public visibility toggle — single source of truth, do not add another field for this.
+    isDisplay: { type: Boolean, default: false, index: true },
     
     // Availability for sale/stud (for showcase)
     isForSale: { type: Boolean, default: false },
@@ -1022,7 +1021,7 @@ const LitterSchema = new mongoose.Schema({
     // Planned mating flag — true until a birthDate is set
     isPlanned: { type: Boolean, default: false, index: true },
     // Whether this litter is shown on the breeder's public profile
-    showOnPublicProfile: { type: Boolean, default: false, index: true },
+    isDisplayLitter: { type: Boolean, default: false, index: true },
     // Tracks whether the mating-day reminder notification has already been sent
     matingReminderSent: { type: Boolean, default: false },
     // Tracks whether the user has permanently dismissed the weaning notification for this litter

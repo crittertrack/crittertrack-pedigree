@@ -274,7 +274,7 @@ router.get('/global/animals', async (req, res) => {
         console.log('Global animals search - Model:', Model.modelName, 'Query params:', query);
 
         // Note: PublicAnimal collection only contains public animals by design (syncAnimalToPublic
-        // only adds animals with showOnPublicProfile === true), so no extra filter needed here.
+        // only adds animals with isDisplay === true), so no extra filter needed here.
 
         if (query.name) {
             // Search name, prefix, suffix, and id_public (OR) so prefix/suffix names like "FKM" are findable
@@ -324,15 +324,15 @@ router.get('/global/animals', async (req, res) => {
         const privateParentMap = {};
         for (const p of privateParents) privateParentMap[p.id_public] = p;
 
-        // PublicAnimal schema doesn't include showOnPublicProfile, but all docs in this
-        // collection are public by definition. Inject the field so frontend privacy checks work.
+        // All docs in the PublicAnimal collection are public by definition — ensure isDisplay
+        // is explicitly true in the response even if a stale doc were ever missing it.
         const publicDocs = docs.map(doc => {
             const priv = privateParentMap[doc.id_public];
             return {
                 ...doc,
                 sireId_public: doc.sireId_public || priv?.sireId_public || null,
                 damId_public: doc.damId_public || priv?.damId_public || null,
-                showOnPublicProfile: true,
+                isDisplay: true,
             };
         });
         return res.status(200).json(publicDocs);
@@ -901,13 +901,13 @@ router.get('/animal/:id_public/inbreeding', async (req, res) => {
 });
 
 // GET /api/public/litters/user/:id_public
-// Returns litters marked showOnPublicProfile for a given user.
+// Returns litters marked isDisplayLitter for a given user.
 router.get('/litters/user/:id_public', async (req, res) => {
     try {
         const { id_public } = req.params;
         const profile = await PublicProfile.findOne({ id_public }).select('userId_backend').lean();
         if (!profile) return res.status(404).json({ message: 'User not found.' });
-        const litters = await Litter.find({ creatorId: profile.userId_backend, showOnPublicProfile: true })
+        const litters = await Litter.find({ creatorId: profile.userId_backend, isDisplayLitter: true })
             .select('litter_id_public breedingPairCodeName sireId_public sirePrefixName damId_public damPrefixName isPlanned birthDate pregnancyDate expectedDueDate matingDate litterSizeBorn maleCount femaleCount unknownCount notes images inbreedingCoefficient')
             .sort({ isPlanned: -1, birthDate: -1 })
             .lean();

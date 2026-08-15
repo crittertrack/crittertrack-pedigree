@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { assertCleanText } = require('../utils/profanityFilter');
 const { computeIsInTreatment, computeHealthStatus } = require('../utils/healthStatusSync');
 const { logFieldEdits, logCareUpdates, logAnimalCreated } = require('../utils/animalLogger');
+const { resyncAnimalToPublic } = require('../utils/syncPublicAnimals');
 
 const {
     User,
@@ -823,7 +824,7 @@ const addAnimal = async (appUserId_backend, animalData) => {
         creatorId: appUserId_backend,
         id_public,
         // Default visibility to private if not specified
-        showOnPublicProfile: false,
+        isDisplay: false,
         ...animalData,
     });
     console.log('[addAnimal] Creating animal with:', JSON.stringify({ breederAssignedId: newAnimal.breederAssignedId, geneticCode: newAnimal.geneticCode, remarks: newAnimal.remarks }));
@@ -970,7 +971,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     const slimFields = filters.slim === 'true' || filters.slim === true
         ? 'id_public creatorId creatorId_public originalCreatorId name prefix suffix species gender birthDate ' +
           'imageUrl photoUrl status isOwned isPregnant isNursing isInMating isPlannedMating isQuarantine isInTreatment isStub archived ' +
-          'soldStatus showOnPublicProfile sireId_public damId_public tags ' +
+          'soldStatus isDisplay sireId_public damId_public tags ' +
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
           'medicalConditions medications healthStatus healthStatusOverride ' +
           'quarantineDetails quarantineHistory ' +
@@ -1015,7 +1016,6 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
         ...d,
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
-        isDisplay: d.showOnPublicProfile ?? false,
         isViewOnly: d.creatorId.toString() !== appUserId_backend.toString(),
         manualownerName: d.creatorId.toString() !== appUserId_backend.toString()
             ? (manualownerNameMap[d.creatorId.toString()] || 'Unknown')
@@ -1050,7 +1050,6 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     // Backwards-compatible alias fields for older frontend keys
     animal.fatherId_public = animal.sireId_public || null;
     animal.motherId_public = animal.damId_public || null;
-    animal.isDisplay = animal.showOnPublicProfile ?? false;
     animal.originalCreatorId = animal.originalCreatorId || null; // Ensure originalCreatorId is always present
     return animal;
 };
@@ -1086,10 +1085,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     };
 
     try {
-        // Map isDisplay to showOnPublicProfile (frontend sends isDisplay, backend uses showOnPublicProfile)
-        if (updates.isDisplay !== undefined) {
-            updates.showOnPublicProfile = updates.isDisplay;
-        }
+        // isDisplay is the single source of truth for public visibility — no mapping needed.
 
         // Map parent alias fields to schema's sireId_public/damId_public.
         // NOTE: the animal edit form always echoes back the animal's last-known sireId_public/
@@ -1292,185 +1288,11 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         length: updatedAnimal.length
     });
 
-    // If the animal is public, update or create the corresponding PublicAnimal record
-    if (updatedAnimal.showOnPublicProfile || updatedAnimal.isDisplay) {
-        // Prepare public updates - syncing ALL promoted-to-public fields
-        const publicUpdates = {
-            creatorId_public: updatedAnimal.creatorId_public,
-            id_public: updatedAnimal.id_public,
-            species: updatedAnimal.species,
-            prefix: updatedAnimal.prefix,
-            suffix: updatedAnimal.suffix,
-            name: updatedAnimal.name,
-            gender: updatedAnimal.gender,
-            birthDate: updatedAnimal.birthDate,
-            deceasedDate: updatedAnimal.deceasedDate || null,
-            color: updatedAnimal.color,
-            coat: updatedAnimal.coat,
-            coatPattern: updatedAnimal.coatPattern || null,
-            manualownerName: updatedAnimal.manualownerName || null,
-            earset: updatedAnimal.earset || null,
-            status: updatedAnimal.status || null,
-            lifeStage: updatedAnimal.lifeStage || null,
-            carrierTraits: updatedAnimal.carrierTraits || null,
-            // Universal animal appearance fields
-            morph: updatedAnimal.morph || null,
-            markings: updatedAnimal.markings || null,
-            eyeColor: updatedAnimal.eyeColor || null,
-            nailColor: updatedAnimal.nailColor || null,
-            size: updatedAnimal.size || null,
-            // Current measurements
-            weight: updatedAnimal.weight || null,
-            length: updatedAnimal.length || null,
-            breederId_public: updatedAnimal.breederId_public || null,
-            manualBreederName: updatedAnimal.manualBreederName || null,
-            // Ensure public record includes image URLs if present
-            imageUrl: updatedAnimal.imageUrl || null,
-            photoUrl: updatedAnimal.photoUrl || null,
-            // Ensure sire/dam public ids are stored for pedigree lookup
-            sireId_public: updatedAnimal.sireId_public || null,
-            damId_public: updatedAnimal.damId_public || null,
-            // Include status fields for offspring display
-            isOwned: updatedAnimal.isOwned || false,
-            isPregnant: updatedAnimal.isPregnant || false,
-            isNursing: updatedAnimal.isNursing || false,
-            isInMating: updatedAnimal.isInMating || false,
-            isPlannedMating: updatedAnimal.isPlannedMating || false,
-            // Include availability/sale fields (PUBLIC marketplace listing data)
-            isForSale: updatedAnimal.isForSale || false,
-            availableForBreeding: updatedAnimal.availableForBreeding || false,
-            salePriceAmount: updatedAnimal.salePriceAmount || null,
-            salePriceCurrency: updatedAnimal.salePriceCurrency || 'USD',
-            studFeeAmount: updatedAnimal.studFeeAmount || null,
-            studFeeCurrency: updatedAnimal.studFeeCurrency || 'USD',
-            
-            // List 3: Collaboration Features (PUBLIC)
-            publicRemarks: updatedAnimal.publicRemarks || null,
-            tags: updatedAnimal.tags || [],
-            originalCreatorId_public: updatedAnimal.originalCreatorId_public || null,
-            originalBreederName: updatedAnimal.originalBreederName || null,
-            
-            // Include remarks/genetic code
-            remarks: updatedAnimal.remarks || '',
-            geneticCode: updatedAnimal.geneticCode || null,
-            // Sync display settings to public record
-            isDisplay: updatedAnimal.isDisplay || false,
-            // Include Identification fields
-            microchipNumber: updatedAnimal.microchipNumber || '',
-            pedigreeRegistrationId: updatedAnimal.pedigreeRegistrationId || '',
-            identifiers: updatedAnimal.identifiers || null,
-            ringId: updatedAnimal.ringId || '',
-            eartagNumber: updatedAnimal.eartagNumber || '',
-            breed: updatedAnimal.breed || null,
-            strain: updatedAnimal.strain || null,
-            origin: updatedAnimal.origin || null,
-            
-            // --- PROMOTED TO PUBLIC: Health Records (as arrays, not stringified) ---
-            vaccinations: updatedAnimal.vaccinations || [],
-            medications: updatedAnimal.medications || [],
-            medicalConditions: updatedAnimal.medicalConditions || [],
-            allergies: updatedAnimal.allergies || [],
-            labResults: updatedAnimal.labResults || [],
-            vetVisits: updatedAnimal.vetVisits || [],
-            parasiteControl: updatedAnimal.parasiteControl || [],
-            dewormingRecords: updatedAnimal.dewormingRecords || [],
-            healthClearances: updatedAnimal.healthClearances || [],
-            parasitePreventionSchedule: updatedAnimal.parasitePreventionSchedule || [],
-            spayNeuterDate: updatedAnimal.spayNeuterDate || null,
-            isNeutered: updatedAnimal.isNeutered || false,
-            heartwormStatus: updatedAnimal.heartwormStatus || null,
-            hipElbowScores: updatedAnimal.hipElbowScores || null,
-            geneticTestResults: updatedAnimal.geneticTestResults || null,
-            eyeClearance: updatedAnimal.eyeClearance || null,
-            cardiacClearance: updatedAnimal.cardiacClearance || null,
-            
-            // --- PROMOTED TO PUBLIC: Behavior & Safety ---
-            aggressionLevel: updatedAnimal.aggressionLevel || 3,
-            aggressionTriggers: updatedAnimal.aggressionTriggers || null,
-            fearAnxietyLevel: updatedAnimal.fearAnxietyLevel || 3,
-            preyDriveLevel: updatedAnimal.preyDriveLevel || 'Unknown',
-            biteHistory: updatedAnimal.biteHistory || null,
-            foodAggressionLevel: updatedAnimal.foodAggressionLevel || 'None',
-            reactivityNotes: updatedAnimal.reactivityNotes || null,
-            temperament: updatedAnimal.temperament || null,
-            handlingTolerance: updatedAnimal.handlingTolerance || null,
-            
-            // --- PROMOTED TO PUBLIC: Training & Certifications ---
-            trainingLevel: updatedAnimal.trainingLevel || null,
-            trainingDisciplines: updatedAnimal.trainingDisciplines || null,
-            certifications: updatedAnimal.certifications || null,
-            workingRole: updatedAnimal.workingRole || null,
-            
-            // --- PROMOTED TO PUBLIC: Reproduction & Breeding ---
-            breedingRole: updatedAnimal.breedingRole || null,
-            lastMatingDate: updatedAnimal.lastMatingDate || null,
-            successfulMatings: updatedAnimal.successfulMatings || null,
-            lastPregnancyDate: updatedAnimal.lastPregnancyDate || null,
-            offspringCount: updatedAnimal.offspringCount || null,
-            fertilityStatus: updatedAnimal.fertilityStatus || 'Unknown',
-            fertilityNotes: updatedAnimal.fertilityNotes || null,
-            breedingRecords: updatedAnimal.breedingRecords || [],
-            artificialInseminationUsed: updatedAnimal.artificialInseminationUsed || null,
-            reproductiveClearances: updatedAnimal.reproductiveClearances || null,
-            heatStatus: updatedAnimal.heatStatus || null,
-            lastHeatDate: updatedAnimal.lastHeatDate || null,
-            ovulationDate: updatedAnimal.ovulationDate || null,
-            expectedDueDate: updatedAnimal.expectedDueDate || null,
-            litterCount: updatedAnimal.litterCount || null,
-            litterSizeBorn: updatedAnimal.litterSizeBorn || null,
-            litterSizeWeaned: updatedAnimal.litterSizeWeaned || null,
-            stillbornCount: updatedAnimal.stillbornCount || null,
-            lossesCount: updatedAnimal.lossesCount || null,
-            
-            // --- PROMOTED TO PUBLIC: Care & Husbandry ---
-            dietType: updatedAnimal.dietType || null,
-            feedingSchedule: updatedAnimal.feedingSchedule || null,
-            supplements: updatedAnimal.supplements || null,
-            housingType: updatedAnimal.housingType || null,
-            bedding: updatedAnimal.bedding || null,
-            enrichment: updatedAnimal.enrichment || null,
-            temperatureRange: updatedAnimal.temperatureRange || '',
-            humidity: updatedAnimal.humidity || '',
-            lighting: updatedAnimal.lighting || '',
-            noise: updatedAnimal.noise || '',
-            exerciseRequirements: updatedAnimal.exerciseRequirements || null,
-            dailyExerciseMinutes: updatedAnimal.dailyExerciseMinutes || null,
-            groomingNeeds: updatedAnimal.groomingNeeds || null,
-            sheddingLevel: updatedAnimal.sheddingLevel || null,
-            crateTrained: updatedAnimal.crateTrained || null,
-            litterTrained: updatedAnimal.litterTrained || null,
-            leashTrained: updatedAnimal.leashTrained || null,
-            
-            // --- PROMOTED TO PUBLIC: Show & Awards ---
-            shows: updatedAnimal.shows || [],
-            workingTitles: updatedAnimal.workingTitles || null,
-            
-            // --- PROMOTED TO PUBLIC: Legal & Restrictions ---
-            breedingRestrictions: updatedAnimal.breedingRestrictions || null,
-            exportRestrictions: updatedAnimal.exportRestrictions || null,
-            breederBuybackClause: updatedAnimal.breederBuybackClause || null,
-            
-            // --- BEHAVIOR FIELDS (additional) ---
-            socialStructure: updatedAnimal.socialStructure || null,
-            activityCycle: updatedAnimal.activityCycle || null,
-            
-            // --- GROWTH & MEASUREMENTS ---
-            growthRecords: updatedAnimal.growthRecords || [],
-            measurementUnits: updatedAnimal.measurementUnits || null,
-            
-            updatedAt: new Date(),
-        };
-
-        // Use upsert to create if doesn't exist, update if it does
-        await PublicAnimal.updateOne(
-            { id_public: updatedAnimal.id_public },
-            { $set: publicUpdates },
-            { upsert: true }
-        );
-    } else {
-        // If showOnPublicProfile is false, remove from PublicAnimal
-        await PublicAnimal.deleteOne({ id_public: updatedAnimal.id_public });
-    }
+    // Keep the PublicAnimal mirror in sync with every field this route can touch.
+    // (Shared with any other route that writes to Animal directly — see resyncAnimalToPublic
+    // in utils/syncPublicAnimals.js — so the field list can't drift out of sync in one place
+    // but not another.)
+    await resyncAnimalToPublic(updatedAnimal);
 
     // If the animal's gender changed and it belongs to a litter, re-derive the
     // litter's gender counts from all linked offspring so both directions of the
@@ -1620,7 +1442,7 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
     const animal = await getAnimalByIdAndUser(appUserId_backend, animalId_backend);
     
     // 1. Update the private animal's public status
-    animal.showOnPublicProfile = toggleData.makePublic;
+    animal.isDisplay = toggleData.makePublic;
     await animal.save();
 
     // 2. Manage the PublicAnimal collection record
@@ -2131,7 +1953,7 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
             await animal.save();
             
             // Update PublicAnimal if this animal is public
-            if (animal.showOnPublicProfile) {
+            if (animal.isDisplay) {
                 await PublicAnimal.updateOne(
                     { id_public: animal.id_public },
                     { 
@@ -2265,7 +2087,7 @@ const recallTransferredAnimal = async (appUserId_backend, animalId_public) => {
     await animal.save();
 
     // 7. Update PublicAnimal if this animal is public.
-    if (animal.showOnPublicProfile) {
+    if (animal.isDisplay) {
         await PublicAnimal.updateOne(
             { id_public: animal.id_public },
             { $set: { creatorId_public: animal.creatorId_public, status: animal.status } }
@@ -2368,7 +2190,6 @@ const getHiddenViewOnlyAnimals = async (appUserId_backend) => {
         ...d,
         fatherId_public: d.sireId_public || null,
         motherId_public: d.damId_public || null,
-        isDisplay: d.showOnPublicProfile ?? false,
         isViewOnly: true,
         isHidden: true,
     }));

@@ -532,9 +532,9 @@ router.get('/animals', async (req, res) => {
         }
         
         if (isPublic === 'true') {
-            query.showOnPublicProfile = true;
+            query.isDisplay = true;
         } else if (isPublic === 'false') {
-            query.showOnPublicProfile = { $ne: true };
+            query.isDisplay = { $ne: true };
         }
         
         if (owner) {
@@ -547,7 +547,7 @@ router.get('/animals', async (req, res) => {
 
         const [animals, total] = await Promise.all([
             Animal.find(query)
-                .select('id_public name prefix suffix species gender status creatorId creatorId_public originalCreatorId showOnPublicProfile imageUrl createdAt soldStatus breederId_public')
+                .select('id_public name prefix suffix species gender status creatorId creatorId_public originalCreatorId isDisplay imageUrl createdAt soldStatus breederId_public')
                 .populate('creatorId', 'email personalName id_public')
                 .populate('originalCreatorId', 'email personalName id_public')
                 .sort(sort)
@@ -692,6 +692,13 @@ router.post('/animals/bulk-update', async (req, res) => {
             { _id: { $in: animalIds } },
             updates
         );
+
+        // Bulk-updated animals may be public — resync their PublicAnimal mirror so
+        // arbitrary admin field edits don't silently go stale there.
+        const { resyncAnimalToPublicById } = require('../utils/syncPublicAnimals');
+        const touched = await Animal.find({ _id: { $in: animalIds } }).select('id_public').lean();
+        await Promise.all(touched.map(a => resyncAnimalToPublicById(a.id_public)));
+
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -2047,7 +2054,7 @@ router.patch('/animals/:animalId/hide', async (req, res) => {
         await PublicAnimal.deleteOne({ id_public: animal.id_public });
         
         // Update animal to not be public
-        animal.showOnPublicProfile = false;
+        animal.isDisplay = false;
         await animal.save();
 
         // Create audit log
