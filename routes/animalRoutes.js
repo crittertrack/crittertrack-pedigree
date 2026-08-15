@@ -329,12 +329,15 @@ router.get('/:id_public/offspring', async (req, res) => {
         let relevantOffspring = offspring;
         if (!includeManaged) {
             // Exclude offspring only if they're tracked by a Litter Management record the
-            // viewer can actually see (own litters, or another user's litter marked
+            // viewer can actually see (own litters, litters on an animal the viewer owns —
+            // even if another user created the litter, or another user's litter marked
             // isDisplayLitter) — that litter is represented by GET /litters/for-animal instead.
-            // Offspring whose only litter link is someone else's PRIVATE litter fall through
-            // and are shown here instead, so a public offspring is never hidden behind another
-            // user's private litter record.
+            // Offspring whose only litter link is someone else's PRIVATE litter (on an animal
+            // the viewer doesn't own) fall through and are shown here instead, so a public
+            // offspring is never hidden behind another user's private litter record.
             const { Litter } = require('../database/models');
+            const viewedAnimal = await Animal.findOne({ id_public }).select('creatorId').lean();
+            const viewerOwnsThisAnimal = !!(viewedAnimal && viewedAnimal.creatorId && viewedAnimal.creatorId.toString() === viewerId);
             const managedLitters = await Litter.find({
                 $or: [{ sireId_public: id_public }, { damId_public: id_public }]
             }).select('creatorId isDisplayLitter offspringIds_public').lean();
@@ -342,7 +345,7 @@ router.get('/:id_public/offspring', async (req, res) => {
             const litterVisibility = new Map();
             const visibleOffspringIds = new Set();
             for (const litter of managedLitters) {
-                const isVisible = (litter.creatorId && litter.creatorId.toString() === viewerId) || litter.isDisplayLitter === true;
+                const isVisible = viewerOwnsThisAnimal || (litter.creatorId && litter.creatorId.toString() === viewerId) || litter.isDisplayLitter === true;
                 litterVisibility.set(litter._id.toString(), isVisible);
                 if (isVisible) {
                     (litter.offspringIds_public || []).forEach(id => visibleOffspringIds.add(id));
