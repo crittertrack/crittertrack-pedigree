@@ -459,15 +459,23 @@ async function calculateAverageKinship(animalId, populationIds, fetchAnimal, gen
     const selfCOI = await calculateInbreedingCoefficient(animalId, fetchAnimal, generations);
     const selfKinship = (1 + selfCOI / 100) / 2;
 
+    // Process the population in concurrent batches (not one-at-a-time) — for a
+    // reference population of any real size, sequential awaits here were serializing
+    // hundreds of DB round-trips behind the COI response, which the caller (the
+    // /:id_public/inbreeding route) waits on before responding at all.
+    const BATCH_SIZE = 15;
     let sum = 0;
-    for (const otherId of uniquePopulation) {
-        if (otherId === animalId) {
-            sum += selfKinship;
-            continue;
-        }
-        const otherDag = await buildPedigreeDAG(otherId, fetchAnimal, generations);
-        const otherDP = computePathSums(otherId, otherDag);
-        sum += kinshipFromPathSums(rootDP, otherDP);
+    const others = uniquePopulation.filter(id => id !== animalId);
+    if (uniquePopulation.length !== others.length) sum += selfKinship;
+
+    for (let i = 0; i < others.length; i += BATCH_SIZE) {
+        const batch = others.slice(i, i + BATCH_SIZE);
+        const batchKinships = await Promise.all(batch.map(async (otherId) => {
+            const otherDag = await buildPedigreeDAG(otherId, fetchAnimal, generations);
+            const otherDP = computePathSums(otherId, otherDag);
+            return kinshipFromPathSums(rootDP, otherDP);
+        }));
+        sum += batchKinships.reduce((a, b) => a + b, 0);
     }
 
     const avgKinship = sum / uniquePopulation.length;
