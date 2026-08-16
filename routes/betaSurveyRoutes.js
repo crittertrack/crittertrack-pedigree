@@ -92,8 +92,10 @@ router.get('/admin/stats', async (req, res) => {
             return res.status(403).json({ message: 'Admin or moderator access required' });
         }
 
+        // aggregate() bypasses Mongoose schema defaults, so profiles predating this field
+        // (no betaSurveyStatus stored in Mongo) must be treated as 'pending' explicitly
         const funnelCounts = await PublicProfile.aggregate([
-            { $group: { _id: '$betaSurveyStatus', count: { $sum: 1 } } }
+            { $group: { _id: { $ifNull: ['$betaSurveyStatus', 'pending'] }, count: { $sum: 1 } } }
         ]);
         const funnel = { pending: 0, skipped: 0, dismissed: 0, completed: 0 };
         funnelCounts.forEach(({ _id, count }) => {
@@ -101,6 +103,8 @@ router.get('/admin/stats', async (req, res) => {
         });
 
         const totalResponses = await BetaSurveyResponse.countDocuments();
+        // "Engaged" users are anyone who has resolved the prompt one way or another, as opposed to still pending
+        const totalEngaged = funnel.skipped + funnel.dismissed + funnel.completed;
 
         const starQuestions = [
             'q1_overallSatisfaction', 'q4_appSpeed', 'q5_easeOfNavigation',
@@ -161,6 +165,7 @@ router.get('/admin/stats', async (req, res) => {
         res.json({
             funnel,
             totalResponses,
+            totalEngaged,
             starAverages,
             choiceBreakdowns,
             freeTextAnswers
@@ -180,6 +185,9 @@ router.get('/admin/users', async (req, res) => {
         const profiles = await PublicProfile.find()
             .select('id_public personalName breederName betaSurveyStatus betaSurveyLastPromptedAt')
             .lean();
+
+        // .lean() also bypasses schema defaults, so normalize missing status the same way
+        profiles.forEach(p => { if (!p.betaSurveyStatus) p.betaSurveyStatus = 'pending'; });
 
         res.json(profiles);
     } catch (error) {
