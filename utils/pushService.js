@@ -38,6 +38,7 @@ const TYPE_TO_CATEGORY = {
     report_status_update: 'system',
     report_feedback: 'system',
     new_rating: 'system',
+    beta_survey_completed: 'system',
     litter_assignment: 'breeding',
 };
 

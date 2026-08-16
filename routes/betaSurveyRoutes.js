@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { PublicProfile, BetaSurveyResponse } = require('../database/models');
+const { PublicProfile, BetaSurveyResponse, User, Notification } = require('../database/models');
 
 // Skip for now — stays re-promptable, throttled to once per calendar day
 router.post('/skip', async (req, res) => {
@@ -76,6 +76,21 @@ router.post('/submit', async (req, res) => {
 
         profile.betaSurveyStatus = 'completed';
         await profile.save();
+
+        // Let the site owner (CTU2) know a new response came in, without needing to check the admin panel
+        try {
+            const ownerProfile = await PublicProfile.findOne({ id_public: 'CTU2' }).select('userId_backend');
+            if (ownerProfile) {
+                await Notification.create({
+                    userId: ownerProfile.userId_backend,
+                    userId_public: 'CTU2',
+                    type: 'beta_survey_completed',
+                    message: `New beta survey response submitted by ${profile.id_public}.`
+                });
+            }
+        } catch (notifyError) {
+            console.error('Failed to create beta survey completion notification:', notifyError);
+        }
 
         res.status(201).json({ message: 'Survey submitted successfully', betaSurveyStatus: 'completed' });
     } catch (error) {

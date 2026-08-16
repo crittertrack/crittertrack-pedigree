@@ -1042,7 +1042,7 @@ const Litter = mongoose.model('Litter', LitterSchema);
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     userId_public: { type: String, index: true },
-    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'transfer_accepted', 'transfer_declined', 'transfer_cancelled', 'animal_returned', 'animal_recalled', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder', 'new_rating', 'bug_report_update', 'report_status_update', 'report_feedback'], index: true },
+    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'transfer_accepted', 'transfer_declined', 'transfer_cancelled', 'animal_returned', 'animal_recalled', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder', 'new_rating', 'bug_report_update', 'report_status_update', 'report_feedback', 'beta_survey_completed'], index: true },
     status: { type: String, enum: ['pending', 'accepted', 'rejected', 'read', 'declined', 'cancelled', 'returned'], default: 'pending', index: true }, // Added 'returned' for consistency
     
     // Request details
