@@ -9,6 +9,13 @@ const { protect } = require('../middleware/authMiddleware');
 // Apply authentication to all routes
 router.use(protect);
 
+// Guards against the AVK background recompute (triggered on every /inbreeding fetch) piling up
+// concurrent, expensive pedigree traversals across a user's whole reference population when the
+// same animal's detail view is opened/switched-away-from-and-back repeatedly in a short window —
+// this was overwhelming the DB connection pool and causing unrelated requests to time out (499s).
+const avkRecomputeInFlight = new Set();
+const AVK_RECOMPUTE_COOLDOWN_MS = 10 * 60 * 1000;
+
 // GET /api/animals - Get all animals for the user, with filtering
 router.get('/', async (req, res) => {
     try {
@@ -639,24 +646,35 @@ router.get('/:id_public/inbreeding', async (req, res) => {
         let avgKinship = null;
         let avkPopulationSize = null;
         try {
-            const targetAnimal = await Animal.findOne({ id_public }).select('creatorId species avgKinship avkPopulationSize').lean();
+            const targetAnimal = await Animal.findOne({ id_public }).select('creatorId species avgKinship avkPopulationSize avkComputedAt').lean();
             if (targetAnimal) {
                 avgKinship = targetAnimal.avgKinship ?? null;
                 avkPopulationSize = targetAnimal.avkPopulationSize ?? null;
 
-                // Fire-and-forget recompute; intentionally not awaited.
-                (async () => {
-                    try {
-                        const populationIds = await getAvkReferencePopulation(targetAnimal.creatorId, targetAnimal.species);
-                        const avk = await calculateAverageKinship(id_public, populationIds, fetchAnimal, generations);
-                        await Animal.updateOne(
-                            { id_public, creatorId: targetAnimal.creatorId },
-                            { avgKinship: avk.avgKinship, avkPopulationSize: avk.populationSize }
-                        );
-                    } catch (bgError) {
-                        console.error(`[ANIMALS] Background AVK recompute failed for ${id_public}:`, bgError);
-                    }
-                })();
+                // Skip re-triggering if a recompute for this animal is already running, or
+                // if one finished recently — repeatedly opening/switching the same animal's
+                // detail view was stacking up duplicate full-population traversals.
+                const recentlyComputed = targetAnimal.avkComputedAt &&
+                    (Date.now() - new Date(targetAnimal.avkComputedAt).getTime()) < AVK_RECOMPUTE_COOLDOWN_MS;
+
+                if (!avkRecomputeInFlight.has(id_public) && !recentlyComputed) {
+                    avkRecomputeInFlight.add(id_public);
+                    // Fire-and-forget recompute; intentionally not awaited.
+                    (async () => {
+                        try {
+                            const populationIds = await getAvkReferencePopulation(targetAnimal.creatorId, targetAnimal.species);
+                            const avk = await calculateAverageKinship(id_public, populationIds, fetchAnimal, generations);
+                            await Animal.updateOne(
+                                { id_public, creatorId: targetAnimal.creatorId },
+                                { avgKinship: avk.avgKinship, avkPopulationSize: avk.populationSize, avkComputedAt: new Date() }
+                            );
+                        } catch (bgError) {
+                            console.error(`[ANIMALS] Background AVK recompute failed for ${id_public}:`, bgError);
+                        } finally {
+                            avkRecomputeInFlight.delete(id_public);
+                        }
+                    })();
+                }
             }
         } catch (avkError) {
             console.error(`[ANIMALS] Error reading cached AVK for ${id_public}:`, avkError);
