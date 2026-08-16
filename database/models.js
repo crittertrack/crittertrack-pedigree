@@ -657,11 +657,15 @@ const AnimalSchema = new mongoose.Schema({
     purchasePriceCurrency: { type: String, default: 'USD' },
     sellerName: { type: String, default: null },
     sellerContact: { type: String, default: null },
+    // Links to the Budget Tracker Transaction auto-created/synced from purchaseDate+purchasePrice above.
+    purchaseTransactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', default: null },
     saleDate: { type: Date, default: null },
     salePrice: { type: Number, default: null },
     saleRecordCurrency: { type: String, default: 'USD' },
     buyerName: { type: String, default: null },
     buyerContact: { type: String, default: null },
+    // Links to the Budget Tracker Transaction auto-created/synced from saleDate+salePrice above.
+    saleTransactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', default: null },
     breedingRightsPurchased: { type: String, default: null },
     showRightsPurchased: { type: String, default: null },
     exportRightsPurchased: { type: String, default: null },

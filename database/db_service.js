@@ -1333,6 +1333,85 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     // but not another.)
     await resyncAnimalToPublic(updatedAnimal);
 
+    // Auto-create/sync a Budget Tracker "sale" Transaction from the animal form's Sale Date +
+    // Sale Price fields, so users don't have to log the same sale twice. The edit form always
+    // echoes back every existing field on every save (see the parent-field comment above), so we
+    // can't just check "updates.saleDate !== undefined" — that's true on nearly every save. Only
+    // act when the actual stored sale values changed vs. the pre-update record.
+    try {
+        const saleDateChanged = new Date(originalAnimal.saleDate || 0).getTime() !== new Date(updatedAnimal.saleDate || 0).getTime();
+        const salePriceChanged = (originalAnimal.salePrice ?? null) !== (updatedAnimal.salePrice ?? null);
+        const buyerNameChanged = (originalAnimal.buyerName ?? null) !== (updatedAnimal.buyerName ?? null);
+        const buyerContactChanged = (originalAnimal.buyerContact ?? null) !== (updatedAnimal.buyerContact ?? null);
+
+        if (updatedAnimal.saleDate && updatedAnimal.salePrice != null &&
+            (saleDateChanged || salePriceChanged || buyerNameChanged || buyerContactChanged)) {
+            const { Transaction } = require('./models');
+            const txFields = {
+                type: 'sale',
+                animalId: updatedAnimal.id_public,
+                animalName: updatedAnimal.name,
+                price: updatedAnimal.salePrice,
+                date: updatedAnimal.saleDate,
+                buyer: updatedAnimal.buyerName || null,
+                notes: updatedAnimal.buyerContact ? `Buyer contact: ${updatedAnimal.buyerContact}` : null,
+            };
+
+            const linkedTx = updatedAnimal.saleTransactionId
+                ? await Transaction.findOne({ _id: updatedAnimal.saleTransactionId, userId: appUserId_backend })
+                : null;
+
+            if (linkedTx) {
+                Object.assign(linkedTx, txFields);
+                await linkedTx.save();
+            } else {
+                const newTx = await Transaction.create({ userId: appUserId_backend, ...txFields });
+                await Animal.updateOne({ _id: updatedAnimal._id }, { $set: { saleTransactionId: newTx._id } });
+                updatedAnimal.saleTransactionId = newTx._id;
+            }
+        }
+    } catch (saleTxErr) {
+        console.warn('[updateAnimal] Failed to auto-sync Budget Tracker sale transaction:', saleTxErr && saleTxErr.message ? saleTxErr.message : saleTxErr);
+    }
+
+    // Same auto-create/sync behavior as the sale block above, mirrored for the Purchase &
+    // Sale Records' purchase side (purchaseDate/purchasePrice/sellerName/sellerContact).
+    try {
+        const purchaseDateChanged = new Date(originalAnimal.purchaseDate || 0).getTime() !== new Date(updatedAnimal.purchaseDate || 0).getTime();
+        const purchasePriceChanged = (originalAnimal.purchasePrice ?? null) !== (updatedAnimal.purchasePrice ?? null);
+        const sellerNameChanged = (originalAnimal.sellerName ?? null) !== (updatedAnimal.sellerName ?? null);
+        const sellerContactChanged = (originalAnimal.sellerContact ?? null) !== (updatedAnimal.sellerContact ?? null);
+
+        if (updatedAnimal.purchaseDate && updatedAnimal.purchasePrice != null &&
+            (purchaseDateChanged || purchasePriceChanged || sellerNameChanged || sellerContactChanged)) {
+            const { Transaction } = require('./models');
+            const txFields = {
+                type: 'purchase',
+                animalId: updatedAnimal.id_public,
+                animalName: updatedAnimal.name,
+                price: updatedAnimal.purchasePrice,
+                date: updatedAnimal.purchaseDate,
+                seller: updatedAnimal.sellerName || null,
+                notes: updatedAnimal.sellerContact ? `Seller contact: ${updatedAnimal.sellerContact}` : null,
+            };
+
+            const linkedTx = updatedAnimal.purchaseTransactionId
+                ? await Transaction.findOne({ _id: updatedAnimal.purchaseTransactionId, userId: appUserId_backend })
+                : null;
+
+            if (linkedTx) {
+                Object.assign(linkedTx, txFields);
+                await linkedTx.save();
+            } else {
+                const newTx = await Transaction.create({ userId: appUserId_backend, ...txFields });
+                await Animal.updateOne({ _id: updatedAnimal._id }, { $set: { purchaseTransactionId: newTx._id } });
+                updatedAnimal.purchaseTransactionId = newTx._id;
+            }
+        }
+    } catch (purchaseTxErr) {
+        console.warn('[updateAnimal] Failed to auto-sync Budget Tracker purchase transaction:', purchaseTxErr && purchaseTxErr.message ? purchaseTxErr.message : purchaseTxErr);
+    }
+
     // If the animal's gender changed and it belongs to a litter, re-derive the
     // litter's gender counts from all linked offspring so both directions of the
     // change (increment new gender, decrement old gender) are captured at once.
