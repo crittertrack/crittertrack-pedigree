@@ -1697,6 +1697,21 @@ const SupplyItemSchema = new mongoose.Schema({
 }, { timestamps: true });
 const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
 
+// ── AppearanceFieldOption (per-user, per-species dropdown entries for appearance fields
+// like Color — starts empty and grows as the user types new values on the Animal form) ──
+const AppearanceFieldOptionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    species: { type: String, required: true, trim: true },
+    field: { type: String, required: true, trim: true }, // e.g. 'color'
+    value: { type: String, required: true, trim: true },
+}, { timestamps: true });
+// Case-insensitive uniqueness so "Black" and "black" don't both get saved.
+AppearanceFieldOptionSchema.index(
+    { userId: 1, species: 1, field: 1, value: 1 },
+    { unique: true, collation: { locale: 'en', strength: 2 } }
+);
+const AppearanceFieldOption = mongoose.model('AppearanceFieldOption', AppearanceFieldOptionSchema);
+
 // ── Location ──────────────────────────────────────────────────────────────────
 const LocationSchema = new mongoose.Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -1903,4 +1918,5 @@ module.exports = {
     RatingReport,
     Favorite,
     Location,
+    AppearanceFieldOption,
 };

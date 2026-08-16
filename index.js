@@ -898,6 +898,10 @@ app.use('/api/supplies', authMiddleware, suppliesRoutes);
 const contactRoutes = require('./routes/contactRoutes');
 app.use('/api/contacts', authMiddleware, contactRoutes);
 
+// Appearance Field Option Routes (per-user dropdown+custom-entry lists, e.g. Color) — Require authMiddleware
+const appearanceFieldOptionsRoutes = require('./routes/appearanceFieldOptionsRoutes');
+app.use('/api/appearance-options', authMiddleware, appearanceFieldOptionsRoutes);
+
 // Data Portability — Export / Import (Require authMiddleware)
 const exportRoutes = require('./routes/exportRoutes');
 const importRoutes = require('./routes/importRoutes');
