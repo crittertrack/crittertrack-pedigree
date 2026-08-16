@@ -1103,6 +1103,13 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     if (!originalAnimal) {
         throw new Error('Animal not found or user does not own this animal.');
     }
+
+    // The edit form seeds formData by spreading the whole existing animal record, so the
+    // payload can include immutable/protected fields (_id, __v, creatorId) that MongoDB
+    // rejects with "would modify the immutable field '_id'" if left in the $set. Strip them.
+    delete updates._id;
+    delete updates.__v;
+    delete updates.creatorId;
     
     // Track if birthdate or parents are being changed
     let shouldRemoveLitterLink = false;
