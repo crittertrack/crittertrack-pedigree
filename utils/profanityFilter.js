@@ -9,7 +9,8 @@ leoProfanity.remove(['ctc', 'ctu']);
 // Allow animal-specific terminology that may be flagged incorrectly
 // 'bareback' is a recognized rat coat/pattern type
 // 'nude' is a recognized hairless variety / colour descriptor
-leoProfanity.remove(['bareback', 'nude']);
+// 'butt' is a common innocuous pet name/nickname component (e.g. "Butt Fluff")
+leoProfanity.remove(['bareback', 'nude', 'butt']);
 
 class ProfanityError extends Error {
     constructor(fieldLabel = 'field') {
