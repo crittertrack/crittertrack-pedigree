@@ -707,6 +707,7 @@ const AnimalSchema = new mongoose.Schema({
 
     // Average Kinship (AVK / mean kinship) vs. the reference population (cached value)
     avgKinship: { type: Number, default: null },
+    avkPopulationSize: { type: Number, default: null },
 
     // Manual Pedigree (Beta) — free-text ancestor entries not linked to registered animals
     manualPedigree: { type: mongoose.Schema.Types.Mixed, default: null },

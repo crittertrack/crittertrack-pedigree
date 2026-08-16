@@ -626,19 +626,37 @@ router.get('/:id_public/inbreeding', async (req, res) => {
         // AVK (Average Kinship) — additive alongside COI above; does not alter the COI
         // calculation itself. Reference population is the target animal's own owner's
         // living, non-archived, same-species animals (see getAvkReferencePopulation).
+        //
+        // Serve the last CACHED value immediately and recompute in the background: a
+        // real reference population can be large enough (hundreds of same-species
+        // animals) that computing it synchronously here was serializing behind the COI
+        // response and made the whole endpoint appear to hang. AVK is eventually
+        // consistent — it refreshes on the next fetch after a background recompute
+        // finishes, instead of ever blocking this request.
         let avgKinship = null;
-        let avkPopulationSize = 0;
+        let avkPopulationSize = null;
         try {
-            const targetAnimal = await Animal.findOne({ id_public }).select('creatorId species').lean();
+            const targetAnimal = await Animal.findOne({ id_public }).select('creatorId species avgKinship avkPopulationSize').lean();
             if (targetAnimal) {
-                const populationIds = await getAvkReferencePopulation(targetAnimal.creatorId, targetAnimal.species);
-                const avk = await calculateAverageKinship(id_public, populationIds, fetchAnimal, generations);
-                avgKinship = avk.avgKinship;
-                avkPopulationSize = avk.populationSize;
-                await Animal.updateOne({ id_public, creatorId: req.user.id }, { avgKinship });
+                avgKinship = targetAnimal.avgKinship ?? null;
+                avkPopulationSize = targetAnimal.avkPopulationSize ?? null;
+
+                // Fire-and-forget recompute; intentionally not awaited.
+                (async () => {
+                    try {
+                        const populationIds = await getAvkReferencePopulation(targetAnimal.creatorId, targetAnimal.species);
+                        const avk = await calculateAverageKinship(id_public, populationIds, fetchAnimal, generations);
+                        await Animal.updateOne(
+                            { id_public, creatorId: targetAnimal.creatorId },
+                            { avgKinship: avk.avgKinship, avkPopulationSize: avk.populationSize }
+                        );
+                    } catch (bgError) {
+                        console.error(`[ANIMALS] Background AVK recompute failed for ${id_public}:`, bgError);
+                    }
+                })();
             }
         } catch (avkError) {
-            console.error(`[ANIMALS] Error calculating AVK for ${id_public}:`, avkError);
+            console.error(`[ANIMALS] Error reading cached AVK for ${id_public}:`, avkError);
         }
 
         res.json({ 
