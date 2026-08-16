@@ -283,7 +283,10 @@ router.get('/any/:id_public', async (req, res) => {
         }).lean();
 
         if (animal) {
-            return res.json(animal);
+            // Marks that the viewer has real ownership/view-only access (as opposed to the
+            // public/public-safe fallbacks below) so the frontend can tell them apart without
+            // an extra request.
+            return res.json({ ...animal, _viewerHasAccess: true });
         }
 
         // 2. If not, check if there's a public version of the animal
