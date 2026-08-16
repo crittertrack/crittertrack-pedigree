@@ -17,32 +17,24 @@
  * @returns {Number} Inbreeding coefficient as a percentage (0-100)
  */
 async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations = 50) {
-    if (!animalId) return 0;
+    if (!animalId || generations <= 0) return 0;
 
-    const pedigree = await buildPedigree(animalId, fetchAnimal, generations);
-    const commonAncestors = findCommonAncestors(pedigree);
+    const animal = await fetchAnimal(animalId);
+    if (!animal) return 0;
 
-    if (commonAncestors.length === 0) return 0;
+    const sireId = animal.sireId_public || animal.fatherId_public;
+    const damId = animal.damId_public || animal.motherId_public;
+    if (!sireId || !damId) return 0;
 
-    let coi = 0;
-    for (const ancestor of commonAncestors) {
-        const pathsToSire = findPathsToAncestor(pedigree.sire, ancestor.id, []);
-        const pathsToDam = findPathsToAncestor(pedigree.dam, ancestor.id, []);
-
-        for (const sPath of pathsToSire) {
-            for (const dPath of pathsToDam) {
-                const n1 = sPath.length;
-                const n2 = dPath.length;
-                const fa = ancestor.inbreeding || 0;
-
-                // Corrected exponent: n1 + n2 - 1 (accounts for path arrays
-                // including the starting node, making each length = formula_n + 1)
-                coi += Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
-            }
-        }
-    }
-
-    return parseFloat((coi * 100).toFixed(2));
+    // An animal's own COI is, by definition, the kinship coefficient of its two parents —
+    // reuse the DAG+DP pairing calculation (O(unique_animals × generations)) instead of the
+    // old tree/findPathsToAncestor approach below, which enumerates every root→ancestor path
+    // and blows up combinatorially on deep/heavily-linebred pedigrees (see history note above
+    // buildPedigree). generations-2: the old tree only ever resolved ancestor data for
+    // generations g < D relative to the root (g=1 sire/dam, g=2 grandparents, ...), so
+    // relative to the sire/dam themselves (one generation in already) the matching DAG depth
+    // is D-2, not D-1 (verified against the depth-truncation regression tests).
+    return parseFloat((await calculatePairingInbreeding(sireId, damId, fetchAnimal, generations - 2)).toFixed(2));
 }
 
 /**
@@ -50,34 +42,20 @@ async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations
  * @returns {{ inbreedingCoefficient: Number, commonAncestorCount: Number }}
  */
 async function calculateInbreedingCoefficientWithDiagnostics(animalId, fetchAnimal, generations = 50) {
-    if (!animalId) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
+    if (!animalId || generations <= 0) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
 
-    const pedigree = await buildPedigree(animalId, fetchAnimal, generations);
-    const commonAncestors = findCommonAncestors(pedigree);
+    const animal = await fetchAnimal(animalId);
+    if (!animal) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
 
-    if (commonAncestors.length === 0) {
-        return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
-    }
+    const sireId = animal.sireId_public || animal.fatherId_public;
+    const damId = animal.damId_public || animal.motherId_public;
+    if (!sireId || !damId) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
 
-    let coi = 0;
-    for (const ancestor of commonAncestors) {
-        const pathsToSire = findPathsToAncestor(pedigree.sire, ancestor.id, []);
-        const pathsToDam = findPathsToAncestor(pedigree.dam, ancestor.id, []);
-
-        for (const sPath of pathsToSire) {
-            for (const dPath of pathsToDam) {
-                const n1 = sPath.length;
-                const n2 = dPath.length;
-                const fa = ancestor.inbreeding || 0;
-
-                coi += Math.pow(0.5, n1 + n2 - 1) * (1 + fa);
-            }
-        }
-    }
-
+    // Same DAG+DP delegation as calculateInbreedingCoefficient above — see its comment.
+    const { total, breakdown } = await explainPairingInbreeding(sireId, damId, fetchAnimal, generations - 2);
     return {
-        inbreedingCoefficient: parseFloat((coi * 100).toFixed(2)),
-        commonAncestorCount: commonAncestors.length
+        inbreedingCoefficient: parseFloat(total.toFixed(2)),
+        commonAncestorCount: breakdown.length
     };
 }
 
