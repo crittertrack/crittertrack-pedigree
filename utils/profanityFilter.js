@@ -13,8 +13,9 @@ leoProfanity.remove(['ctc', 'ctu']);
 leoProfanity.remove(['bareback', 'nude', 'butt']);
 
 class ProfanityError extends Error {
-    constructor(fieldLabel = 'field') {
-        super(`The ${fieldLabel} contains inappropriate language.`);
+    constructor(fieldLabel = 'field', badWords = []) {
+        const detail = badWords.length ? ` ("${badWords.join('", "')}")` : '';
+        super(`The ${fieldLabel} contains inappropriate language${detail}.`);
         this.name = 'ProfanityError';
         this.statusCode = 400;
     }
@@ -32,11 +33,17 @@ const isProfane = (value) => {
     return leoProfanity.check(normalized);
 };
 
+// leoProfanity.check() only says whether the whole string is flagged, not which
+// word did it — check word-by-word so the error can name the actual offender.
+const findProfaneWords = (value) => {
+    return value.split(/\s+/).filter(word => leoProfanity.check(word));
+};
+
 const assertCleanText = (value, fieldLabel) => {
     const normalized = normalizeInput(value);
     if (!normalized) return;
     if (isProfane(normalized)) {
-        throw new ProfanityError(fieldLabel);
+        throw new ProfanityError(fieldLabel, findProfaneWords(normalized));
     }
 };
 

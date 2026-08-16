@@ -5,6 +5,7 @@ const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAnd
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding, calculateAverageKinship } = require('../utils/inbreeding');
 const { logFeedingEvent } = require('../utils/animalLogger');
 const { protect } = require('../middleware/authMiddleware');
+const { ProfanityError } = require('../utils/profanityFilter');
 
 // Apply authentication to all routes
 router.use(protect);
@@ -488,6 +489,9 @@ router.post('/', async (req, res) => {
         res.status(201).json(newAnimal);
     } catch (error) {
         console.error('[ANIMALS] Error creating animal:', error);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Failed to create animal', error: error.message });
     }
 });
@@ -513,6 +517,9 @@ router.put('/:id_public', async (req, res) => {
         res.json(updatedAnimal);
     } catch (error) {
         console.error(`[ANIMALS] Error updating animal ${req.params.id_public}:`, error);
+        if (error instanceof ProfanityError) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Failed to update animal', error: error.message });
     }
 });
