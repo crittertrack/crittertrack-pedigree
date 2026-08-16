@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { AppearanceFieldOption } = require('../database/models');
+const { AppearanceFieldOption, Animal, PublicAnimal } = require('../database/models');
 
 // GET /api/appearance-options?species=Fancy%20Mouse&field=color
 // Returns this user's saved dropdown options for the given species+field, alphabetized.
@@ -51,6 +51,55 @@ router.post('/', async (req, res) => {
     } catch (error) {
         console.error('[appearanceFieldOptions] Error saving option:', error);
         res.status(500).json({ message: 'Failed to save dropdown option.' });
+    }
+});
+
+// PATCH /api/appearance-options/:id — rename a value (e.g. fixing a typo). Cascades the rename
+// to this user's existing animals (and their public mirrors) currently using the old value, so
+// the fix doesn't leave old records out of sync with the corrected list.
+router.patch('/:id', async (req, res) => {
+    try {
+        const newValue = req.body.value?.trim();
+        if (!newValue) {
+            return res.status(400).json({ message: 'value is required.' });
+        }
+
+        const option = await AppearanceFieldOption.findOne({ _id: req.params.id, userId: req.user.id });
+        if (!option) {
+            return res.status(404).json({ message: 'Option not found.' });
+        }
+
+        if (option.value.toLowerCase() === newValue.toLowerCase()) {
+            option.value = newValue;
+            await option.save();
+            return res.json(option);
+        }
+
+        const duplicate = await AppearanceFieldOption.findOne({
+            _id: { $ne: option._id }, userId: req.user.id, species: option.species, field: option.field, value: newValue
+        }).collation({ locale: 'en', strength: 2 });
+        if (duplicate) {
+            return res.status(409).json({ message: `"${newValue}" already exists in this list.` });
+        }
+
+        const { species, field } = option;
+        const oldValue = option.value;
+        option.value = newValue;
+        await option.save();
+
+        await Animal.updateMany(
+            { creatorId: req.user.id, species, [field]: oldValue },
+            { $set: { [field]: newValue } }
+        );
+        await PublicAnimal.updateMany(
+            { creatorId_public: req.user.id_public, species, [field]: oldValue },
+            { $set: { [field]: newValue } }
+        );
+
+        res.json(option);
+    } catch (error) {
+        console.error('[appearanceFieldOptions] Error renaming option:', error);
+        res.status(500).json({ message: 'Failed to rename dropdown option.' });
     }
 });
 
