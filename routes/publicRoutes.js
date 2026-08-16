@@ -198,6 +198,21 @@ router.get('/users/count', async (req, res) => {
     }
 });
 
+// GET /api/public/community-stats - Site-wide totals used for fun facts / marketing copy
+router.get('/community-stats', async (req, res) => {
+    try {
+        const [totalUsers, totalAnimals, countries] = await Promise.all([
+            User.countDocuments({ emailVerified: true }),
+            Animal.countDocuments({}),
+            User.distinct('country', { country: { $ne: null } })
+        ]);
+        res.status(200).json({ totalUsers, totalAnimals, totalCountries: countries.length });
+    } catch (error) {
+        console.error('Error fetching community stats:', error);
+        res.status(500).json({ message: 'Internal server error while fetching community stats.' });
+    }
+});
+
 // TEMPORARY MIGRATION ENDPOINT - Remove after running once
 router.get('/migrate-profiles-temp', async (req, res) => {
     try {
