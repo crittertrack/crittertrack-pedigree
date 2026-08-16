@@ -385,13 +385,11 @@ const AnimalSchema = new mongoose.Schema({
     }],
     
     // Tab 3: Physical Profile Fields
-    coatPattern: { type: String, default: null },
+    markings: { type: String, default: null }, // Body markings/patterns (formerly "coatPattern")
     lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     // Universal animal appearance fields
     morph: { type: String, default: null }, // Mutation/Morph (esp. reptiles/invertebrates)
-    markings: { type: String, default: null }, // Body markings/patterns
     eyeColor: { type: String, default: null }, // Eye color
-    nailColor: { type: String, default: null }, // Nail/claw color (mammals)
     size: { type: String, default: null }, // General size description (Small, Medium, Large, etc.)
     carrierTraits: { type: String, default: null }, // Genetics calculator: recessive/het traits carried
     // Current measurements (snapshot - growth records track history)
@@ -743,15 +741,13 @@ const PublicAnimalSchema = new mongoose.Schema({
     status: { type: String, default: 'Pet' },
     color: { type: String, default: null },
     coat: { type: String, default: null },
-    coatPattern: { type: String, default: null },
+    markings: { type: String, default: null }, // formerly "coatPattern"
     earset: { type: String, default: null },
     lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
     morph: { type: String, default: null },
-    markings: { type: String, default: null },
     eyeColor: { type: String, default: null },
-    nailColor: { type: String, default: null },
     size: { type: String, default: null }, // General size description (Small, Medium, Large, etc.)
     // Current measurements
     weight: { type: String, default: null },

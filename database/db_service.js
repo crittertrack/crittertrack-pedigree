@@ -73,7 +73,6 @@ const ANIMAL_TEXT_FIELDS = {
     status: 'animal status',
     color: 'animal color',
     coat: 'animal coat',
-    coatPattern: 'coat pattern',
     earset: 'earset',
     manualownerName: 'keeper name',
     remarks: 'animal remarks',
@@ -123,7 +122,6 @@ const ANIMAL_TEXT_FIELDS = {
     morph: 'morph',
     markings: 'markings',
     eyeColor: 'eye color',
-    nailColor: 'nail color',
     size: 'size',
     weight: 'weight',
     length: 'length',
@@ -978,7 +976,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
           'medicalConditions medications healthStatus healthStatusOverride ' +
           'quarantineDetails quarantineHistory ' +
-          'color coat coatPattern earset morph markings eyeColor nailColor size carrierTraits geneticCode lifeStage ' +
+          'color coat earset morph markings eyeColor size carrierTraits geneticCode lifeStage ' +
           'ringId eartagNumber ' +
           // Feeding & Care management view (Feeding, Scheduled Care, Grooming & Special Care, Training clusters)
           'lastFedDate feedingIntervalHours dietType animalCareTasks ' +
@@ -1082,7 +1080,6 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
         morph: animal.morph,
         markings: animal.markings,
         eyeColor: animal.eyeColor,
-        nailColor: animal.nailColor,
         weight: animal.weight,
         length: animal.length
     });
@@ -1241,7 +1238,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         morph: updates.morph,
         markings: updates.markings,
         eyeColor: updates.eyeColor,
-        nailColor: updates.nailColor,
         weight: updates.weight,
         length: updates.length
     }));
@@ -1329,7 +1325,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         morph: updatedAnimal.morph,
         markings: updatedAnimal.markings,
         eyeColor: updatedAnimal.eyeColor,
-        nailColor: updatedAnimal.nailColor,
         weight: updatedAnimal.weight,
         length: updatedAnimal.length
     });
@@ -1483,7 +1478,7 @@ const getArchivedAndSoldAnimals = async (appUserId_backend) => {
     const archiveSlimFields = 'id_public creatorId creatorId_public originalCreatorId name prefix suffix ' +
         'species gender birthDate imageUrl photoUrl status archived soldStatus manualownerName ' +
         'sireId_public damId_public viewOnlyForUsers hiddenForUsers ' +
-        'color coat coatPattern morph markings';
+        'color coat morph markings';
 
     // 1. Fetch archived animals owned by the user
     const archived = await Animal.find({
@@ -1586,7 +1581,7 @@ const toggleAnimalPublic = async (appUserId_backend, animalId_backend, toggleDat
             manualownerName: animal.manualownerName || null,
             color: animal.color,
             coat: animal.coat,
-            coatPattern: animal.coatPattern || null,
+            markings: animal.markings || null,
             // Copy image URLs into the public record as well
             imageUrl: animal.imageUrl || null,
             photoUrl: animal.photoUrl || null,
