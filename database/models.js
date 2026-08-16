@@ -1227,15 +1227,15 @@ const BetaSurveyResponseSchema = new mongoose.Schema({
     id_public: { type: String, required: true },
 
     q1_overallSatisfaction: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q2_mostUsedFeature: { type: String, default: null },
-    q3_mostConfusingFeature: { type: String, default: null },
+    q2_mostUsedFeature: { type: [String], default: null }, // multi-select
+    q3_mostConfusingFeature: { type: [String], default: null }, // multi-select
     q4_appSpeed: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
     q5_easeOfNavigation: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
     q6_visualDesign: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q7_primarySpecies: { type: String, default: null },
+    q7_primarySpecies: { type: [String], default: null }, // multi-select
     q8_primaryDevice: { type: String, default: null },
-    q9_priorSolution: { type: String, default: null },
-    q9_priorSolutionOther: { type: String, default: null }, // "Which app?" free text when q9 === 'Another app'
+    q9_priorSolution: { type: [String], default: null }, // multi-select
+    q9_priorSolutionOther: { type: String, default: null }, // "Which app?" free text when q9 includes 'Another app'
     q10_howHeard: { type: String, default: null },
     q11_likelihoodToRecommend: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
     q12_likelyToKeepUsing: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5

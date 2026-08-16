@@ -114,14 +114,29 @@ router.get('/admin/stats', async (req, res) => {
         const starAverages = averagesResult[0] || {};
         delete starAverages._id;
 
-        const choiceQuestions = [
+        const singleChoiceQuestions = ['q8_primaryDevice', 'q10_howHeard'];
+        const multiChoiceQuestions = [
             'q2_mostUsedFeature', 'q3_mostConfusingFeature', 'q7_primarySpecies',
-            'q8_primaryDevice', 'q9_priorSolution', 'q10_howHeard'
+            'q9_priorSolution'
         ];
         const choiceBreakdowns = {};
-        for (const q of choiceQuestions) {
+        for (const q of singleChoiceQuestions) {
             const dist = await BetaSurveyResponse.aggregate([
                 { $match: { [q]: { $ne: null } } },
+                { $group: { _id: `$${q}`, count: { $sum: 1 } } },
+                { $sort: { count: -1 } }
+            ]);
+            choiceBreakdowns[q] = dist.map(d => ({
+                choice: d._id,
+                count: d.count,
+                percentage: totalResponses > 0 ? Number(((d.count / totalResponses) * 100).toFixed(1)) : 0
+            }));
+        }
+        // Multi-select fields are stored as arrays — unwind so each chosen option is counted once per respondent
+        for (const q of multiChoiceQuestions) {
+            const dist = await BetaSurveyResponse.aggregate([
+                { $match: { [q]: { $ne: null } } },
+                { $unwind: `$${q}` },
                 { $group: { _id: `$${q}`, count: { $sum: 1 } } },
                 { $sort: { count: -1 } }
             ]);
