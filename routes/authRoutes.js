@@ -208,7 +208,7 @@ router.post('/register', async (req, res) => {
 // Authenticates a user and returns a JWT token.
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, keepSignedIn } = req.body;
 
         // Basic required field validation
         if (!email || !password) {
@@ -216,7 +216,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Call the service function to log in and return the token
-        const { token, userProfile } = await loginUser(email, password, req);
+        const { token, userProfile } = await loginUser(email, password, req, !!keepSignedIn);
 
         // Block non-essential logins while maintenance mode is active
         if (!MAINTENANCE_BYPASS_IDS.includes(userProfile.id_public)) {

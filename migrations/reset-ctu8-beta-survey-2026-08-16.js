@@ -1,6 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const { PublicProfile, BetaSurveyResponse } = require('../database/models');
+const { PublicProfile, BetaSurveyResponse, Notification } = require('../database/models');
 
 (async () => {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -19,8 +19,15 @@ const { PublicProfile, BetaSurveyResponse } = require('../database/models');
     const deleted = await BetaSurveyResponse.deleteMany({ id_public: 'CTU8' });
     console.log('Deleted responses:', deleted.deletedCount);
 
+    const deletedNotifications = await Notification.deleteMany({
+        type: 'beta_survey_completed',
+        message: { $regex: 'CTU8' }
+    });
+    console.log('Deleted notifications:', deletedNotifications.deletedCount);
+
     const verify = await PublicProfile.findOne({ id_public: 'CTU8' });
     console.log('After:', verify.betaSurveyStatus, verify.betaSurveyLastPromptedAt);
 
     await mongoose.disconnect();
 })();
+

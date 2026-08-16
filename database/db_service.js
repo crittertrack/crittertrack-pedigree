@@ -21,6 +21,7 @@ const {
 const JWT_SECRET = process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me';
 const SALT_ROUNDS = 10;
 const JWT_LIFETIME = '1d';
+const JWT_LIFETIME_KEEP_SIGNED_IN = '30d';
 
 const enforceCleanFields = (payload = {}, fieldLabelMap = {}) => {
     Object.entries(fieldLabelMap).forEach(([field, label]) => {
@@ -276,7 +277,7 @@ const registerUser = async (userData) => {
 /**
  * Logs in a user.
  */
-const loginUser = async (email, password, req) => {
+const loginUser = async (email, password, req, keepSignedIn = false) => {
     // 1. Find user by email, explicitly requesting the password field
     const user = await User.findOne({ email }).select('+password');
 
@@ -379,7 +380,7 @@ const loginUser = async (email, password, req) => {
 
     // 4. Generate JWT Token
     const payload = { user: { id: user.id } }; // Use user.id (internal _id)
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_LIFETIME });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: keepSignedIn ? JWT_LIFETIME_KEEP_SIGNED_IN : JWT_LIFETIME });
 
     // 5. Return the token and a safe version of the user profile
     const userProfile = await getUserProfileById(user.id);
