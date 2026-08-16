@@ -170,6 +170,12 @@ const PublicProfileSchema = new mongoose.Schema({
         default: new Map()
     },
     hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
+    betaSurveyStatus: {
+        type: String,
+        enum: ['pending', 'skipped', 'dismissed', 'completed'],
+        default: 'pending'
+    },
+    betaSurveyLastPromptedAt: { type: Date, default: null }, // Drives the once-per-day "Skip for now" re-prompt throttle
     speciesOrder: { type: [String], default: [] }, // User's custom order for species display
     speciesFavorites: { type: [String], default: [] }, // User's favorite species (starred)
     breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
@@ -1215,40 +1221,29 @@ const FeedbackSchema = new mongoose.Schema({
 const Feedback = mongoose.model('Feedback', FeedbackSchema);
 
 
-// --- 9B. BETA SURVEY SCHEMA ---
-const BetaSurveySchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    userIdPublic: { type: String, required: true }, // CTUID
-    userEmail: { type: String, required: true },
-    userName: { type: String, required: true },
-    
-    // Questions 1-14: Linear scales (1-5)
-    q1_overall_satisfaction: { type: Number, min: 1, max: 5, required: true }, // Very dissatisfied to Very satisfied
-    q2_visual_design: { type: Number, min: 1, max: 5, required: true }, // Visual design satisfaction
-    
-    // Question 3: Multiple choice - what do you use most for
-    q3_primary_use: { type: [String], required: true }, // Array of selected options
-    
-    // Question 4: Multiple choice - features used most often
-    q4_features_used: { type: [String], required: true }, // Array of selected options
-    
-    q5_find_animals: { type: Number, min: 1, max: 5, required: true }, // Very difficult to Very easy
-    q6_litter_family_tree: { type: Number, min: 1, max: 5, required: true }, // Very difficult to Very easy
-    q7_genetics_tools: { type: Number, min: 1, max: 5, required: true }, // Not useful to Very useful
-    q8_animal_profile_clarity: { type: Number, min: 1, max: 5, required: true }, // Very unclear to Very clear
-    q9_litter_tracking: { type: Number, min: 1, max: 5, required: true }, // Not well to Very well
-    q10_ownership_management: { type: Number, min: 1, max: 5, required: true }, // Not well to Very well
-    q11_profile_settings: { type: Number, min: 1, max: 5, required: true }, // Very hard to Very easy
-    q12_breeder_directory: { type: Number, min: 1, max: 5, required: true }, // Not helpful to Very helpful
-    q13_visibility_comfort: { type: Number, min: 1, max: 5, required: true }, // Very uncomfortable to Very comfortable
-    q14_marketplace_utility: { type: Number, min: 1, max: 5, required: true }, // Not useful to Very useful
-    
-    // Question 15: Free text feedback
-    q15_improvements: { type: String, default: null },
-    
-    createdAt: { type: Date, default: Date.now, index: true }
+// --- 9B. BETA SURVEY RESPONSE SCHEMA (Beta Feedback Finalizing Survey) ---
+const BetaSurveyResponseSchema = new mongoose.Schema({
+    userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    id_public: { type: String, required: true },
+
+    q1_overallSatisfaction: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
+    q2_mostUsedFeature: { type: String, default: null },
+    q3_mostConfusingFeature: { type: String, default: null },
+    q4_appSpeed: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
+    q5_easeOfNavigation: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
+    q6_visualDesign: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
+    q7_primarySpecies: { type: String, default: null },
+    q8_primaryDevice: { type: String, default: null },
+    q9_priorSolution: { type: String, default: null },
+    q9_priorSolutionOther: { type: String, default: null }, // "Which app?" free text when q9 === 'Another app'
+    q10_howHeard: { type: String, default: null },
+    q11_likelihoodToRecommend: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
+    q12_likelyToKeepUsing: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
+    q13_bugsIssues: { type: String, default: null },
+    q14_magicWandFeature: { type: String, default: null },
+    q15_anythingElse: { type: String, default: null },
 }, { timestamps: true });
-const BetaSurvey = mongoose.model('BetaSurvey', BetaSurveySchema);
+const BetaSurveyResponse = mongoose.model('BetaSurveyResponse', BetaSurveyResponseSchema);
 
 
 // --- 10. MESSAGE SCHEMA ---
@@ -1876,7 +1871,7 @@ module.exports = {
     SpeciesGeneticsSubmission,
     BugReport,
     Feedback,
-    BetaSurvey,
+    BetaSurveyResponse,
     Message,
     MessageReport,
     ProfileReport,

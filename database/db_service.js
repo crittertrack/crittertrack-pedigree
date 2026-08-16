@@ -432,6 +432,8 @@ const getUserProfileById = async (appUserId_backend) => {
         ownedLitters: user.ownedLitters, // Array of internal litter IDs
         // Flags stored on PublicProfile
         hasSeenProfileSetupGuide: publicProfile?.hasSeenProfileSetupGuide || false,
+        betaSurveyStatus: publicProfile?.betaSurveyStatus || 'pending',
+        betaSurveyLastPromptedAt: publicProfile?.betaSurveyLastPromptedAt || null,
         // Push notifications
         hasPushSubscriptions: (user.pushSubscriptions || []).length > 0,
         pushCategoryPreferences: user.pushCategoryPreferences ? Object.fromEntries(user.pushCategoryPreferences) : {},

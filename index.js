@@ -866,9 +866,9 @@ app.use('/api/bug-reports', authMiddleware, bugReportRoutes);
 const feedbackRoutes = require('./routes/feedbackRoutes');
 app.use('/api/feedback', authMiddleware, feedbackRoutes);
 
-// Survey Routes (Require authMiddleware)
-const surveyRoutes = require('./routes/surveyRoutes');
-app.use('/api/surveys', authMiddleware, surveyRoutes);
+// Beta Survey Routes (Require authMiddleware)
+const betaSurveyRoutes = require('./routes/betaSurveyRoutes');
+app.use('/api/beta-survey', authMiddleware, betaSurveyRoutes);
 
 // Message Routes (Require authMiddleware)
 const messageRoutes = require('./routes/messageRoutes');
