@@ -1,8 +1,8 @@
 ﻿﻿const express = require('express');
 const router = express.Router();
 const { Animal, AnimalLog, SupplyItem, Litter, User, PublicAnimal, Transaction, Notification } = require('../database/models');
-const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals } = require('../database/db_service');
-const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding } = require('../utils/inbreeding');
+const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals, getAvkReferencePopulation } = require('../database/db_service');
+const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding, calculateAverageKinship } = require('../utils/inbreeding');
 const { logFeedingEvent } = require('../utils/animalLogger');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -623,10 +623,30 @@ router.get('/:id_public/inbreeding', async (req, res) => {
         // Update the animal's record with the cached value if the user owns it
         await Animal.updateOne({ id_public, creatorId: req.user.id }, { inbreedingCoefficient: result.inbreedingCoefficient });
 
+        // AVK (Average Kinship) — additive alongside COI above; does not alter the COI
+        // calculation itself. Reference population is the target animal's own owner's
+        // living, non-archived, same-species animals (see getAvkReferencePopulation).
+        let avgKinship = null;
+        let avkPopulationSize = 0;
+        try {
+            const targetAnimal = await Animal.findOne({ id_public }).select('creatorId species').lean();
+            if (targetAnimal) {
+                const populationIds = await getAvkReferencePopulation(targetAnimal.creatorId, targetAnimal.species);
+                const avk = await calculateAverageKinship(id_public, populationIds, fetchAnimal, generations);
+                avgKinship = avk.avgKinship;
+                avkPopulationSize = avk.populationSize;
+                await Animal.updateOne({ id_public, creatorId: req.user.id }, { avgKinship });
+            }
+        } catch (avkError) {
+            console.error(`[ANIMALS] Error calculating AVK for ${id_public}:`, avkError);
+        }
+
         res.json({ 
             id_public, 
             inbreedingCoefficient: result.inbreedingCoefficient,
-            commonAncestorCount: result.commonAncestorCount
+            commonAncestorCount: result.commonAncestorCount,
+            avgKinship,
+            avkPopulationSize
         });
     } catch (error) {
         console.error(`[ANIMALS] Error calculating inbreeding for ${req.params.id_public}:`, error);

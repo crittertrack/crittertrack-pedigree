@@ -1033,6 +1033,42 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
 };
 
 /**
+ * AVK (Average Kinship) reference-population selection.
+ *
+ * Kept as its own small, isolated function (separate from the kinship math in
+ * utils/inbreeding.js) specifically so the population definition can be revisited later
+ * (e.g. widened to a breeding group, or to other users' public animals) without touching
+ * the pedigree/kinship calculation itself.
+ *
+ * Initial population rule, per current spec: animals that
+ *   - belong to `creatorId` (the animal-being-scored's current owner — mirrors the same
+ *     "currently owned" semantics as getUsersAnimals' `onlyOwned` branch, so transferred-away
+ *     animals are naturally excluded since their creatorId has already moved to the new
+ *     owner, and transferred-in animals are naturally included since creatorId is updated
+ *     to the new owner on transfer acceptance)
+ *   - are the same `species`
+ *   - are currently owned (`isOwned: true`, not a stub)
+ *   - are NOT archived
+ *   - are still living (no `deceasedDate`)
+ */
+const buildAvkPopulationQuery = (creatorId, species) => ({
+    creatorId,
+    species,
+    isOwned: true,
+    isStub: { $ne: true },
+    archived: { $ne: true },
+    $or: [{ deceasedDate: null }, { deceasedDate: { $exists: false } }]
+});
+
+const getAvkReferencePopulation = async (creatorId, species) => {
+    if (!creatorId || !species) return [];
+    const animals = await Animal.find(buildAvkPopulationQuery(creatorId, species))
+        .select('id_public')
+        .lean();
+    return animals.map(a => a.id_public);
+};
+
+/**
  * Helper to find an animal by internal ID and verify ownership.
  */
 const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
@@ -2455,6 +2491,9 @@ module.exports = {
     hideViewOnlyAnimal,
     restoreViewOnlyAnimal,
     getHiddenViewOnlyAnimals,
+    // AVK (Average Kinship) reference population
+    buildAvkPopulationQuery,
+    getAvkReferencePopulation,
     // Litter functions
     addLitter,
     adoptLitter,

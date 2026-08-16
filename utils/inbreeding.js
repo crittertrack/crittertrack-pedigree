@@ -385,6 +385,98 @@ async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations 
     };
 }
 
+/**
+ * Kinship (coancestry) coefficient f(X,Y) between two DISTINCT individuals, derived from
+ * their Wright's path-coefficient DP maps (see computePathSums).
+ *
+ *   f(X,Y) = Σ over every ancestor A reachable from BOTH X and Y of 2 × dpX[A] × dpY[A]
+ *
+ * This is the exact same summation calculatePairingInbreeding()/explainPairingInbreeding()
+ * already use to compute a hypothetical offspring's COI — because F_offspring(sire,dam) is,
+ * by definition, equal to the kinship coefficient f(sire,dam) of its two parents.
+ *
+ * IMPORTANT: this must only be used for X ≠ Y. Passing the same dp map for both sides does
+ * NOT correctly yield self-kinship f(X,X) — it double-counts X's own ancestors beyond what
+ * F_X already captures. Self-kinship uses the separate, well-established identity
+ * f(X,X) = (1 + F_X) / 2 instead (see calculateAverageKinship below).
+ *
+ * @returns {Number} kinship as a fraction (0-1), NOT a percentage
+ */
+function kinshipFromPathSums(dpA, dpB) {
+    let kinship = 0;
+    for (const [ancestorId, aContrib] of dpA) {
+        const bContrib = dpB.get(ancestorId);
+        if (bContrib == null) continue;
+        kinship += 2 * aContrib * bContrib;
+    }
+    return kinship;
+}
+
+/**
+ * Calculate an individual's Average Kinship (AVK), a.k.a. Mean Kinship (MK) —
+ * a standard pedigree-based population-management metric (used in studbooks/SSPs)
+ * distinct from COI: COI measures an individual's OWN inbreeding, while AVK measures
+ * how represented/redundant that individual's ancestry is across a reference population.
+ *
+ *   AVK_i = (1/N) × Σ_{j=1}^{N} f(i,j)
+ *
+ * summed over every member j of the reference population (N animals), INCLUDING the
+ * individual's self-kinship f(i,i) if it is itself part of that population. A LOWER AVK
+ * means the animal's lineage is less duplicated elsewhere in the population (more
+ * genetically distinct/valuable to breed from); a HIGHER AVK means its ancestry is already
+ * heavily represented.
+ *
+ * Reuses the existing buildPedigreeDAG/computePathSums machinery (same functions
+ * calculatePairingInbreeding relies on) — no separate/simplified pedigree walk, and no
+ * changes to the existing COI functions above.
+ *
+ * Handles incomplete pedigrees, one known parent, deep pedigrees, and duplicated ancestors
+ * automatically (inherited from buildPedigreeDAG/computePathSums). buildPedigreeDAG's BFS
+ * with a `queued` visited-set guards against malformed/cyclic pedigree data causing infinite
+ * loops, exactly as it already does for COI pairing calculations.
+ *
+ * @param {String} animalId - the animal being scored
+ * @param {String[]} populationIds - reference population id_publics (deduplicated internally;
+ *   include animalId itself if self-kinship should count toward the average, per the standard
+ *   Mean Kinship definition)
+ * @param {Function} fetchAnimal - resolves { sireId_public, damId_public, name } for pedigree traversal
+ * @param {Number} generations - how many generations back to trace (default 20, matches other pairing calcs)
+ * @returns {{ avgKinship: Number|null, populationSize: Number }} avgKinship as a percentage (0-100),
+ *   or null when the reference population is empty (cannot be computed, NOT the same as 0%)
+ */
+async function calculateAverageKinship(animalId, populationIds, fetchAnimal, generations = 20) {
+    if (!animalId) return { avgKinship: null, populationSize: 0 };
+
+    const uniquePopulation = [...new Set((populationIds || []).filter(Boolean))];
+    if (uniquePopulation.length === 0) return { avgKinship: null, populationSize: 0 };
+
+    const rootDag = await buildPedigreeDAG(animalId, fetchAnimal, generations);
+    const rootDP = computePathSums(animalId, rootDag);
+
+    // Self-kinship f(X,X) = (1 + F_X) / 2 — reuses the EXISTING, untouched
+    // calculateInbreedingCoefficient() for F_X rather than re-deriving it from the DP maps
+    // (see kinshipFromPathSums' doc comment for why the DP-map approach can't be reused here).
+    const selfCOI = await calculateInbreedingCoefficient(animalId, fetchAnimal, generations);
+    const selfKinship = (1 + selfCOI / 100) / 2;
+
+    let sum = 0;
+    for (const otherId of uniquePopulation) {
+        if (otherId === animalId) {
+            sum += selfKinship;
+            continue;
+        }
+        const otherDag = await buildPedigreeDAG(otherId, fetchAnimal, generations);
+        const otherDP = computePathSums(otherId, otherDag);
+        sum += kinshipFromPathSums(rootDP, otherDP);
+    }
+
+    const avgKinship = sum / uniquePopulation.length;
+    return {
+        avgKinship: parseFloat((avgKinship * 100).toFixed(4)),
+        populationSize: uniquePopulation.length
+    };
+}
+
 module.exports = {
     calculateInbreedingCoefficient,
     calculateInbreedingCoefficientWithDiagnostics,
@@ -392,5 +484,6 @@ module.exports = {
     buildPedigree,
     buildPedigreeDAG,
     computePathSums,
-    explainPairingInbreeding
+    explainPairingInbreeding,
+    calculateAverageKinship
 };
