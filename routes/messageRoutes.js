@@ -14,15 +14,17 @@ const getConversationId = (userId1, userId2) => {
 // POST /api/messages/send - Send a message
 router.post('/send', async (req, res) => {
     try {
-        const { receiverId, message, adminOverride = false, isModeratorMessage = false } = req.body;
+        const { receiverId, message, images = [], adminOverride = false, isModeratorMessage = false } = req.body;
         const senderId = req.user.id;
 
-        if (!receiverId || typeof message !== 'string' || !message.trim()) {
+        // message may legitimately be empty when the user is sending image(s) only —
+        // only receiverId and a string-typed message are required here.
+        if (!receiverId || typeof message !== 'string') {
             return res.status(400).json({ error: 'receiverId and message are required' });
         }
 
         const normalizedMessage = message.trim();
-        assertCleanText(normalizedMessage, 'message');
+        if (normalizedMessage) assertCleanText(normalizedMessage, 'message');
 
         if (senderId === receiverId) {
             return res.status(400).json({ error: 'Cannot send message to yourself' });
@@ -72,7 +74,6 @@ router.post('/send', async (req, res) => {
         }
 
         // Validate that either message text or images are provided
-        const { images = [] } = req.body;
         if (!normalizedMessage && (!Array.isArray(images) || images.length === 0)) {
             return res.status(400).json({ error: 'Message text or at least one image is required' });
         }
