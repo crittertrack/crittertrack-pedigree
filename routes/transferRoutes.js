@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const { AnimalTransfer, Animal, Notification, User, PublicProfile } = require('../database/models'); // PublicAnimal removed as accept-view-only route is removed
+const { resyncAnimalToPublic } = require('../utils/syncPublicAnimals');
 
 // GET /api/transfers - Get all transfers for the logged-in user (sent and received)
 router.get('/', async (req, res) => {
@@ -114,20 +115,23 @@ router.post('/', async (req, res) => {
 
 // POST /api/transfers/:id/accept - Accept a transfer
 router.post('/:id/accept', async (req, res) => {
-    const session = await mongoose.startSession(); // Start a session
-    session.startTransaction(); // Start a transaction
+    const session = await mongoose.startSession();
+    let transfer, animal;
     try {
+        // withTransaction auto-retries the whole callback on transient errors (e.g. two
+        // transfers from the same sender being accepted concurrently, both touching the
+        // sender's User.ownedAnimals array at once — the exact WriteConflict seen in prod).
+        await session.withTransaction(async () => {
         const userId = req.user.id;
         const transferId = req.params.id;
         
         console.log('[Transfer Accept] UserId:', userId, 'TransferId:', transferId);
         
-        const transfer = await AnimalTransfer.findById(transferId).session(session);
+        transfer = await AnimalTransfer.findById(transferId).session(session);
         
         if (!transfer) {
             console.log('[Transfer Accept] Transfer not found with ID:', transferId);
-            await session.abortTransaction(); // Abort transaction on error
-            return res.status(404).json({ message: 'Transfer not found.' });
+            throw Object.assign(new Error('Transfer not found.'), { statusCode: 404 });
         }
         
         console.log('[Transfer Accept] Transfer found:', {
@@ -140,20 +144,20 @@ router.post('/:id/accept', async (req, res) => {
         if (transfer.toUserId.toString() !== userId.toString()) {
             console.log('[Transfer Accept] Authorization failed - user is not recipient');
             console.log('[Transfer Accept] transfer.toUserId:', transfer.toUserId.toString(), 'userId:', userId.toString());
-            return res.status(403).json({ message: 'You are not authorized to accept this transfer.' });
+            throw Object.assign(new Error('You are not authorized to accept this transfer.'), { statusCode: 403 });
         }
         
         if (transfer.status !== 'pending') {
             console.log('[Transfer Accept] Transfer already responded:', transfer.status);
-            return res.status(400).json({ message: 'Transfer has already been responded to.' });
+            throw Object.assign(new Error('Transfer has already been responded to.'), { statusCode: 400 });
         }
         
         // Find the animal
-        const animal = await Animal.findOne({ id_public: transfer.animalId_public }).session(session); // Pass session
+        animal = await Animal.findOne({ id_public: transfer.animalId_public }).session(session); // Pass session
         
         if (!animal) {
             console.log('[Transfer Accept] Animal not found:', transfer.animalId_public);
-            return res.status(404).json({ message: 'Animal not found.' });
+            throw Object.assign(new Error('Animal not found.'), { statusCode: 404 });
         }
         
         console.log('[Transfer Accept] Animal found:', animal.id_public, 'Current owner:', animal.creatorId.toString());
@@ -226,14 +230,6 @@ router.post('/:id/accept', async (req, res) => {
         await animal.save({ session }); // Pass session
         console.log('[Transfer Accept] Animal ownership transferred, viewOnly access added');
         
-        // Update PublicAnimal if this animal is public
-        if (animal.isDisplay) {
-            // PublicAnimal model was removed, so this block is no longer relevant.
-            // If PublicAnimal functionality is still desired, it needs to be re-implemented
-            // and the model re-imported.
-            console.warn('[Transfer Accept] PublicAnimal update skipped as model is not imported.');
-        }
-        
         // Update user ownedAnimals arrays
         await User.findByIdAndUpdate(previousOwner, {
             $pull: { ownedAnimals: animal._id }
@@ -287,10 +283,12 @@ router.post('/:id/accept', async (req, res) => {
             console.error('[Transfer Accept] Error stack:', notifError.stack);
             // Don't fail the whole transfer if notification creation fails
         }
+        });
 
-        await session.commitTransaction();
-console.log('[Transfer Accept] ✓ Transaction committed');
-        
+        // PublicAnimal is not part of the transaction (resyncAnimalToPublic manages its own
+        // write) — run after commit so a public mirror update never causes/blocks a retry.
+        await resyncAnimalToPublic(animal);
+
         console.log('[Transfer Accept] ✓ Transfer accepted successfully');
         res.status(200).json({ 
             message: 'Transfer accepted successfully.', 
@@ -302,47 +300,42 @@ console.log('[Transfer Accept] ✓ Transaction committed');
             }
         });
     } catch (error) {
-    console.error('[Transfer Accept] Error:', error);
-    console.error('[Transfer Accept] Error stack:', error.stack);
-
-    if (session.inTransaction()) {
-        await session.abortTransaction();
-        console.log('[Transfer Accept] Transaction aborted');
+        console.error('[Transfer Accept] Error:', error);
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+        res.status(500).json({
+            message: 'Internal server error while accepting transfer.',
+            error: error.message
+        });
+    } finally {
+        session.endSession();
     }
-
-    res.status(500).json({
-        message: 'Internal server error while accepting transfer.',
-        error: error.message
-    });
-} finally {
-    await session.endSession();
-}
 });
+
 
 // POST /api/transfers/:id/decline - Decline a transfer
 router.post('/:id/decline', async (req, res) => {
-    const session = await mongoose.startSession(); // Start a session
-    session.startTransaction(); // Start a transaction
+    const session = await mongoose.startSession();
+    let transfer;
     try {
+        await session.withTransaction(async () => {
         const userId = req.user.id;
         const transferId = req.params.id;
         
-        const transfer = await AnimalTransfer.findById(transferId).session(session); // Pass session
+        transfer = await AnimalTransfer.findById(transferId).session(session); // Pass session
         
         if (!transfer) {
-            await session.abortTransaction();
-            return res.status(404).json({ message: 'Transfer not found.' });
+            throw Object.assign(new Error('Transfer not found.'), { statusCode: 404 });
         }
         
         // Verify the user is the recipient
         if (transfer.toUserId.toString() !== userId.toString()) {
-            await session.abortTransaction();
-            return res.status(403).json({ message: 'You are not authorized to decline this transfer.' });
+            throw Object.assign(new Error('You are not authorized to decline this transfer.'), { statusCode: 403 });
         }
         
         if (transfer.status !== 'pending') {
-            await session.abortTransaction();
-            return res.status(400).json({ message: 'Transfer has already been responded to.' });
+            throw Object.assign(new Error('Transfer has already been responded to.'), { statusCode: 400 });
         }
         
         // Update transfer status
@@ -388,15 +381,17 @@ router.post('/:id/decline', async (req, res) => {
         } catch (notifError) {
             console.error('[Decline Transfer] Failed to create sender notification:', notifError);
         }
-        await session.commitTransaction(); // Commit the transaction
+        });
         res.status(200).json({ 
             message: 'Transfer declined. The transaction remains in your budget as a local entry.', 
             transfer
         });
     } catch (error) {
         console.error('Error declining transfer:', error);
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Internal server error while declining transfer.' });
-        await session.abortTransaction(); // Abort transaction on error
     } finally {
         session.endSession(); // End the session
     }
@@ -405,34 +400,31 @@ router.post('/:id/decline', async (req, res) => {
 // POST /api/transfers/return - Return an animal to its original breeder/creator
 router.post('/return', async (req, res) => {
     const session = await mongoose.startSession();
-    session.startTransaction();
+    let createdTransfer;
     try {
+        await session.withTransaction(async () => {
         const userId = req.user.id;
         const { animalId_public } = req.body;
 
         if (!animalId_public) {
-            await session.abortTransaction();
-            return res.status(400).json({ message: 'animalId_public is required.' });
+            throw Object.assign(new Error('animalId_public is required.'), { statusCode: 400 });
         }
 
         // Find the animal - current owner must be the one returning it
         const animal = await Animal.findOne({ id_public: animalId_public, creatorId: userId }).session(session);
 
         if (!animal) {
-            await session.abortTransaction();
-            return res.status(404).json({ message: 'Animal not found or you are not the current owner.' });
+            throw Object.assign(new Error('Animal not found or you are not the current owner.'), { statusCode: 404 });
         }
 
         // Must have an originalCreatorId to return to
         if (!animal.originalCreatorId) {
-            await session.abortTransaction();
-            return res.status(400).json({ message: 'This animal has no original breeder/owner to return to.' });
+            throw Object.assign(new Error('This animal has no original breeder/owner to return to.'), { statusCode: 400 });
         }
 
         // Prevent duplicate pending returns
         if (animal.pendingTransferId) {
-            await session.abortTransaction();
-            return res.status(409).json({ message: 'This animal already has a pending transfer request.' });
+            throw Object.assign(new Error('This animal already has a pending transfer request.'), { statusCode: 409 });
         }
 
         const originalOwnerId = animal.originalCreatorId;
@@ -449,7 +441,7 @@ router.post('/return', async (req, res) => {
             type: 'ownership',
         }], { session });
 
-        const createdTransfer = transfer[0];
+        createdTransfer = transfer[0];
 
         // Set pendingTransferId on animal
         animal.pendingTransferId = createdTransfer._id;
@@ -481,13 +473,15 @@ router.post('/return', async (req, res) => {
         } catch (notifError) {
             console.error('[Return Transfer] Notification error:', notifError.message);
         }
+        });
 
-        await session.commitTransaction();
         res.status(201).json({ message: 'Return request sent successfully.', transfer: createdTransfer });
 
     } catch (error) {
-        await session.abortTransaction();
         console.error('Error returning animal:', error);
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Internal server error while returning animal.' });
     } finally {
         session.endSession();
@@ -496,32 +490,26 @@ router.post('/return', async (req, res) => {
 
 router.post('/:id/withdraw', async (req, res) => {
     const session = await mongoose.startSession();
-    session.startTransaction();
+    let transfer;
     try {
+        await session.withTransaction(async () => {
         const userId = req.user.id;
         const transferId = req.params.id;
 
-        const transfer = await AnimalTransfer.findById(transferId).session(session);
+        transfer = await AnimalTransfer.findById(transferId).session(session);
 
         if (!transfer) {
-            await session.abortTransaction();
-            return res.status(404).json({ message: 'Transfer not found.' });
+            throw Object.assign(new Error('Transfer not found.'), { statusCode: 404 });
         }
 
         // Only sender can withdraw
         if (transfer.fromUserId.toString() !== userId.toString()) {
-            await session.abortTransaction();
-            return res.status(403).json({
-                message: 'You are not authorized to withdraw this transfer.'
-            });
+            throw Object.assign(new Error('You are not authorized to withdraw this transfer.'), { statusCode: 403 });
         }
 
         // Only pending transfers can be withdrawn
         if (transfer.status !== 'pending') {
-            await session.abortTransaction();
-            return res.status(400).json({
-                message: 'Only pending transfers can be withdrawn.'
-            });
+            throw Object.assign(new Error('Only pending transfers can be withdrawn.'), { statusCode: 400 });
         }
 
         // Update transfer
@@ -584,17 +572,18 @@ router.post('/:id/withdraw', async (req, res) => {
         } catch (notifError) {
             console.error('[Withdraw Transfer] Notification error:', notifError.message);
         }
+        });
 
-        await session.commitTransaction();
         res.status(200).json({
             message: 'Transfer withdrawn successfully.',
             transfer
         });
 
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession(); // Ensure session is ended on error
         console.error('Error withdrawing transfer:', error);
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         res.status(500).json({
             message: 'Internal server error while withdrawing transfer.'
         });
