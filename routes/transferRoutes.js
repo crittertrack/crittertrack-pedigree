@@ -25,82 +25,86 @@ router.get('/', async (req, res) => {
 
 // POST /api/transfers - Initiate a new transfer request
 router.post('/', async (req, res) => {
-    const session = await mongoose.startSession(); // Start a session
-    session.startTransaction(); // Start a transaction
+    const session = await mongoose.startSession();
+    let createdTransfer;
     try {
-        const { animalId_public, toUserId, price, notes } = req.body;
-        const fromUserId = req.user.id; // Assuming req.user.id is reliably populated by authentication middleware
+        // withTransaction auto-retries the whole callback on transient errors (e.g. the
+        // WriteConflict/TransientTransactionError seen when this animal is being saved
+        // concurrently by another request), instead of failing on the first conflict.
+        await session.withTransaction(async () => {
+            const { animalId_public, toUserId, price, notes } = req.body;
+            const fromUserId = req.user.id; // Assuming req.user.id is reliably populated by authentication middleware
 
-        // 1. Verify animal exists and belongs to the sender
-        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: fromUserId });
-        if (!animal) {
-            await session.abortTransaction(); // Abort transaction on error
-            return res.status(404).json({ message: 'Animal not found or you are not the owner.' });
-        }
+            // 1. Verify animal exists and belongs to the sender
+            const animal = await Animal.findOne({ id_public: animalId_public, creatorId: fromUserId }).session(session);
+            if (!animal) {
+                throw Object.assign(new Error('Animal not found or you are not the owner.'), { statusCode: 404 });
+            }
 
-        // --- NEW: Prevent duplicate pending transfers for this animal ---
-        // Assuming Animal model has a 'pendingTransferId' field (ObjectId)
-        if (animal.pendingTransferId) {
-            await session.abortTransaction(); // Abort transaction on error
-            return res.status(409).json({ message: 'This animal already has a pending transfer request.' });
-        }
-        // --- END NEW ---
+            // --- NEW: Prevent duplicate pending transfers for this animal ---
+            // Assuming Animal model has a 'pendingTransferId' field (ObjectId)
+            if (animal.pendingTransferId) {
+                throw Object.assign(new Error('This animal already has a pending transfer request.'), { statusCode: 409 });
+            }
+            // --- END NEW ---
 
-        // 2. Create the Transfer Record
-        const transferType = req.body.transferType || 'gift'; // Ensure transferType is set
+            // 2. Create the Transfer Record
+            const transferType = req.body.transferType || 'gift'; // Ensure transferType is set
 
-        const transfer = await AnimalTransfer.create([{
-            fromUserId,
-            toUserId,
-            animalId_public,
-            price: price || 0,
-            notes: notes || '',
-            status: 'pending',
-            transferType: transferType,
-            type: 'ownership', // Explicitly set type for new ownership transfers
-        }], { session });
-        const createdTransfer = transfer[0]; // Get the created document
-
-        // --- NEW: Update animal with pendingTransferId ---
-        animal.pendingTransferId = createdTransfer._id; // Set pendingTransferId
-        await animal.save({ session }); // Save animal within the session
-        // --- END NEW ---
-
-        // 3. Create Notification for the Recipient
-        const sender = await User.findById(fromUserId).select('personalName breederName').session(session); // Pass session
-        const senderName = sender?.breederName || sender?.personalName || 'A CritterTrack User';
-        
-        // Get recipient's public ID
-        const recipient = await User.findById(toUserId).select('id_public').session(session);
-        const recipientPublicId = recipient?.id_public || '';
-
-        try {
-            await Notification.create([{ // Create with array for session
-                userId: toUserId,
-                userId_public: recipientPublicId,
-                type: 'transfer_request',
-                status: 'pending',
+            const transfer = await AnimalTransfer.create([{
+                fromUserId,
+                toUserId,
                 animalId_public,
-                animalName: animal.name,
-                animalImageUrl: animal.imageUrl || '',
-                transferId: createdTransfer._id,
-                message: `${senderName} wants to transfer ${animal.name} (${animalId_public}) to you.`,
-                metadata: {
-                    transferId: createdTransfer._id,
-                    animalId: animalId_public,
-                    price: price || 0
-                }
+                price: price || 0,
+                notes: notes || '',
+                status: 'pending',
+                transferType: transferType,
+                type: 'ownership', // Explicitly set type for new ownership transfers
             }], { session });
-            console.log('[Transfer Create] Notification created for recipient:', recipientPublicId);
-        } catch (notifError) {
-            console.error('[Transfer Create] Failed to create notification:', notifError.message);
-            // Don't abort - notification is secondary to transfer
-        }
+            createdTransfer = transfer[0]; // Get the created document
 
-        await session.commitTransaction(); // Commit the transaction
+            // --- NEW: Update animal with pendingTransferId ---
+            animal.pendingTransferId = createdTransfer._id; // Set pendingTransferId
+            await animal.save({ session }); // Save animal within the session
+            // --- END NEW ---
+
+            // 3. Create Notification for the Recipient
+            const sender = await User.findById(fromUserId).select('personalName breederName').session(session); // Pass session
+            const senderName = sender?.breederName || sender?.personalName || 'A CritterTrack User';
+
+            // Get recipient's public ID
+            const recipient = await User.findById(toUserId).select('id_public').session(session);
+            const recipientPublicId = recipient?.id_public || '';
+
+            try {
+                await Notification.create([{ // Create with array for session
+                    userId: toUserId,
+                    userId_public: recipientPublicId,
+                    type: 'transfer_request',
+                    status: 'pending',
+                    animalId_public,
+                    animalName: animal.name,
+                    animalImageUrl: animal.imageUrl || '',
+                    transferId: createdTransfer._id,
+                    message: `${senderName} wants to transfer ${animal.name} (${animalId_public}) to you.`,
+                    metadata: {
+                        transferId: createdTransfer._id,
+                        animalId: animalId_public,
+                        price: price || 0
+                    }
+                }], { session });
+                console.log('[Transfer Create] Notification created for recipient:', recipientPublicId);
+            } catch (notifError) {
+                console.error('[Transfer Create] Failed to create notification:', notifError.message);
+                // Don't abort - notification is secondary to transfer
+            }
+        });
+
         res.status(201).json({ message: 'Transfer request sent successfully.', transfer: createdTransfer });
     } catch (error) {
-        await session.abortTransaction(); // Abort transaction on error
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         console.error('Error creating transfer:', error);
         res.status(500).json({ message: 'Internal server error while creating transfer.' });
     } finally {
