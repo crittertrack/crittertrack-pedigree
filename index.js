@@ -452,6 +452,34 @@ app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
     }
 });
 
+// General (standalone, not animal/enclosure-linked) Feeding & Care tasks
+app.get('/api/users/general-tasks', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('generalCareTasks').lean();
+        res.json({ generalCareTasks: user?.generalCareTasks || [] });
+    } catch (error) {
+        console.error('Error fetching general tasks:', error);
+        res.status(500).json({ message: 'Failed to fetch general tasks' });
+    }
+});
+
+app.put('/api/users/general-tasks', authMiddleware, async (req, res) => {
+    try {
+        const { generalCareTasks } = req.body;
+        if (!Array.isArray(generalCareTasks)) {
+            return res.status(400).json({ message: 'Invalid data format' });
+        }
+        if (generalCareTasks.length > 100) {
+            return res.status(400).json({ message: 'Maximum 100 general tasks allowed' });
+        }
+        await User.findByIdAndUpdate(req.user.id, { $set: { generalCareTasks } });
+        res.json({ message: 'General tasks saved' });
+    } catch (error) {
+        console.error('Error saving general tasks:', error);
+        res.status(500).json({ message: 'Failed to save general tasks' });
+    }
+});
+
 // Dismiss profile setup guide
 app.post('/api/users/dismiss-profile-setup-guide', authMiddleware, async (req, res) => {
     try {

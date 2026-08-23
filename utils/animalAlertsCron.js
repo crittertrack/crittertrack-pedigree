@@ -2,7 +2,7 @@
 // These items are NOT persisted as Notification documents (they're derived/computed, not events),
 // so this bypasses the Notification model entirely and pushes directly via sendPushToUser.
 const cron = require('node-cron');
-const { Animal, Litter, Enclosure, SupplyItem, SystemSettings } = require('../database/models');
+const { Animal, Litter, Enclosure, SupplyItem, SystemSettings, User } = require('../database/models');
 const { sendPushToUser } = require('./pushService');
 
 const LAST_RUN_KEY = 'animalAlertsCron_lastRunDate';
@@ -111,6 +111,16 @@ const runAnimalAlertsCheck = async () => {
         if (!e.creatorId) return;
         const due = (e.cleaningTasks || []).filter((t) => isTaskDue(t.lastDoneDate, cleaningTaskFreqDays(t))).length;
         bump(counts, e.creatorId, 'enclosureCare', due);
+    });
+
+    // --- Standalone (not animal/enclosure-linked) general Feeding & Care tasks ---
+    const usersWithGeneralTasks = await User.find({ 'generalCareTasks.0': { $exists: true } }).select('generalCareTasks').lean();
+    usersWithGeneralTasks.forEach((u) => {
+        (u.generalCareTasks || []).forEach((t) => {
+            if (!isTaskDue(t.lastDoneDate, cleaningTaskFreqDays(t))) return;
+            const category = t.type === 'Feeding' ? 'feeding' : t.type === 'Cleaning' || t.type === 'Maintenance' ? 'enclosureCare' : 'careTasks';
+            bump(counts, u._id, category, 1);
+        });
     });
 
     // --- Litters: planned mating date reached, due date reached, weaning date reached ---

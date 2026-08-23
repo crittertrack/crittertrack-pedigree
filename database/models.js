@@ -180,6 +180,24 @@ const PublicProfileSchema = new mongoose.Schema({
     speciesFavorites: { type: [String], default: [] }, // User's favorite species (starred)
     breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
     animalBreedingLines: { type: mongoose.Schema.Types.Mixed, default: {} }, // { animalId_public: [lineIds] }
+
+    // Standalone Feeding & Care tasks not tied to any single animal or enclosure — e.g.
+    // "Feed the mouse colony" so a user with 100+ animals gets ONE recurring reminder instead
+    // of maintaining/receiving 100 separate per-animal feeding schedules.
+    generalCareTasks: [{
+        id: { type: String, default: null },
+        taskName: { type: String, required: true, trim: true },
+        type: { type: String, enum: ['Feeding', 'Cleaning', 'Maintenance', 'Other'], default: 'Feeding' },
+        notes: { type: String, default: null },
+        lastDoneDate: { type: Date, default: null },
+        frequency: { type: Number, default: null },
+        frequencyUnit: { type: String, enum: ['days', 'weeks', 'months', 'years'], default: 'days' },
+        lastSkipped: { type: Boolean, default: false },
+        // Optional, informational-only list of animals this task applies to (e.g. "the mouse
+        // colony") — does NOT create per-animal due-dates/notifications, purely for display/
+        // filtering context on an otherwise fully standalone task.
+        assignedAnimals: { type: [String], default: [] }, // id_public values
+    }],
     
     // Donation badge fields
     monthlyDonationActive: { type: Boolean, default: false },  // Monthly supporter badge (diamond)
