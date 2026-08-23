@@ -17,6 +17,17 @@ router.use(protect);
 const avkRecomputeInFlight = new Set();
 const AVK_RECOMPUTE_COOLDOWN_MS = 10 * 60 * 1000;
 
+// The per-animal guard above only stops the SAME animal's recompute from overlapping itself —
+// it does nothing to stop DIFFERENT animals (opened by different users/tabs) from all recomputing
+// at once. Each job traverses the full pedigree of every animal in the owner's same-species
+// population, so a handful of concurrent jobs server-wide was enough to starve the DB connection
+// pool for EVERY request (not just inbreeding), matching the site-wide slowness reported since AVK
+// shipped. Cap how many of these background jobs may run at the same time across the whole
+// process; anything over the cap is simply skipped for now (it'll retry on the next /inbreeding
+// fetch once cooldown allows), rather than queued, to avoid unbounded backlog buildup.
+let avkActiveCount = 0;
+const AVK_MAX_CONCURRENT = 1;
+
 // GET /api/animals - Get all animals for the user, with filtering
 router.get('/', async (req, res) => {
     try {
@@ -664,8 +675,9 @@ router.get('/:id_public/inbreeding', async (req, res) => {
                 const recentlyComputed = targetAnimal.avkComputedAt &&
                     (Date.now() - new Date(targetAnimal.avkComputedAt).getTime()) < AVK_RECOMPUTE_COOLDOWN_MS;
 
-                if (!avkRecomputeInFlight.has(id_public) && !recentlyComputed) {
+                if (!avkRecomputeInFlight.has(id_public) && !recentlyComputed && avkActiveCount < AVK_MAX_CONCURRENT) {
                     avkRecomputeInFlight.add(id_public);
+                    avkActiveCount++;
                     // Fire-and-forget recompute; intentionally not awaited.
                     (async () => {
                         try {
@@ -679,6 +691,7 @@ router.get('/:id_public/inbreeding', async (req, res) => {
                             console.error(`[ANIMALS] Background AVK recompute failed for ${id_public}:`, bgError);
                         } finally {
                             avkRecomputeInFlight.delete(id_public);
+                            avkActiveCount--;
                         }
                     })();
                 }
