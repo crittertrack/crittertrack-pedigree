@@ -2,7 +2,7 @@
 // These items are NOT persisted as Notification documents (they're derived/computed, not events),
 // so this bypasses the Notification model entirely and pushes directly via sendPushToUser.
 const cron = require('node-cron');
-const { Animal, Litter, Enclosure, SupplyItem, SystemSettings, User } = require('../database/models');
+const { Animal, Litter, Enclosure, SupplyItem, SystemSettings, PublicProfile } = require('../database/models');
 const { sendPushToUser } = require('./pushService');
 
 const LAST_RUN_KEY = 'animalAlertsCron_lastRunDate';
@@ -114,12 +114,14 @@ const runAnimalAlertsCheck = async () => {
     });
 
     // --- Standalone (not animal/enclosure-linked) general Feeding & Care tasks ---
-    const usersWithGeneralTasks = await User.find({ 'generalCareTasks.0': { $exists: true } }).select('generalCareTasks').lean();
-    usersWithGeneralTasks.forEach((u) => {
-        (u.generalCareTasks || []).forEach((t) => {
+    // generalCareTasks lives on PublicProfile (keyed by userId_backend), not on User.
+    const profilesWithGeneralTasks = await PublicProfile.find({ 'generalCareTasks.0': { $exists: true } }).select('userId_backend generalCareTasks').lean();
+    profilesWithGeneralTasks.forEach((p) => {
+        if (!p.userId_backend) return;
+        (p.generalCareTasks || []).forEach((t) => {
             if (!isTaskDue(t.lastDoneDate, cleaningTaskFreqDays(t))) return;
             const category = t.type === 'Feeding' ? 'feeding' : t.type === 'Cleaning' || t.type === 'Maintenance' ? 'enclosureCare' : 'careTasks';
-            bump(counts, u._id, category, 1);
+            bump(counts, p.userId_backend, category, 1);
         });
     });
 
