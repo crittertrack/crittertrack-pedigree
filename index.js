@@ -453,10 +453,12 @@ app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
 });
 
 // General (standalone, not animal/enclosure-linked) Feeding & Care tasks
+// NOTE: generalCareTasks is declared on PublicProfileSchema, not UserSchema — must use PublicProfile here.
 app.get('/api/users/general-tasks', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('generalCareTasks').lean();
-        res.json({ generalCareTasks: user?.generalCareTasks || [] });
+        const { PublicProfile } = require('./database/models');
+        const userProfile = await PublicProfile.findOne({ userId_backend: req.user.id }).select('generalCareTasks').lean();
+        res.json({ generalCareTasks: userProfile?.generalCareTasks || [] });
     } catch (error) {
         console.error('Error fetching general tasks:', error);
         res.status(500).json({ message: 'Failed to fetch general tasks' });
@@ -465,6 +467,7 @@ app.get('/api/users/general-tasks', authMiddleware, async (req, res) => {
 
 app.put('/api/users/general-tasks', authMiddleware, async (req, res) => {
     try {
+        const { PublicProfile } = require('./database/models');
         const { generalCareTasks } = req.body;
         if (!Array.isArray(generalCareTasks)) {
             return res.status(400).json({ message: 'Invalid data format' });
@@ -472,7 +475,11 @@ app.put('/api/users/general-tasks', authMiddleware, async (req, res) => {
         if (generalCareTasks.length > 100) {
             return res.status(400).json({ message: 'Maximum 100 general tasks allowed' });
         }
-        await User.findByIdAndUpdate(req.user.id, { $set: { generalCareTasks } });
+        const userProfile = await PublicProfile.findOneAndUpdate(
+            { userId_backend: req.user.id },
+            { $set: { generalCareTasks } }
+        );
+        if (!userProfile) return res.status(404).json({ message: 'User profile not found' });
         res.json({ message: 'General tasks saved' });
     } catch (error) {
         console.error('Error saving general tasks:', error);
