@@ -53,6 +53,7 @@ const buildPublicAnimalFields = (a) => ({
     originalBreederName: a.originalBreederName || null,
     remarks: a.remarks || '',
     geneticCode: a.geneticCode || null,
+    possibleHets: a.possibleHets || [],
     isDisplay: a.isDisplay || false,
     microchipNumber: a.microchipNumber || '',
     pedigreeRegistrationId: a.pedigreeRegistrationId || '',

@@ -383,6 +383,12 @@ const AnimalSchema = new mongoose.Schema({
     // SENSITIVE/OPTIONAL DATA (Default to private)
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
+    // Unconfirmed/probability-based het status (e.g. "66% Het Clown"), separate from the
+    // confirmed genotype in geneticCode — doesn't affect phenotype, purely a breeding-record note.
+    possibleHets: [{
+        locus: { type: String, required: true },
+        percent: { type: Number, required: true },
+    }],
     
     // Tab 2: Ownership Fields
     manualownerName: { type: String, default: null }, // Free-text keeper/custodian name
@@ -800,6 +806,10 @@ const PublicAnimalSchema = new mongoose.Schema({
     // SENSITIVE/OPTIONAL DATA (Copied if toggled on)
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
+    possibleHets: [{
+        locus: { type: String, required: true },
+        percent: { type: Number, required: true },
+    }],
     
     // Identification fields
     microchipNumber: { type: String, default: null },
