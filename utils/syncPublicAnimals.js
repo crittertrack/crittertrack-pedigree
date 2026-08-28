@@ -24,7 +24,6 @@ const buildPublicAnimalFields = (a) => ({
     status: a.status || null,
     lifeStage: a.lifeStage || null,
     carrierTraits: a.carrierTraits || null,
-    morph: a.morph || null,
     markings: a.markings || null,
     eyeColor: a.eyeColor || null,
     body: a.body || null,

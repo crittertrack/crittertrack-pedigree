@@ -412,7 +412,6 @@ const AnimalSchema = new mongoose.Schema({
     markings: { type: String, default: null }, // Body markings/patterns (formerly "coatPattern")
     lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     // Universal animal appearance fields
-    morph: { type: String, default: null }, // Mutation/Morph (esp. reptiles/invertebrates)
     eyeColor: { type: String, default: null }, // Eye color
     body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. — formerly "size")
     carrierTraits: { type: String, default: null }, // Genetics calculator: recessive/het traits carried
@@ -770,7 +769,6 @@ const PublicAnimalSchema = new mongoose.Schema({
     lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
-    morph: { type: String, default: null },
     eyeColor: { type: String, default: null },
     body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. — formerly "size")
     // Current measurements

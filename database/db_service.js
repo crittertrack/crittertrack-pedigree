@@ -119,7 +119,6 @@ const ANIMAL_TEXT_FIELDS = {
     heatStatus: 'heat status',
     matingDates: 'mating dates',
     // Universal appearance fields
-    morph: 'morph',
     markings: 'markings',
     eyeColor: 'eye color',
     body: 'body',
@@ -976,7 +975,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           'breederId_public manualBreederName viewOnlyForUsers hiddenForUsers breederAssignedId enclosureId ' +
           'medicalConditions medications healthStatus healthStatusOverride ' +
           'quarantineDetails quarantineHistory ' +
-          'color coat earset morph markings eyeColor size carrierTraits geneticCode lifeStage ' +
+          'color coat earset markings eyeColor size carrierTraits geneticCode lifeStage ' +
           'ringId eartagNumber ' +
           // Feeding & Care management view (Feeding, Scheduled Care, Grooming & Special Care, Training clusters)
           'lastFedDate feedingIntervalHours dietType animalCareTasks ' +
@@ -1077,7 +1076,6 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     // Debug: Log appearance fields being returned
     console.log(`[getAnimalByIdAndUser] Returning animal ${animal.id_public} with appearance fields:`, {
         body: animal.body,
-        morph: animal.morph,
         markings: animal.markings,
         eyeColor: animal.eyeColor,
         weight: animal.weight,
@@ -1235,7 +1233,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         breedingRecords: updates.breedingRecords ? `${Array.isArray(updates.breedingRecords) ? updates.breedingRecords.length : 'invalid format'} record(s)` : 'none',
         isDisplay: updates.isDisplay,
         body: updates.body,
-        morph: updates.morph,
         markings: updates.markings,
         eyeColor: updates.eyeColor,
         weight: updates.weight,
@@ -1322,7 +1319,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     });
     console.log('[updateAnimal] ✅ Appearance fields SAVED to database:', {
         body: updatedAnimal.body,
-        morph: updatedAnimal.morph,
         markings: updatedAnimal.markings,
         eyeColor: updatedAnimal.eyeColor,
         weight: updatedAnimal.weight,
@@ -1478,7 +1474,7 @@ const getArchivedAndSoldAnimals = async (appUserId_backend) => {
     const archiveSlimFields = 'id_public creatorId creatorId_public originalCreatorId name prefix suffix ' +
         'species gender birthDate imageUrl photoUrl status archived soldStatus manualownerName ' +
         'sireId_public damId_public viewOnlyForUsers hiddenForUsers ' +
-        'color coat morph markings';
+        'color coat markings';
 
     // 1. Fetch archived animals owned by the user
     const archived = await Animal.find({

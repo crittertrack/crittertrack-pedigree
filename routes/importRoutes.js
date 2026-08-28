@@ -124,7 +124,7 @@ const ANIMAL_SAFE = new Set([
     'animalCareTasks','tags','imageUrl','photoUrl','extraImages',
     'sireId_public','damId_public',
     'remarks','geneticCode','manualownerName','groupRole','keeperHistory',
-    'lifeStage','carrierTraits','morph','markings',
+    'lifeStage','carrierTraits','markings',
     'eyeColor','body','weight','length','heightAtWithers','bodyLength',
     'chestGirth','bodyConditionScore',
     'microchipNumber','pedigreeRegistrationId','colonyId','breed','strain',
