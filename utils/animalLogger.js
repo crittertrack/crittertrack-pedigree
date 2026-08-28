@@ -30,7 +30,7 @@ const FIELD_LABELS = {
     morph: 'Morph',
     markings: 'Markings',
     eyeColor: 'Eye Color',
-    size: 'Size',
+    body: 'Body',
     breed: 'Breed',
     strain: 'Strain',
     geneticCode: 'Genetic Code',

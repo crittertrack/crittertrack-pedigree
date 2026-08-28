@@ -414,7 +414,7 @@ const AnimalSchema = new mongoose.Schema({
     // Universal animal appearance fields
     morph: { type: String, default: null }, // Mutation/Morph (esp. reptiles/invertebrates)
     eyeColor: { type: String, default: null }, // Eye color
-    size: { type: String, default: null }, // General size description (Small, Medium, Large, etc.)
+    body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. — formerly "size")
     carrierTraits: { type: String, default: null }, // Genetics calculator: recessive/het traits carried
     // Current measurements (snapshot - growth records track history)
     weight: { type: String, default: null }, // Current weight
@@ -772,7 +772,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     // Universal animal appearance fields
     morph: { type: String, default: null },
     eyeColor: { type: String, default: null },
-    size: { type: String, default: null }, // General size description (Small, Medium, Large, etc.)
+    body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. — formerly "size")
     // Current measurements
     weight: { type: String, default: null },
     length: { type: String, default: null },

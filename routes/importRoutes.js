@@ -125,7 +125,7 @@ const ANIMAL_SAFE = new Set([
     'sireId_public','damId_public',
     'remarks','geneticCode','manualownerName','groupRole','keeperHistory',
     'lifeStage','carrierTraits','morph','markings',
-    'eyeColor','size','weight','length','heightAtWithers','bodyLength',
+    'eyeColor','body','weight','length','heightAtWithers','bodyLength',
     'chestGirth','bodyConditionScore',
     'microchipNumber','pedigreeRegistrationId','colonyId','breed','strain',
     'licenseNumber','licenseJurisdiction','tattooId','ringId','eartagNumber',

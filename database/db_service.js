@@ -122,7 +122,7 @@ const ANIMAL_TEXT_FIELDS = {
     morph: 'morph',
     markings: 'markings',
     eyeColor: 'eye color',
-    size: 'size',
+    body: 'body',
     weight: 'weight',
     length: 'length',
     carrierTraits: 'carrier traits'
@@ -1076,7 +1076,7 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
     }
     // Debug: Log appearance fields being returned
     console.log(`[getAnimalByIdAndUser] Returning animal ${animal.id_public} with appearance fields:`, {
-        size: animal.size,
+        body: animal.body,
         morph: animal.morph,
         markings: animal.markings,
         eyeColor: animal.eyeColor,
@@ -1234,7 +1234,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         parasiteControl: Array.isArray(updates.parasiteControl) ? `${updates.parasiteControl.length} records` : 'not an array or null',
         breedingRecords: updates.breedingRecords ? `${Array.isArray(updates.breedingRecords) ? updates.breedingRecords.length : 'invalid format'} record(s)` : 'none',
         isDisplay: updates.isDisplay,
-        size: updates.size,
+        body: updates.body,
         morph: updates.morph,
         markings: updates.markings,
         eyeColor: updates.eyeColor,
@@ -1243,10 +1243,10 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }));
     
     console.log('[updateAnimal] Full updates object keys:', Object.keys(updates));
-    console.log('[updateAnimal] Size field specifically:', { 
-        hasSize: 'size' in updates, 
-        sizeValue: updates.size,
-        sizeType: typeof updates.size 
+    console.log('[updateAnimal] Body field specifically:', { 
+        hasBody: 'body' in updates, 
+        bodyValue: updates.body,
+        bodyType: typeof updates.body 
     });
     
     // Debug breeding records specifically
@@ -1295,7 +1295,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
     await notifyLinkageChanges(appUserId_backend, originalAnimal, updatedAnimal);
     
-    console.log('[updateAnimal] MongoDB returned document with size:', updatedAnimal.size);
+    console.log('[updateAnimal] MongoDB returned document with body:', updatedAnimal.body);
     
     // Debug breeding records that were saved
     console.log('[updateAnimal] 🔍 Breeding records SAVED to database:', {
@@ -1321,7 +1321,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         hasParasiteControl: !!updatedAnimal.parasiteControl
     });
     console.log('[updateAnimal] ✅ Appearance fields SAVED to database:', {
-        size: updatedAnimal.size,
+        body: updatedAnimal.body,
         morph: updatedAnimal.morph,
         markings: updatedAnimal.markings,
         eyeColor: updatedAnimal.eyeColor,

@@ -27,7 +27,7 @@ const buildPublicAnimalFields = (a) => ({
     morph: a.morph || null,
     markings: a.markings || null,
     eyeColor: a.eyeColor || null,
-    size: a.size || null,
+    body: a.body || null,
     weight: a.weight || null,
     length: a.length || null,
     breederId_public: a.breederId_public || null,
