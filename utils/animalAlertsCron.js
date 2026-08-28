@@ -95,7 +95,12 @@ const runAnimalAlertsCheck = async () => {
         bump(counts, a.creatorId, 'careTasks', careTaskCount);
 
         let healthCount = 0;
-        if (a.quarantineDetails?.endDate && daysSince(a.quarantineDetails.endDate) >= 0) healthCount += 1;
+        // Only count a passed quarantine end date while quarantine is still marked active —
+        // once a user ends it, status resets to 'None' but endDate is deliberately kept as the
+        // "ended on" record for the health timeline (see AnimalFormModalV2.jsx), so checking
+        // endDate alone fired this every single day forever for any animal that ever finished one.
+        const quarantineActive = a.quarantineDetails?.status && a.quarantineDetails.status !== 'None';
+        if (quarantineActive && a.quarantineDetails?.endDate && daysSince(a.quarantineDetails.endDate) >= 0) healthCount += 1;
         const status = a.healthStatusOverride || a.healthStatus;
         if (HEALTH_STATUSES_OF_CONCERN.includes(status)) healthCount += 1;
         healthCount += (a.medications || [])
