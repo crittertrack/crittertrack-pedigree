@@ -112,7 +112,11 @@ app.use(helmet());
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    // Cache-Control/Pragma are sent by the Marketplace fetch (to bypass caching) — must be
+    // explicitly allowed or the CORS preflight fails. This only matters for the native
+    // Android app, which calls the API cross-origin; the web app is same-origin (via the
+    // Vercel proxy rewrite) so it never triggers a preflight at all.
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma'],
 }));
 
 // PayPal webhook must receive raw body for signature verification — register BEFORE bodyParser.json()
