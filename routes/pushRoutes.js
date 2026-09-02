@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { User, Animal, Litter, Enclosure, SupplyItem, PublicProfile } = require('../database/models');
-const { PUSH_CATEGORIES } = require('../utils/pushService');
+const { PUSH_CATEGORIES, sendPushToUser } = require('../utils/pushService');
 const {
     daysSince, isTaskDue, isFeedingDue, cleaningTaskFreqDays, calcNextDose,
     SCHEDULE_FIELD_KEYS, HEALTH_STATUSES_OF_CONCERN,
@@ -128,6 +128,28 @@ router.post('/unregister-device', async (req, res) => {
     } catch (error) {
         console.error('Error unregistering device token:', error);
         res.status(500).json({ message: 'Failed to unregister device.' });
+    }
+});
+
+// POST /api/push/test-self — TEMPORARY: sends a test push to only the caller's most-recently
+// registered device token, to isolate delivery testing per-app. Remove after verification.
+router.post('/test-self', async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('_id id_public deviceTokens');
+        const targetToken = user.deviceTokens[user.deviceTokens.length - 1];
+        if (!targetToken) return res.status(400).json({ message: 'No device tokens registered.' });
+
+        const scopedUser = { ...user.toObject(), deviceTokens: [targetToken] };
+        await sendPushToUser(scopedUser, {
+            title: 'CritterTrack test push (full app)',
+            body: 'This one is for the full CritterTrack app, not Lite.',
+            url: '/',
+            tag: 'test-push-full',
+        }, 'system');
+        res.status(200).json({ message: 'Test push sent.', tokenCreatedAt: targetToken.createdAt });
+    } catch (error) {
+        console.error('Error sending test push:', error);
+        res.status(500).json({ message: 'Failed to send test push.' });
     }
 });
 
