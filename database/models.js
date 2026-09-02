@@ -54,6 +54,12 @@ const UserSchema = new mongoose.Schema({
         userAgent: { type: String, default: null },
         createdAt: { type: Date, default: Date.now }
     }],
+    // Native (FCM) push tokens — one per installed native app instance (e.g. CritterTrack Lite on Android)
+    deviceTokens: [{
+        token: { type: String, required: true },
+        platform: { type: String, enum: ['android', 'ios'], default: 'android' },
+        createdAt: { type: Date, default: Date.now }
+    }],
     // Per-category push notification opt-out (missing key = enabled by default)
     pushCategoryPreferences: { type: Map, of: Boolean, default: {} },
     // Email notification preferences

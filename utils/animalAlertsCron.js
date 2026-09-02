@@ -214,4 +214,10 @@ const startAnimalAlertsCron = () => {
     console.log('[animalAlertsCron] Scheduled (checks hourly, sends once/day after 09:00 UTC).');
 };
 
-module.exports = { startAnimalAlertsCron, runAnimalAlertsCheck };
+module.exports = {
+    startAnimalAlertsCron, runAnimalAlertsCheck,
+    // Exported so routes (e.g. the bell-icon alert-count endpoint) can reuse the exact same
+    // due-date/frequency logic instead of re-implementing it and risking drift.
+    daysSince, isTaskDue, isFeedingDue, cleaningTaskFreqDays, calcNextDose,
+    SCHEDULE_FIELD_KEYS, HEALTH_STATUSES_OF_CONCERN,
+};

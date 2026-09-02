@@ -1,4 +1,5 @@
 const webpush = require('web-push');
+const admin = require('firebase-admin');
 
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
@@ -10,6 +11,21 @@ if (vapidPublicKey && vapidPrivateKey) {
     vapidConfigured = true;
 } else {
     console.warn('[push] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY not set — push notifications are disabled.');
+}
+
+// Native push (FCM) for Capacitor apps (e.g. CritterTrack Lite) — separate from the VAPID/web-push
+// setup above, which only delivers to browser PushSubscriptions.
+let fcmConfigured = false;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+        fcmConfigured = true;
+    } catch (err) {
+        console.error('[push] Failed to initialize firebase-admin from FIREBASE_SERVICE_ACCOUNT:', err.message || err);
+    }
+} else {
+    console.warn('[push] FIREBASE_SERVICE_ACCOUNT not set — native (FCM) push notifications are disabled.');
 }
 
 // Maps every Notification.type enum value to a user-facing preference category.
@@ -69,36 +85,63 @@ const isCategoryEnabled = (user, category) => {
  * push service reports as gone (404/410).
  */
 const sendPushToUser = async (userOrId, payload, category = 'other') => {
-    if (!vapidConfigured) return;
-
     const { User } = require('../database/models');
     // Accept either a raw id (string/ObjectId) or an already-loaded user doc that includes pushSubscriptions
     const user = Array.isArray(userOrId?.pushSubscriptions)
         ? userOrId
-        : await User.findById(userOrId).select('pushSubscriptions pushCategoryPreferences');
+        : await User.findById(userOrId).select('pushSubscriptions deviceTokens pushCategoryPreferences');
 
-    if (!user || !Array.isArray(user.pushSubscriptions) || user.pushSubscriptions.length === 0) return;
+    const hasWebPush = vapidConfigured && Array.isArray(user?.pushSubscriptions) && user.pushSubscriptions.length > 0;
+    const hasFcm = fcmConfigured && Array.isArray(user?.deviceTokens) && user.deviceTokens.length > 0;
+    if (!user || (!hasWebPush && !hasFcm)) return;
     if (!isCategoryEnabled(user, category)) return;
 
-    const body = JSON.stringify(payload);
     const staleEndpoints = [];
+    const staleTokens = [];
 
-    await Promise.all(user.pushSubscriptions.map(async (sub) => {
-        try {
-            await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, body);
-        } catch (err) {
-            if (err.statusCode === 404 || err.statusCode === 410) {
-                staleEndpoints.push(sub.endpoint);
-            } else {
-                console.error('[push] Send failed for', sub.endpoint, err.statusCode || err.message);
+    if (hasWebPush) {
+        const body = JSON.stringify(payload);
+        await Promise.all(user.pushSubscriptions.map(async (sub) => {
+            try {
+                await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, body);
+            } catch (err) {
+                if (err.statusCode === 404 || err.statusCode === 410) {
+                    staleEndpoints.push(sub.endpoint);
+                } else {
+                    console.error('[push] Send failed for', sub.endpoint, err.statusCode || err.message);
+                }
             }
-        }
-    }));
+        }));
+    }
+
+    if (hasFcm) {
+        await Promise.all(user.deviceTokens.map(async (d) => {
+            try {
+                await admin.messaging().send({
+                    token: d.token,
+                    notification: { title: payload.title, body: payload.body },
+                    data: { url: payload.url || '/', tag: payload.tag || '' },
+                });
+            } catch (err) {
+                if (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token') {
+                    staleTokens.push(d.token);
+                } else {
+                    console.error('[push] FCM send failed for', d.token, err.code || err.message);
+                }
+            }
+        }));
+    }
 
     if (staleEndpoints.length > 0) {
         await User.updateOne(
             { _id: user._id },
             { $pull: { pushSubscriptions: { endpoint: { $in: staleEndpoints } } } }
+        );
+    }
+    if (staleTokens.length > 0) {
+        await User.updateOne(
+            { _id: user._id },
+            { $pull: { deviceTokens: { token: { $in: staleTokens } } } }
         );
     }
 };
