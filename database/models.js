@@ -135,7 +135,9 @@ const UserSchema = new mongoose.Schema({
         enclosureShowUnowned: { type: Boolean, default: true },
         enclosureShowAvailable: { type: Boolean, default: true },
         enclosureShowBooked: { type: Boolean, default: true },
-        enclosureShowRehomed: { type: Boolean, default: false }
+        enclosureShowRehomed: { type: Boolean, default: false },
+        // Per-species map of hidden Animal Form tabs/sections: { [species]: { tabs: [id...], sections: [id...] } }
+        hiddenFormSections: { type: mongoose.Schema.Types.Mixed, default: {} }
     }
 });
 const User = mongoose.model('User', UserSchema);

@@ -533,6 +533,8 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
             enclosureShowAvailable,
             enclosureShowBooked,
             enclosureShowRehomed,
+            hiddenFormSectionsSpecies,
+            hiddenFormSections,
         } = req.body;
 
         const allowed = ['list', 'collections', 'management'];
@@ -551,6 +553,15 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
         if (enclosureShowRehomed !== undefined && typeof enclosureShowRehomed !== 'boolean') {
             return res.status(400).json({ message: 'Invalid enclosureShowRehomed value' });
         }
+        if (hiddenFormSections !== undefined) {
+            if (typeof hiddenFormSectionsSpecies !== 'string' || !hiddenFormSectionsSpecies.trim()) {
+                return res.status(400).json({ message: 'hiddenFormSectionsSpecies is required with hiddenFormSections' });
+            }
+            if (typeof hiddenFormSections !== 'object' || hiddenFormSections === null ||
+                !Array.isArray(hiddenFormSections.tabs) || !Array.isArray(hiddenFormSections.sections)) {
+                return res.status(400).json({ message: 'Invalid hiddenFormSections value' });
+            }
+        }
 
         const update = {};
         if (defaultAnimalView !== undefined) {
@@ -567,6 +578,14 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
         }
         if (enclosureShowRehomed !== undefined) {
             update['uiPreferences.enclosureShowRehomed'] = enclosureShowRehomed;
+        }
+        if (hiddenFormSections !== undefined) {
+            // Species is used as a nested Mixed-map key — sanitize to block dot-path injection (e.g. "$set"-style keys).
+            const speciesKey = hiddenFormSectionsSpecies.trim().replace(/[.$]/g, '');
+            update[`uiPreferences.hiddenFormSections.${speciesKey}`] = {
+                tabs: hiddenFormSections.tabs.filter(v => typeof v === 'string'),
+                sections: hiddenFormSections.sections.filter(v => typeof v === 'string'),
+            };
         }
 
         if (Object.keys(update).length === 0) {

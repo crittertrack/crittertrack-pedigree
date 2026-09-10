@@ -444,6 +444,7 @@ const getUserProfileById = async (appUserId_backend) => {
             enclosureShowAvailable: user.uiPreferences?.enclosureShowAvailable !== false,
             enclosureShowBooked: user.uiPreferences?.enclosureShowBooked !== false,
             enclosureShowRehomed: user.uiPreferences?.enclosureShowRehomed === true,
+            hiddenFormSections: user.uiPreferences?.hiddenFormSections || {},
         },
     };
 };
