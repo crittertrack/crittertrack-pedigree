@@ -1879,6 +1879,25 @@ FavoriteSchema.index({ userId: 1, itemType: 1, itemId: 1 }, { unique: true });
 
 const Favorite = mongoose.model('Favorite', FavoriteSchema);
 
+// --- KO-FI PLEDGE SCHEMA (iOS fundraiser live total + supporter credits) ---
+const KofiPledgeSchema = new mongoose.Schema({
+    kofiEmail: { type: String, required: true, index: true }, // Ko-fi payer's email; the upsert key per supporter
+    idPublic: { type: String, default: null, index: true }, // matched CritterTrack account, if one was identified
+    creditName: { type: String, default: null }, // name to show in supporter credits (Ko-fi's own "From" field)
+    isPublic: { type: Boolean, default: true }, // mirrors Ko-fi's own "show my support publicly" toggle
+    tierName: { type: String, default: null },
+    amount: { type: Number, required: true },
+    currency: { type: String, default: 'EUR' },
+    isSubscription: { type: Boolean, default: false },
+    lastPaymentDate: { type: Date, default: Date.now },
+    kofiTransactionId: { type: String, default: null },
+    // 'manual' = entered by an admin for a donor outside Ko-fi (e.g. a pre-existing PayPal
+    // subscriber) — never auto-expired by the badge-expiry cron, and doesn't require a real
+    // lastPaymentDate refresh to keep counting toward the fundraiser total.
+    source: { type: String, enum: ['kofi', 'manual'], default: 'kofi' },
+}, { timestamps: true });
+const KofiPledge = mongoose.model('KofiPledge', KofiPledgeSchema);
+
 // --- HIGH-PRIORITY COMPOUND INDEXES (Audit Step 2.2) ---
 // These optimize critical security checks and frequently-accessed queries
 // Expected improvement: 40-60% faster queries for these operations
@@ -1949,4 +1968,5 @@ module.exports = {
     Favorite,
     Location,
     AppearanceFieldOption,
+    KofiPledge,
 };

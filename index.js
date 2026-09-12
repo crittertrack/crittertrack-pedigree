@@ -119,10 +119,6 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma'],
 }));
 
-// PayPal webhook must receive raw body for signature verification — register BEFORE bodyParser.json()
-const paymentRoutes = require('./routes/paymentRoutes');
-app.use('/api/payments/paypal/webhook', express.raw({ type: '*/*' }));
-
 app.use(bodyParser.json({ limit: '10mb' })); // Increase limit for base64 images
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 // Set Cross-Origin-Resource-Policy to allow cross-origin embedding of uploaded assets
@@ -139,8 +135,9 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
-// Payment routes (subscription/create works unauth; webhook raw body handled above)
-app.use('/api/payments', paymentRoutes);
+// Ko-fi webhook + public fundraiser/supporter endpoints (unauthenticated — Ko-fi calls this directly)
+const kofiRoutes = require('./routes/kofiRoutes');
+app.use('/api/kofi', kofiRoutes);
 
 // Admin routes (protected by authMiddleware and restricted by ADMIN_USER_ID)
 const legacyAdminRoutes = require('./routes/admin');
@@ -1140,5 +1137,45 @@ const matingReminderCronJob = async () => {
 // Run hourly, and once 10 s after startup
 setInterval(matingReminderCronJob, 60 * 60 * 1000);
 setTimeout(matingReminderCronJob, 10000);
+
+// --- Ko-fi Monthly Badge Expiry Cron ---
+// Ko-fi only sends a webhook on successful payments, never on cancellation, so the monthly
+// supporter badge would otherwise stay on forever once granted. This clears it for any user
+// whose most recent matched Ko-fi subscription payment has aged past the grace window.
+// Manually-tracked badges (source: 'manual', e.g. a pre-existing PayPal subscriber added by an
+// admin) are deliberately never touched here — only an admin can grant/clear those.
+const kofiBadgeExpiryCronJob = async () => {
+    try {
+        const { User, PublicProfile, KofiPledge } = require('./database/models');
+        const cutoff = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
+        const staleIdPublics = await KofiPledge.distinct('idPublic', {
+            isSubscription: true,
+            source: 'kofi',
+            lastPaymentDate: { $lt: cutoff },
+            idPublic: { $ne: null },
+        });
+        const activeIdPublics = await KofiPledge.distinct('idPublic', {
+            isSubscription: true,
+            source: 'kofi',
+            lastPaymentDate: { $gte: cutoff },
+            idPublic: { $ne: null },
+        });
+        const toExpire = staleIdPublics.filter(id => !activeIdPublics.includes(id));
+        const staleUsers = await User.find({ monthlyDonationActive: true, id_public: { $in: toExpire } }).select('id_public');
+        for (const u of staleUsers) {
+            await User.updateOne({ _id: u._id }, { monthlyDonationActive: false });
+            await PublicProfile.updateOne({ id_public: u.id_public }, { monthlyDonationActive: false });
+        }
+        if (staleUsers.length > 0) {
+            console.log(`[KO-FI BADGE EXPIRY] Cleared monthly badge for ${staleUsers.length} lapsed subscriber(s)`);
+        }
+    } catch (err) {
+        console.error('[KO-FI BADGE EXPIRY] Cron error:', err);
+    }
+};
+
+// Run every 6 hours, and once 15 s after startup
+setInterval(kofiBadgeExpiryCronJob, 6 * 60 * 60 * 1000);
+setTimeout(kofiBadgeExpiryCronJob, 15000);
 
 // Updated for mate data debug logging
