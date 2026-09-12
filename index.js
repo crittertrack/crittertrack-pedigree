@@ -969,9 +969,6 @@ app.use('/api/import/zooeasy', authMiddleware, zooeasyRoutes);
 app.use('/api/import/kintraks', authMiddleware, kintrakRoutes);
 app.use('/api/import/simplebreed', authMiddleware, simplebreedRoutes);
 
-// Payment Routes (PayPal subscription activate — requires auth; webhook registered above before bodyParser)
-app.use('/api/payments', authMiddleware, paymentRoutes);
-
 // Species Routes (GET is public, POST requires auth except migration)
 const speciesRoutes = require('./routes/speciesRoutes');
 app.use('/api/species', (req, res, next) => {
