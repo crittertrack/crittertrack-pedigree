@@ -421,6 +421,7 @@ const getUserProfileById = async (appUserId_backend) => {
         bio: user.bio,
         showBio: user.showBio !== undefined ? user.showBio : true,
         showStatsTab: user.showStatsTab !== undefined ? user.showStatsTab : true,
+        uiMode: user.uiMode || 'full',
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         warningCount: user.warningCount || 0,
@@ -580,6 +581,10 @@ const updateUserProfile = async (appUserId_backend, updates) => {
     if (updates.showStatsTab !== undefined) {
         user.showStatsTab = updates.showStatsTab;
         await PublicProfile.updateOne({ id_public: user.id_public }, { showStatsTab: updates.showStatsTab });
+    }
+    if (updates.uiMode !== undefined) {
+        if (!['full', 'lite'].includes(updates.uiMode)) throw new Error('Invalid uiMode value.');
+        user.uiMode = updates.uiMode;
     }
     
     if (updates.breederInfo !== undefined && typeof updates.breederInfo === 'object') {

@@ -130,6 +130,9 @@ const UserSchema = new mongoose.Schema({
         // Map of animal id_public -> array of collection IDs the animal belongs to
         animalMap: { type: mongoose.Schema.Types.Mixed, default: {} }
     },
+    // Full-site "Lite" mode preference — swaps the web app into a simplified UI mirroring
+    // crittertrack-lite's own scope/nav. Defaults to 'full' for all existing/new users.
+    uiMode: { type: String, enum: ['full', 'lite'], default: 'full' },
     uiPreferences: {
         defaultAnimalView: { type: String, default: 'list' },
         enclosureShowUnowned: { type: Boolean, default: true },
