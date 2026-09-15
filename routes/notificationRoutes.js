@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { Notification, User, Animal } = require('../database/models');
+const { Notification, User, Animal, Litter, PublicAnimal } = require('../database/models');
+const { syncParentReproStatus } = require('../utils/reproStatusSync');
 
 // Get all notifications for the current user
 router.get('/', async (req, res) => {
@@ -111,7 +112,7 @@ router.post('/:notificationId/approve', async (req, res) => {
         notification.read = true;
         await notification.save();
 
-        if (notification.type === 'breeder_request' || notification.type === 'parent_request') {
+        if (notification.type === 'breeder_request' || notification.type === 'owner_request' || notification.type === 'parent_request') {
             await Notification.create({
                 userId: notification.requestedBy_id,
                 userId_public: notification.requestedBy_public,
@@ -125,7 +126,7 @@ router.post('/:notificationId/approve', async (req, res) => {
                 targetAnimalId_public: notification.targetAnimalId_public,
                 // Wording matters here: the link was already applied when the request was sent,
                 // not just now — "approved" would wrongly imply it only just took effect.
-                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was acknowledged.`,
+                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.type === 'owner_request' ? 'owner' : notification.parentType} request for ${notification.animalName} was acknowledged.`,
                 read: false
             });
         }
@@ -159,17 +160,17 @@ router.post('/:notificationId/reject', async (req, res) => {
         // We only remove it here when the breeder/parent owner explicitly rejects the request.
         const animal = await Animal.findOne({ id_public: notification.animalId_public });
         
-        if (animal) {
+        if (animal && (notification.type === 'breeder_request' || notification.type === 'owner_request' || notification.type === 'parent_request')) {
             // Remove the link based on notification type
             if (notification.type === 'breeder_request') {
                 animal.breederId_public = null;
+            } else if (notification.type === 'owner_request') {
+                animal.ownerId_public = null;
             } else if (notification.type === 'parent_request') {
                 if (notification.parentType === 'sire') {
                     animal.sireId_public = null;
-                    animal.fatherId_public = null;
                 } else if (notification.parentType === 'dam') {
                     animal.damId_public = null;
-                    animal.motherId_public = null;
                 }
                 // Clearing a parent link invalidates any auto-matched litter link and the
                 // cached inbreeding coefficient, mirroring the cleanup updateAnimal() performs
@@ -185,6 +186,8 @@ router.post('/:notificationId/reject', async (req, res) => {
             if (publicAnimal) {
                 if (notification.type === 'breeder_request') {
                     publicAnimal.breederId_public = null;
+                } else if (notification.type === 'owner_request') {
+                    publicAnimal.ownerId_public = null;
                 } else if (notification.type === 'parent_request') {
                     if (notification.parentType === 'sire') {
                         publicAnimal.sireId_public = null;
@@ -208,9 +211,84 @@ router.post('/:notificationId/reject', async (req, res) => {
                 animalName: notification.animalName,
                 parentType: notification.parentType,
                 targetAnimalId_public: notification.targetAnimalId_public,
-                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.parentType} request for ${notification.animalName} was rejected and the link was removed.`,
+                message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.type === 'owner_request' ? 'owner' : notification.parentType} request for ${notification.animalName} was rejected and the link was removed.`,
                 read: false
             });
+        } else if (notification.type === 'litter_assignment') {
+            // Owner is rejecting having their animal used as a sire/dam in someone else's litter —
+            // clear the assignment on the Litter itself (the animal record has no link to clear).
+            const litterId_public = notification.metadata?.litterId_public;
+            const role = notification.parentType;
+
+            if (litterId_public && role) {
+                const litter = await Litter.findOne({ litter_id_public: litterId_public });
+                if (litter) {
+                    if (role === 'sire' && litter.sireId_public === notification.animalId_public) {
+                        litter.sireId_public = null;
+                        litter.sirePrefixName = null;
+                    } else if (role === 'dam' && litter.damId_public === notification.animalId_public) {
+                        litter.damId_public = null;
+                        litter.damPrefixName = null;
+                    }
+                    litter.inbreedingCoefficient = null;
+                    await litter.save();
+
+                    // Offspring already registered under this litter may have independently copied
+                    // this animal onto their own sireId_public/damId_public (that's a separate field
+                    // from the Litter's, populated when each offspring is created) — clear those too so
+                    // the animal actually disappears from those offspring's Pedigree tabs, not just the
+                    // Litter record.
+                    const offspringIds = litter.offspringIds_public || [];
+                    if (offspringIds.length) {
+                        const query = role === 'sire'
+                            ? { id_public: { $in: offspringIds }, sireId_public: notification.animalId_public }
+                            : { id_public: { $in: offspringIds }, damId_public: notification.animalId_public };
+                        const animalUnset = role === 'sire'
+                            ? { sireId_public: null, inbreedingCoefficient: null }
+                            : { damId_public: null, inbreedingCoefficient: null };
+                        const publicUnset = role === 'sire'
+                            ? { sireId_public: null, inbreedingCoefficient: null }
+                            : { damId_public: null, inbreedingCoefficient: null };
+                        await Animal.updateMany(query, { $set: animalUnset });
+                        await PublicAnimal.updateMany(query, { $set: publicUnset });
+
+                        // Auto-resolve any still-pending parent_request notifications for those same
+                        // offspring links so they don't linger as stale duplicates of what we just did.
+                        await Notification.updateMany(
+                            {
+                                userId,
+                                type: 'parent_request',
+                                status: 'pending',
+                                animalId_public: { $in: offspringIds },
+                                targetAnimalId_public: notification.animalId_public,
+                                parentType: role,
+                            },
+                            { $set: { status: 'rejected', read: true } }
+                        );
+                    }
+                }
+
+                try {
+                    await syncParentReproStatus(userId, [notification.animalId_public]);
+                } catch (syncErr) {
+                    console.error('Warning: failed to sync reproductive status after litter unassignment:', syncErr);
+                }
+
+                if (notification.requestedBy_id) {
+                    await Notification.create({
+                        userId: notification.requestedBy_id,
+                        userId_public: notification.requestedBy_public,
+                        type: 'litter_assignment',
+                        status: 'rejected',
+                        animalId_public: notification.animalId_public,
+                        animalName: notification.animalName,
+                        parentType: role,
+                        message: `${notification.animalName} (${notification.animalId_public}) was removed as the ${role} of litter ${litterId_public} by its owner.`,
+                        metadata: { litterId_public, role },
+                        read: false
+                    });
+                }
+            }
         }
         
         // Update original notification

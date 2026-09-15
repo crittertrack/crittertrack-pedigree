@@ -399,9 +399,7 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
         const publicOffspring = await PublicAnimal.find({
             $or: [
                 { sireId_public: animalIdPublic },
-                { damId_public: animalIdPublic },
-                { fatherId_public: animalIdPublic },
-                { motherId_public: animalIdPublic }
+                { damId_public: animalIdPublic }
             ]
         }).lean();
 
@@ -418,9 +416,7 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
             const privateOffspring = await Animal.find({
                 $or: [
                     { sireId_public: animalIdPublic },
-                    { damId_public: animalIdPublic },
-                    { fatherId_public: animalIdPublic },
-                    { motherId_public: animalIdPublic }
+                    { damId_public: animalIdPublic }
                 ],
                 creatorId: authenticatedUserId
             }).lean();
@@ -440,10 +436,10 @@ router.get('/animal/:id_public/offspring', async (req, res) => {
 
         for (const offspring of allOffspring) {
             // Determine the other parent ID
-            const isSire = offspring.sireId_public === animalIdPublic || offspring.fatherId_public === animalIdPublic;
+            const isSire = offspring.sireId_public === animalIdPublic;
             const otherParentId = isSire 
-                ? (offspring.damId_public || offspring.motherId_public)
-                : (offspring.sireId_public || offspring.fatherId_public);
+                ? offspring.damId_public
+                : offspring.sireId_public;
             const otherParentType = isSire ? 'dam' : 'sire';
 
             // Create a unique key for the litter based on birthDate and other parent

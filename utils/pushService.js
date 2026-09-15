@@ -33,7 +33,6 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 const TYPE_TO_CATEGORY = {
     breeder_request: 'requests',
     parent_request: 'requests',
-    link_request: 'requests',
     transfer_request: 'requests',
     transfer_accepted: 'requests',
     transfer_declined: 'requests',

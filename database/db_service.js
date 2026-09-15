@@ -651,11 +651,12 @@ const updateUserProfile = async (appUserId_backend, updates) => {
  * Adds a new animal to the user's private collection.
  */
 /**
- * Notifies the owners of animals/users referenced via sireId_public, damId_public, or
- * breederId_public whenever a save points one of those links at someone else's record.
- * The link is applied immediately (optimistic); the notified owner can reject it via
- * POST /notifications/:id/reject, which strips the link back off (see notificationRoutes.js).
- * Only fires for links that actually changed in this save, and never for self-links.
+ * Notifies the owners of animals/users referenced via sireId_public, damId_public,
+ * breederId_public, or ownerId_public whenever a save points one of those links at
+ * someone else's record. The link is applied immediately (optimistic); the notified
+ * owner can reject it via POST /notifications/:id/reject, which strips the link back
+ * off (see notificationRoutes.js). Only fires for links that actually changed in this
+ * save, and never for self-links.
  */
 const notifyLinkageChanges = async (requesterId_backend, originalAnimal, animal) => {
     try {
@@ -663,7 +664,8 @@ const notifyLinkageChanges = async (requesterId_backend, originalAnimal, animal)
         const sireChanged = changed('sireId_public');
         const damChanged = changed('damId_public');
         const breederChanged = changed('breederId_public');
-        if (!sireChanged && !damChanged && !breederChanged) return;
+        const ownerChanged = changed('ownerId_public');
+        if (!sireChanged && !damChanged && !breederChanged && !ownerChanged) return;
 
         const requester = await User.findById(requesterId_backend).select('id_public personalName breederName showBreederName').lean();
         if (!requester) return;
@@ -708,6 +710,18 @@ const notifyLinkageChanges = async (requesterId_backend, originalAnimal, animal)
                     targetUserPublicId: breederUser.id_public,
                     type: 'breeder_request',
                     message: `${requesterName} has listed you as the breeder of ${animalDisplayName} (${animal.id_public}).`,
+                });
+            }
+        }
+
+        if (ownerChanged) {
+            const ownerUser = await User.findOne({ id_public: animal.ownerId_public }).select('_id id_public').lean();
+            if (ownerUser) {
+                await notifyOwner({
+                    targetUserBackendId: ownerUser._id,
+                    targetUserPublicId: ownerUser.id_public,
+                    type: 'owner_request',
+                    message: `${requesterName} has listed you as the owner of ${animalDisplayName} (${animal.id_public}).`,
                 });
             }
         }
@@ -758,34 +772,6 @@ const addAnimal = async (appUserId_backend, animalData) => {
     };
 
     try {
-        // Map parent aliases to schema fields: the schema uses sireId_public/damId_public
-        // Accept frontend aliases like fatherId_public / fatherId / father_id and map them
-        if (!animalData.sireId_public) {
-            const candidate = animalData.fatherId_public || animalData.fatherId || animalData.father_id || animalData.father_public || animalData.sireId_public;
-            if (candidate) {
-                const resolved = await resolveParentPublicToBackend(candidate);
-                if (resolved) {
-                    animalData.sireId_public = resolved.id_public;
-                } else {
-                    // If not owned by user, still set the value as-is (for linkage to other users' animals)
-                    animalData.sireId_public = candidate;
-                }
-            }
-        }
-
-        if (!animalData.damId_public) {
-            const candidateM = animalData.motherId_public || animalData.motherId || animalData.mother_id || animalData.mother_public || animalData.damId_public;
-            if (candidateM) {
-                const resolvedM = await resolveParentPublicToBackend(candidateM);
-                if (resolvedM) {
-                    animalData.damId_public = resolvedM.id_public;
-                } else {
-                    // If not owned by user, still set the value as-is (for linkage to other users' animals)
-                    animalData.damId_public = candidateM;
-                }
-            }
-        }
-
         // Ensure image fields propagate
         if (animalData.imageUrl && !animalData.photoUrl) {
             animalData.photoUrl = animalData.imageUrl;
@@ -841,8 +827,6 @@ const addAnimal = async (appUserId_backend, animalData) => {
 
     // Return a plain object with backward-compatible alias fields
     const saved = newAnimal.toObject();
-    saved.fatherId_public = saved.sireId_public || null;
-    saved.motherId_public = saved.damId_public || null;
 
     await notifyLinkageChanges(appUserId_backend, null, saved);
 
@@ -1020,8 +1004,6 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     // Also add isViewOnly flag and manualownerName to identify view-only animals
     return docs.map(d => ({
         ...d,
-        fatherId_public: d.sireId_public || null,
-        motherId_public: d.damId_public || null,
         isViewOnly: d.creatorId.toString() !== appUserId_backend.toString(),
         manualownerName: d.creatorId.toString() !== appUserId_backend.toString()
             ? (manualownerNameMap[d.creatorId.toString()] || 'Unknown')
@@ -1088,8 +1070,6 @@ const getAnimalByIdAndUser = async (appUserId_backend, animalId_backend) => {
         length: animal.length
     });
     // Backwards-compatible alias fields for older frontend keys
-    animal.fatherId_public = animal.sireId_public || null;
-    animal.motherId_public = animal.damId_public || null;
     animal.originalCreatorId = animal.originalCreatorId || null; // Ensure originalCreatorId is always present
     return animal;
 };
@@ -1134,23 +1114,17 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     try {
         // isDisplay is the single source of truth for public visibility — no mapping needed.
 
-        // Map parent alias fields to schema's sireId_public/damId_public.
-        // NOTE: the animal edit form always echoes back the animal's last-known sireId_public/
-        // damId_public in the same payload as any fatherId_public/motherId_public change (its
-        // formData is seeded by spreading the whole existing animal record), so gating this sync
-        // on "updates.sireId_public === undefined" would almost never fire and silently discard
-        // every real fatherId_public/motherId_public edit. Trust the alias field whenever it's
-        // present instead, regardless of whatever sireId_public/damId_public was also sent.
-        const fatherCandidate = updates.fatherId_public ?? updates.fatherId ?? updates.father_id ?? updates.father_public;
-        if (fatherCandidate !== undefined) {
-            if (fatherCandidate === null) {
+        // Resolve sireId_public/damId_public updates (single canonical field name for parents) —
+        // trust `updates.sireId_public`/`updates.damId_public` whenever present.
+        if (updates.sireId_public !== undefined) {
+            if (!updates.sireId_public) {
                 updates.sireId_public = null;
                 if (originalAnimal.sireId_public !== null) {
                     shouldRemoveLitterLink = true;
                 }
             } else {
-                const resolved = await resolveParentPublicToBackend(fatherCandidate);
-                const resolvedId = resolved ? resolved.id_public : fatherCandidate;
+                const resolved = await resolveParentPublicToBackend(updates.sireId_public);
+                const resolvedId = resolved ? resolved.id_public : updates.sireId_public;
                 updates.sireId_public = resolvedId;
                 if (originalAnimal.sireId_public !== resolvedId) {
                     shouldRemoveLitterLink = true;
@@ -1158,16 +1132,15 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
             }
         }
 
-        const motherCandidate = updates.motherId_public ?? updates.motherId ?? updates.mother_id ?? updates.mother_public;
-        if (motherCandidate !== undefined) {
-            if (motherCandidate === null) {
+        if (updates.damId_public !== undefined) {
+            if (!updates.damId_public) {
                 updates.damId_public = null;
                 if (originalAnimal.damId_public !== null) {
                     shouldRemoveLitterLink = true;
                 }
             } else {
-                const resolvedM = await resolveParentPublicToBackend(motherCandidate);
-                const resolvedMId = resolvedM ? resolvedM.id_public : motherCandidate;
+                const resolvedM = await resolveParentPublicToBackend(updates.damId_public);
+                const resolvedMId = resolvedM ? resolvedM.id_public : updates.damId_public;
                 updates.damId_public = resolvedMId;
                 if (originalAnimal.damId_public !== resolvedMId) {
                     shouldRemoveLitterLink = true;
@@ -1177,7 +1150,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
 
         // SYNC: When manualPedigree is updated, extract sire/dam CTC IDs and sync to sireId_public/damId_public
         // This ensures Pedigree entries automatically populate the canonical parent fields.
-        // Runs unconditionally (taking precedence over the fatherId_public/motherId_public alias
+        // Runs unconditionally (taking precedence over the sireId_public/damId_public set above)
         // above) since manualPedigree.sire/dam.ctcId comes from the Pedigree tab's own CTC picker —
         // the most specific and freshest source of intent when present.
         if (updates.manualPedigree && typeof updates.manualPedigree === 'object') {
@@ -1441,8 +1414,6 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     }
 
     // Add backward-compatible alias fields before returning
-    updatedAnimal.fatherId_public = updatedAnimal.sireId_public || null;
-    updatedAnimal.motherId_public = updatedAnimal.damId_public || null;
 
     // Log whatever changed (core fields vs. care schedule) so the animal's Timeline tab
     // stays up to date. Each helper is a no-op if nothing relevant changed.
@@ -1530,8 +1501,6 @@ const getArchivedAndSoldAnimals = async (appUserId_backend) => {
     // Add backward-compatible alias fields before returning
     const addAliases = (animal, isViewOnly = false) => ({
         ...animal,
-        fatherId_public: animal.sireId_public || null,
-        motherId_public: animal.damId_public || null,
         isViewOnly,
     });
 
@@ -2310,8 +2279,6 @@ const getHiddenViewOnlyAnimals = async (appUserId_backend) => {
 
     return animals.map(d => ({
         ...d,
-        fatherId_public: d.sireId_public || null,
-        motherId_public: d.damId_public || null,
         isViewOnly: true,
         isHidden: true,
     }));

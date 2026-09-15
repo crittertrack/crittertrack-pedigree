@@ -313,6 +313,7 @@ const AnimalSchema = new mongoose.Schema({
     // Breeder and owner info
     breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder (user)
     manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
+    ownerId_public: { type: String, default: null, index: true }, // Public ID of the linked owner (user), mirrors breederId_public
     
     // Ownership and breeding status
     isOwned: { type: Boolean, default: true },
@@ -789,6 +790,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     // Breeder info (public)
     breederId_public: { type: String, default: null, index: true }, // Public ID of the breeder
     manualBreederName: { type: String, default: null }, // Manual breeder name when no user is selected
+    ownerId_public: { type: String, default: null, index: true }, // Public ID of the linked owner (user), mirrors breederId_public
     
     // Ownership and breeding status
     manualownerName: { type: String, default: null }, // Free-text keeper/custodian name
@@ -1085,7 +1087,7 @@ const Litter = mongoose.model('Litter', LitterSchema);
 const NotificationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     userId_public: { type: String, index: true },
-    type: { type: String, required: true, enum: ['breeder_request', 'parent_request', 'link_request', 'transfer_request', 'transfer_accepted', 'transfer_declined', 'transfer_cancelled', 'animal_returned', 'animal_recalled', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'marketplace_inquiry', 'litter_assignment', 'mating_reminder', 'new_rating', 'bug_report_update', 'report_status_update', 'report_feedback', 'beta_survey_completed'], index: true },
+    type: { type: String, required: true, enum: ['breeder_request', 'owner_request', 'parent_request', 'transfer_request', 'transfer_accepted', 'transfer_declined', 'transfer_cancelled', 'animal_returned', 'animal_recalled', 'moderator_warning', 'moderator_message', 'account_suspended', 'account_banned', 'content_edited', 'broadcast', 'announcement', 'litter_assignment', 'mating_reminder', 'new_rating', 'bug_report_update', 'report_status_update', 'report_feedback', 'beta_survey_completed'], index: true },
     status: { type: String, enum: ['pending', 'accepted', 'approved', 'rejected', 'read', 'declined', 'cancelled', 'returned'], default: 'pending', index: true }, // Added 'returned' for consistency
     
     // Request details

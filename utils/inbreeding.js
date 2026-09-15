@@ -22,8 +22,8 @@ async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations
     const animal = await fetchAnimal(animalId);
     if (!animal) return 0;
 
-    const sireId = animal.sireId_public || animal.fatherId_public;
-    const damId = animal.damId_public || animal.motherId_public;
+    const sireId = animal.sireId_public;
+    const damId = animal.damId_public;
     if (!sireId || !damId) return 0;
 
     // An animal's own COI is, by definition, the kinship coefficient of its two parents —
@@ -47,8 +47,8 @@ async function calculateInbreedingCoefficientWithDiagnostics(animalId, fetchAnim
     const animal = await fetchAnimal(animalId);
     if (!animal) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
 
-    const sireId = animal.sireId_public || animal.fatherId_public;
-    const damId = animal.damId_public || animal.motherId_public;
+    const sireId = animal.sireId_public;
+    const damId = animal.damId_public;
     if (!sireId || !damId) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
 
     // Same DAG+DP delegation as calculateInbreedingCoefficient above — see its comment.
@@ -104,8 +104,8 @@ async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set(), 
         return null;
     }
 
-    const sireId = animal.sireId_public || animal.fatherId_public;
-    const damId = animal.damId_public || animal.motherId_public;
+    const sireId = animal.sireId_public;
+    const damId = animal.damId_public;
 
     const node = {
         id: animalId,
@@ -220,8 +220,8 @@ async function buildPedigreeDAG(rootId, fetchAnimal, maxGenerations) {
                 dag.set(id, { id, name: id, sireId: null, damId: null });
                 return;
             }
-            const sireId = animal.sireId_public || animal.fatherId_public || null;
-            const damId  = animal.damId_public  || animal.motherId_public  || null;
+            const sireId = animal.sireId_public || null;
+            const damId  = animal.damId_public  || null;
             dag.set(id, { id, name: animal.name, sireId, damId });
         }));
 
