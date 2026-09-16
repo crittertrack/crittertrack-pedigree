@@ -1,0 +1,2396 @@
+﻿CTU2 - 297 litters with offspring
+
+## CTL4 (2018-12-25)
+Sire: Baco - Black Merle Tan, Shorthair
+Dam: Mimi - Black Merle Tan, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Black Merle Tan Pied, Shorthair
+  - Black Merle Tan, Shorthair
+
+## CTL5 (2019-01-18)
+Sire: Scar - Snowtiger, Shorthair Rosette
+Dam: Emma - Brindle, Longhair Satin Rosette
+Offspring varieties (1 unique, 1 total):
+  - Chocolate, Longhair Rosette
+
+## CTL275 (2019-02-03)
+Sire: Baron - Colorpoint Blue, Shorthair
+Dam: Mascha - Brindle Splashed, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Agouti, Longhair
+
+## CTL284 (2019-04-19)
+Sire: Loki - Dove Brindle, Shorthair
+Dam: Mascha - Brindle Splashed, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Argente Splashed, Shorthair
+
+## CTL6 (2019-05-19)
+Sire: Loki - Dove Brindle, Shorthair
+Dam: Amelie - Dominant Red, Longhair Satin
+Offspring varieties (2 unique, 2 total):
+  - Dominant Red Chocolate Pied, Longhair
+  - Dominant Red Tan Pied, Longhair
+
+## CTL281 (2019-06-03)
+Sire: Levi - Black Merle Tan, Shorthair
+Dam: Nana - Black Merle Tan Pied, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Black Merle Tan, Shorthair
+
+## CTL282 (2019-08-03)
+Sire: Vince - Agouti, Longhair
+Dam: Skye - Blue, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Agouti, Longhair
+
+## CTL283 (2019-08-18)
+Sire: Devon - Brindle, Shorthair Satin
+Dam: Destiny - Argente Tan, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Brindle, Shorthair Satin
+
+## CTL285 (2019-08-21)
+Sire: Fudge - Argente Splashed, Shorthair
+Dam: Ruby - Snowtiger, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Brindle Splashed, Shorthair
+
+## CTL286 (2019-10-26)
+Sire: Sundae Caramel - Dominant Red Tan Pied, Longhair
+Dam: Senna - Brindle Umbrous, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Agouti Tan, Shorthair
+
+## CTL287 (2019-11-08)
+Sire: Flip - Black Pied, Texel Satin
+Dam: Jasmin - Agouti, Texel Satin
+Offspring varieties (2 unique, 2 total):
+  - Blue Tan, Texel
+  - Agouti, Texel Satin
+
+## CTL288 (2019-11-28)
+Sire: King - Brindle, Texel
+Dam: Cami - Brindle, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Brindle, Texel
+
+## CTL7 (2019-11-29)
+Sire: Sundae Caramel - Dominant Red Tan Pied, Longhair
+Dam: Mirabel - Brindle Pied, Longhair
+Offspring varieties (2 unique, 2 total):
+  - Chocolate Brindle Pied, Longhair
+  - Dominant Red Pied, Longhair Satin
+
+## CTL8 (2020-01-31)
+Sire: Casanova - Tricolor, Shorthair Satin
+Dam: Juniper - Tricolor, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Blue Tricolor, Shorthair
+
+## CTL263 (2020-02-21)
+Sire: Casanova - Tricolor, Shorthair Satin
+Dam: Hardy - Black Pied, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Blue Tricolor, Shorthair Rosette
+
+## CTL265 (2020-03-21)
+Sire: Alec - Blue Tricolor, Shorthair
+Dam: Xatu - Tricolor, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Tricolor, Shorthair
+
+## CTL9 (2020-03-26)
+Sire: Casanova - Tricolor, Shorthair Satin
+Dam: Cherise - Tricolor, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Tricolor, Longhair Satin
+
+## CTL289 (2020-03-28)
+Sire: Kalani - Blue, Shorthair Satin
+Dam: Rosemary - Blue Brindle, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Blue Brindle, Shorthair Satin
+
+## CTL10 (2020-04-16)
+Sire: Vidar - Brindle Splashed, Texel
+Dam: Marble - Splashed Fox
+Offspring varieties (1 unique, 1 total):
+  - Brindle Tricolor, Shorthair
+
+## CTL291 (2020-05-11)
+Sire: Indigo - Blue Tricolor, Shorthair Rosette
+Dam: Sierra - Splashed Fox, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Splashed Fox, Astrex Rosette
+
+## CTL262 (2020-05-14)
+Sire: Felix - Black Pied, Longhair Satin
+Dam: Tutti - Black Eye White, Shorthair Satin
+Offspring varieties (1 unique, 1 total):
+  - Brindle Whitebelly, Shorthair Satin
+
+## CTL11 (2020-05-14)
+Sire: Felix - Black Pied, Longhair Satin
+Dam: Gracie - Snowtiger, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Brindle Pied, Longhair
+
+## CTL299 (2020-05-15)
+Sire: Emmett - Lilac Tan, Texel
+Dam: Azula - Blue Tan, Astrex
+Offspring varieties (1 unique, 1 total):
+  - Blue Tan, Astrex
+
+## CTL270 (2020-05-17)
+Sire: Remy - Splashed Fox, Shorthair Satin Rosette
+Dam: Boo - Splashed, Texel Rosette
+Offspring varieties (1 unique, 1 total):
+  - Color Point Beige, Astrex Rosette
+
+## CTL12 (2020-05-18)
+Sire: Sundae Caramel - Dominant Red Tan Pied, Longhair
+Dam: Mirabel - Brindle Pied, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Brindle Pied, Longhair Satin
+
+## CTL269 (2020-06-07)
+Sire: Remy - Splashed Fox, Shorthair Satin Rosette
+Dam: Lovegood - Colorpoint Beige Pied, Texel Rosette
+Offspring varieties (1 unique, 1 total):
+  - Splashed, Texel Rosette
+
+## CTL13 (2020-07-01)
+Sire: Leviathan - Agouti Merle, Shorthair Rosette
+Dam: Kappa - Black, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Dove, Shorthair
+
+## CTL14 (2020-07-14)
+Sire: Sundae Caramel - Dominant Red Tan Pied, Longhair
+Dam: Bellatrix - Black Pied, Shorthair
+Offspring varieties (4 unique, 5 total):
+  - Dominant Red Pied, Longhair
+  - Chocolate Tan Pied, Longhair
+  - Dominant Red Pied, Shorthair
+  - Dominant Red, Longhair
+
+## CTL15 (2020-07-14)
+Sire: Mateo - Blue Tricolor, Shorthair
+Dam: Bluet - Blue Tricolor, Shorthair
+Offspring varieties (2 unique, 4 total):
+  - Blue Tricolor, Shorthair
+  - Blue Beige Pied, Shorthair
+
+## CTL16 (2020-07-15)
+Sire: Alec - Blue Tricolor, Shorthair
+Dam: Bluberry - Blue Pied, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Color Point Blue Pied, Shorthair Rosette
+  - Blue Tricolor, Shorthair
+
+## CTL268 (2020-07-27)
+Sire: Carlisle - Brindle Hereford, Shorthair Rosette
+Dam: Rebel - Black Tan, Longhair Rosette
+Offspring varieties (1 unique, 1 total):
+  - Brindle Pied, Longhair Rosette
+
+## CTL264 (2020-07-29)
+Sire: Sundae Caramel - Dominant Red Tan Pied, Longhair
+Dam: Hairo - Unknown
+Offspring varieties (2 unique, 3 total):
+  - Black Tan, Shorthair
+  - Sable, Shorthair
+
+## CTL323 (2020-07-30)
+Sire: Dante's Inferno - Brindle, Shorthair Satin
+Dam: Solstice - Brindle, Shorthair Satin
+Offspring varieties (4 unique, 6 total):
+  - Snowtiger, Longhair Satin
+  - Fuzz
+  - Brindle Splashed, Shorthair Satin
+  - Chocolate, Shorthair Satin
+
+## CTL322 (2020-07-30)
+Sire: Dante's Inferno - Brindle, Shorthair Satin
+Dam: Sheera - Brindle, Texel
+Offspring varieties (3 unique, 3 total):
+  - Champagne Tan, Shorthair Satin
+  - Brindle, Texel Satin
+  - Brindle Whitebelly, Longhair
+
+## CTL17 (2020-08-06)
+Sire: Percy Plumeau - Chocolate Brindle Pied, Longhair
+Dam: Ryoka - Brindle Pied, Shorthair
+Offspring varieties (3 unique, 3 total):
+  - Brindle Whitebelly, Longhair
+  - Brindle Pied, Longhair
+  - Brindle Pied, Shorthair
+
+## CTL18 (2020-08-08)
+Sire: Carlisle - Brindle Hereford, Shorthair Rosette
+Dam: Fata Morgana - Chocolate Tan Pied, Shorthair Rosette
+Offspring varieties (1 unique, 1 total):
+  - Pink Eye White, Longhair Satin
+
+## CTL335 (2020-10-13)
+Sire: Lucifer - Black, Shorthair
+Dam: Mystique - Brindle Whitebelly, Shorthair Satin
+Offspring varieties (1 unique, 1 total):
+  - Brindle Marten, Shorthair
+
+## CTL19 (2020-10-16)
+Sire: Peter - Pink Eye White, Longhair Satin
+Dam: Glowe - Black Eye White, Longhair Satin
+Offspring varieties (1 unique, 1 total):
+  - Splashed, Longhair Satin
+
+## CTL266 (2020-11-09)
+Sire: Alec - Blue Tricolor, Shorthair
+Dam: Tikka - Splashed Fox, Texel Satin
+Offspring varieties (1 unique, 1 total):
+  - Colorpoint Beige, Longhair
+
+## CTL267 (2020-12-20)
+Sire: Alec - Blue Tricolor, Shorthair
+Dam: Tikka - Splashed Fox, Texel Satin
+Offspring varieties (3 unique, 3 total):
+  - Tricolor, Shorthair
+  - Splashed Fox, Shorthair
+  - Sealpoint Siamese, Shorthair
+
+## CTL20 (2021-01-11)
+Sire: Jerome - Brindle Tricolor, Shorthair
+Dam: Lovegood - Colorpoint Beige Pied, Texel Rosette
+Offspring varieties (3 unique, 6 total):
+  - Brindle Tricolor, Astrex
+  - Tricolor, Texel Satin
+  - Tricolor, Astrex
+
+## CTL340 (2021-01-12)
+Sire: Dayton - Brindle, Shorthair
+Dam: Elle - Blue Brindle, Shorthair Satin
+Offspring varieties (5 unique, 7 total):
+  - Brindle, Shorthair
+  - Brindle Dove Sable, Shorthair
+  - Brindle, Longhair
+  - Blue Brindle, Shorthair
+  - Brindle Tricolor, Shorthair
+
+## CTL21 (2021-01-12)
+Sire: Chiro - Tricolor, Longhair Rosette
+Dam: Fata Morgana - Chocolate Tan Pied, Shorthair Rosette
+Offspring varieties (3 unique, 7 total):
+  - Tricolor, Longhair Rosette
+  - Black Pied, Longhair Rosette
+  - Chocolate Pied, Longhair Rosette
+
+## CTL22 (2021-01-12)
+Sire: Calypso - Silver, Texel Satin
+Dam: Lexie - Colorpoint Blue, Texel
+Offspring varieties (3 unique, 7 total):
+  - Blue Tan, Texel
+  - Blue, Texel
+  - Colorpoint Blue Fox, Longhair
+
+## CTL306 (2021-01-13)
+Sire: Chiro - Tricolor, Longhair Rosette
+Dam: Maisy - Splashed Fox, Astrex Rosette
+Offspring varieties (5 unique, 6 total):
+  - Splashed, Shorthair Rosette
+  - Tricolor, Texel Rosette
+  - Tricolor, Astrex Rosette
+  - Blue Splashed Fox, Texel Satin Rosette
+  - Blue Splashed, Longhair Satin Rosette
+
+## CTL273 (2021-01-13)
+Sire: Carlisle - Brindle Hereford, Shorthair Rosette
+Dam: Teddie - Color Point Beige, Astrex Rosette
+Offspring varieties (1 unique, 1 total):
+  - Brindle Pied, Shorthair Rosette
+
+## CTL23 (2021-01-13)
+Sire: Fallon - Blue Tricolor, Shorthair
+Dam: Pip - Tricolor, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Chocolate Tricolor Fox, Shorthair
+
+## CTL25 (2021-01-14)
+Sire: Fallon - Blue Tricolor, Shorthair
+Dam: Luciana - Blue Tricolor, Shorthair
+Offspring varieties (1 unique, 4 total):
+  - Blue Tricolor, Shorthair
+
+## CTL26 (2021-01-14)
+Sire: Wicked - Brindle Pied, Longhair Satin
+Dam: Noelle - Brindle, Longhair
+Offspring varieties (5 unique, 5 total):
+  - Brindle, Longhair Satin
+  - Brindle Pied, Longhair
+  - Burmese Fox, Longhair Satin
+  - Burmese Fox, Shorthair Satin
+  - Brindle Tricolor, Longhair Satin
+
+## CTL341 (2021-01-14)
+Sire: Pierce - Tricolor, Shorthair
+Dam: Djennah - Dominant Red Pied, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Dominant Red Tricolor, Longhair
+
+## CTL24 (2021-01-14)
+Sire: Wicked - Brindle Pied, Longhair Satin
+Dam: Zola - Black Tan Pied, Longhair Satin
+Offspring varieties (2 unique, 5 total):
+  - Black Pied, Longhair Satin
+  - Brindle Pied, Longhair Satin
+
+## CTL27 (2021-01-18)
+Sire: Carlisle - Brindle Hereford, Shorthair Rosette
+Dam: Sjors - Splashed, Texel Satin Rosette
+Offspring varieties (3 unique, 3 total):
+  - Black Eye White, Shorthair Rosette
+  - Black Eye White, Texel Rosette
+  - Brindle Pied, Shorthair Rosette
+
+## CTL301 (2021-01-19)
+Sire: Fallon - Blue Tricolor, Shorthair
+Dam: Bindi - Tricolor, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Tricolor, Shorthair
+  - Blue Tricolor, Shorthair Satin
+
+## CTL28 (2021-01-20)
+Sire: Universe - Brindle Pied, Longhair
+Dam: Hayley - Brindle Pied, Longhair
+Offspring varieties (3 unique, 4 total):
+  - Brindle Pied, Longhair
+  - Brindle Tricolor, Longhair Satin
+  - Brindle Tricolor, Longhair
+
+## CTL331 (2021-01-28)
+Sire: Gavin - Color Point Blue Pied, Shorthair Rosette
+Dam: Sadie - Blue Tricolor, Shorthair
+Offspring varieties (1 unique, 2 total):
+  - Blue Tricolor, Shorthair
+
+## CTL333 (2021-01-30)
+Sire: Gavin - Color Point Blue Pied, Shorthair Rosette
+Dam: Maren - Tricolor, Longhair Satin
+Offspring varieties (2 unique, 6 total):
+  - Tricolor, Longhair
+  - Tricolor, Shorthair
+
+## CTL271 (2021-01-31)
+Sire: Carlisle - Brindle Hereford, Shorthair Rosette
+Dam: Senne - Splashed, Texel Rosette
+Offspring varieties (4 unique, 4 total):
+  - Brindle, Texel Rosette
+  - Brindle Pied, Astrex Rosette
+  - Brindle, Shorthair Rosette
+  - Brindle Splashed, Astrex Rosette
+
+## CTL305 (2021-02-11)
+Sire: Calypso - Silver, Texel Satin
+Dam: Sinne - Blue Tan, Astrex
+Offspring varieties (1 unique, 1 total):
+  - Blue, Texel
+
+## CTL29 (2021-03-25)
+Sire: Carlisle - Brindle Hereford, Shorthair Rosette
+Dam: Briley - Black Tan, Texel Rosette
+Offspring varieties (1 unique, 1 total):
+  - Brindle Pied, Longhair Rosette
+
+## CTL272 (2021-03-25)
+Sire: Carlisle - Brindle Hereford, Shorthair Rosette
+Dam: Silke - Brindle, Shorthair Satin
+Offspring varieties (2 unique, 2 total):
+  - Brindle, Longhair Rosette
+  - Brindle, Texel Rosette
+
+## CTL343 (2021-03-26)
+Sire: Tycho - Brindle Pied, Shorthair
+Dam: Solana - Brindle, Shorthair
+Offspring varieties (4 unique, 4 total):
+  - Brindle Pied, Shorthair
+  - Brindle Tricolor, Shorthair
+  - Brindle Tricolor, Longhair
+  - Brindle, Shorthair
+
+## CTL336 (2021-03-28)
+Sire: Matsu - Brindle Splashed, Longhair
+Dam: Qiara - Brindle Marten, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Blue Brindle Tricolor, Shorthair
+
+## CTL30 (2021-03-29)
+Sire: Caramel Swirl - Dominant Red Pied, Shorthair
+Dam: Penny - Black Tan Pied, Longhair Satin
+Offspring varieties (4 unique, 4 total):
+  - Chocolate Tan Pied, Longhair
+  - Dominant Red Pied, Longhair
+  - Dominant Red Pied, Shorthair Rosette
+  - Dominant Red Pied, Longhair Satin Rosette
+
+## CTL31 (2021-03-31)
+Sire: Captain Fluff - Tricolor, Longhair Rosette
+Dam: Hope - Brindle Pied, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Brindle Pied, Longhair
+  - Tricolor, Longhair
+
+## CTL32 (2021-04-02)
+Sire: Calypso - Silver, Texel Satin
+Dam: Felicity - Blue Tricolor, Texel
+Offspring varieties (2 unique, 3 total):
+  - Blue, Texel
+  - Blue, Texel Rosette
+
+## CTL344 (2021-06-11)
+Sire: Dayton - Brindle, Shorthair
+Dam: Ameya - Black tan Variegated, Longhair
+Offspring varieties (5 unique, 7 total):
+  - Brindle, Longhair
+  - Brindle Dove Variegated, Longhair
+  - Brindle Dove, Longhair
+  - Dove, Longhair
+  - Tricolor Variegated, Longhair
+
+## CTL502 (2021-06-21)
+Sire: Arin - Dove Tan, Shorthair
+Dam: Emirah - Brindle Tricolor, Shorthair Rosette
+Offspring varieties (2 unique, 2 total):
+  - Brindle Tricolor, Longhair
+  - Black Pied, Longhair
+
+## CTL345 (2021-06-21)
+Sire: Rory - Brindle Tricolor, Longhair
+Dam: Oreo - Black tan Pied, Shorthair
+Offspring varieties (3 unique, 4 total):
+  - Brindle Splashed, Shorthair Rosette
+  - Brindle, Shorthair
+  - Brindle Tricolor, Shorthair
+
+## CTL347 (2021-06-26)
+Sire: Eyuki - Agouti Tricolor Siamese Variegated, Longhair
+Dam: Nyah - Tricolor, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Splashed Variegated, Longhair
+
+## CTL33 (2021-06-26)
+Sire: Hakuna - Black Tan Pied, Longhair
+Dam: Salt Junior - Dominant Red Pied, Shorthair
+Offspring varieties (3 unique, 3 total):
+  - Black Pied, Longhair Rosette
+  - Chocolate Pied, Shorthair Satin
+  - Dominant Red Pied, Shorthair Satin
+
+## CTL348 (2021-06-27)
+Sire: Eyuki - Agouti Tricolor Siamese Variegated, Longhair
+Dam: Nena - Tricolor, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Pink Eye White, Longhair
+
+## CTL349 (2021-06-28)
+Sire: Dustin - Brindle, Shorthair
+Dam: Asami - Black Variegated, Astrex
+Offspring varieties (1 unique, 1 total):
+  - Brindle Variegated, Shorthair
+
+## CTL351 (2021-07-15)
+Sire: Phoenix - Brindle, Shorthair Satin
+Dam: Dice - Black Tan Pied, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Blue Pied, Shorthair Satin
+  - Blue Fox, Longhair
+
+## CTL352 (2021-10-28)
+Sire: Chocolate Chip Cookie - Black Pied, Longhair Rosette
+Dam: Vivi - Blue Splashed, Astrex
+Offspring varieties (4 unique, 4 total):
+  - Splashed, Texel Rosette
+  - Black Pied, Texel Rosette
+  - Black, Texel Rosette
+  - Black Tan, Texel
+
+## CTL353 (2021-10-31)
+Sire: Plumeau - Snowtiger, Texel
+Dam: Pretzel - Brindle, Texel
+Offspring varieties (5 unique, 7 total):
+  - Brindle Pied, Texel
+  - Black Eye White, Texel
+  - Brindle, Longhair
+  - Black Tan, Texel
+  - Beige Pied, Texel
+
+## CTL34 (2021-11-01)
+Sire: Pador - Brindle, Longhair Satin
+Dam: Laluna - Brindle Pied, Longhair
+Offspring varieties (4 unique, 9 total):
+  - Brindle Pied, Longhair Satin
+  - Brindle, Longhair Satin
+  - Brindle, Longhair
+  - Brindle Pied, Longhair
+
+## CTL503 (2021-11-01)
+Sire: Ichiro - Black Tan Smoke?, Texel
+Dam: Sativa - Black Pied, Texel
+Offspring varieties (2 unique, 2 total):
+  - Chocolate Tan Pied, Astrex
+  - Black Pied, Astrex
+
+## CTL504 (2021-11-21)
+Sire: Dove Astrex - Dove, Astrex
+Dam: Nessa - Tricolor, Texel Satin
+Offspring varieties (2 unique, 2 total):
+  - Black Pied, Texel
+  - Black Pied, Texel Satin
+
+## CTL496 (2021-11-21)
+Sire: Dove Astrex - Dove, Astrex
+Dam: Sunshine - Brindle Pied, Shorthair
+Offspring varieties (8 unique, 10 total):
+  - Brindle Dove Pied, Texel
+  - Brindle, Texel
+  - Black Pied, Texel
+  - Black Pied, Longhair
+  - Brindle Dove, Longhair
+  - Brindle Pied, Longhair Rosette
+  - Chocolate, Longhair Rosette
+  - Brindle Pied, Longhair
+
+## CTL495 (2021-11-23)
+Sire: Dove Astrex - Dove, Astrex
+Dam: ChiChi - Color Point Beige Pied, Texel
+Offspring varieties (4 unique, 5 total):
+  - Black Pied, Astrex
+  - Black Pied, Astrex Satin
+  - Chocolate Pied, Astrex
+  - Chocolate Pied, Longhair
+
+## CTL505 (2021-12-03)
+Sire: Serato - Black Tan, Shorthair Satin
+Dam: Zhabelle - Brindle Tricolor, Texel
+Offspring varieties (1 unique, 1 total):
+  - Brindle, Texel
+
+## CTL302 (2021-12-06)
+Sire: Glennfiddich - Brindle Pied, Longhair Satin
+Dam: Domino - Black Pied, Shorthair Satin
+Offspring varieties (5 unique, 7 total):
+  - Black Tan Pied, Longhair Satin
+  - Chocolate Pied, Shorthair Satin
+  - Chocolate Pied, Longhair Satin
+  - Chocolate Tricolor Fox, Shorthair Satin
+  - Brindle Pied, Longhair Satin
+
+## CTL501 (2021-12-06)
+Sire: Ichiro - Black Tan Smoke?, Texel
+Dam: Leilani - Unknown
+Offspring varieties (1 unique, 1 total):
+  - Black Pied, Shorthair
+
+## CTL494 (2021-12-08)
+Sire: Ichiro - Black Tan Smoke?, Texel
+Dam: Saige - Splashed Fox, Astrex
+Offspring varieties (3 unique, 3 total):
+  - Stone Fox, Astrex
+  - Bone Fox, Astrex
+  - Blue, Texel
+
+## CTL493 (2021-12-12)
+Sire: Ichiro - Black Tan Smoke?, Texel
+Dam: Liberty - Tricolor, Texel
+Offspring varieties (4 unique, 4 total):
+  - Black Tan Pied, Texel
+  - Sealpoint Siamese Pied, Texel
+  - Pearl Tan Pied, Texel
+  - Blue Tricolor, Texel
+
+## CTL491 (2021-12-13)
+Sire: Ayata - Splashed Siamese Fox, Texel
+Dam: Nyah - Tricolor, Longhair
+Offspring varieties (5 unique, 6 total):
+  - Splashed Fox, Texel
+  - Splashed, Longhair
+  - Sealpoint Siamese, Texel
+  - Blue Splashed, Texel
+  - Silver Tricolor, Longhair
+
+## CTL490 (2022-01-09)
+Sire: Mars - Brindle, Longhair Satin
+Dam: Coco - Brindle, Longhair Satin
+Offspring varieties (4 unique, 6 total):
+  - Chocolate Tan, Longhair Satin Rosette
+  - Brindle, Longhair Satin
+  - Brindle, Longhair Satin Rosette
+  - Brindle Pied, Longhair Satin
+
+## CTL489 (2022-01-12)
+Sire: Mars - Brindle, Longhair Satin
+Dam: Lilly - Splashed, Texel Rosette
+Offspring varieties (5 unique, 6 total):
+  - Black Tan, Texel Satin Rosette
+  - Black Tan Pied, Texel Satin
+  - Black Tan Pied, Shorthair
+  - Brindle, Astrex Satin Rosette
+  - Black Tan, Longhair
+
+## CTL506 (2022-02-18)
+Sire: Chocolate Chip Cookie - Black Pied, Longhair Rosette
+Dam: Roxy - Brindle Splashed, Shorthair Rosette
+Offspring varieties (4 unique, 4 total):
+  - Black Pied, Longhair Rosette
+  - Snowtiger, Longhair Rosette
+  - Bone Fox, Longhair Rosette
+  - Brindle Pied, Longhair Rosette
+
+## CTL488 (2022-02-18)
+Sire: Ferrero - Splashed, Shorthair Rosette
+Dam: Quinty - Burmese Fox, Longhair
+Offspring varieties (3 unique, 3 total):
+  - Tricolor, Longhair Satin Rosette
+  - Tricolor, Longhair
+  - Black Fox, Longhair Satin
+
+## CTL507 (2022-02-18)
+Sire: Yoshi - Blue Brindle Pied, Shorthair Satin
+Dam: Fearless - Blue Tan Pied, Longhair Satin
+Offspring varieties (2 unique, 2 total):
+  - Blue Tan Pied, Longhair
+  - Blue Brindle Pied, Longhair Satin
+
+## CTL35 (2022-02-19)
+Sire: Glennfiddich - Brindle Pied, Longhair Satin
+Dam: Peyton - Black Pied, Texel
+Offspring varieties (2 unique, 2 total):
+  - Brindle Pied, Longhair Satin
+  - Black Pied, Texel Satin
+
+## CTL500 (2022-02-24)
+Sire: Katsuro - Black Variegated, Astrex
+Dam: Black Ebony - Black, Longhair Satin
+Offspring varieties (1 unique, 1 total):
+  - Black Variegated, Astrex
+
+## CTL484 (2022-03-01)
+Sire: Chibi - Blue Tan, Longhair Rosette
+Dam: Quicksilver - Unknown
+Offspring varieties (3 unique, 3 total):
+  - Silver Tan, Longhair
+  - Blue Pied, Longhair
+  - Bluepoint Siamese Pied, Longhair
+
+## CTL483 (2022-03-16)
+Sire: Chico - Brindle Pied, Shorthair Rosette
+Dam: Merci - Black, Texel Rosette
+Offspring varieties (4 unique, 5 total):
+  - Brindle Pied, Shorthair Rosette
+  - Bone, Astrex Rosette
+  - Black Pied, Astrex Rosette
+  - Black Pied, Shorthair Rosette
+
+## CTL481 (2022-03-27)
+Sire: Serato - Black Tan, Shorthair Satin
+Dam: Lavina - Black, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Black, Texel
+
+## CTL480 (2022-06-08)
+Sire: Onni - Rec. Red Pied, Shorthair
+Dam: Verena - Splashed, Longhair
+Offspring varieties (4 unique, 9 total):
+  - Beige Pied, Longhair
+  - Tricolor, Longhair
+  - Longhair
+  - Blue Splashed, Longhair
+
+## CTL508 (2022-06-08)
+Sire: Onni - Rec. Red Pied, Shorthair
+Dam: Kyona - Black Pied, Longhair
+Offspring varieties (4 unique, 4 total):
+  - Blue Beige Pied, Longhair
+  - Black Pied, Longhair
+  - Black Pied, Shorthair
+  - Black, Longhair
+
+## CTL36 (2022-06-09)
+Sire: Chocolate Chip Cookie - Black Pied, Longhair Rosette
+Dam: Starlight Sterre - Brindle Pied, Longhair Satin
+Offspring varieties (2 unique, 13 total):
+  - Brindle Pied, Longhair Rosette
+  - Brindle Pied, Longhair
+
+## CTL479 (2022-06-10)
+Sire: Marty - Black Variegated, Astrex
+Dam: Dahlia - Black, Shorthair Satin
+Offspring varieties (4 unique, 4 total):
+  - Black, Shorthair
+  - Blue, Astrex
+  - Blue, Longhair
+  - Black Variegated, Astrex
+
+## CTL478 (2022-06-22)
+Sire: Heartside - Pearl Tan Pied, Texel
+Dam: Rabiha - Rec. Fawn, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Black Tan, Shorthair
+  - Black Tan Pied, Astrex
+
+## CTL476 (2022-07-18)
+Sire: Incognito - Splashed Fox, Texel
+Dam: Yzzy - Brindle Pied, Texel
+Offspring varieties (1 unique, 1 total):
+  - BEW, Texel
+
+## CTL475 (2022-08-06)
+Sire: Licorice - Black, Shorthair Satin
+Dam: Teruma - Sealpoint Siamese Fox Variegated, Texel
+Offspring varieties (1 unique, 1 total):
+  - Sealpoint Siamese Fox Variegated, Longhair Satin
+
+## CTL474 (2022-08-09)
+Sire: Black Jack - Black Tan, Longhair
+Dam: Impressive - Sealpoint Siamese Fox, Texel
+Offspring varieties (1 unique, 1 total):
+  - Blue Tan, Texel
+
+## CTL473 (2022-08-30)
+Sire: Black Jack - Black Tan, Longhair
+Dam: Impressive - Sealpoint Siamese Fox, Texel
+Offspring varieties (7 unique, 10 total):
+  - Splashed, Texel Satin
+  - Blue Splashed, Texel
+  - Blue Tan, Texel
+  - Black Pied, Texel
+  - Splashed, Texel
+  - Black Tan, Texel
+  - Black, Texel
+
+## CTL472 (2022-10-04)
+Sire: Alvari - Bluepoint Siamese, Longhair
+Dam: Atlantic Elegance - Blue Tan Pied, Longhair
+Offspring varieties (4 unique, 7 total):
+  - Blue Splashed, Longhair
+  - Bluepoint Siamese, Longhair
+  - Blue Pied, Longhair
+  - Blue, Longhair
+
+## CTL37 (2022-12-15)
+Sire: Gifted Spirit - Black Merle, Shorthair
+Dam: Black Belle - Black, Shorthair
+Offspring varieties (3 unique, 9 total):
+  - Black, Shorthair
+  - Black Pied, Shorthair
+  - Black Tan, Shorthair
+
+## CTL471 (2022-12-28)
+Sire: Ghost - Black Tan, Longhair Satin
+Dam: Fluffy Fantasy - Brindle, Longhair Rosette
+Offspring varieties (6 unique, 6 total):
+  - Chocolate, Longhair Rosette
+  - Brindle, Longhair Rosette
+  - Chocolate Pied, Longhair Rosette
+  - Brindle Dove, Longhair Satin Rosette
+  - Brindle Pied, Longhair Satin Rosette
+  - Brindle Dove, Longhair Rosette
+
+## CTL470 (2023-01-11)
+Sire: Ghost - Black, Longhair Rosette
+Dam: Your Wildest Dream - Brindle Pied, Longhair Rosette
+Offspring varieties (5 unique, 6 total):
+  - Brindle Pied, Longhair Rosette
+  - Black Pied, Longhair Satin Rosette
+  - Brindle Pied, Longhair Satin Rosette
+  - Brindle, Longhair Rosette
+  - Black, Longhair Satin Rosette
+
+## CTL469 (2023-01-19)
+Sire: Ghost - Black, Longhair Rosette
+Dam: Yours Truly - Brindle Pied, Longhair Rosette
+Offspring varieties (3 unique, 5 total):
+  - Black Pied, Longhair Rosette
+  - Black, Longhair Rosette
+  - Burmese, Longhair Rosette
+
+## CTL468 (2023-02-21)
+Sire: Royal Blue - Blue, Shorthair Rosette
+Dam: Risky Business - Color Point Smoke Pied, Shorthair Rosette
+Offspring varieties (2 unique, 12 total):
+  - Pearl, Shorthair Rosette
+  - Blue, Shorthair Rosette
+
+## CTL466 (2023-02-27)
+Sire: Reign - Brindle Pied, Shorthair Satin
+Dam: Cola - Black, Shorthair Rosette
+Offspring varieties (5 unique, 12 total):
+  - Black Pied, Shorthair
+  - Black, Shorthair
+  - Brindle, Shorthair
+  - Blue Pied, Shorthair
+  - Brindle Pied, Shorthair
+
+## CTL465 (2023-03-09)
+Sire: Gizmo - Burmese Pied, Longhair Satin Rosette
+Dam: Sudoku - Tricolor, Longhair Satin Rosette
+Offspring varieties (2 unique, 7 total):
+  - Sealpoint Siamese Pied, Longhair Satin Rosette
+  - Tricolor, Longhair Satin Rosette
+
+## CTL38 (2023-03-15)
+Sire: Chedomir - Colorpoint Blue Fox, Shorthair
+Dam: Black Belle - Black, Shorthair
+Offspring varieties (6 unique, 10 total):
+  - BEW, Shorthair
+  - Splashed, Shorthair
+  - Blue Splashed, Shorthair
+  - Sealpoint Siamese, Shorthair
+  - Black Pied, Shorthair
+  - Black Tan, Shorthair
+
+## CTL467 (2023-03-16)
+Sire: Chedomir - Colorpoint Blue Fox, Shorthair
+Dam: Natalya - Bluepoint Siamese, Shorthair
+Offspring varieties (2 unique, 5 total):
+  - Color Point Blue, Shorthair
+  - Bluepoint Siamese, Shorthair
+
+## CTL464 (2023-04-02)
+Sire: Milosz - Splashed, Texel
+Dam: Gaenora - Splashed, Texel
+Offspring varieties (3 unique, 10 total):
+  - Tricolor, Longhair
+  - Splashed, Texel
+  - Splashed Fox, Longhair
+
+## CTL463 (2023-04-09)
+Sire: Perfect Alibi - Black Pied, Longhair Rosette
+Dam: Mahogany - Brindle, Shorthair Rosette
+Offspring varieties (8 unique, 11 total):
+  - Black, Longhair Satin Rosette
+  - Brindle Dove, Longhair Rosette
+  - Black Tan, Longhair Satin Rosette
+  - Dove Tan, Longhair Satin Rosette
+  - Black, Longhair Rosette
+  - Brindle, Longhair Rosette
+  - Black Tan, Longhair Rosette
+  - Brindle, Longhair Satin Rosette
+
+## CTL462 (2023-04-17)
+Sire: Perfect Alibi - Black Pied, Longhair Rosette
+Dam: Copper - Brindle, Shorthair Rosette
+Offspring varieties (1 unique, 1 total):
+  - Brindle, Longhair Rosette
+
+## CTL39 (2023-04-24)
+Sire: Mex - Black Hereford, Shorthair
+Dam: Inola - Black, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Black Hereford, Shorthair
+
+## CTL461 (2023-05-02)
+Sire: Pumpkin Spice - Shorthair Rosette
+Dam: Chokotoff - Chocolate Fox, Texel
+Offspring varieties (2 unique, 2 total):
+  - Cinnamon, Texel Satin Rosette
+  - Brindle, Texel Rosette
+
+## CTL460 (2023-05-19)
+Sire: Max - Black Pied, Longhair Rosette
+Dam: Your Wildest Dream - Brindle Pied, Longhair Rosette
+Offspring varieties (3 unique, 7 total):
+  - Brindle Pied, Longhair Satin Rosette
+  - Brindle Pied, Longhair Rosette
+  - Black Pied, Longhair Rosette
+
+## CTL458 (2023-05-19)
+Sire: Noah - Bluepoint Siamese Fox, Texel
+Dam: Enya - Bluepoint Siamese, Longhair
+Offspring varieties (2 unique, 2 total):
+  - Bluepoint Siamese, Longhair
+  - Bluepoint Siamese Fox, Shorthair
+
+## CTL459 (2023-05-21)
+Sire: Phenomenon - Sealpoint Siamese Pied, Longhair Satin Rosette
+Dam: Extraordinary - Splashed, Longhair Satin Rosette
+Offspring varieties (3 unique, 4 total):
+  - Tricolor, Longhair Satin Rosette
+  - Splashed, Longhair Satin Rosette
+  - Sealpoint Siamese Pied, Longhair Satin Rosette
+
+## CTL457 (2023-06-12)
+Sire: Alvari - Bluepoint Siamese, Longhair
+Dam: Senka - Sealpoint Siamese, Astrex
+Offspring varieties (2 unique, 2 total):
+  - Sealpoint Siamese Fox, Shorthair
+  - Sealpoint Siamese Fox, Astrex
+
+## CTL456 (2023-06-29)
+Sire: Licorice - Black, Shorthair Satin
+Dam: Stunnin' Saffron - Brindle, Longhair Rosette
+Offspring varieties (3 unique, 3 total):
+  - Black Pied
+  - Black Pied, Shorthair Satin
+  - Black Tan, Longhair
+
+## CTL453 (2023-07-15)
+Sire: Beetlejuice - Tricolor, Shorthair
+Dam: Creme Catalana - Rec. Red Pied, Shorthair
+Offspring varieties (3 unique, 4 total):
+  - Agouti Pied
+  - Agouti Tan Pied
+  - Black Tan Pied
+
+## CTL452 (2023-07-17)
+Sire: Oreo - Black Pied, Astrex
+Dam: Trash Panda - Black Pied, Fuzz
+Offspring varieties (2 unique, 3 total):
+  - Unknown
+  - Black Pied, Astrex
+
+## CTL451 (2023-07-20)
+Sire: Vapor - Black Merle Pied, Shorthair
+Dam: Torchic - Black Tan, Shorthair
+Offspring varieties (5 unique, 7 total):
+  - Black Tan Pied, Shorthair
+  - Black Merle Tan Pied, Longhair
+  - Black Pied, Shorthair
+  - Black Merle Tan Pied, Shorthair
+  - Black Roan, Longhair
+
+## CTL40 (2023-07-22)
+Sire: Quantum - Black Pied, Shorthair
+Dam: Wildfire - Dominant Red, Texel
+Offspring varieties (6 unique, 6 total):
+  - Dominant Red, Astrex
+  - Unknown
+  - Blue Tan, Texel
+  - Splashed, Shorthair
+  - Sealpoint Siamese, Longhair
+  - Black Tan, Astrex
+
+## CTL450 (2023-07-28)
+Sire: Saber - Chocolate Merle, Shorthair
+Dam: Nightingale - Chocolate Merle Fox, Longhair Satin
+Offspring varieties (3 unique, 7 total):
+  - Chocolate Merle, Shorthair
+  - Chocolate Point Siamese Merle, Shorthair
+  - Chocolate Splashed Merle, Shorthair
+
+## CTL449 (2023-08-08)
+Sire: Unico - Black Merle Pied, Shorthair
+Dam: Chromera - Black Merle Pied, Shorthair
+Offspring varieties (3 unique, 8 total):
+  - Black Merle Tan Pied, Shorthair
+  - Chocolate Merle Pied, Shorthair
+  - Black Merle Pied, Shorthair
+
+## CTL448 (2023-08-10)
+Sire: Woozy - Black Merle Tan, Longhair
+Dam: Mystery Madness - Rec. Red Merle, Shorthair
+Offspring varieties (5 unique, 8 total):
+  - Recessive Fawn Merle, Longhair
+  - Agouti Merle, Longhair
+  - Recessive Red Merle, Shorthair
+  - Black Merle Tan, Longhair
+  - Recessive Red Merle, Longhair
+
+## CTL447 (2023-08-11)
+Sire: Marvelous - Tricolor, Shorthair
+Dam: Rioja - Rec. Red, Shorthair
+Offspring varieties (4 unique, 5 total):
+  - Black, Shorthair
+  - Shorthair
+  - Splashed Burmese, Shorthair
+  - Burmese, Shorthair
+
+## CTL41 (2023-08-29)
+Sire: Yeshua - Brindle Pied, Longhair Rosette
+Dam: Magpie - Black Pied, Shorthair Rosette
+Offspring varieties (2 unique, 2 total):
+  - Black Pied, Longhair Rosette
+  - Brindle Pied, Shorthair Rosette
+
+## CTL42 (2023-09-13)
+Sire: Masked Flame - Dominant Red Pied, Longhair
+Dam: Zigzagoon - Black Tan Pied, Shorthair
+Offspring varieties (4 unique, 9 total):
+  - Black Tan Pied, Shorthair
+  - Dominant Red Pied, Shorthair
+  - BEW, Shorthair
+  - Blue Pied, Shorthair
+
+## CTL445 (2023-09-13)
+Sire: Ca├▒a - Rec. Red, Shorthair
+Dam: Mancha - Tricolor, Shorthair
+Offspring varieties (4 unique, 4 total):
+  - Splashed, Shorthair
+  - Black Tan, Shorthair Satin Rosette
+  - Black Pied, Shorthair Satin
+  - Tricolor, Shorthair
+
+## CTL43 (2023-09-18)
+Sire: Quantum - Black Pied, Shorthair
+Dam: Yours Truly - Brindle Pied, Longhair Rosette
+Offspring varieties (1 unique, 2 total):
+  - Black Pied, Shorthair
+
+## CTL443 (2023-10-10)
+Sire: Cerveza - Rec. Red Banded, Shorthair
+Dam: Kamiko - Rec. Red Splashed, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - PEW, Shorthair
+  - Recessive Red Banded, Shorthair
+
+## CTL307 (2023-10-22)
+Sire: Scooby - Chocolate, Longhair
+Dam: Wildfire - Dominant Red, Texel
+Offspring varieties (6 unique, 8 total):
+  - Dominant Red Splashed, Texel
+  - Black Tan, Texel
+  - Dominant Red Pied, Texel
+  - Chocolate Tan, Texel
+  - Black Pied, Longhair
+  - Chocolate Tan, Longhair
+
+## CTL44 (2023-10-22)
+Sire: Rogan - Brindle, Shorthair
+Dam: Hot Spot - Black Pied, Longhair Rosette
+Offspring varieties (6 unique, 6 total):
+  - Dove Tan Pied, Shorthair
+  - Black Tan, Shorthair
+  - Brindle, Shorthair
+  - Brindle Pied, Longhair
+  - Black Tan Pied, Longhair
+  - Dove Tan Pied, Longhair
+
+## CTL442 (2023-10-24)
+Sire: Navarro - Rec. Red Dilute, Texel
+Dam: Aelina - Rec. Red Splashed, Longhair
+Offspring varieties (6 unique, 10 total):
+  - Recessive Red Splashed, Texel
+  - Recessive Red Dilute, Texel
+  - Recessive Red Splashed, Shorthair
+  - Recessive Red Splashed, Longhair
+  - Recessive Red Dilute, Longhair
+  - Recessive Red Dilute, Shorthair
+
+## CTL45 (2023-10-30)
+Sire: Ventura - Black Pied, Longhair Rosette
+Dam: Ember - Brindle Pied, Shorthair
+Offspring varieties (3 unique, 9 total):
+  - Brindle Pied, Shorthair Rosette
+  - Brindle Pied, Shorthair
+  - Black Pied, Shorthair
+
+## CTL441 (2023-11-05)
+Sire: Finn Collins - Chocolate Tricolor, Shorthair
+Dam: Fuego - Rec. Red Pied, Shorthair Rosette
+Offspring varieties (2 unique, 8 total):
+  - Black Tan Pied, Shorthair
+  - Black Pied, Shorthair
+
+## CTL440 (2023-11-05)
+Sire: Organized Mess - Black Merle Tan Pied, Shorthair
+Dam: Sparrow - Black, Shorthair
+Offspring varieties (8 unique, 12 total):
+  - Chocolate Merle Pied, Shorthair
+  - Chocolate Pied, Shorthair
+  - Chocolate Tan, Shorthair
+  - Black Merle Pied, Shorthair
+  - Black Pied, Shorthair
+  - Black Merle, Shorthair
+  - Black Tan, Shorthair
+  - Black Merle Tan, Shorthair
+
+## CTL439 (2023-11-12)
+Sire: Navarro - Rec. Red Dilute, Texel
+Dam: Mantequilla - Black Pied
+Offspring varieties (5 unique, 7 total):
+  - Agouti Splashed, Shorthair
+  - Recessive Red Dilute, Astrex
+  - Recessive Red, Shorthair
+  - Unknown
+  - Agouti, Shorthair
+
+## CTL438 (2023-11-13)
+Sire: Azure - Silver Splashed, Shorthair Rosette
+Dam: Sylveon - Silver Tan Pied, Shorthair
+Offspring varieties (5 unique, 6 total):
+  - Silver, Longhair Rosette
+  - Silver, Shorthair
+  - Silver Pied, Shorthair
+  - Silver Tan, Longhair Rosette
+  - Silver Tan Pied, Longhair Rosette
+
+## CTL435 (2023-12-26)
+Sire: Killian Jones - Tricolor, Shorthair
+Dam: Dulce - Rec. Red, Shorthair
+Offspring varieties (3 unique, 12 total):
+  - Unknown
+  - Sealpoint Siamese
+  - Black
+
+## CTL436 (2023-12-26)
+Sire: Gonzales - Rec. Red Splashed, Shorthair
+Dam: Arabela - Champagne Splashed, Longhair Rosette
+Offspring varieties (1 unique, 10 total):
+  - Unknown
+
+## CTL46 (2023-12-26)
+Sire: Mr. Midnight - Black, Shorthair Rosette
+Dam: Victoria's Secret - Brindle Pied, Shorthair Rosette
+Offspring varieties (4 unique, 7 total):
+  - Black, Shorthair Rosette
+  - Brindle, Shorthair Satin Rosette
+  - Shorthair Satin Rosette
+  - Brindle, Shorthair Rosette
+
+## CTL47 (2023-12-28)
+Sire: Scooby - Chocolate, Longhair
+Dam: Nugget - Dominant Red, Astrex
+Offspring varieties (7 unique, 7 total):
+  - Tricolor, Texel
+  - Dominant Red Pied, Longhair
+  - Dominant Red Splashed, Longhair
+  - Dominant Red, Texel
+  - Dominant Red, Shorthair
+  - Dominant Red Pied, Texel
+  - PEW, Texel
+
+## CTL434 (2024-01-01)
+Sire: Gonzales - Rec. Red Splashed, Shorthair
+Dam: Fresas Con Crema - Rec. Red Pied, Shorthair
+Offspring varieties (1 unique, 8 total):
+  - Recessive Red, Shorthair
+
+## CTL48 (2024-01-02)
+Sire: Rory - Brindle Pied, Shorthair
+Dam: Abundance - Black Pied, Shorthair
+Offspring varieties (5 unique, 8 total):
+  - Brindle Pied, Shorthair
+  - Black Pied, Shorthair
+  - Brindle, Shorthair
+  - Black Pied, Shorthair Rosette
+  - Brindle Pied, Shorthair Rosette
+
+## CTL433 (2024-01-23)
+Sire: Saffron Sweetheart - Recessive Fawn Merle, Longhair
+Dam: Ruby's Rodeo - Black Merle Tan Pied, Shorthair
+Offspring varieties (3 unique, 9 total):
+  - Black Merle Tan, Shorthair
+  - Black Merle, Shorthair
+  - Black Merle Tan Pied, Shorthair
+
+## CTL432 (2024-01-26)
+Sire: Twilight - Black Merle Tan, Shorthair
+Dam: Silly - Black Merle, Shorthair Satin
+Offspring varieties (3 unique, 3 total):
+  - Black Merle Pied, Shorthair
+  - Black Merle, Shorthair
+  - Black Merle Tan Pied, Shorthair
+
+## CTL431 (2024-01-27)
+Sire: The Whiskey Bandit - Black Merle, Shorthair
+Dam: Lucky Charm - Black Merle Tan Pied, Shorthair
+Offspring varieties (7 unique, 9 total):
+  - Black Merle Tan Pied, Longhair
+  - Black Merle, Shorthair
+  - Black Merle Tan, Shorthair
+  - Black Merle Pied, Shorthair
+  - Black Merle Tan Pied, Shorthair
+  - Black Merle, Longhair
+  - Black Merle Tan, Longhair
+
+## CTL430 (2024-01-28)
+Sire: Limited Edition - Black Merle Tan Pied, Longhair
+Dam: Olivia Twist - Black Merle Pied, Shorthair
+Offspring varieties (4 unique, 11 total):
+  - Black Merle Tan Pied, Longhair
+  - Black Merle Tan Pied, Shorthair
+  - Black Merle Pied, Shorthair
+  - Black Merle Pied, Longhair
+
+## CTL428 (2024-01-30)
+Sire: Gemini - Recessive Red Splashed, Texel
+Dam: Buena - Burmese, Shorthair
+Offspring varieties (4 unique, 6 total):
+  - Recessive Red Splashed, Shorthair
+  - Agouti Splashed, Shorthair
+  - Agouti Splashed, Astrex
+  - Recessive Red Splashed, Texel
+
+## CTL427 (2024-02-03)
+Sire: Gaspar - Recessive Red Splashed, Shorthair
+Dam: Xephyra - Black Tan, Shorthair Satin Rosette
+Offspring varieties (2 unique, 5 total):
+  - Recessive Red Splashed, Longhair
+  - Recessive Red Pied, Longhair
+
+## CTL426 (2024-02-04)
+Sire: Gaspar - Recessive Red Splashed, Shorthair
+Dam: Xena - Tricolor, Shorthair
+Offspring varieties (8 unique, 8 total):
+  - Recessive Red Dilute, Shorthair
+  - Recessive Red Splashed, Longhair
+  - Recessive Red Splashed, Shorthair
+  - Tricolor, Shorthair
+  - Splashed, Longhair
+  - BEW, Shorthair
+  - Splashed, Shorthair
+  - Recessive Red Tricolor, Longhair
+
+## CTL425 (2024-02-04)
+Sire: Gemini - Recessive Red Splashed, Texel
+Dam: Xyla - Splashed, Shorthair
+Offspring varieties (4 unique, 8 total):
+  - Recessive Red Splashed, Shorthair
+  - Agouti Splashed, Astrex Satin
+  - Agouti Splashed, Astrex
+  - Agouti Splashed, Shorthair
+
+## CTL424 (2024-02-22)
+Sire: Max - Black Pied, Longhair Rosette
+Dam: Fuego - Rec. Red Pied, Shorthair Rosette
+Offspring varieties (2 unique, 3 total):
+  - Black Pied, Longhair Rosette
+  - Black Tan Pied, Longhair Rosette
+
+## CTL423 (2024-03-17)
+Sire: The Whiskey Bandit - Black Merle, Shorthair
+Dam: Triple Thunder - Black Merle, Shorthair Satin
+Offspring varieties (3 unique, 9 total):
+  - Black Merle Pied, Shorthair
+  - Black Merle, Shorthair
+  - Chocolate Merle Pied, Shorthair
+
+## CTL422 (2024-03-25)
+Sire: Mr. Midnight - Black, Shorthair Rosette
+Dam: Smurf - Blue Variegated, Shorthair
+Offspring varieties (6 unique, 8 total):
+  - Black Tan, Shorthair
+  - Dove Tan Variegated, Shorthair Satin
+  - Splashed Siamese, Shorthair
+  - Black Variegated, Shorthair
+  - Dove Variegated, Shorthair Satin
+  - Dove, Shorthair
+
+## CTL49 (2024-03-31)
+Sire: Up2Date - Dominant Red Pied, Longhair
+Dam: Zipper - Black Tan Pied, Shorthair
+Offspring varieties (5 unique, 8 total):
+  - Dominant Red Pied, Longhair
+  - BEW, Longhair
+  - PEW, Shorthair
+  - Tricolor, Shorthair
+  - Black Pied, Longhair
+
+## CTL50 (2024-05-06)
+Sire: Whoop Whoop - Brindle Pied, Shorthair Rosette
+Dam: Touchdown - Black, Shorthair Rosette
+Offspring varieties (3 unique, 4 total):
+  - Brindle, Shorthair Rosette
+  - Splashed, Shorthair Rosette
+  - Black Pied, Shorthair Rosette
+
+## CTL51 (2024-05-07)
+Sire: Kaito - Brindle Tricolor, Longhair
+Dam: Flogging Molly - Brindle Pied, Longhair
+Offspring varieties (3 unique, 3 total):
+  - Brindle Pied, Longhair Rosette
+  - Brindle Tricolor, Longhair
+  - Snowtiger Pied, Longhair Rosette
+
+## CTL53 (2024-05-08)
+Sire: Diesel - Black Pied, Shorthair
+Dam: Jumpstart - Brindle Pied, Shorthair
+Offspring varieties (1 unique, 3 total):
+  - Black Pied, Shorthair
+
+## CTL52 (2024-05-08)
+Sire: Unichi - Black Pied, Texel
+Dam: Grandity - Black, Shorthair
+Offspring varieties (3 unique, 3 total):
+  - Blue Pied, Texel
+  - Black Pied, Astrex
+  - Black, Longhair Rosette
+
+## CTL421 (2024-05-11)
+Sire: Jackpot - Brindle Pied, Shorthair Rosette
+Dam: Kryptonite - Black, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Brindle Pied, Longhair
+
+## CTL54 (2024-05-17)
+Sire: Whats'up Dog - Brindle Pied, Shorthair
+Dam: Likona - Black Pied, Shorthair
+Offspring varieties (3 unique, 4 total):
+  - Brindle Pied, Shorthair
+  - Black Pied, Shorthair Rosette
+  - Black Pied, Longhair
+
+## CTL55 (2024-05-19)
+Sire: Pikachu - Brindle Pied, Shorthair Satin Rosette
+Dam: Victoria's Secret - Brindle Pied, Shorthair Rosette
+Offspring varieties (2 unique, 9 total):
+  - Brindle Pied, Shorthair Rosette
+  - Brindle Pied, Shorthair Satin Rosette
+
+## CTL56 (2024-05-22)
+Sire: Pikachu - Brindle Pied, Shorthair Satin Rosette
+Dam: Taragon - Brindle, Shorthair Satin Rosette
+Offspring varieties (5 unique, 11 total):
+  - Chocolate Tan Pied, Shorthair Satin Rosette
+  - Brindle, Shorthair Satin Rosette
+  - Brindle Pied, Shorthair Satin Rosette
+  - Black Tan Pied, Shorthair Satin Rosette
+  - Brindle Dove, Shorthair Satin Rosette
+
+## CTL420 (2024-05-22)
+Sire: Quantum - Black Pied, Shorthair
+Dam: Kyra - Black Merle Tan, Shorthair
+Offspring varieties (5 unique, 8 total):
+  - Black, Shorthair
+  - Splashed, Shorthair
+  - Splashed Fox, Shorthair
+  - Beige Fox, Shorthair
+  - Black Pied, Shorthair
+
+## CTL57 (2024-07-12)
+Sire: Up2Date - Dominant Red Pied, Longhair
+Dam: Kitsy - Tricolor, Shorthair
+Offspring varieties (4 unique, 12 total):
+  - Tricolor, Shorthair
+  - Dominant Red Tricolor, Shorthair
+  - Black Pied, Shorthair
+  - Dominant Red Pied, Shorthair
+
+## CTL58 (2024-07-13)
+Sire: Up2Date - Dominant Red Pied, Longhair
+Dam: Umbreon - Tricolor, Texel
+Offspring varieties (3 unique, 5 total):
+  - Dominant Red Pied, Texel
+  - Dominant Red Pied, Longhair
+  - Pink Eye White, Texel
+
+## CTL59 (2024-07-13)
+Sire: Qasimir - Bluepoint Siamese, Texel
+Dam: Ultra Vox - Dominant Red Splashed, Longhair
+Offspring varieties (6 unique, 6 total):
+  - Sealpoint Siamese Longhair
+  - Dominant Red Splashed, Texel
+  - Splashed, Texel
+  - Pink Eye White, Texel
+  - Dominant Red Splashed, Longhair
+  - Dominant Redpoint Siamese, Texel
+
+## CTL222 (2024-07-13)
+Sire: Yoshi - Black, Texel Rosette
+Dam: Tater Tot - Brindle, Shorthair Rosette
+Offspring varieties (6 unique, 13 total):
+  - Black, Astrex Rosette
+  - Brindle, Shorthair Rosette
+  - Black, Shorthair Rosette
+  - Brindle, Astrex Rosette
+  - Brindle, Shorthair Satin Rosette
+  - Black, Texel Rosette
+
+## CTL60 (2024-07-14)
+Sire: Qasimir - Bluepoint Siamese, Texel
+Dam: Uptown Girl - Dominant Red, Texel
+Offspring varieties (3 unique, 3 total):
+  - Black, Texel
+  - Blue Sable, Texel
+  - Dominant Sable, Longhair
+
+## CTL61 (2024-07-14)
+Sire: Yoshi - Black, Texel Rosette
+Dam: Unicat - Dominant Red Pied, Texel
+Offspring varieties (10 unique, 12 total):
+  - Black, Astrex Rosette
+  - Dominant Red, Shorthair Rosette
+  - Dominant Red, Astrex Rosette
+  - Dominant Red, Astrex
+  - Black, Astrex
+  - Black, Shorthair Rosette
+  - Dominant Fawn, Texel
+  - Black, Texel
+  - Dominant Red, Texel Rosette
+  - Dominant Fawn, Texel Rosette
+
+## CTL62 (2024-07-14)
+Sire: Jackpot - Brindle Pied, Shorthair Rosette
+Dam: Topnotch - Black, Shorthair Rosette
+Offspring varieties (6 unique, 10 total):
+  - Black, Longhair Rosette
+  - Brindle, Shorthair Rosette
+  - Black Pied, Shorthair Rosette
+  - Brindle Pied, Shorthair Rosette
+  - Black, Shorthair Rosette
+  - Brindle, Longhair Rosette
+
+## CTL63 (2024-09-24)
+Sire: Kingfish - Black, Shorthair
+Dam: Banda - Extreme Black Banded, Shorthair
+Offspring varieties (3 unique, 5 total):
+  - Black, Shorthair
+  - Splashed Banded, Shorthair
+  - Pink Eye White, Shorthair
+
+## CTL64 (2024-10-20)
+Sire: Kingfish - Black, Shorthair
+Dam: Banda - Extreme Black Banded, Shorthair
+Offspring varieties (6 unique, 9 total):
+  - Black, Longhair
+  - Pink Eye White, Shorthair
+  - Pink eye White, Shorthair
+  - Chocolate, Shorthair
+  - Black Banded, Shorthair
+  - Pink Eye White, Longhair
+
+## CTL65 (2024-11-01)
+Sire: Yoshi - Black, Texel Rosette
+Dam: Avalanche - Snowtiger Fox, Texel
+Offspring varieties (3 unique, 3 total):
+  - Splashed Fox, Texel Satin
+  - Dove Tan, Texel Satin
+  - Pink Eye White, Texel Satin
+
+## CTL66 (2024-11-02)
+Sire: Nero - Black Pied, Astrex
+Dam: Erina - Brindle, Shorthair Rosette
+Offspring varieties (1 unique, 1 total):
+  - Black Pied, Texel
+
+## CTL67 (2024-11-13)
+Sire: Teddy Boy - Chocolate Tan Pied, Shorthair Satin Rosette
+Dam: Marshmallow - Snowtiger Pied, Longhair Rosette
+Offspring varieties (1 unique, 2 total):
+  - Black Pied, Longhair Satin Rosette
+
+## CTL68 (2024-11-15)
+Sire: Rocky Road - Tricolor, Shorthair
+Dam: Keepsake - Dominant Red Pied, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Black Tan Pied, Shorthair
+
+## CTL217 (2024-12-07)
+Sire: Snoetje - Black Pied, Shorthair
+Dam: Ambrosia - Black Merle Pied, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Chocolate Pied, Shorthair
+
+## CTL69 (2024-12-08)
+Sire: Whoop Whoop - Brindle Pied, Shorthair Rosette
+Dam: Quava - Black Pied, Shorthair Rosette
+Offspring varieties (3 unique, 4 total):
+  - Brindle Pied, Shorthair Rosette
+  - Black Pied, Shorthair Rosette
+  - Brindle Pied, Longhair Rosette
+
+## CTL70 (2024-12-29)
+Sire: Zylan - Black, Longhair Rosette
+Dam: Ravin' Renegade - Brindle Pied, Shorthair Satin Rosette
+Offspring varieties (2 unique, 2 total):
+  - Black Tan, Shorthair Rosette
+  - Unknown
+
+## CTL71 (2025-01-01)
+Sire: Oddball - Black Pied, Shorthair
+Dam: Queen of Hearts - Brindle Pied, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Black Pied, Longhair
+
+## CTL72 (2025-01-01)
+Sire: Zodiac - Black, Longhair Rosette
+Dam: Royal Sunshine - Brindle Pied, Shorthair Rosette
+Offspring varieties (2 unique, 2 total):
+  - Black Pied, Longhair Rosette
+  - Brindle, Shorthair Rosette
+
+## CTL73 (2025-01-02)
+Sire: Toby - Black, Astrex
+Dam: Nautica - Blue Pied, Texel
+Offspring varieties (2 unique, 2 total):
+  - Black, Texel
+  - Blue, Astrex
+
+## CTL76 (2025-01-04)
+Sire: Raichu - Brindle Pied, Shorthair Satin Rosette
+Dam: Tuxedo Teaser - Black Tan Pied, Shorthair Satin Rosette
+Offspring varieties (2 unique, 2 total):
+  - Black Tan Pied, Shorthair Satin Rosette
+  - Brindle Pied, Shorthair Satin Rosette
+
+## CTL75 (2025-01-08)
+Sire: Raichu - Brindle Pied, Shorthair Satin Rosette
+Dam: Mango Vista - Brindle Tricolor, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Brindle Pied, Shorthair Satin Rosette
+
+## CTL74 (2025-02-25)
+Sire: Unknown - Black Tan Merle, Shorthair
+Dam: Shelby - Splashed, Shorthair Rosette
+Offspring varieties (2 unique, 2 total):
+  - Colorpoint Beige Pied, Shorthair Rosette
+  - Colorpoint Beige, Shorthair
+
+## CTL77 (2025-02-28)
+Sire: Dazzle Dream - Splashed Fox, Texel Satin
+Dam: White Magic - Sealpoint Siamese Longhair
+Offspring varieties (6 unique, 8 total):
+  - Splashed, Texel Satin
+  - Splashed, Texel
+  - Sealpoint Himalayan, Longhair Satin
+  - Pink Eye White, Texel Satin
+  - Sealpoint Siamese, Longhair
+  - Splashed, Longhair Satin
+
+## CTL78 (2025-03-02)
+Sire: Zodiac - Black, Longhair Rosette
+Dam: What the Fluff - Dominant Red Splashed, Texel
+Offspring varieties (4 unique, 5 total):
+  - Splashed, Longhair
+  - Blue, Texel
+  - Splashed, Texel
+  - Dominant Red, Longhair
+
+## CTL81 (2025-03-03)
+Sire: Yoshi - Black, Texel Rosette
+Dam: Wildcard - Dominant Red Splashed, Longhair
+Offspring varieties (2 unique, 2 total):
+  - Dominant Red Splashed, Texel
+  - Black, Texel
+
+## CTL80 (2025-03-03)
+Sire: Unknown - Black Tan Merle, Shorthair
+Dam: Macy - Black Pied, Shorthair Rosette
+Offspring varieties (1 unique, 1 total):
+  - Black Pied, Shorthair
+
+## CTL79 (2025-03-03)
+Sire: Zodiac - Black, Longhair Rosette
+Dam: Vision Forward - Dominant Red Pied, Texel
+Offspring varieties (5 unique, 6 total):
+  - Black Pied, Longhair
+  - Black, Texel
+  - Dominant Red Tricolor, Longhair
+  - Dominant Red Pied, Texel
+  - Tricolor, Texel
+
+## CTL82 (2025-03-04)
+Sire: Unknown - Black Tan Merle, Shorthair
+Dam: Liana - Splashed, Longhair Satin Rosette
+Offspring varieties (2 unique, 2 total):
+  - Splashed, Shorthair Rosette
+  - Burmese, Shorthair Satin Rosette
+
+## CTL83 (2025-04-02)
+Sire: Chicken Wing - Recessive Red Merle, Shorthair Satin
+Dam: Ambrosia - Black Merle Pied, Shorthair
+Offspring varieties (3 unique, 3 total):
+  - Recessive Red Merle, Shorthair
+  - Chocolate Merle, Shorthair
+  - Recessive Red Merle, Shorthair Satin
+
+## CTL388 (2025-04-11)
+Sire: Rizzo - Black, Texel
+Dam: Raja - Dominant Red Sable, Astrex
+Offspring varieties (2 unique, 2 total):
+  - Dominant Red, Longhair
+  - Dominant Red, Texel
+
+## CTL211 (2025-04-11)
+Sire: Teddy Boy - Chocolate Tan Pied, Shorthair Satin Rosette
+Dam: Butt Fluff - Dominant Fawn, Texel Rosette
+Offspring varieties (1 unique, 1 total):
+  - Champagne Tan, Astrex Rosette
+
+## CTL84 (2025-04-12)
+Sire: Spencer - Recessive Red, Astrex
+Dam: Chantilly - Pink Eye White, Shorthair
+Offspring varieties (3 unique, 3 total):
+  - Recessive Fawn, Texel
+  - Recessive Fawn Merle, Texel
+  - Recessive Red Leaden Merle, Longhair
+
+## CTL85 (2025-04-14)
+Sire: Rocco - Lilac Agouti Pied, Texel Satin
+Dam: Awesome Curls - Black, Texel
+Offspring varieties (2 unique, 2 total):
+  - Lilac, Texel
+  - Sealpoint Siamese, Texel
+
+## CTL86 (2025-04-16)
+Sire: Poco Loco - Black Pied, Longhair
+Dam: Mia - Black Pied, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Black Pied, Shorthair
+
+## CTL87 (2025-04-17)
+Sire: Quincy - Black Pied, Longhair Rosette
+Dam: Jordana - Black Pied, Shorthair
+Offspring varieties (3 unique, 5 total):
+  - Black Pied, Shorthair
+  - Tricolor, Shorthair
+  - Dove Pied, Shorthair
+
+## CTL88 (2025-04-17)
+Sire: Poco Loco - Black Pied, Longhair
+Dam: Samara - Dominant Red Pied, Longhair
+Offspring varieties (2 unique, 2 total):
+  - Black Pied, Longhair
+  - Dominant Red Pied, Longhair
+
+## CTL89 (2025-04-19)
+Sire: Quincy - Black Pied, Longhair Rosette
+Dam: Farah - Dominant Red Pied, Longhair
+Offspring varieties (1 unique, 2 total):
+  - Black Pied, Longhair
+
+## CTL90 (2025-04-22)
+Sire: Gameboy - Black Pied, Texel
+Dam: Leila - Chocolate Pied, Longhair
+Offspring varieties (3 unique, 5 total):
+  - Chocolate Pied, Texel
+  - Black Pied, Texel
+  - Chocolate Pied, Longhair
+
+## CTL91 (2025-05-14)
+Sire: Valor - Agouti Pied Merle, Longhair
+Dam: Thalia - Dove, Texel Satin
+Offspring varieties (1 unique, 1 total):
+  - Blue, Texel
+
+## CTL92 (2025-05-15)
+Sire: Rizzo - Black, Texel
+Dam: Darcy - Blue Tan, Astrex
+Offspring varieties (1 unique, 2 total):
+  - Blue, Texel
+
+## CTL93 (2025-05-16)
+Sire: Floyd - Tricolor, Texel
+Dam: Itsy Bitsy - Black Pied, Longhair Satin Rosette
+Offspring varieties (1 unique, 1 total):
+  - Black Tan Pied, Texel Satin
+
+## CTL94 (2025-05-17)
+Sire: Uros - Splashed, Texel Satin
+Dam: Ciaran - Chocolate Tan, Longhair
+Offspring varieties (4 unique, 4 total):
+  - Chocolate Tan, Texel
+  - Black Tan, Texel Satin
+  - Black Tan Pied, Texel
+  - Unknown
+
+## CTL209 (2025-05-17)
+Sire: Sami - Agouti Tricolor Fox, Texel
+Dam: Ivy League - Black Pied, Longhair Satin Rosette
+Offspring varieties (2 unique, 2 total):
+  - Agouti Colorpoint Beige Pied, Texel
+  - Unknown
+
+## CTL95 (2025-05-18)
+Sire: Cooper - Black Merle, Astrex
+Dam: Safiya - Black Tan Merle, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Black Tan Merle Pied, Longhair
+
+## CTL96 (2025-06-10)
+Sire: Cooper - Black Merle, Astrex
+Dam: Safiya - Black Tan Merle, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Chocolate Merle Tan, Astrex
+
+## CTL97 (2025-06-13)
+Sire: Quattro - Blue Burmese, Texel
+Dam: Just a Flirt - Black Tan Pied, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Colorpoint Beige, Texel
+
+## CTL98 (2025-06-13)
+Sire: Valor - Agouti Pied Merle, Longhair
+Dam: Thalia - Dove, Texel Satin
+Offspring varieties (1 unique, 1 total):
+  - Blue, Texel Satin
+
+## CTL99 (2025-07-21)
+Sire: Rizzo - Black, Texel
+Dam: Pardoes - Black Pied, Shorthair
+Offspring varieties (1 unique, 1 total):
+  - Tricolor, Shorthair
+
+## CTL100 (2025-07-21)
+Sire: Gianni - Recessive Red Leaden Merle, Longhair
+Dam: Lucia - Blue Splashed Merle, Longhair Rosette
+Offspring varieties (2 unique, 2 total):
+  - Black Merle, Longhair
+  - Sealpoint Siamese Merle, Longhair
+
+## CTL101 (2025-07-22)
+Sire: Sami - Agouti Tricolor Fox, Texel
+Dam: Poppy - Black Pied, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Burmese Pied, Shorthair
+  - Colorpoint Beige Pied, Shorthair
+
+## CTL102 (2025-07-22)
+Sire: Quattro - Blue Burmese, Texel
+Dam: Unica - Sealpoint Himalayan, Longhair Satin
+Offspring varieties (4 unique, 7 total):
+  - Sealpoint Siamese, Texel
+  - Stone, Texel
+  - Burmese, Texel
+  - Sealpoint Himalayan, Texel
+
+## CTL103 (2025-07-24)
+Sire: Quattro - Blue Burmese, Texel
+Dam: Yara - Blue Splashed, Longhair Rosette
+Offspring varieties (3 unique, 4 total):
+  - Bluepoint Siamese, Texel
+  - Blue Burmese, Texel
+  - Blue Splashed, Texel Rosette
+
+## CTL104 (2025-07-25)
+Sire: Parker - Blue, Texel
+Dam: Winnie the Blue - Blue, Texel
+Offspring varieties (1 unique, 2 total):
+  - Blue, Texel
+
+## CTL105 (2025-07-27)
+Sire: Gryffin - Recessive Fawn Merle, Texel
+Dam: Ursula - Sealpoint Siamese, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Sealpoint Siamese, Longhair Satin
+
+## CTL106 (2025-08-03)
+Sire: Spencer - Recessive Red, Astrex
+Dam: Arianna - Splashed, Texel
+Offspring varieties (1 unique, 1 total):
+  - Black Pied, Longhair
+
+## CTL107 (2025-08-04)
+Sire: Uros - Splashed, Texel Satin
+Dam: Azzura - Blue Splashed, Texel Satin
+Offspring varieties (3 unique, 4 total):
+  - Blue Splashed, Texel Satin
+  - Splashed Fox, Texel Satin
+  - Splashed, Texel Satin
+
+## CTL108 (2025-08-06)
+Sire: Mottley - Splashed, Longhair
+Dam: Sofia - Splashed, Texel
+Offspring varieties (5 unique, 6 total):
+  - Tricolor, Texel
+  - Sealpoint Siamese, Texel
+  - Tricolor, Texel Satin
+  - Splashed, Texel Satin
+  - Splashed, Texel
+
+## CTL109 (2025-08-07)
+Sire: Omega - Blue, Texel
+Dam: Giulia - Black, Texel Satin
+Offspring varieties (6 unique, 6 total):
+  - Blue Pied, Longhair
+  - Black Merle Pied, Texel Satin
+  - Black Merle, Texel Satin
+  - Black Merle Pied, Texel
+  - Black, Texel
+  - Black, Texel Satin
+
+## CTL110 (2025-08-09)
+Sire: Quattro - Blue Burmese, Texel
+Dam: Chiara - Blue Splashed, Texel Satin
+Offspring varieties (3 unique, 5 total):
+  - Blue Burmese, Texel
+  - Bluepoint Siamese, Texel
+  - Blue Splashed, Texel
+
+## CTL111 (2025-08-10)
+Sire: Breezer - Splashed Merle, Longhair
+Dam: Bianca - Splashed Fox, Texel
+Offspring varieties (4 unique, 4 total):
+  - Splashed Fox, Texel
+  - Sealpoint Siamese, Longhair
+  - Splashed, Longhair
+  - Splashed Fox, Longhair
+
+## CTL113 (2025-08-21)
+Sire: Sami - Agouti Tricolor Fox, Texel
+Dam: Allegra - Black Tan, Texel
+Offspring varieties (4 unique, 6 total):
+  - Splashed Fox, Texel
+  - Black Tan, Texel
+  - Agouti Dilute Fox, Texel
+  - Agouti Dilute, Texel
+
+## CTL114 (2025-10-18)
+Sire: Charlie - Black Merle, Longhair
+Dam: Delcia - Recessive Red Merle, Shorthair
+Offspring varieties (5 unique, 7 total):
+  - Black Calico, Longhair
+  - Black Merle Pied, Shorthair
+  - Recessive Red Merle, Shorthair
+  - Unknown
+  - Black, Merle + pied, Short hair
+
+## CTL115 (2025-10-20)
+Sire: Rizzo - Black, Texel
+Dam: Mika - Chocolate Pied, Longhair
+Offspring varieties (3 unique, 4 total):
+  - Black Pied, Texel
+  - Black, Texel
+  - Unknown
+
+## CTL116 (2025-10-24)
+Sire: Knox - Tricolor, Texel Satin
+Dam: Zelesta - Tricolor, Texel
+Offspring varieties (4 unique, 6 total):
+  - Blue Tricolor, Longhair Rosette
+  - Tricolor, Texel
+  - Blue Tricolor, Texel Rosette
+  - Unknown
+
+## CTL117 (2025-10-30)
+Sire: Gianni - Recessive Red Leaden Merle, Longhair
+Dam: Daevy - Chocolate Merle, Shorthair
+Offspring varieties (6 unique, 6 total):
+  - Chocolate Merle, Shorthair
+  - Recessive Red Chocolate Merle, Shorthair
+  - chocolat, merle, shorthair
+  - Unknown
+  - Recessive Red Merle, Shorthair
+  - Black Merle, Longhair
+
+## CTL118 (2025-11-04)
+Sire: Laszlo - Black Merle Pied, Texel
+Dam: Zoltara - Black, Texel
+Offspring varieties (2 unique, 2 total):
+  - Blue Pied, Texel
+  - Blue, Piebald, Long hair
+
+## CTL119 (2025-11-17)
+Sire: Daikon - Blue, Texel Rosette
+Dam: Raylin - Black Pied, Texel Satin
+Offspring varieties (7 unique, 8 total):
+  - Lilac Pied, Texel
+  - Blue Pied, Texel Satin
+  - Black Pied, Texel Satin
+  - Black, Texel
+  - Blue, Texel
+  - Black Pied, Longhair
+  - Black, Texel Satin
+
+## CTL122 (2025-11-17)
+Sire: Voltari - Black Tan Merle Pied, Longhair
+Dam: Vivian - Chocolate Pied, Texel Satin
+Offspring varieties (4 unique, 4 total):
+  - Chocolate Tan Pied, Texel
+  - Chocolate Pied, Longhair
+  - Black, Piebald, Longhair
+  - Black Pied, Longhair
+
+## CTL120 (2025-11-17)
+Sire: Daikon - Blue, Texel Rosette
+Dam: Vajen - Blue Pied, Texel Satin
+Offspring varieties (3 unique, 3 total):
+  - Lilac Pied, Texel Satin
+  - Blue Pied, Longhair
+  - Blue Pied, Longhair Satin
+
+## CTL121 (2025-11-17)
+Sire: Fynn - Bluepoint Siamese, Texel
+Dam: Violet - Lilac Pied, Texel Satin
+Offspring varieties (4 unique, 5 total):
+  - Blue Splashed, Texel
+  - Blue Splashed, Texel Satin
+  - Blue Splashed, Longhair Rosette
+  - Blue Splashed, Longhair Satin
+
+## CTL123 (2025-11-19)
+Sire: Bianco - Sealpoint Siamese Merle, Longhair
+Dam: Doria - Black Merle, Longhair
+Offspring varieties (1 unique, 2 total):
+  - Black Merle, Longhair
+
+## CTL124 (2025-11-20)
+Sire: Nolan - Sealpoint Siamese, Longhair
+Dam: Wayla - Chocolate Tricolor, Longhair
+Offspring varieties (4 unique, 8 total):
+  - Blue Splashed, Longhair
+  - Splashed, Longhair Satin
+  - CPB splashed, Longhair
+  - Splashed, Longhair
+
+## CTL129 (2025-12-03)
+Sire: Daikon - Blue, Texel Rosette
+Dam: Wyna - Blue Pied, Longhair Satin Rosette
+Offspring varieties (4 unique, 4 total):
+  - Lilac Pied, Longhair Rosette
+  - Lilac Pied, Texel Satin Rosette
+  - Blue Pied, Longhair Satin Rosette
+  - Blue Pied, Longhair Rosette
+
+## CTL130 (2025-12-05)
+Sire: Gianni - Recessive Red Leaden Merle, Longhair
+Dam: Gabriella - Recessive Fawn, Texel
+Offspring varieties (5 unique, 5 total):
+  - Fawn, Texel
+  - Pink Eye White, Longhair
+  - Pink Eye White, Texel
+  - Pink Eye White (Siamese + PE), Longhair
+  - Pink Eye White (Siamese + PE), Texel
+
+## CTL131 (2025-12-15)
+Sire: Rizzo - Black, Texel
+Dam: Kenzie - Black Pied, Longhair
+Offspring varieties (1 unique, 1 total):
+  - Black, Longhair Satin
+
+## CTL135 (2025-12-15)
+Sire: Fenno - Blue Splashed, Texel Rosette
+Dam: Haidera - Lilac, Texel
+Offspring varieties (2 unique, 4 total):
+  - Blue, Texel Rosette
+  - Blue, Texel
+
+## CTL134 (2025-12-16)
+Sire: Daikon - Blue, Texel Rosette
+Dam: Primrose - Blue, Texel
+Offspring varieties (1 unique, 2 total):
+  - Blue, Texel
+
+## CTL133 (2025-12-16)
+Sire: Charlie - Black Merle, Longhair
+Dam: Meadow - Chocolate Pied, Texel
+Offspring varieties (3 unique, 3 total):
+  - Black Pied, Longhair
+  - Black, Longhair
+  - Splashed, Longhair
+
+## CTL132 (2025-12-18)
+Sire: Legend - Black, Texel
+Dam: Mavi - Blue, Longhair
+Offspring varieties (2 unique, 3 total):
+  - Blue, Texel
+  - Blue, Texel Satin
+
+## CTL136 (2026-01-04)
+Sire: Nolan - Sealpoint Siamese, Longhair
+Dam: Bagel - Sealpoint Siamese Fox, Longhair Rosette
+Offspring varieties (4 unique, 7 total):
+  - Unknown
+  - Sealpoint Siamese, Longhair Satin
+  - Sealpoint Siamese, Longhair
+  - sealpoint siamese, longhair
+
+## CTL137 (2026-01-08)
+Sire: Rijswijk (Ryder) - Tricolor, Texel
+Dam: Ivey - Black Pied, Shorthair
+Offspring varieties (5 unique, 8 total):
+  - Chocolate Pied, Astrex
+  - Black Pied, Astrex
+  - Unknown
+  - Chocolate Pied, Texel
+  - Lilac Pied, Longhair
+
+## CTL138 (2026-01-17)
+Sire: Royce - Blue Tricolor, Longhair Rosette
+Dam: Manisha - Black Pied, Texel
+Offspring varieties (7 unique, 8 total):
+  - Chocolate Pied, Longhair
+  - Tricolor, Longhair Rosette
+  - Chocolate Tricolor, Longhair Rosette
+  - Tricolor, Longhair
+  - Tricolor, Texel Rosette
+  - Black Pied, Longhair
+  - Chocolate Pied, Texel
+
+## CTL149 (2026-01-23)
+Sire: Charlie - Black Merle, Longhair
+Dam: Melina - Black Pied, Texel
+Offspring varieties (6 unique, 7 total):
+  - Black Pied, Longhair
+  - Black, Longhair
+  - Chocolate Roan, Longhair
+  - Black Roan, Texel
+  - Black Pied, Texel
+  - Black Roan, Longhair
+
+## CTL150 (2026-01-26)
+Sire: Legend - Black, Texel
+Dam: Ursula - Chocolate Tan, Texel
+Offspring varieties (5 unique, 9 total):
+  - Black Tan, Texel
+  - Dove Tan, Texel
+  - Black Tan Pied, Texel
+  - Black Tan, Longhair
+  - Black Tan, Texel Satin
+
+## CTL151 (2026-01-31)
+Sire: Daikon - Blue, Texel Rosette
+Dam: Marla - Black Tan Pied, Texel Satin
+Offspring varieties (4 unique, 4 total):
+  - Blue, Longhair
+  - Burmese Fox, Longhair Satin Rosette
+  - Lilac Pied, Texel Satin
+  - Black Tan Pied, Texel Satin Rosette
+
+## CTL152 (2026-02-05)
+Sire: Nolan - Sealpoint Siamese, Longhair
+Dam: Habiba - Sealpoint Siamese, Texel
+Offspring varieties (3 unique, 3 total):
+  - Siamese, Texel
+  - Bluepoint Siamese, Texel
+  - Agouti Siamese, Texel
+
+## CTL166 (2026-02-07)
+Sire: Rizzo - Black, Texel
+Dam: Jimena - Black Pied, Shorthair
+Offspring varieties (2 unique, 2 total):
+  - Black Pied, Texel
+  - Black, Texel
+
+## CTL168 (2026-02-09)
+Sire: Special - Chocolate Merle, Shorthair
+Dam: Atari - Chocolate Merle Tan, Astrex
+Offspring varieties (2 unique, 2 total):
+  - Chocolate Pied Merle, Astrex
+  - Chocolate Merle, Texel
+
+## CTL167 (2026-02-09)
+Sire: Legend - Black, Texel
+Dam: Yeva - Blue, Texel Satin
+Offspring varieties (6 unique, 6 total):
+  - Silver, Longhair
+  - Black Merle, Texel
+  - Blue, Longhair Satin
+  - Silver, Texel Satin
+  - Black, Texel Rosette
+  - Blue, Texel
+
+## CTL169 (2026-02-16)
+Sire: Sami - Agouti Tricolor Fox, Texel
+Dam: Myrrh - Chocolate Pied, Texel
+Offspring varieties (6 unique, 8 total):
+  - Chocolate Pied, Longhair
+  - Cinnamon Pied, Longhair Rosette
+  - Black Pied, Texel Rosette
+  - Agouti Pied, Texel Rosette
+  - Black Tan Pied, Texel
+  - Chocolate Tan Pied, Texel
+
+## CTL203 (2026-03-01)
+Sire: Vitan - Siamese, Texel
+Dam: Tamala - Sealpoint Siamese, Texel
+Offspring varieties (3 unique, 5 total):
+  - Sealpoint Siamese, Longhair
+  - Sealpoint Siamese, Texel
+  - Bluepoint Siamese, Texel
+
+## CTL205 (2026-03-04)
+Sire: Vitan - Siamese, Texel
+Dam: Cotija - Pink Eye White, Texel Satin
+Offspring varieties (6 unique, 11 total):
+  - Bluepoint? Siamese, Longhair
+  - Sealpoint Siamese, Texel Rosette
+  - Dove/Silverpoint Siamese, Texel
+  - Sealpoint Siamese, Longhair
+  - Pink Eye White, Texel
+  - Bluepoint Siamese, Texel
+
+## CTL206 (2026-03-06)
+Sire: Special - Chocolate Merle, Shorthair
+Dam: Sunny - Recessive Red Chocolate Merle, Shorthair
+Offspring varieties (3 unique, 7 total):
+  - Recessive Red Chocolate Merle, Shorthair
+  - Chocolate Merle, Longhair
+  - Chocolate Merle, Shorthair
+
+## CTL207 (2026-03-06)
+Sire: Special - Chocolate Merle, Shorthair
+Dam: Primadonna - Black Merle Pied, Shorthair
+Offspring varieties (5 unique, 7 total):
+  - Black Merle, Shorthair
+  - Chocolate Roan, Shorthair
+  - Chocolate Merle Pied, Shorthair
+  - Chocolate Merle, Longhair
+  - Black Merle Pied, Shorthair
+
+## CTL237 (2026-03-11)
+Sire: Special - Chocolate Merle, Shorthair
+Dam: Calico - Black Calico, Longhair
+Offspring varieties (4 unique, 5 total):
+  - Chocolate Merle, Shorthair
+  - Black Merle, Shorthair
+  - Black Merle, Longhair
+  - Recessive Red Merle, Shorthair
+
+## CTL296 (2026-03-19)
+Sire: Prism - Recessive Red Merle, Shorthair
+Dam: Sally - Black Merle, Longhair
+Offspring varieties (1 unique, 2 total):
+  - Black Merle, Longhair
+
+## CTL539 (2026-04-15)
+Sire: Prism - Recessive Red Merle, Shorthair
+Dam: Sally - Black Merle, Longhair
+Offspring varieties (4 unique, 7 total):
+  - Black Merle, Longhair
+  - Leaden Merle, Longhair
+  - Recessive Red Merle, Longhair
+  - Recessive Red Merle, Shorthair
+
+## CTL540 (2026-04-18)
+Sire: Prism - Recessive Red Merle, Shorthair
+Dam: Cherry - Black, Longhair
+Offspring varieties (6 unique, 10 total):
+  - Chocolate Sepia, Shorthair
+  - Leaden, Shorthair
+  - Black, Longhair
+  - Black, Shorthair
+  - Sepia, Longhair
+  - Sepia, Shorthair
+
+## CTL258 (2026-05-01)
+Sire: Nolan - Sealpoint Siamese, Longhair
+Dam: Femme - Bluepoint Siamese, Texel
+Offspring varieties (4 unique, 9 total):
+  - Sealpoint Siamese, Texel
+  - Bluepoint Siamese, Texel
+  - Sealpoint Siamese, Longhair
+  - Bluepoint Siamese, Longhair
+
+## CTL414 (2026-05-01)
+Sire: Furby - Blue, Texel
+Dam: Riccia - Black Tan Pied, Texel Satin Rosette
+Offspring varieties (6 unique, 14 total):
+  - Blue, Longhair
+  - Blue, Texel Rosette
+  - Black, Texel
+  - Black, Longhair Rosette
+  - Blue, Texel
+  - Blue, Longhair Rosette
+
+## CTL252 (2026-05-02)
+Sire: O'Bee - Black Pied, Texel
+Dam: Daifuku - Blue, Texel Satin Rosette
+Offspring varieties (5 unique, 11 total):
+  - Tricolor, Texel
+  - Black Pied, Texel
+  - Black, Texel
+  - Black, Longhair
+  - Black Pied, Longhair
+
+## CTL253 (2026-05-02)
+Sire: Ripton - Black Tan, Texel
+Dam: Ginny - Blue, Texel
+Offspring varieties (5 unique, 11 total):
+  - Blue, Texel
+  - Black, Texel
+  - Silver, Texel
+  - Blue Tan, Texel
+  - Lavender, Texel
+
+## CTL256 (2026-05-02)
+Sire: Monty - Burmese Fox, Longhair Satin Rosette
+Dam: Dica - Stone, Texel
+Offspring varieties (7 unique, 8 total):
+  - Pink-eyed Himalayan, Longhair Satin
+  - Blue Stone Fox, Longhair Satin
+  - Sepia Pied, Texel Rosette
+  - Sepia, Longhair
+  - Stone, Longhair Satin
+  - Himalayan, Texel
+  - Burmese Pied, Longhair Satin Rosette
+
+## CTL254 (2026-05-03)
+Sire: Monty - Burmese Fox, Longhair Satin Rosette
+Dam: Jazlin - Blue Splashed, Texel Satin
+Offspring varieties (12 unique, 12 total):
+  - Burmese Fox, Longhair Satin Rosette
+  - Blue Splashed Fox, Longhair Satin
+  - Blue Splashed Fox, Texel Satin Rosette
+  - Blue Splashed, Texel Satin
+  - Blue Burmese, Longhair Satin Rosette
+  - Splashed, Texel Satin Rosette
+  - Blue Burmese Fox, Longhair Satin
+  - Blue Burmese?, Texel Satin Rosette
+  - Blue Burmese?, Longhair Satin Rosette
+  - Blue Splashed Fox, Texel Satin
+  - Himalayan, Longhair Satin
+  - Blue Splashed, Texel Satin Rosette
+
+## CTL672 (2026-05-05)
+Sire: Bianco - Sealpoint Siamese Merle, Longhair
+Dam: Deedee - Stone, Texel
+Offspring varieties (1 unique, 2 total):
+  - Himalayan, Texel
+
+## CTL251 (2026-05-06)
+Sire: Joep - Blue Splashed, Longhair
+Dam: Keira - Tricolor, Texel
+Offspring varieties (8 unique, 13 total):
+  - Splashed, Texel
+  - Lilac Splashed, Texel
+  - Tricolor, Texel
+  - Himalayan, Texel
+  - Lilac Tricolor, Texel
+  - Splashed, Longhair
+  - Blue Tricolor, Texel
+  - Lilac Splashed, Longhair
+
+## CTL250 (2026-05-06)
+Sire: Melano - Black Merle Tan Pied, Longhair
+Dam: Lainey - Blue Pied, Longhair
+Offspring varieties (6 unique, 7 total):
+  - Black Pied Merle, Longhair
+  - Black Pied, Longhair
+  - Blue Tan Pied, Longhair
+  - Blue Pied (Roan? Merle?), Longhair
+  - Blue Pied, Longhair Satin
+  - Black Tan Pied Roan, Longhair
+
+## CTL632 (2026-05-11)
+Sire: Xavi - Chocolate Pied, Longhair
+Dam: Chianti - Black, Longhair
+Offspring varieties (6 unique, 12 total):
+  - Chocolate, Longhair
+  - Black, Longhair
+  - Black Merle, Longhair
+  - Black, Longhair Satin
+  - Chocolate Pied, Longhair
+  - Chocolate, Longhair Satin
+
+## CTL413 (2026-05-13)
+Sire: Fiero - Recessive Red, Longhair Satin Rosette
+Dam: Calora - Recessive Red Merle, Shorthair
+Offspring varieties (1 unique, 2 total):
+  - Recessive Red, Shorthair
+
+## CTL391 (2026-05-14)
+Sire: Rijswijk (Ryder) - Tricolor, Texel
+Dam: Tinkerbell - Chocolate Tricolor, Longhair
+Offspring varieties (3 unique, 3 total):
+  - Tricolor, Texel
+  - Chocolate Tricolor, Longhair
+  - Chocolate Tricolor, Longhair Satin
+
+## CTL412 (2026-05-18)
+Sire: Fiero - Recessive Red, Longhair Satin Rosette
+Dam: Favilla - Dominant Red Pied, Shorthair Rosette
+Offspring varieties (8 unique, 8 total):
+  - Chocolate Pied, Shorthair Rosette
+  - Black Pied, Rosette
+  - Dominant Red Pied, Rosette
+  - Red Pied, Rosette
+  - Red, Longhair Satin Rosette
+  - Red, Rosette
+  - Red, Satin Rosette
+  - Dominant Red, Satin Rosette
+
+## CTL753 (2026-06-22)
+Sire: Keeper - Recessive Red Chocolate, Shorthair
+Dam: Unknown - Unknown
+Offspring varieties (2 unique, 9 total):
+  - Recessive Red, Shorthair
+  - Black, Shorthair
+
+## CTL599 (2026-06-25)
+Sire: Revvy - Cinnamon Pied, Longhair Rosette
+Dam: Ramona - Tricolor, Texel
+Offspring varieties (2 unique, 3 total):
+  - Agouti Pied, Texel Rosette
+  - Black Pied, Texel Rosette
+
+## CTL598 (2026-06-27)
+Sire: Rijswijk (Ryder) - Tricolor, Texel
+Dam: Rogue - Blue Tricolor, Texel Rosette
+Offspring varieties (1 unique, 1 total):
+  - Tricolor, Texel
+
+## CTL648 (2026-06-29)
+Sire: Melano - Black Merle Tan Pied, Longhair
+Dam: Cindara - Black Merle, Shorthair
+Offspring varieties (5 unique, 5 total):
+  - Blue Tan Merle, Shorthair
+  - Black Tan Merle, Longhair
+  - Blue Merle, Longhair
+  - Black Pied Merle, Longhair
+  - Black Merle, Longhair
+
+## CTL758 (2026-07-22)
+Sire: Revvy - Cinnamon Pied, Longhair Rosette
+Dam: Umbra - Black, Texel Satin
+Offspring varieties (7 unique, 7 total):
+  - Agouti Pied, Texel
+  - Agouti, Longhair Rosette
+  - Agouti Pied, Longhair
+  - Black, Longhair
+  - Black Pied, Texel
+  - Black Pied, Texel Rosette
+  - Black, Longhair Rosette
+
+## CTL757 (2026-07-23)
+Sire: Simba - Recessive Red Pied, Shorthair
+Dam: Solare - Recessive Red, Shorthair Satin Rosette
+Offspring varieties (1 unique, 7 total):
+  - Recessive Red, Shorthair
+
+## CTL762 (2026-07-23)
+Sire: Figaro - Black Tan Pied, Longhair
+Dam: Arabica - Chocolate Tan Pied, Texel
+Offspring varieties (3 unique, 9 total):
+  - Black Tan Pied, Texel
+  - Black Tan Pied, Texel Rosette
+  - Black Tan Pied, Texel Satin
+
+## CTL761 (2026-07-23)
+Sire: Whisperion - Black, Longhair
+Dam: Tiana - Chocolate pied, Longhair
+Offspring varieties (3 unique, 3 total):
+  - Black, Longhair Rosette?
+  - Black Pied, Longhair
+  - Black, Longhair
+
+## CTL765 (2026-07-24)
+Sire: Carmino - Recessive Red Chocolate Pied (Tricolor? Merle?), Texel
+Dam: Serina - Black Tan Pied, Longhair
+Offspring varieties (7 unique, 8 total):
+  - Lilac Tan, Longhair Satin
+  - Chocolate Tan Pied, Texel
+  - Black Pied, Texel Satin
+  - Silver Pied, Longhair Satin
+  - Black Tan Pied, Texel Satin
+  - Unknown
+  - Black Pied, Longhair
+
+## CTL788 (2026-08-04)
+Sire: Melano - Black Merle Tan Pied, Longhair
+Dam: Primadonna - Black Merle Pied, Shorthair
+Offspring varieties (4 unique, 4 total):
+  - Black Pied Merle, Longhair Satin
+  - Chocolate Pied Merle, Longhair
+  - Black Pied Merle, Longhair
+  - Chocolate Merle Pied, Longhair
+
+## CTL789 (2026-08-06)
+Sire: Simba - Recessive Red Pied, Shorthair
+Dam: Sunny - Recessive Red Chocolate Merle, Shorthair
+Offspring varieties (1 unique, 2 total):
+  - Unknown
+
+## CTL792 (2026-08-07)
+Sire: Whisperion - Black, Longhair
+Dam: Favilla - Dominant Red Pied, Shorthair Rosette
+Offspring varieties (3 unique, 3 total):
+  - Chocolate, Satin Rosette
+  - Dominant Red Pied, Longhair Rosette
+  - Black Pied, Longhair Rosette
+
+## CTL941 (2026-08-30)
+Sire: Kristoff x ..... - Brindle, Umbrous, Longhair
+Dam: Ditzy - Unknown
+Offspring varieties (1 unique, 1 total):
+  - Unknown
+
