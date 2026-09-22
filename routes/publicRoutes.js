@@ -82,24 +82,31 @@ router.get('/profiles/search', async (req, res) => {
         let filter = {};
         if (query && query.trim()) {
             const searchTerm = query.trim();
-            // Search by breederName, personalName, or id_public
-            // Handle both old numeric IDs and new CTU-prefixed IDs (e.g., "5", "CT5", "CTU5")
-            const idMatch = searchTerm.match(/^(?:CTU?[- ]?)?(.+)$/i);
-            if (idMatch) {
-                // Try to match as-is (for CTU5 format) or extracted value
-                filter.$or = [
-                    { id_public: searchTerm }, // Try exact match (CTU5)
-                    { id_public: idMatch[1] }, // Try without prefix (5)
-                    { breederName: { $regex: searchTerm, $options: 'i' } },
-                    { personalName: { $regex: searchTerm, $options: 'i' } }
-                ];
+            // Search by breederName, personalName, or id_public.
+            // id_public is always stored uppercase with no separators (e.g. "CTU1001"), but users
+            // may type it many ways: "ctu1001", "CTU 1001", "CTU-1001", "CT1001", or just "1001".
+            // Strip any optional CT/CTU prefix and separators, keep the trailing digits, and match
+            // the rebuilt "CTU<digits>" case-insensitively (regex, not exact-match) so partial/odd
+            // casing/formatting still finds the profile.
+            const digitsMatch = searchTerm.match(/^(?:CTU?[- ]?)?(\d+)$/i);
+
+            const orClauses = [
+                { breederName: { $regex: searchTerm, $options: 'i' } },
+                { personalName: { $regex: searchTerm, $options: 'i' } }
+            ];
+
+            if (digitsMatch) {
+                // Pure/near-ID search term (digits, optionally prefixed) — match id_public exactly
+                // (case-insensitive) once rebuilt as CTU<digits>, e.g. "1001" or "ctu 1001" -> CTU1001.
+                const rebuiltId = `CTU${digitsMatch[1]}`;
+                orClauses.unshift({ id_public: { $regex: `^${rebuiltId}$`, $options: 'i' } });
             } else {
-                // Otherwise search by breederName or personalName
-                filter.$or = [
-                    { breederName: { $regex: searchTerm, $options: 'i' } },
-                    { personalName: { $regex: searchTerm, $options: 'i' } }
-                ];
+                // Otherwise still allow partial/case-insensitive id_public matches, e.g. typing
+                // just part of the ID or mixed case.
+                orClauses.unshift({ id_public: { $regex: searchTerm, $options: 'i' } });
             }
+
+            filter.$or = orClauses;
         }
         
         const profiles = await PublicProfile.find(filter)
