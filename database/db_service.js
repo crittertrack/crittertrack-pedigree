@@ -433,6 +433,11 @@ const getUserProfileById = async (appUserId_backend) => {
         hasSeenProfileSetupGuide: publicProfile?.hasSeenProfileSetupGuide || false,
         betaSurveyStatus: publicProfile?.betaSurveyStatus || 'pending',
         betaSurveyLastPromptedAt: publicProfile?.betaSurveyLastPromptedAt || null,
+        // Android Play Store closed-testing opt-in (see routes/androidBetaRoutes.js)
+        androidBetaOptIn: {
+            googleEmail: user.androidBetaOptIn?.googleEmail || null,
+            submittedAt: user.androidBetaOptIn?.submittedAt || null,
+        },
         // Push notifications
         hasPushSubscriptions: (user.pushSubscriptions || []).length > 0,
         pushCategoryPreferences: user.pushCategoryPreferences ? Object.fromEntries(user.pushCategoryPreferences) : {},

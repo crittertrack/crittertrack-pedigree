@@ -119,6 +119,14 @@ const UserSchema = new mongoose.Schema({
     // Donation badge fields
     monthlyDonationActive: { type: Boolean, default: false },  // Monthly supporter badge (diamond)
     lastDonationDate: { type: Date, default: null },           // Last one-time donation (gift badge, 31 days)
+
+    // Android Play Store closed-testing opt-in (see routes/androidBetaRoutes.js). The submitted
+    // Google account email is added manually to the Play Console tester list (no Google API
+    // integration), so this just records what the user submitted and when.
+    androidBetaOptIn: {
+        googleEmail: { type: String, default: null, trim: true, lowercase: true },
+        submittedAt: { type: Date, default: null },
+    },
     
     // Duplicate detection dismissed pairs (to avoid showing same duplicates repeatedly)
     dismissedDuplicatePairs: { type: [String], default: [] },  // Array of '{id1}|{id2}' sorted pairs
@@ -1884,7 +1892,7 @@ FavoriteSchema.index({ userId: 1, itemType: 1, itemId: 1 }, { unique: true });
 
 const Favorite = mongoose.model('Favorite', FavoriteSchema);
 
-// --- KO-FI PLEDGE SCHEMA (iOS fundraiser live total + supporter credits) ---
+// --- KO-FI PLEDGE SCHEMA (supporter credits + monthly donation badges) ---
 const KofiPledgeSchema = new mongoose.Schema({
     kofiEmail: { type: String, required: true, index: true }, // Ko-fi payer's email; the upsert key per supporter
     idPublic: { type: String, default: null, index: true }, // matched CritterTrack account, if one was identified
@@ -1897,8 +1905,7 @@ const KofiPledgeSchema = new mongoose.Schema({
     lastPaymentDate: { type: Date, default: Date.now },
     kofiTransactionId: { type: String, default: null },
     // 'manual' = entered by an admin for a donor outside Ko-fi (e.g. a pre-existing PayPal
-    // subscriber) — never auto-expired by the badge-expiry cron, and doesn't require a real
-    // lastPaymentDate refresh to keep counting toward the fundraiser total.
+    // subscriber) — never auto-expired by the badge-expiry cron.
     source: { type: String, enum: ['kofi', 'manual'], default: 'kofi' },
 }, { timestamps: true });
 const KofiPledge = mongoose.model('KofiPledge', KofiPledgeSchema);

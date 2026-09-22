@@ -894,6 +894,10 @@ const enclosureRoutes = require('./routes/enclosureRoutes');
 app.use('/api/enclosures', authMiddleware, enclosureRoutes);
 app.use('/api/pedigree', authMiddleware, pedigreeRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
+
+// Android Play Store closed-testing opt-in (banner in crittertrack-frontend's web app)
+const androidBetaRoutes = require('./routes/androidBetaRoutes');
+app.use('/api/android-beta', authMiddleware, androidBetaRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/moderation', authMiddleware, moderationRoutes);
 

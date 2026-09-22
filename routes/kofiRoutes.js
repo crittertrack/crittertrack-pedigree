@@ -2,11 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { User, PublicProfile, KofiPledge } = require('../database/models');
 
-// A Ko-fi subscription payment counts as "still active" for this many days after its last
-// payment — a bit over a month, since Ko-fi doesn't send a webhook event when someone cancels,
-// only on successful payments. See kofiBadgeExpiryCronJob in index.js for how this is enforced.
-const SUBSCRIPTION_GRACE_DAYS = 35;
-
 async function setMonthlyBadge(idPublic, active) {
     const user = await User.findOneAndUpdate({ id_public: idPublic }, { monthlyDonationActive: active }, { new: true });
     if (user) await PublicProfile.updateOne({ id_public: idPublic }, { monthlyDonationActive: active });
@@ -54,8 +49,8 @@ router.post('/webhook', async (req, res) => {
         const trimmedName = (event.from_name || '').trim();
         const creditName = trimmedName || null;
 
-        // Track it toward the iOS fundraiser's live monthly total and supporter credits,
-        // keyed by the Ko-fi email so repeat/renewal payments update the same record.
+        // Track it for supporter credits, keyed by the Ko-fi email so repeat/renewal payments
+        // update the same record.
         await KofiPledge.findOneAndUpdate(
             { kofiEmail: event.email },
             {
@@ -89,25 +84,6 @@ router.post('/webhook', async (req, res) => {
     } catch (err) {
         console.error('[Ko-fi] Webhook error:', err.message);
         res.sendStatus(200); // acknowledge anyway so Ko-fi doesn't endlessly retry a bad payload
-    }
-});
-
-// GET /api/kofi/ios-fundraiser — public; the frontend progress bar reads the live total from
-// here instead of a hand-maintained constant.
-router.get('/ios-fundraiser', async (req, res) => {
-    try {
-        const cutoff = new Date(Date.now() - SUBSCRIPTION_GRACE_DAYS * 24 * 60 * 60 * 1000);
-        // Manual pledges (e.g. a pre-existing PayPal subscriber, added by an admin) count
-        // regardless of lastPaymentDate recency — there's no automatic renewal signal for them.
-        const activePledges = await KofiPledge.find({
-            isSubscription: true,
-            $or: [{ lastPaymentDate: { $gte: cutoff } }, { source: 'manual' }],
-        }).select('amount');
-        const total = activePledges.reduce((sum, p) => sum + (p.amount || 0), 0);
-        res.json({ total: Math.round(total * 100) / 100, supporterCount: activePledges.length });
-    } catch (err) {
-        console.error('[Ko-fi] ios-fundraiser fetch error:', err.message);
-        res.status(500).json({ error: 'Failed to load fundraiser total' });
     }
 });
 
