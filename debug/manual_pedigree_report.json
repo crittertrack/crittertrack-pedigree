@@ -1,0 +1,3951 @@
+{
+  "summary": {
+    "documentsWithField": 6158,
+    "emptyContainers": 2553,
+    "animalsWithPedigreeData": 3603,
+    "animalsWithManualEntries": 76,
+    "totalManualSlots": 300,
+    "totalLinkedSlots": 10511,
+    "manualSlotsBySlot": {
+      "sire": 58,
+      "dam": 59,
+      "sireSire": 21,
+      "sireDam": 23,
+      "damSire": 23,
+      "damDam": 27,
+      "sireSireSire": 12,
+      "sireSireDam": 12,
+      "sireDamSire": 9,
+      "sireDamDam": 10,
+      "damSireSire": 12,
+      "damSireDam": 14,
+      "damDamSire": 8,
+      "damDamDam": 12
+    },
+    "conflicts": 4
+  },
+  "animals": [
+    {
+      "id_public": "CTC927",
+      "species": "Fancy Mouse",
+      "prefix": "OHH",
+      "suffix": "",
+      "name": "SplashGordon",
+      "sireId_public": "CTC6666",
+      "damId_public": null,
+      "creatorId": "69de1a07b066c7d0e199b017",
+      "manualSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Choco Lady",
+          "birthDate": "2013-10-01",
+          "genCode": "a/a d/d",
+          "breederName": "OHH"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC6666"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC6665"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "ctcId": "CTC6664"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "ctcId": "CTC6663"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC1294",
+      "species": "Fancy Rat",
+      "prefix": "TBS",
+      "suffix": "",
+      "name": "Madmax",
+      "sireId_public": "CTC1190",
+      "damId_public": "CTC1288",
+      "creatorId": "69961edd34653d7d1486a486",
+      "manualSlots": [
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "Liroy",
+          "prefix": "DPR",
+          "gender": "Male",
+          "birthDate": "2023-06-11",
+          "variety": "Bleu russe hooded rex dumbo",
+          "breederName": "Diamants de Pando Rats (France)"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Lilo",
+          "prefix": "DPR",
+          "gender": "Female",
+          "birthDate": "2023-12-23",
+          "variety": "Noir variberk blazed lisse dumbo",
+          "breederName": "Diamants de Pando Rats (France)"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "name": "Dan Brady",
+          "prefix": "DPR",
+          "gender": "Male",
+          "birthDate": "2023-09-15",
+          "variety": "Bleu us berkshire rex dumbo",
+          "breederName": "Diamants de Pando Rats (France)"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "Black Widow",
+          "prefix": "YOU",
+          "gender": "Female",
+          "birthDate": "2023-12-27",
+          "variety": "Noir uni lisse standard",
+          "breederName": "Diamants de Pando Rats (France)"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC1190"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC1288"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC1362"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC1361"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC1402"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "ctcId": "CTC1400"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "ctcId": "CTC1364"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "ctcId": "CTC1363"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "ctcId": "CTC1366"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "ctcId": "CTC1365"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC1631",
+      "species": "Fancy Rat",
+      "prefix": "RD'A",
+      "suffix": "",
+      "name": "Hélios",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "699ccb7fc4969e0acd9a491d",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Papa Hélios",
+          "variety": "Agouti hooded standard lisse"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Maman Hélios",
+          "variety": "Himalayenne Dumbo yeux rouges"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC1960",
+      "species": "Fancy Mouse",
+      "prefix": "MM",
+      "suffix": "",
+      "name": "R15-M3",
+      "sireId_public": "CTC14",
+      "damId_public": "CTC118",
+      "creatorId": "6935d63a9a5a8b31e51a4821",
+      "manualSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Test grandsire",
+          "birthDate": "1994-03-30",
+          "genCode": "2352385",
+          "variety": "black",
+          "breederName": "Morningstar",
+          "notes": "note"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC14"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC118"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC305"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "ctcId": "CTC300"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC303"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC302"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC294"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "ctcId": "CTC295"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC1966",
+      "species": "Fancy Mouse",
+      "prefix": "MM",
+      "suffix": "",
+      "name": "Tipsy",
+      "sireId_public": "CTC14",
+      "damId_public": "CTC118",
+      "creatorId": "6935d63a9a5a8b31e51a4821",
+      "manualSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "test",
+          "birthDate": "2026-04-15",
+          "variety": "test",
+          "breederName": "test breeder"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC14"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC118"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC2010",
+      "species": "Fancy Rat",
+      "prefix": "KH",
+      "suffix": "",
+      "name": "Tango",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "699ccb7fc4969e0acd9a491d",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Thor",
+          "variety": "Cannelle pearl étoilée standard lisse yeux noir",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Isilda",
+          "variety": "Noir marble uni standard lisse yeux noir",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC2547",
+      "species": "Fancy Rat",
+      "prefix": "RR",
+      "suffix": "SRVR",
+      "name": "Bacon",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "698bfebb249806199cde0309",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "SSR Tonka RR",
+          "genCode": "Aa Dd ctch Bebe Cucu dudu dwdw",
+          "variety": "BE Wheaten Tonk Vel dumbo dwarf",
+          "breederName": "Sunny Savannah Rattery • Georgia"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RR Nora",
+          "genCode": "Aa DD ctch Bebe dudu dwdw",
+          "variety": "BE Wheaten Tonk dumbo dwsrf",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "RR Scooter",
+          "genCode": "As Cct Bebe dudu dwdw",
+          "variety": "Agouti dumbo dwarf",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Noir RR",
+          "genCode": "aa Cch Dudu Dwdw",
+          "variety": "Black",
+          "breederName": "Joe local breeder"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "SSR Tonka RR",
+          "genCode": "Aa Dd ctch Bebe Cucu dudu dwdw",
+          "variety": "BE Wheaten Tonk Vel dumbo dwarf",
+          "breederName": "Sunny Savannah Rattery • Georgia"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "RR Morticia",
+          "genCode": "aa Dd C- Mm dudu dwdw",
+          "variety": "Black dumbo dwarf",
+          "breederName": "Rexburg Rats"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC2701",
+      "species": "Fancy Rat",
+      "prefix": "KH",
+      "suffix": "",
+      "name": "Rhéa",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "699ccb7fc4969e0acd9a491d",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Pollux",
+          "variety": "BEW harley standard yeux noir",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Miriam",
+          "variety": "Cannelle bleu blazed variegated standard lisse",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC2797",
+      "species": "Fancy Rat",
+      "prefix": "RATA",
+      "suffix": "BSS",
+      "name": "Leo",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "RATA Owen",
+          "variety": "BES Rexoid",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RATA Amelia",
+          "variety": "Siamese dumbo",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "RATA Quinn",
+          "variety": "BES Rexoid",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "RATA Ruthie",
+          "variety": "Siamese Double Rexoid",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "RATA Quinn",
+          "variety": "Siamese rexoid",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "RATA Mulan",
+          "variety": "Himalayan",
+          "breederName": "Ratatouilles Rattery • SD"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC2798",
+      "species": "Fancy Rat",
+      "prefix": "RATA",
+      "suffix": "BSS",
+      "name": "Kobicha",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "RATA Magnifico",
+          "variety": "Pointed Tonk variberk",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RATA Maribel",
+          "variety": "Pointed/Marten Tonkinese",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "RATA Jett",
+          "variety": "Black Marten",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "RATA Aphrodite",
+          "variety": "Tonkinese",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "RATA Toast",
+          "variety": "Tonkinese Hooded Rexoid",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "RATA Aphrodite",
+          "variety": "Tonkinese",
+          "breederName": "Ratatouilles Rattery • MD"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4577",
+      "species": "Fancy Mouse",
+      "prefix": "NRR",
+      "suffix": "",
+      "name": "Nat",
+      "sireId_public": "CTC4634",
+      "damId_public": "CTC4584",
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Sylvester",
+          "birthDate": "2024-04-01",
+          "variety": "black tan angora",
+          "breederName": "Neuse River Rodentry"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC4591"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC4623",
+      "species": "Fancy Mouse",
+      "prefix": "NRR",
+      "suffix": "",
+      "name": "Taz",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "missexed buck",
+          "variety": "See photo for possibilities",
+          "breederName": "Morgan Ruocchio"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Unnamed",
+          "genCode": "a/a C/ch s/s go/go Re/re",
+          "variety": "black pied texel",
+          "breederName": "Morgan Ruocchio"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4624",
+      "species": "Fancy Mouse",
+      "prefix": "NRR",
+      "suffix": "",
+      "name": "S'more",
+      "sireId_public": "CTC4634",
+      "damId_public": "CTC4584",
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Sylvester",
+          "birthDate": "2024-04-01",
+          "variety": "black tan angora",
+          "breederName": "Neuse River Rodentry"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC4591"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC4674",
+      "species": "Fancy Mouse",
+      "prefix": "NRR",
+      "suffix": "",
+      "name": "Haze",
+      "sireId_public": "CTC4587",
+      "damId_public": null,
+      "creatorId": "6a26d308be1c72c0df466d69",
+      "manualSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Unnamed",
+          "birthDate": "2024-04-17",
+          "variety": "blue satin rex",
+          "breederName": "Neuse River Rodentry"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Kudzu",
+          "birthDate": "2022-11-30",
+          "variety": "blue pied standard",
+          "breederName": "Neuse River Rodentry"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Unnamed",
+          "variety": "lilac himilayan satin texel",
+          "breederName": "Chris M."
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "Eggs",
+          "birthDate": "2023-09-22",
+          "variety": "straw pied rex",
+          "breederName": "Aquarium Outfitters"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Maggie",
+          "variety": "blue pied satin"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC4587"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC4591"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC4675",
+      "species": "Fancy Mouse",
+      "prefix": "NRR",
+      "suffix": "",
+      "name": "Cheese",
+      "sireId_public": "CTC4587",
+      "damId_public": null,
+      "creatorId": "6a26d308be1c72c0df466d69",
+      "manualSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Unnamed",
+          "birthDate": "2024-03-01",
+          "genCode": "a/a S/s Go/go",
+          "variety": "black standard",
+          "breederName": "Neuse River Rodentry"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Unnamed",
+          "birthDate": "2023-12-25",
+          "genCode": "a/a B/b C/c s/s go/go Re/re",
+          "variety": "black pied texel",
+          "breederName": "Morgan R."
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "Missexed buck",
+          "variety": "See photo for possibilities",
+          "breederName": "Morgan Ruocchio"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Unnamed",
+          "genCode": "a/a C/ch s/s go/go Re/re",
+          "variety": "black pied texel",
+          "breederName": "Morgan Ruocchio"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC4587"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC4591"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "ctcId": "CTC4733"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC4677",
+      "species": "Fancy Mouse",
+      "prefix": "DSB",
+      "suffix": "",
+      "name": "Maggie",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "DSB Roy",
+          "birthDate": "2025-03-11",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "DSB Lucina",
+          "birthDate": "2025-03-11",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "DSB Oddball",
+          "birthDate": "2025-01-13",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "DSB Oddball",
+          "birthDate": "2025-01-13",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "DSB Betty",
+          "birthDate": "2024-07-31",
+          "variety": "black merle",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "DSB Betty",
+          "birthDate": "2024-07-31",
+          "variety": "black merle",
+          "breederName": "Durham Squeak Beasties"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC4634"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC4634"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "ctcId": "CTC4591"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "ctcId": "CTC4634"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC4591"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC4634"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC4678",
+      "species": "Fancy Mouse",
+      "prefix": "DSB",
+      "suffix": "",
+      "name": "Lizzie",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "DSB Roy",
+          "birthDate": "2025-03-11",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "DSB Lucina",
+          "birthDate": "2025-03-11",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "DSB Oddball",
+          "birthDate": "2025-01-13",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "DSB Oddball",
+          "birthDate": "2025-01-13",
+          "variety": "red merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "DSB Betty",
+          "birthDate": "2024-07-31",
+          "variety": "black merle standard",
+          "breederName": "Durham Squeak Beasties"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "DSB Betty",
+          "birthDate": "2024-07-31",
+          "variety": "black merle standard",
+          "breederName": "Durham Squeak Beasties"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC4634"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC4634"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "ctcId": "CTC4591"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "ctcId": "CTC4634"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC4597"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC4591"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC4634"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC4712",
+      "species": "Fancy Rat",
+      "prefix": "BSS",
+      "suffix": "",
+      "name": "Tots Baby Blue",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Tottenham Navy",
+          "variety": "Russian Blue Agouti variegated dumbo"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "BSS Maya Blue",
+          "variety": "Russian Blue Vel dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "BSS Lincoln",
+          "variety": "American Blue berk Marble Vel dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "BSS Momma Blue",
+          "variety": "Russian Blue berk dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4715",
+      "species": "Fancy Rat",
+      "prefix": "BSS",
+      "suffix": "",
+      "name": "Chelsea Blue",
+      "sireId_public": "CTC4777",
+      "damId_public": "CTC4711",
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "BSS Admiral Blue",
+          "variety": "Russian Blue Marble dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "BSS Peacock Blue",
+          "variety": "Russian Blue berkshire dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "BSS Lincoln",
+          "variety": "American Blue Marble velveteen dimbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "BSS Momma Blue",
+          "variety": "Russian Blue berkshire dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "BSS Lincoln",
+          "variety": "American Blue berk Marble vel dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "BSS Momma Blue",
+          "variety": "Russian Blue berk dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC4777"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC4711"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC4718",
+      "species": "Fancy Rat",
+      "prefix": "MDR",
+      "suffix": "BSS",
+      "name": "Stuffing",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "MDR Russian Blue Harley",
+          "variety": "Russian Blue harley",
+          "breederName": "MD Ratties"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "MDR Mink Satin Silvermane",
+          "variety": "Mink Satin Silvermane",
+          "breederName": "MD Ratties"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4719",
+      "species": "Fancy Rat",
+      "prefix": "MDR",
+      "suffix": "BSS",
+      "name": "Bumblebee",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "MDR Petey",
+          "variety": "Black patched DU rex",
+          "breederName": "MD Ratties"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "MDR Coral",
+          "variety": "Mink OE dumbo",
+          "breederName": "MD Ratties"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4733",
+      "species": "Fancy Mouse",
+      "prefix": "MMM",
+      "suffix": "",
+      "name": "Silk",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "MMM buck",
+          "breederName": "Marie's Menagerie & Mousery"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "MMM doe",
+          "breederName": "Marie's Menagerie & Mousery"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4756",
+      "species": "Fancy Rat",
+      "prefix": "SSR",
+      "suffix": "",
+      "name": "Teeny Little Super Guy BSS",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "GBR Viktor",
+          "variety": "Black patched dumbo dwarf"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Black dwarf",
+          "variety": "Black dwarf"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "GBR Regal",
+          "variety": "Agouti variegated vel dwarf"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "GBR Empress",
+          "variety": "Agouti Variegated vel dwarf"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "GBR Empire",
+          "variety": "Black Blz berk Harley satin dwarf"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "GBR Chic",
+          "variety": "Agouti Chinchilla OE dwarf"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "GBR Empire",
+          "variety": "Black blz berk Harley satin dwarf"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "GBR Chic",
+          "variety": "Agouti Chinchilla OE dwarf"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4757",
+      "species": "Fancy Rat",
+      "prefix": "RATA",
+      "suffix": "BSS",
+      "name": "Misty Rose",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "RATA Ezra",
+          "variety": "UK mink Irish",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RATA Savannah",
+          "variety": "DP Pearl MM hooded/variegated",
+          "breederName": "Ratatouilles Rattery • SD"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4758",
+      "species": "Fancy Rat",
+      "prefix": "RATA",
+      "suffix": "BSS",
+      "name": "Cotton Candy",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "RATA Cobalt",
+          "variety": "Russian Blue rexoid",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RATA Sushi",
+          "variety": "Black capped rexoid",
+          "breederName": "Ratatouilles Rattery • SD"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4760",
+      "species": "Fancy Rat",
+      "prefix": "RATA",
+      "suffix": "BSS",
+      "name": "Anthracite",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "RATA Cash",
+          "variety": "Black Marble",
+          "breederName": "Ratatouilles Rattery • SD"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RATA Penny",
+          "variety": "Black MM blz berk",
+          "breederName": "Ratatouilles Rattery • SD"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4781",
+      "species": "Fancy Rat",
+      "prefix": "BSS",
+      "suffix": "",
+      "name": "Lincoln",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "BSS Cobalt Dragon",
+          "variety": "Russian Blue light ing box berk dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "MDR Skype BSS",
+          "variety": "American Blue berk HS Vel dumbo",
+          "breederName": "MD Ratties"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4782",
+      "species": "Fancy Rat",
+      "prefix": "BSS",
+      "suffix": "",
+      "name": "Momma Blue",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "BSS Irish Lovin",
+          "variety": "Russian Blue heart Irish dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "BSS Freckles",
+          "variety": "Black berk HS Marble dumbo",
+          "breederName": "Blue Stone Siamese Rattery"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4783",
+      "species": "Fancy Rat",
+      "prefix": "SMPL",
+      "suffix": "BSS",
+      "name": "Lemonade",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Dolce SMPL",
+          "variety": "American Cinnamon silvermane"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Cinnamon Bun SMPL",
+          "variety": "Aussie Cinnamon"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC4822",
+      "species": "Fancy Rat",
+      "prefix": "MDR",
+      "suffix": "BSS",
+      "name": "Blue dilute Harley doe",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6987f87a27ce20c05433aede",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "MDR Blue DU",
+          "variety": "Blue dilute DU dumbo",
+          "breederName": "MD Ratties • Maryland"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "MDR Blue dwarf",
+          "variety": "Blue dwarf",
+          "breederName": "MD Ratties • Maryland"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC5234",
+      "species": "Fancy Rat",
+      "prefix": "RR",
+      "suffix": "SRVR",
+      "name": "Filet",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "698bfebb249806199cde0309",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "SSR Tonka RR",
+          "genCode": "Aa Dd ctch Bebe Cucu dudu dwdw",
+          "variety": "BE Tonkinese velveteen dumbo dwarf",
+          "breederName": "Sunny Savannah Rattery • Georgia Savannah Rattery"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RR Nora",
+          "genCode": "Aa DD ctch Bebe dudu dwdw",
+          "variety": "BE Wheaten Tonkinese dumbo dwarf",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "RR Scooter",
+          "genCode": "Aa Cct Bebe dudu dwdw",
+          "variety": "Agouti dumbo dwarf",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Noir RR",
+          "genCode": "aa Cch Dudu Dwdw",
+          "variety": "Black",
+          "breederName": "Joe local breeder"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "SSR Tonka RR",
+          "genCode": "Aa Dd ctch Bebe Cucu dudu dwdw",
+          "variety": "BE Wheaten Tonk Vel dumbo dwarf",
+          "breederName": "Sunny Savannah Rattery • Georgia Savannah Rattery"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "RR Morticia",
+          "genCode": "aa Dd C- Mm dudu dwdw",
+          "variety": "Black dumbo dwarf"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC5240",
+      "species": "Fancy Rat",
+      "prefix": "RR",
+      "suffix": "SRVR",
+      "name": "Gouda",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "698bfebb249806199cde0309",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "RR Fox",
+          "genCode": "aa Mm Dudu Dwdw",
+          "variety": "Black",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "RR Piper",
+          "genCode": "aa Dudu Dwdw",
+          "variety": "Black"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "RR Dunkin",
+          "genCode": "aa Gg Cch mm",
+          "variety": "Mink dwarf",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Panda RR",
+          "genCode": "aa Gg MM dudu DwDw",
+          "variety": "Black dumbo",
+          "breederName": "Joe local breeder"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "RR Guacamole",
+          "genCode": "aa Dd Smsm dudu dwdw",
+          "variety": "Russian Blue silvermane dumbo dwarf",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Shiro RR",
+          "genCode": "as Dudu DwDw",
+          "variety": "Black",
+          "breederName": "Joe local breeder"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "NCR Hopper",
+          "genCode": "aa Dd Cch Mm Hh Smsm dudu dwdw",
+          "variety": "Black silvermane dumbo dwarf",
+          "breederName": "Northern Colors Rattery"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "RR Taffeta",
+          "genCode": "Aa Dd Mm Hh Dudu Dwdw",
+          "variety": "Agouti",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "RR Thumper",
+          "genCode": "Aa Dd C(c?) Mm Smsm Dudu Dwdw",
+          "variety": "Russian Blue Agouti Silvermane",
+          "breederName": "Rexburg Rats"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "RR Skippy",
+          "genCode": "aa Dd H(h?) Dudu Dwdw",
+          "variety": "Russian Blue",
+          "breederName": "Rexburg Rats"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC5665",
+      "species": "Fancy Rat",
+      "prefix": "NPB",
+      "suffix": "",
+      "name": "Aramis",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69961edd34653d7d1486a486",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Nino",
+          "birthDate": "2024-12-09",
+          "variety": "Champagne dumbo lisse standard yeux rose",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Misa",
+          "birthDate": "2024-10-23",
+          "variety": "Ambre dumbo yeux rose lisse",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Lilo",
+          "birthDate": "2024-08-03",
+          "variety": "Agouti Irish étoilée dumbo lisse yeux noir",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Nina",
+          "birthDate": "2024-04-10",
+          "variety": "Ambre standard lisse yeux rouge",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Zorro",
+          "birthDate": "2023-06-18",
+          "variety": "Topaze standard uni yeux rouge",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Zorra",
+          "birthDate": "2023-07-07",
+          "variety": "Beige masqué yeux rouge dumbo lisse",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Titus",
+          "birthDate": "0022-08-29",
+          "variety": "Redevil standard",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Lola",
+          "variety": "Agouti berkshire dumbo",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "Tisa",
+          "variety": "Ambre dumbo lisse yeux rose",
+          "breederName": "NPB Rattery (France)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC5687",
+      "species": "Fancy Mouse",
+      "prefix": "DSB",
+      "suffix": "",
+      "name": "Tatl",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "CC Baron O' Beef Dip (Baron)",
+          "birthDate": "2025-10-16",
+          "genCode": "aa bb Pp Go_",
+          "variety": "chocolate standard",
+          "breederName": "Crystallized Critters"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "DSB Mildrith",
+          "birthDate": "2025-10-04",
+          "genCode": "at_ Bb Pp Rnrn gogo",
+          "variety": "black tan merle angora",
+          "breederName": "Durham Squeak Beasties"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC5688",
+      "species": "Fancy Mouse",
+      "prefix": "DSB",
+      "suffix": "",
+      "name": "Tael",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69ce9aa60407c8e295b9fac3",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "CC Baron O' Beef Dip (Baron)",
+          "birthDate": "2025-10-16",
+          "genCode": "aa bb Pp Go_",
+          "variety": "chocolate standard",
+          "breederName": "Crystallized Critters"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "DSB Mildrith",
+          "birthDate": "2025-10-04",
+          "genCode": "ata Bb Pp rnrn gogo",
+          "variety": "black tan merle angora",
+          "breederName": "Durham Squeak Beasties"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC5693",
+      "species": "Fancy Rat",
+      "prefix": "les ptis kachotiers",
+      "suffix": "",
+      "name": "Tirex",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6a11addebe1c72c0dfec761a",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "sun",
+          "variety": "topaze red rex dumbo"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "blue",
+          "variety": "bleu Dumbo lisse"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC6089",
+      "species": "Fancy Mouse",
+      "prefix": "",
+      "suffix": "",
+      "name": "Grey",
+      "sireId_public": null,
+      "damId_public": "CTC6100",
+      "creatorId": "6a21cfa3be1c72c0df1648f2",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Duo",
+          "gender": "Male",
+          "birthDate": "2025-01-13"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC6100"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6233",
+      "species": "Fancy Mouse",
+      "prefix": "SLM's",
+      "suffix": "",
+      "name": "Meganium",
+      "sireId_public": null,
+      "damId_public": "CTC707",
+      "creatorId": "695b9f33c57b859245c72ec6",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Dobby von Zaandam",
+          "prefix": "SLM'S",
+          "gender": "Male",
+          "birthDate": "2025-01-13",
+          "variety": "Black and tan Satin Long"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC707"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC314"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "ctcId": "CTC315"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC313"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC310"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6244",
+      "species": "Fancy Rat",
+      "prefix": "DTC",
+      "suffix": "",
+      "name": "ATHENA",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "699d6d4ba29a0e851c2f345b",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "jupiter",
+          "prefix": "IND",
+          "gender": "Male",
+          "birthDate": "2025-01-01",
+          "variety": "AGOUTI uni LISSE DUMBO",
+          "breederName": "SENNE GRIMON"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "COMETE",
+          "prefix": "Kh",
+          "gender": "Female",
+          "birthDate": "2025-04-01",
+          "variety": "AGOUTI BERKSHIRE LISSE DUMBO",
+          "breederName": "Knabbelhoek ( belgique )"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "M1R",
+          "prefix": "RK",
+          "gender": "Male",
+          "birthDate": "2024-08-29",
+          "variety": "Agouti variberk étoilée lisse dumbo",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "mere c-f",
+          "gender": "Female",
+          "birthDate": "2025-01-01",
+          "variety": "cannelle etoilé silverman lisse STANDARDS",
+          "breederName": "knobellhoek"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC6399",
+      "species": "Fancy Mouse",
+      "prefix": "CWR",
+      "suffix": "",
+      "name": "Grey",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69de1a07b066c7d0e199b017",
+      "manualSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "K13-F2",
+          "prefix": "MM",
+          "gender": "Female",
+          "birthDate": "2025-04-17",
+          "variety": "Dominant Red Pied Longhair"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC278"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "ctcId": "CTC296"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC274"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC277"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC294"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "ctcId": "CTC295"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6499",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Xatu",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69961edd34653d7d1486a486",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Lian VR",
+          "birthDate": "2024-12-11",
+          "variety": "Bleu russe whiteside harley standard",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Sisa WR",
+          "birthDate": "2025-07-01",
+          "variety": "Siamois sable silvermane standard lisse",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Jupiter VR",
+          "birthDate": "2024-07-06",
+          "variety": "Bleu russe irish het dwarf het harley",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Julie VR",
+          "birthDate": "2024-07-06",
+          "variety": "Noir uni het dwarf het harley",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Mowgli VR",
+          "variety": "Dwarf siamois whiteside yeux noir lisse standard",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Margo VR",
+          "variety": "Noir uni harley standard",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "Mowgli VR",
+          "variety": "Dwarf siamois whiteside yeux noir lisse standard",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "Margo VR",
+          "variety": "Noir uni harley standard",
+          "breederName": "Ratsmore (Allemagne)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC6500",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Chester",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69961edd34653d7d1486a486",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Jumi VR",
+          "birthDate": "2025-04-16",
+          "variety": "Bleu russe agouti berkshire velours",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Walka VR",
+          "birthDate": "2025-03-13",
+          "variety": "Bleu russe whiteside lisse",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Jupiter VR",
+          "birthDate": "2024-07-06",
+          "variety": "Bleu russe irish",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Zmyrna VR",
+          "birthDate": "2024-04-12",
+          "variety": "Agouti uni velours dwarf",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Jupiter VR",
+          "birthDate": "2024-07-06",
+          "variety": "Bleu russe irish",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Julie VR",
+          "birthDate": "2024-07-06",
+          "variety": "Noir uni standard lisse",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Mowgli WR",
+          "variety": "Siamois whiteside dwarf yeux noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Margo VR",
+          "variety": "Noir uni harley",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "Opal VR",
+          "variety": "Noir blazed varieagted velours dwarf",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "Pepper VR",
+          "variety": "Bleu anglais agouti berkshire dwarf lisse"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "Mowgli WR",
+          "variety": "Siamois whiteside dwarf yeux noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Margo VR",
+          "variety": "Noir uni harley",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "name": "Mowgli WR",
+          "variety": "Siamois whiteside dwarf yeux noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "Margo VR",
+          "variety": "Noir uni harley",
+          "breederName": "Ratsmore (Allemagne)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC6501",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Volcanion",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "6a3ce8ee916dae75018a8490",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Urmel VR",
+          "birthDate": "2025-01-03",
+          "variety": "Noir dalmatien down under standard lisse yeux noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Blossom VR",
+          "birthDate": "2025-04-05",
+          "variety": "Bleu russe variberk standard lisse",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Kimba KM",
+          "birthDate": "2024-01-01",
+          "variety": "Noir dalmatien down under standard lisse"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Tamino BRB",
+          "birthDate": "2024-08-21",
+          "variety": "Coffe merle blazed variberk dumbo lisse"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Chloe VR",
+          "birthDate": "2024-04-15",
+          "variety": "Noir blazed variberk standard lisse",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Herzog VRVP",
+          "variety": "Bleu anglais uni standard",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Iduna VR",
+          "variety": "Noir blazed variberk standard",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "Oskar BRB",
+          "variety": "Coffee blazed variegated odd-eyes standard"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Jose BRB",
+          "variety": "Coffee headspot variberk standard"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "name": "Milo BRB",
+          "variety": "Agouti dalmatien down under standard"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "Leilani VR",
+          "variety": "Noir blazed variegated down under standard",
+          "breederName": "Ratsmore (Allemagne)"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC1577"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6502",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Sydney",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69961edd34653d7d1486a486",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Quill VR",
+          "birthDate": "2024-12-28",
+          "variety": "Mink blazed variberk down under",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Ronia VR",
+          "birthDate": "2025-07-15",
+          "variety": "Noir opossum variegated standard lisse yeux noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Valentin VR",
+          "birthDate": "2024-11-26",
+          "variety": "Black eyed platinum devil headspot variberk",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Robin BRB",
+          "birthDate": "2025-01-14",
+          "variety": "Red eyed devil dalmatien down under",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Herzog VRVP",
+          "variety": "Bleu anglais uni",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Iduna VR",
+          "variety": "Noir blazed variberk",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Firefly VR",
+          "variety": "Red eyed devil headspot variberk dumbo",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "name": "Robin BRB",
+          "variety": "Red eyed devil blazed variegated velours standard",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "Majandra BRB",
+          "variety": "Red eyed devil blazed variegated lisse standard"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC1577"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC1580"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "ctcId": "CTC1577"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "ctcId": "CTC1578"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC1587"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6516",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "",
+      "name": "mohrchen",
+      "sireId_public": "CTC6520",
+      "damId_public": "CTC6523",
+      "creatorId": "699d6d4ba29a0e851c2f345b",
+      "manualSlots": [
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "giles",
+          "gender": "Male",
+          "variety": "russian topaze uni"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "halfrek",
+          "gender": "Female",
+          "variety": "russian beige STANDARDS"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC6520"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC6523"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6563",
+      "species": "Fancy Rat",
+      "prefix": "J.R",
+      "suffix": "",
+      "name": "Layla",
+      "sireId_public": "CTC6462",
+      "damId_public": null,
+      "creatorId": "6a373f30d0466d25099cb693",
+      "manualSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Kiara",
+          "prefix": "J.R",
+          "gender": "Female",
+          "breederName": "Jade's Rattery"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Nala",
+          "prefix": "J.R",
+          "gender": "Female",
+          "breederName": "Alyssa"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC6462"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6841",
+      "species": "Fancy Mouse",
+      "prefix": "SDV",
+      "suffix": "",
+      "name": "Phœnix",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69de1a07b066c7d0e199b017",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "HVR Exxon",
+          "birthDate": "2012-01-01",
+          "genCode": "A/a ce/ce",
+          "variety": "beige",
+          "breederName": "Henry Von Raaij"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "HVR Petunia",
+          "birthDate": "2012-01-01",
+          "genCode": "a/a d/d ce/ch",
+          "variety": "color point blue",
+          "breederName": "henry Von Raaij"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC6842",
+      "species": "Fancy Mouse",
+      "prefix": "NM",
+      "suffix": "",
+      "name": "Shuka",
+      "sireId_public": null,
+      "damId_public": null,
+      "creatorId": "69de1a07b066c7d0e199b017",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "SIL Leo",
+          "birthDate": "2012-08-20",
+          "genCode": "ae/ae ch/ch",
+          "variety": "siamese EB",
+          "breederName": "SourIsLand"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "NM Gaelle",
+          "birthDate": "2012-08-20",
+          "variety": "burmese",
+          "breederName": "Nana Mousery"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "id_public": "CTC6848",
+      "species": "Fancy Rat",
+      "prefix": "J.R",
+      "suffix": "",
+      "name": "Hank",
+      "sireId_public": null,
+      "damId_public": "CTC6438",
+      "creatorId": "6a373f30d0466d25099cb693",
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Mister"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC6438"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6849",
+      "species": "Fancy Rat",
+      "prefix": "J.R",
+      "suffix": "",
+      "name": "Whiskey",
+      "sireId_public": "CTC6462",
+      "damId_public": null,
+      "creatorId": "6a373f30d0466d25099cb693",
+      "manualSlots": [
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Ghost",
+          "variety": "Fawn"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC6462"
+        }
+      ]
+    },
+    {
+      "id_public": "CTC6921",
+      "species": "Fancy Rat",
+      "prefix": "DPR",
+      "suffix": "",
+      "name": "MERLIN",
+      "sireId_public": "CTC1412",
+      "damId_public": "CTC6933",
+      "creatorId": "699d6d4ba29a0e851c2f345b",
+      "manualSlots": [
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Aneth",
+          "birthDate": "2022-01-19",
+          "variety": "Siamois mink dumbo lisse",
+          "breederName": "PANDO RATS"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "VANILLE",
+          "variety": "Mink irish dumbo lisse"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC1412"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC6933"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC1666"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC1665"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC1607"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC1606"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC1512"
+        }
+      ]
+    },
+    {
+      "creatorId": "6a3ce8ee916dae75018a8490",
+      "id_public": "CTC7029",
+      "species": "Fancy Rat",
+      "prefix": "NPB",
+      "suffix": "",
+      "name": "Anicara",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Malok",
+          "birthDate": "2025-01-20",
+          "variety": "Mink Irish standard lisse",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Love",
+          "birthDate": "2024-10-17",
+          "variety": "Noir uni velours standard",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Destin",
+          "birthDate": "2024-07-04",
+          "variety": "Harley champagne standard yeux rose",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Testa",
+          "birthDate": "2024-07-03",
+          "variety": "Siamois yeux rose standard",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Axelle",
+          "variety": "Noir velours irish standard",
+          "breederName": "NPB Rattery (France)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Emeline",
+          "birthDate": "2024-04-07",
+          "variety": "Noir silvermane hooded étoilée standard",
+          "breederName": "NPB Rattery (France)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "6a5fd978922360c6f22beec3",
+      "id_public": "CTC7130",
+      "species": "Fancy Mouse",
+      "prefix": "",
+      "suffix": "",
+      "name": "Umami",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Umarlak",
+          "variety": "short hair rosette black",
+          "breederName": "Ray's"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Fela",
+          "variety": "short hair rosette black broken",
+          "breederName": "FromMouseHouse"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Sempervivum",
+          "variety": "short hair rosette black broken",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Hitaxa Junior",
+          "variety": "short hair rosette black broken",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Owlbear",
+          "variety": "short hair rosette siamese seal point",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Ron",
+          "variety": "short hair rosette black",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "Xenon",
+          "variety": "short hair rosette black hereford",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "Hitaxa",
+          "variety": "short hair rosette black broken",
+          "breederName": "Ray's Rodents"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "6a5fd978922360c6f22beec3",
+      "id_public": "CTC7141",
+      "species": "Fancy Mouse",
+      "prefix": "",
+      "suffix": "",
+      "name": "Tadeusz",
+      "sireId_public": "CTC7128",
+      "damId_public": "CTC7130",
+      "manualSlots": [
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Umarlak",
+          "variety": "short hair rosette black",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Fela",
+          "variety": "short hair rosette black broken",
+          "breederName": "FromMouseHouse"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "variety": "short hair rosette siamese seal piont",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "Sempervivum",
+          "variety": "Short hair rosette blue tan",
+          "breederName": "Ray's Rodents"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Hitaxa Junior",
+          "variety": "Short hair rosette black broken",
+          "breederName": "Ray's Rodents"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC7128"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC7130"
+        }
+      ]
+    },
+    {
+      "creatorId": "6a5fd978922360c6f22beec3",
+      "id_public": "CTC7150",
+      "species": "Fancy Mouse",
+      "prefix": "",
+      "suffix": "",
+      "name": "Almound",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Halny",
+          "variety": "Colourpoint beige",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Istota",
+          "variety": "Colourpoint beige",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Softvare",
+          "variety": "fuzzy siamese seal point",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Amelia",
+          "variety": "blue splashed",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Iloraz",
+          "variety": "Splashed",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Tona",
+          "variety": "Fuzzy colourpoint beige",
+          "breederName": "Mohanah"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "6a5fd978922360c6f22beec3",
+      "id_public": "CTC7151",
+      "species": "Fancy Mouse",
+      "prefix": "",
+      "suffix": "",
+      "name": "Nougat",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Toruk",
+          "variety": "Colourpoint beige",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Eta",
+          "variety": "Fuzzy siamese seal point"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Jacek",
+          "variety": "Fuzzy colourpoint beige",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Gloria",
+          "variety": "Siamese seal point",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Soft",
+          "variety": "Fuzzy siamese",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Tirna",
+          "variety": "Fuzzy colourpoint beige",
+          "breederName": "Mohanah"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "69a20178c98629e98733a28d",
+      "id_public": "CTC7217",
+      "species": "Fancy Rat",
+      "prefix": "JLWC",
+      "suffix": "- MYSTIC -",
+      "name": "Star / LAVENDER",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Spyro",
+          "variety": "Russian Blue Silverman Dumbo"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Nixie",
+          "variety": "??",
+          "breederName": "JLWC"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "69a20178c98629e98733a28d",
+      "id_public": "CTC7218",
+      "species": "Fancy Rat",
+      "prefix": "JWLC",
+      "suffix": "- MYSTIC -",
+      "name": "Lizzy / RAVEN",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Spruce",
+          "variety": "??"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Cora",
+          "variety": "??"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "6934b7c970b7dc125b5fc65e",
+      "id_public": "CTC7258",
+      "species": "Fancy Mouse",
+      "prefix": "Baby",
+      "suffix": "",
+      "name": "Tutorial",
+      "sireId_public": "CTC7252",
+      "damId_public": "CTC7257",
+      "manualSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "test grandsire 1",
+          "variety": "Variety"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "test granddam 1",
+          "variety": "Variety"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "test grandsire 2",
+          "variety": "Variety"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "test granddam 2",
+          "variety": "Variety"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "test",
+          "variety": "Variety"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "test",
+          "variety": "Variety"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "test",
+          "variety": "Variety"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "test",
+          "variety": "Variety"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "name": "test",
+          "variety": "Variety"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "test",
+          "variety": "Variety"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "name": "test",
+          "variety": "Variety"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "test",
+          "variety": "Variety"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC7252"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC7257"
+        }
+      ]
+    },
+    {
+      "creatorId": "6a5fd978922360c6f22beec3",
+      "id_public": "CTC7341",
+      "species": "Fancy Mouse",
+      "prefix": "",
+      "suffix": "",
+      "name": "Nutella",
+      "sireId_public": "CTC7128",
+      "damId_public": "CTC7127",
+      "manualSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Tornado",
+          "gender": "Male",
+          "birthDate": "2025-07-09",
+          "variety": "Short hair Black",
+          "breederName": "Halmaus"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Janeczka",
+          "gender": "Female",
+          "variety": "Short hair Black hereford",
+          "breederName": "Ray's Rodents"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC7128"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC7127"
+        }
+      ]
+    },
+    {
+      "creatorId": "6a5fd978922360c6f22beec3",
+      "id_public": "CTC7347",
+      "species": "Fancy Mouse",
+      "prefix": "",
+      "suffix": "",
+      "name": "C3",
+      "sireId_public": "CTC7183",
+      "damId_public": "CTC7337",
+      "manualSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Tikvah",
+          "gender": "Male",
+          "variety": "Blue Short hair Splashed",
+          "breederName": "Mohanah"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Elsa",
+          "gender": "Female",
+          "birthDate": "2026-01-05",
+          "variety": "Black Short hair Roan tan"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC7183"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC7337"
+        }
+      ]
+    },
+    {
+      "creatorId": "69961edd34653d7d1486a486",
+      "id_public": "CTC7373",
+      "species": "Fancy Rat",
+      "prefix": "KH",
+      "suffix": "",
+      "name": "Alyosha",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Lorsd",
+          "variety": "Mink pearl silvermane uni standard lisse yeux noir",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Rose",
+          "variety": "Cannelle pearl berkshire blazed standard lisse",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "69961edd34653d7d1486a486",
+      "id_public": "CTC7428",
+      "species": "Fancy Rat",
+      "prefix": "KH",
+      "suffix": "",
+      "name": "Lyle",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Fortune",
+          "birthDate": "2024-06-24",
+          "variety": "Cannelle uni dumbo velours",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Fortune",
+          "variety": "Marble berkshire étoilée dumbo lisse",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "6a3ce8ee916dae75018a8490",
+      "id_public": "CTC7437",
+      "species": "Fancy Rat",
+      "prefix": "RK",
+      "suffix": "",
+      "name": "Zouko",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Finistère",
+          "variety": "Noir masqué down under velours dumbo yeux noir",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "France",
+          "variety": "Noir silvermane variberk étoilée standard lisse yeux noir",
+          "breederName": "Rattery Knabbelhoek (Belgique)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "6a5feb99922360c6f22bf0e2",
+      "id_public": "CTC7641",
+      "species": "Fancy Mouse",
+      "prefix": "ADD",
+      "suffix": "",
+      "name": "1",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Pa"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Ma"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Elion",
+          "variety": "Siamois Satin",
+          "breederName": "The Royal Mousery"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Grandma",
+          "breederName": "Les petits Mystics"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Gaiko",
+          "birthDate": "2023-08-19",
+          "genCode": "at/a D/d P/p sa/sa",
+          "variety": "Black Tan Satin",
+          "breederName": "TnS"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC4263"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC737"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC7640"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC760"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "ctcId": "CTC4244"
+        }
+      ]
+    },
+    {
+      "creatorId": "699ccb7fc4969e0acd9a491d",
+      "id_public": "CTC7686",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "",
+      "name": "Pixel",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "TBS Zoro",
+          "birthDate": "2025-09-20",
+          "variety": "Bleu russe silvermane Berkshire Dumbo lisse yeux noirs",
+          "breederName": "Les Rats-Tiboiseur"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "TBS Zora",
+          "birthDate": "2025-08-27",
+          "variety": "Mink irish standard nue fuzz",
+          "breederName": "Les Rats-Tiboiseur"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC1306"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC1305"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC1297"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "ctcId": "CTC1629"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "ctcId": "CTC1360"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "ctcId": "CTC1359"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "ctcId": "CTC1362"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "ctcId": "CTC1361"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC1406"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC1598"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC1630"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "ctcId": "CTC1647"
+        }
+      ]
+    },
+    {
+      "creatorId": "69961edd34653d7d1486a486",
+      "id_public": "CTC7696",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Zeila",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Urmel Van Rastmore",
+          "birthDate": "2025-01-03",
+          "genCode": "aa Mm Cc",
+          "variety": "Noir dalmatien down under standard lisse",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Ursaluna Van Ratsmore",
+          "birthDate": "2026-01-03",
+          "genCode": "aa rr Mm Rbrb Cc",
+          "variety": "Beige variberk blazed snowflake down under",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Kimba Van Ratsmore",
+          "birthDate": "2024-01-01",
+          "genCode": "aa",
+          "variety": "Noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Qumuru Van Ratsmore",
+          "birthDate": "2024-12-28",
+          "genCode": "aa rr Mm Rbrb Dd",
+          "variety": "Beige",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Tracey Van Ratsmore",
+          "birthDate": "2025-07-16",
+          "genCode": "aa rr Mm Rbrb Cc",
+          "variety": "Beige",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "Herzog Von Pitzbühl Van Ratsmore",
+          "genCode": "aa Rbrb dd dudu",
+          "variety": "English blue dumbo",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "Iduna Van Ratsmore",
+          "genCode": "aa Cc Mm Dd Rbrb Dudu",
+          "variety": "Noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "name": "Quill Van Ratsmore",
+          "genCode": "aa mm Rr Dd Cc",
+          "variety": "Mink",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "Blue Van Ratsmore",
+          "genCode": "aa Momo Mm rbrb",
+          "variety": "Russian blue",
+          "breederName": "Ratsmore (Allemagne)"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC1577"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC1577"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC1580"
+        }
+      ]
+    },
+    {
+      "creatorId": "69961edd34653d7d1486a486",
+      "id_public": "CTC7700",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Genesis",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Xerneas Van Ratsmore",
+          "birthDate": "2026-01-16",
+          "genCode": "aa Rbrb Cch Smsm Lh1h Sasa",
+          "variety": "Noir uni silvermane standard lisse yeux noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Palika Van Ratsmore",
+          "birthDate": "2025-11-08",
+          "genCode": "aa rbrb 1h1h sasa Dudu Cch",
+          "variety": "Bleu russe harley satin whiteside standard yeux noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Sisa of WonderRatz",
+          "birthDate": "2025-07-01",
+          "genCode": "aa chah Dudu LhLh SaSa Smsm Bebe RbRb",
+          "variety": "Black eyed seal point siamese silvermane",
+          "breederName": "WonderRatz"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Lian Van Ratsmore",
+          "birthDate": "2024-12-11",
+          "genCode": "aa rbrb Cch sasa 1h1h",
+          "variety": "Russian blue Harley Satin"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "Jupiter Van Ratmore",
+          "variety": "Russian n"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "69961edd34653d7d1486a486",
+      "id_public": "CTC7713",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Hunter",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Rufus Van Ratsmore",
+          "birthDate": "2024-12-30",
+          "genCode": "aa rbrb Dwdw Dudu",
+          "variety": "Russian blue",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Bailonda Van Ratsmore",
+          "birthDate": "2025-10-16",
+          "genCode": "aa Rr Mm Rbrb Dudu Dwndwn",
+          "variety": "Black opossum variberk",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "Dexter Van Ratsmore",
+          "genCode": "aa Rr Mm Rbrb Dd Dwdw Dudu",
+          "variety": "Noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Chloe Van Ratsmore",
+          "genCode": "aa Rr Mm Rbrb Dd Dwdw dudu",
+          "variety": "Noir dumbo",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Urmel Van Ratsmore",
+          "birthDate": "2025-01-03",
+          "genCode": "aa Mm Cc",
+          "variety": "Noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Blossom Van Ratsmore",
+          "birthDate": "2025-04-05",
+          "genCode": "aa Momo Mm Rr rbrb",
+          "variety": "Russian blue blazed variberk",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Karni Mata's Bandit",
+          "genCode": "aa Rr Mm Rbrb Dd dwdw Dudu",
+          "variety": "Noir dwarf"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Loor Van Ratsmore",
+          "genCode": "aa Rbrb Dd Rr dudu DwDw",
+          "variety": "Noir dumbo"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "name": "Milo Von Der Bremer Rattenbande",
+          "genCode": "Aa Rr Mm Rbrb Dudu Dwdw",
+          "variety": "Agouti",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "name": "Leilani Van Ratsmore",
+          "genCode": "aa Rr Mm Rbrb Dd Dudu DwDw",
+          "variety": "Noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "name": "Kimba Van Ratsmore",
+          "genCode": "aa",
+          "variety": "Noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "name": "Tamino Von Der Bremer Rattenbande",
+          "genCode": "aa Rr mm dudu Momo",
+          "variety": "Mink dumbo",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "Chloe Van Ratsmore",
+          "genCode": "aa Rr Mm Rbrb Dd Dwdw dudu",
+          "variety": "Noir dumbo",
+          "breederName": "Ratsmore (Allemagne)"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC1577"
+        }
+      ]
+    },
+    {
+      "creatorId": "69961edd34653d7d1486a486",
+      "id_public": "CTC7714",
+      "species": "Fancy Rat",
+      "prefix": "",
+      "suffix": "Van Ratsmore",
+      "name": "Melbourne",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Quill Van Ratsmore",
+          "birthDate": "2024-12-28",
+          "genCode": "aa mm Rr Dd Cc",
+          "variety": "Mink",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Ronja Van Ratsmore",
+          "birthDate": "2025-07-15",
+          "genCode": "aa Dd Mm Bebe",
+          "variety": "Black eyed marten",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Valentin Van Ratsmore",
+          "genCode": "aa dd mm Ve/ve Bebe cmc",
+          "variety": "Black eyed platinum marten velveteen",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Robin Von Der Bremer Rattenbande",
+          "variety": "Marten",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireSire",
+          "label": "Sire's Sire's Sire",
+          "name": "Herzog Von Pitzbühl Van Ratsmore",
+          "genCode": "aa Rbrb dd dudu",
+          "variety": "English blue dumbo",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "sireSireDam",
+          "label": "Sire's Sire's Dam",
+          "name": "Iduna Van Ratsmore",
+          "genCode": "aa cc Mm Dd Rbrb Dudu",
+          "variety": "Noir",
+          "breederName": "Ratsmore (Allemagne)"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "name": "Firefly Van Ratsmore",
+          "genCode": "aa Mm Dd cmc Ve/ve Dwdw dudu",
+          "variety": "Marten velveteen dumbo",
+          "breederName": "Ratsmore (Allemagne)"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "ctcId": "CTC1577"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "ctcId": "CTC1580"
+        },
+        {
+          "slot": "sireDamSire",
+          "label": "Sire's Dam's Sire",
+          "ctcId": "CTC1577"
+        },
+        {
+          "slot": "sireDamDam",
+          "label": "Sire's Dam's Dam",
+          "ctcId": "CTC1578"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC1587"
+        }
+      ]
+    },
+    {
+      "creatorId": "69e8d92c078a62e437ea0c7a",
+      "id_public": "CTC7877",
+      "species": "Fancy Rat",
+      "prefix": "IND",
+      "suffix": "",
+      "name": "Eywa",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Jacob",
+          "variety": "Siamois Agouti Dumbo Double Rex yeux Noirs",
+          "breederName": "Elevage Indépendant"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Yasmine",
+          "variety": "Hooded Agouti Dumbo Lisse yeux Noirs",
+          "breederName": "Elevage Indépendant"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "69e8d92c078a62e437ea0c7a",
+      "id_public": "CTC7881",
+      "species": "Fancy Rat",
+      "prefix": "LMM",
+      "suffix": "",
+      "name": "Asmar",
+      "sireId_public": "CTC7878",
+      "damId_public": "CTC7877",
+      "manualSlots": [
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "name": "Jacob",
+          "suffix": "Van Ratsmore",
+          "gender": "Male",
+          "variety": "Siamois Agouti Dumbo Double Rex yeux Noirs",
+          "breederName": "Elevage Indépendant"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "name": "Yasmine",
+          "gender": "Female",
+          "variety": "Hooded Agouti Dumbo Lisse yeux Noirs",
+          "breederName": "Elevage Indépendant"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "suffix": "van Ratsmore",
+          "gender": "Male"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "suffix": "van Ratsmore",
+          "gender": "Female"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "prefix": "RK",
+          "gender": "Male"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "prefix": "RK",
+          "gender": "Female"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC7878"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC7877"
+        }
+      ]
+    },
+    {
+      "creatorId": "69e8d92c078a62e437ea0c7a",
+      "id_public": "CTC7893",
+      "species": "Fancy Rat",
+      "prefix": "PAR",
+      "suffix": "",
+      "name": "Vi",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Abunis",
+          "variety": "Siamois Noir Dumbo lisse yeux Noirs",
+          "breederName": "Elevage Indépendant (77)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Vénus",
+          "variety": "Hooded Agouti Dumbo Lisse yeux Noirs",
+          "breederName": "Elevage Indépendant (77)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "69e8d92c078a62e437ea0c7a",
+      "id_public": "CTC7907",
+      "species": "Fancy Rat",
+      "prefix": "PAR",
+      "suffix": "",
+      "name": "Hayley",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "???",
+          "variety": "Uni topaze Dumbo lisse yeux Rouges",
+          "breederName": "Elevage Professionnel"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "???",
+          "variety": "Irish agouti Standard lisse yeux Noirs",
+          "breederName": "Elevage Professionnel"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "69e8d92c078a62e437ea0c7a",
+      "id_public": "CTC7927",
+      "species": "Fancy Rat",
+      "prefix": "IND",
+      "suffix": "",
+      "name": "Edward",
+      "sireId_public": null,
+      "damId_public": null,
+      "manualSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "name": "Aladin",
+          "variety": "Hooded Noir Silvermane Dumbo Rex yeux Noirs",
+          "breederName": "Elevage Indépendant (80)"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "name": "Milka",
+          "variety": "Irish Mink Dumbo Lisse yeux Noirs",
+          "breederName": "Elevage Indépendant (80)"
+        }
+      ],
+      "linkedSlots": []
+    },
+    {
+      "creatorId": "699ccb7fc4969e0acd9a491d",
+      "id_public": "CTC7988",
+      "species": "Fancy Rat",
+      "prefix": "LRE",
+      "suffix": "",
+      "name": "Phoenix",
+      "sireId_public": "CTC7122",
+      "damId_public": "CTC2463",
+      "manualSlots": [
+        {
+          "slot": "sireSire",
+          "label": "Sire's Sire",
+          "name": "KH Sun",
+          "birthDate": "2025-09-01",
+          "variety": "Topaze Dumbo rex"
+        },
+        {
+          "slot": "sireDam",
+          "label": "Sire's Dam",
+          "name": "Ela",
+          "birthDate": "2026-01-01",
+          "variety": "Bleu pearl Dumbo lisse"
+        }
+      ],
+      "linkedSlots": [
+        {
+          "slot": "sire",
+          "label": "Sire",
+          "ctcId": "CTC7122"
+        },
+        {
+          "slot": "dam",
+          "label": "Dam",
+          "ctcId": "CTC2463"
+        },
+        {
+          "slot": "damSire",
+          "label": "Dam's Sire",
+          "ctcId": "CTC1303"
+        },
+        {
+          "slot": "damDam",
+          "label": "Dam's Dam",
+          "ctcId": "CTC1348"
+        },
+        {
+          "slot": "damSireSire",
+          "label": "Dam's Sire's Sire",
+          "ctcId": "CTC1373"
+        },
+        {
+          "slot": "damSireDam",
+          "label": "Dam's Sire's Dam",
+          "ctcId": "CTC1372"
+        },
+        {
+          "slot": "damDamSire",
+          "label": "Dam's Dam's Sire",
+          "ctcId": "CTC1689"
+        },
+        {
+          "slot": "damDamDam",
+          "label": "Dam's Dam's Dam",
+          "ctcId": "CTC1436"
+        }
+      ]
+    }
+  ],
+  "conflicts": [
+    {
+      "id_public": "CTC4577",
+      "name": "Nat",
+      "slot": "sire",
+      "label": "Sire",
+      "manualSlotCtcId": null,
+      "canonicalField": "sireId_public",
+      "canonicalValue": "CTC4634",
+      "reason": "Hand-typed parent with no registered link (canonical field not set)"
+    },
+    {
+      "id_public": "CTC4624",
+      "name": "S'more",
+      "slot": "sire",
+      "label": "Sire",
+      "manualSlotCtcId": null,
+      "canonicalField": "sireId_public",
+      "canonicalValue": "CTC4634",
+      "reason": "Hand-typed parent with no registered link (canonical field not set)"
+    },
+    {
+      "id_public": "CTC4882",
+      "name": "Weasel",
+      "slot": "sire",
+      "label": "Sire",
+      "manualSlotCtcId": "CTC4912",
+      "canonicalField": "sireId_public",
+      "canonicalValue": "CTC74",
+      "reason": "Pedigree slot points at a different animal than the canonical parent field"
+    },
+    {
+      "id_public": "CTC7598",
+      "name": "Witch",
+      "slot": "sire",
+      "label": "Sire",
+      "manualSlotCtcId": "CTC7597",
+      "canonicalField": "sireId_public",
+      "canonicalValue": "CTC5040",
+      "reason": "Pedigree slot points at a different animal than the canonical parent field"
+    }
+  ]
+}

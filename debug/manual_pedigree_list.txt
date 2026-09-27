@@ -1,0 +1,448 @@
+ANIMALS WITH MANUAL PEDIGREE ENTRIES: 76
+==============================================================================================================
+
+ 1. CTC927  OHH SplashGordon  [Fancy Mouse]  - 1 manual slot(s)  (canonical: sire=CTC6666 dam=-)
+      Dam:                     name=Choco Lady | b.2013-10-01 | gen=a/a d/d | breeder=OHH
+
+ 2. CTC1294  TBS Madmax  [Fancy Rat]  - 4 manual slot(s)  (canonical: sire=CTC1190 dam=CTC1288)
+      Dam's Sire's Sire:       prefix=DPR | name=Liroy | sex=Male | b.2023-06-11 | var=Bleu russe hooded rex dumbo | breeder=Diamants de Pando Rats (France)
+      Dam's Sire's Dam:        prefix=DPR | name=Lilo | sex=Female | b.2023-12-23 | var=Noir variberk blazed lisse dumbo | breeder=Diamants de Pando Rats (France)
+      Dam's Dam's Sire:        prefix=DPR | name=Dan Brady | sex=Male | b.2023-09-15 | var=Bleu us berkshire rex dumbo | breeder=Diamants de Pando Rats (France)
+      Dam's Dam's Dam:         prefix=YOU | name=Black Widow | sex=Female | b.2023-12-27 | var=Noir uni lisse standard | breeder=Diamants de Pando Rats (France)
+
+ 3. CTC1631  RD'A Hélios  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Papa Hélios | var=Agouti hooded standard lisse
+      Dam:                     name=Maman Hélios | var=Himalayenne Dumbo yeux rouges
+
+ 6. CTC2010  KH Tango  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Thor | var=Cannelle pearl étoilée standard lisse yeux noir | breeder=Rattery Knabbelhoek (Belgique)
+      Dam:                     name=Isilda | var=Noir marble uni standard lisse yeux noir | breeder=Rattery Knabbelhoek (Belgique)
+
+ 7. CTC2547  RR Bacon SRVR  [Fancy Rat]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=SSR Tonka RR | gen=Aa Dd ctch Bebe Cucu dudu dwdw | var=BE Wheaten Tonk Vel dumbo dwarf | breeder=Sunny Savannah Rattery • Georgia
+      Dam:                     name=RR Nora | gen=Aa DD ctch Bebe dudu dwdw | var=BE Wheaten Tonk dumbo dwsrf | breeder=Rexburg Rats
+      Dam's Sire:              name=RR Scooter | gen=As Cct Bebe dudu dwdw | var=Agouti dumbo dwarf | breeder=Rexburg Rats
+      Dam's Dam:               name=Noir RR | gen=aa Cch Dudu Dwdw | var=Black | breeder=Joe local breeder
+      Dam's Sire's Sire:       name=SSR Tonka RR | gen=Aa Dd ctch Bebe Cucu dudu dwdw | var=BE Wheaten Tonk Vel dumbo dwarf | breeder=Sunny Savannah Rattery • Georgia
+      Dam's Sire's Dam:        name=RR Morticia | gen=aa Dd C- Mm dudu dwdw | var=Black dumbo dwarf | breeder=Rexburg Rats
+
+ 8. CTC2701  KH Rhéa  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Pollux | var=BEW harley standard yeux noir | breeder=Rattery Knabbelhoek (Belgique)
+      Dam:                     name=Miriam | var=Cannelle bleu blazed variegated standard lisse | breeder=Rattery Knabbelhoek (Belgique)
+
+ 9. CTC2797  RATA Leo BSS  [Fancy Rat]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=RATA Owen | var=BES Rexoid | breeder=Ratatouilles Rattery • SD
+      Dam:                     name=RATA Amelia | var=Siamese dumbo | breeder=Ratatouilles Rattery • SD
+      Sire's Sire:             name=RATA Quinn | var=BES Rexoid | breeder=Ratatouilles Rattery • SD
+      Sire's Dam:              name=RATA Ruthie | var=Siamese Double Rexoid | breeder=Ratatouilles Rattery • SD
+      Dam's Sire:              name=RATA Quinn | var=Siamese rexoid | breeder=Ratatouilles Rattery • SD
+      Dam's Dam:               name=RATA Mulan | var=Himalayan | breeder=Ratatouilles Rattery • SD
+
+10. CTC2798  RATA Kobicha BSS  [Fancy Rat]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=RATA Magnifico | var=Pointed Tonk variberk | breeder=Ratatouilles Rattery • SD
+      Dam:                     name=RATA Maribel | var=Pointed/Marten Tonkinese | breeder=Ratatouilles Rattery • SD
+      Sire's Sire:             name=RATA Jett | var=Black Marten | breeder=Ratatouilles Rattery • SD
+      Sire's Dam:              name=RATA Aphrodite | var=Tonkinese | breeder=Ratatouilles Rattery • SD
+      Dam's Sire:              name=RATA Toast | var=Tonkinese Hooded Rexoid | breeder=Ratatouilles Rattery • SD
+      Dam's Dam:               name=RATA Aphrodite | var=Tonkinese | breeder=Ratatouilles Rattery • MD
+
+11. CTC4577  NRR Nat  [Fancy Mouse]  - 1 manual slot(s)  (canonical: sire=CTC4634 dam=CTC4584)
+      Sire:                    name=Sylvester | b.2024-04-01 | var=black tan angora | breeder=Neuse River Rodentry
+
+12. CTC4623  NRR Taz  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=missexed buck | var=See photo for possibilities | breeder=Morgan Ruocchio
+      Dam:                     name=Unnamed | gen=a/a C/ch s/s go/go Re/re | var=black pied texel | breeder=Morgan Ruocchio
+
+13. CTC4624  NRR S'more  [Fancy Mouse]  - 1 manual slot(s)  (canonical: sire=CTC4634 dam=CTC4584)
+      Sire:                    name=Sylvester | b.2024-04-01 | var=black tan angora | breeder=Neuse River Rodentry
+
+14. CTC4674  NRR Haze  [Fancy Mouse]  - 5 manual slot(s)  (canonical: sire=CTC4587 dam=-)
+      Dam:                     name=Unnamed | b.2024-04-17 | var=blue satin rex | breeder=Neuse River Rodentry
+      Dam's Sire:              name=Kudzu | b.2022-11-30 | var=blue pied standard | breeder=Neuse River Rodentry
+      Dam's Dam:               name=Unnamed | var=lilac himilayan satin texel | breeder=Chris M.
+      Dam's Sire's Sire:       name=Eggs | b.2023-09-22 | var=straw pied rex | breeder=Aquarium Outfitters
+      Dam's Sire's Dam:        name=Maggie | var=blue pied satin
+
+15. CTC4675  NRR Cheese  [Fancy Mouse]  - 4 manual slot(s)  (canonical: sire=CTC4587 dam=-)
+      Dam:                     name=Unnamed | b.2024-03-01 | gen=a/a S/s Go/go | var=black standard | breeder=Neuse River Rodentry
+      Dam's Sire:              name=Unnamed | b.2023-12-25 | gen=a/a B/b C/c s/s go/go Re/re | var=black pied texel | breeder=Morgan R.
+      Dam's Sire's Sire:       name=Missexed buck | var=See photo for possibilities | breeder=Morgan Ruocchio
+      Dam's Sire's Dam:        name=Unnamed | gen=a/a C/ch s/s go/go Re/re | var=black pied texel | breeder=Morgan Ruocchio
+
+16. CTC4677  DSB Maggie  [Fancy Mouse]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=DSB Roy | b.2025-03-11 | var=red merle standard | breeder=Durham Squeak Beasties
+      Dam:                     name=DSB Lucina | b.2025-03-11 | var=red merle standard | breeder=Durham Squeak Beasties
+      Sire's Dam:              name=DSB Oddball | b.2025-01-13 | var=red merle standard | breeder=Durham Squeak Beasties
+      Dam's Dam:               name=DSB Oddball | b.2025-01-13 | var=red merle standard | breeder=Durham Squeak Beasties
+      Sire's Dam's Dam:        name=DSB Betty | b.2024-07-31 | var=black merle | breeder=Durham Squeak Beasties
+      Dam's Dam's Dam:         name=DSB Betty | b.2024-07-31 | var=black merle | breeder=Durham Squeak Beasties
+
+17. CTC4678  DSB Lizzie  [Fancy Mouse]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=DSB Roy | b.2025-03-11 | var=red merle standard | breeder=Durham Squeak Beasties
+      Dam:                     name=DSB Lucina | b.2025-03-11 | var=red merle standard | breeder=Durham Squeak Beasties
+      Sire's Dam:              name=DSB Oddball | b.2025-01-13 | var=red merle standard | breeder=Durham Squeak Beasties
+      Dam's Dam:               name=DSB Oddball | b.2025-01-13 | var=red merle standard | breeder=Durham Squeak Beasties
+      Sire's Dam's Dam:        name=DSB Betty | b.2024-07-31 | var=black merle standard | breeder=Durham Squeak Beasties
+      Dam's Dam's Dam:         name=DSB Betty | b.2024-07-31 | var=black merle standard | breeder=Durham Squeak Beasties
+
+18. CTC4712  BSS Tots Baby Blue  [Fancy Rat]  - 4 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Tottenham Navy | var=Russian Blue Agouti variegated dumbo
+      Dam:                     name=BSS Maya Blue | var=Russian Blue Vel dumbo | breeder=Blue Stone Siamese Rattery
+      Dam's Sire:              name=BSS Lincoln | var=American Blue berk Marble Vel dumbo | breeder=Blue Stone Siamese Rattery
+      Dam's Dam:               name=BSS Momma Blue | var=Russian Blue berk dumbo | breeder=Blue Stone Siamese Rattery
+
+19. CTC4715  BSS Chelsea Blue  [Fancy Rat]  - 6 manual slot(s)  (canonical: sire=CTC4777 dam=CTC4711)
+      Sire's Sire:             name=BSS Admiral Blue | var=Russian Blue Marble dumbo | breeder=Blue Stone Siamese Rattery
+      Sire's Dam:              name=BSS Peacock Blue | var=Russian Blue berkshire dumbo | breeder=Blue Stone Siamese Rattery
+      Sire's Sire's Sire:      name=BSS Lincoln | var=American Blue Marble velveteen dimbo | breeder=Blue Stone Siamese Rattery
+      Sire's Sire's Dam:       name=BSS Momma Blue | var=Russian Blue berkshire dumbo | breeder=Blue Stone Siamese Rattery
+      Sire's Dam's Sire:       name=BSS Lincoln | var=American Blue berk Marble vel dumbo | breeder=Blue Stone Siamese Rattery
+      Sire's Dam's Dam:        name=BSS Momma Blue | var=Russian Blue berk dumbo | breeder=Blue Stone Siamese Rattery
+
+20. CTC4718  MDR Stuffing BSS  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=MDR Russian Blue Harley | var=Russian Blue harley | breeder=MD Ratties
+      Dam:                     name=MDR Mink Satin Silvermane | var=Mink Satin Silvermane | breeder=MD Ratties
+
+21. CTC4719  MDR Bumblebee BSS  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=MDR Petey | var=Black patched DU rex | breeder=MD Ratties
+      Dam:                     name=MDR Coral | var=Mink OE dumbo | breeder=MD Ratties
+
+22. CTC4733  MMM Silk  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=MMM buck | breeder=Marie's Menagerie & Mousery
+      Dam:                     name=MMM doe | breeder=Marie's Menagerie & Mousery
+
+23. CTC4756  SSR Teeny Little Super Guy BSS  [Fancy Rat]  - 8 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=GBR Viktor | var=Black patched dumbo dwarf
+      Dam:                     name=Black dwarf | var=Black dwarf
+      Sire's Sire:             name=GBR Regal | var=Agouti variegated vel dwarf
+      Sire's Dam:              name=GBR Empress | var=Agouti Variegated vel dwarf
+      Sire's Sire's Sire:      name=GBR Empire | var=Black Blz berk Harley satin dwarf
+      Sire's Sire's Dam:       name=GBR Chic | var=Agouti Chinchilla OE dwarf
+      Dam's Sire's Sire:       name=GBR Empire | var=Black blz berk Harley satin dwarf
+      Dam's Sire's Dam:        name=GBR Chic | var=Agouti Chinchilla OE dwarf
+
+24. CTC4757  RATA Misty Rose BSS  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=RATA Ezra | var=UK mink Irish | breeder=Ratatouilles Rattery • SD
+      Dam:                     name=RATA Savannah | var=DP Pearl MM hooded/variegated | breeder=Ratatouilles Rattery • SD
+
+25. CTC4758  RATA Cotton Candy BSS  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=RATA Cobalt | var=Russian Blue rexoid | breeder=Ratatouilles Rattery • SD
+      Dam:                     name=RATA Sushi | var=Black capped rexoid | breeder=Ratatouilles Rattery • SD
+
+26. CTC4760  RATA Anthracite BSS  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=RATA Cash | var=Black Marble | breeder=Ratatouilles Rattery • SD
+      Dam:                     name=RATA Penny | var=Black MM blz berk | breeder=Ratatouilles Rattery • SD
+
+27. CTC4781  BSS Lincoln  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=BSS Cobalt Dragon | var=Russian Blue light ing box berk dumbo | breeder=Blue Stone Siamese Rattery
+      Dam:                     name=MDR Skype BSS | var=American Blue berk HS Vel dumbo | breeder=MD Ratties
+
+28. CTC4782  BSS Momma Blue  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=BSS Irish Lovin | var=Russian Blue heart Irish dumbo | breeder=Blue Stone Siamese Rattery
+      Dam:                     name=BSS Freckles | var=Black berk HS Marble dumbo | breeder=Blue Stone Siamese Rattery
+
+29. CTC4783  SMPL Lemonade BSS  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Dolce SMPL | var=American Cinnamon silvermane
+      Dam:                     name=Cinnamon Bun SMPL | var=Aussie Cinnamon
+
+30. CTC4822  MDR Blue dilute Harley doe BSS  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=MDR Blue DU | var=Blue dilute DU dumbo | breeder=MD Ratties • Maryland
+      Dam:                     name=MDR Blue dwarf | var=Blue dwarf | breeder=MD Ratties • Maryland
+
+31. CTC5234  RR Filet SRVR  [Fancy Rat]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=SSR Tonka RR | gen=Aa Dd ctch Bebe Cucu dudu dwdw | var=BE Tonkinese velveteen dumbo dwarf | breeder=Sunny Savannah Rattery • Georgia Savannah Rattery
+      Dam:                     name=RR Nora | gen=Aa DD ctch Bebe dudu dwdw | var=BE Wheaten Tonkinese dumbo dwarf | breeder=Rexburg Rats
+      Dam's Sire:              name=RR Scooter | gen=Aa Cct Bebe dudu dwdw | var=Agouti dumbo dwarf | breeder=Rexburg Rats
+      Dam's Dam:               name=Noir RR | gen=aa Cch Dudu Dwdw | var=Black | breeder=Joe local breeder
+      Dam's Sire's Sire:       name=SSR Tonka RR | gen=Aa Dd ctch Bebe Cucu dudu dwdw | var=BE Wheaten Tonk Vel dumbo dwarf | breeder=Sunny Savannah Rattery • Georgia Savannah Rattery
+      Dam's Sire's Dam:        name=RR Morticia | gen=aa Dd C- Mm dudu dwdw | var=Black dumbo dwarf
+
+32. CTC5240  RR Gouda SRVR  [Fancy Rat]  - 10 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=RR Fox | gen=aa Mm Dudu Dwdw | var=Black | breeder=Rexburg Rats
+      Dam:                     name=RR Piper | gen=aa Dudu Dwdw | var=Black
+      Sire's Sire:             name=RR Dunkin | gen=aa Gg Cch mm | var=Mink dwarf | breeder=Rexburg Rats
+      Sire's Dam:              name=Panda RR | gen=aa Gg MM dudu DwDw | var=Black dumbo | breeder=Joe local breeder
+      Dam's Sire:              name=RR Guacamole | gen=aa Dd Smsm dudu dwdw | var=Russian Blue silvermane dumbo dwarf | breeder=Rexburg Rats
+      Dam's Dam:               name=Shiro RR | gen=as Dudu DwDw | var=Black | breeder=Joe local breeder
+      Sire's Sire's Sire:      name=NCR Hopper | gen=aa Dd Cch Mm Hh Smsm dudu dwdw | var=Black silvermane dumbo dwarf | breeder=Northern Colors Rattery
+      Sire's Sire's Dam:       name=RR Taffeta | gen=Aa Dd Mm Hh Dudu Dwdw | var=Agouti | breeder=Rexburg Rats
+      Dam's Sire's Sire:       name=RR Thumper | gen=Aa Dd C(c?) Mm Smsm Dudu Dwdw | var=Russian Blue Agouti Silvermane | breeder=Rexburg Rats
+      Dam's Sire's Dam:        name=RR Skippy | gen=aa Dd H(h?) Dudu Dwdw | var=Russian Blue | breeder=Rexburg Rats
+
+33. CTC5665  NPB Aramis  [Fancy Rat]  - 9 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Nino | b.2024-12-09 | var=Champagne dumbo lisse standard yeux rose | breeder=NPB Rattery (France)
+      Dam:                     name=Misa | b.2024-10-23 | var=Ambre dumbo yeux rose lisse | breeder=NPB Rattery (France)
+      Sire's Sire:             name=Lilo | b.2024-08-03 | var=Agouti Irish étoilée dumbo lisse yeux noir | breeder=NPB Rattery (France)
+      Sire's Dam:              name=Nina | b.2024-04-10 | var=Ambre standard lisse yeux rouge | breeder=NPB Rattery (France)
+      Dam's Sire:              name=Zorro | b.2023-06-18 | var=Topaze standard uni yeux rouge | breeder=NPB Rattery (France)
+      Dam's Dam:               name=Zorra | b.2023-07-07 | var=Beige masqué yeux rouge dumbo lisse | breeder=NPB Rattery (France)
+      Sire's Sire's Sire:      name=Titus | b.0022-08-29 | var=Redevil standard | breeder=NPB Rattery (France)
+      Sire's Sire's Dam:       name=Lola | var=Agouti berkshire dumbo | breeder=NPB Rattery (France)
+      Sire's Dam's Dam:        name=Tisa | var=Ambre dumbo lisse yeux rose | breeder=NPB Rattery (France)
+
+34. CTC5687  DSB Tatl  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=CC Baron O' Beef Dip (Baron) | b.2025-10-16 | gen=aa bb Pp Go_ | var=chocolate standard | breeder=Crystallized Critters
+      Dam:                     name=DSB Mildrith | b.2025-10-04 | gen=at_ Bb Pp Rnrn gogo | var=black tan merle angora | breeder=Durham Squeak Beasties
+
+35. CTC5688  DSB Tael  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=CC Baron O' Beef Dip (Baron) | b.2025-10-16 | gen=aa bb Pp Go_ | var=chocolate standard | breeder=Crystallized Critters
+      Dam:                     name=DSB Mildrith | b.2025-10-04 | gen=ata Bb Pp rnrn gogo | var=black tan merle angora | breeder=Durham Squeak Beasties
+
+36. CTC5693  les ptis kachotiers Tirex  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=sun | var=topaze red rex dumbo
+      Dam:                     name=blue | var=bleu Dumbo lisse
+
+37. CTC6089  Grey  [Fancy Mouse]  - 1 manual slot(s)  (canonical: sire=- dam=CTC6100)
+      Sire:                    name=Duo | sex=Male | b.2025-01-13
+
+38. CTC6233  SLM's Meganium  [Fancy Mouse]  - 1 manual slot(s)  (canonical: sire=- dam=CTC707)
+      Sire:                    prefix=SLM'S | name=Dobby von Zaandam | sex=Male | b.2025-01-13 | var=Black and tan Satin Long
+
+39. CTC6244  DTC ATHENA  [Fancy Rat]  - 4 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    prefix=IND | name=jupiter | sex=Male | b.2025-01-01 | var=AGOUTI uni LISSE DUMBO | breeder=SENNE GRIMON
+      Dam:                     prefix=Kh | name=COMETE | sex=Female | b.2025-04-01 | var=AGOUTI BERKSHIRE LISSE DUMBO | breeder=Knabbelhoek ( belgique )
+      Dam's Sire:              prefix=RK | name=M1R | sex=Male | b.2024-08-29 | var=Agouti variberk étoilée lisse dumbo | breeder=Rattery Knabbelhoek (Belgique)
+      Dam's Dam:               name=mere c-f | sex=Female | b.2025-01-01 | var=cannelle etoilé silverman lisse STANDARDS | breeder=knobellhoek
+
+40. CTC6399  CWR Grey  [Fancy Mouse]  - 1 manual slot(s)  (canonical: sire=- dam=-)
+      Dam:                     prefix=MM | name=K13-F2 | sex=Female | b.2025-04-17 | var=Dominant Red Pied Longhair
+
+41. CTC6499  Xatu Van Ratsmore  [Fancy Rat]  - 8 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Lian VR | b.2024-12-11 | var=Bleu russe whiteside harley standard | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Sisa WR | b.2025-07-01 | var=Siamois sable silvermane standard lisse | breeder=Ratsmore (Allemagne)
+      Sire's Sire:             name=Jupiter VR | b.2024-07-06 | var=Bleu russe irish het dwarf het harley | breeder=Ratsmore (Allemagne)
+      Sire's Dam:              name=Julie VR | b.2024-07-06 | var=Noir uni het dwarf het harley | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Sire:      name=Mowgli VR | var=Dwarf siamois whiteside yeux noir lisse standard | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Dam:       name=Margo VR | var=Noir uni harley standard | breeder=Ratsmore (Allemagne)
+      Sire's Dam's Sire:       name=Mowgli VR | var=Dwarf siamois whiteside yeux noir lisse standard | breeder=Ratsmore (Allemagne)
+      Sire's Dam's Dam:        name=Margo VR | var=Noir uni harley standard | breeder=Ratsmore (Allemagne)
+
+42. CTC6500  Chester Van Ratsmore  [Fancy Rat]  - 14 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Jumi VR | b.2025-04-16 | var=Bleu russe agouti berkshire velours | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Walka VR | b.2025-03-13 | var=Bleu russe whiteside lisse | breeder=Ratsmore (Allemagne)
+      Sire's Sire:             name=Jupiter VR | b.2024-07-06 | var=Bleu russe irish | breeder=Ratsmore (Allemagne)
+      Sire's Dam:              name=Zmyrna VR | b.2024-04-12 | var=Agouti uni velours dwarf | breeder=Ratsmore (Allemagne)
+      Dam's Sire:              name=Jupiter VR | b.2024-07-06 | var=Bleu russe irish | breeder=Ratsmore (Allemagne)
+      Dam's Dam:               name=Julie VR | b.2024-07-06 | var=Noir uni standard lisse | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Sire:      name=Mowgli WR | var=Siamois whiteside dwarf yeux noir | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Dam:       name=Margo VR | var=Noir uni harley | breeder=Ratsmore (Allemagne)
+      Sire's Dam's Sire:       name=Opal VR | var=Noir blazed varieagted velours dwarf | breeder=Ratsmore (Allemagne)
+      Sire's Dam's Dam:        name=Pepper VR | var=Bleu anglais agouti berkshire dwarf lisse
+      Dam's Sire's Sire:       name=Mowgli WR | var=Siamois whiteside dwarf yeux noir | breeder=Ratsmore (Allemagne)
+      Dam's Sire's Dam:        name=Margo VR | var=Noir uni harley | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Sire:        name=Mowgli WR | var=Siamois whiteside dwarf yeux noir | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Dam:         name=Margo VR | var=Noir uni harley | breeder=Ratsmore (Allemagne)
+
+43. CTC6501  Volcanion Van Ratsmore  [Fancy Rat]  - 11 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Urmel VR | b.2025-01-03 | var=Noir dalmatien down under standard lisse yeux noir | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Blossom VR | b.2025-04-05 | var=Bleu russe variberk standard lisse | breeder=Ratsmore (Allemagne)
+      Sire's Dam:              name=Kimba KM | b.2024-01-01 | var=Noir dalmatien down under standard lisse
+      Dam's Sire:              name=Tamino BRB | b.2024-08-21 | var=Coffe merle blazed variberk dumbo lisse
+      Dam's Dam:               name=Chloe VR | b.2024-04-15 | var=Noir blazed variberk standard lisse | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Sire:      name=Herzog VRVP | var=Bleu anglais uni standard | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Dam:       name=Iduna VR | var=Noir blazed variberk standard | breeder=Ratsmore (Allemagne)
+      Dam's Sire's Sire:       name=Oskar BRB | var=Coffee blazed variegated odd-eyes standard
+      Dam's Sire's Dam:        name=Jose BRB | var=Coffee headspot variberk standard
+      Dam's Dam's Sire:        name=Milo BRB | var=Agouti dalmatien down under standard
+      Dam's Dam's Dam:         name=Leilani VR | var=Noir blazed variegated down under standard | breeder=Ratsmore (Allemagne)
+
+44. CTC6502  Sydney Van Ratsmore  [Fancy Rat]  - 9 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Quill VR | b.2024-12-28 | var=Mink blazed variberk down under | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Ronia VR | b.2025-07-15 | var=Noir opossum variegated standard lisse yeux noir | breeder=Ratsmore (Allemagne)
+      Dam's Sire:              name=Valentin VR | b.2024-11-26 | var=Black eyed platinum devil headspot variberk | breeder=Ratsmore (Allemagne)
+      Dam's Dam:               name=Robin BRB | b.2025-01-14 | var=Red eyed devil dalmatien down under | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Sire:      name=Herzog VRVP | var=Bleu anglais uni | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Dam:       name=Iduna VR | var=Noir blazed variberk | breeder=Ratsmore (Allemagne)
+      Dam's Sire's Dam:        name=Firefly VR | var=Red eyed devil headspot variberk dumbo | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Sire:        name=Robin BRB | var=Red eyed devil blazed variegated velours standard | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Dam:         name=Majandra BRB | var=Red eyed devil blazed variegated lisse standard
+
+45. CTC6516  mohrchen  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=CTC6520 dam=CTC6523)
+      Dam's Sire:              name=giles | sex=Male | var=russian topaze uni
+      Dam's Dam:               name=halfrek | sex=Female | var=russian beige STANDARDS
+
+46. CTC6563  J.R Layla  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=CTC6462 dam=-)
+      Dam:                     prefix=J.R | name=Kiara | sex=Female | breeder=Jade's Rattery
+      Dam's Dam:               prefix=J.R | name=Nala | sex=Female | breeder=Alyssa
+
+47. CTC6841  SDV Phœnix  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=HVR Exxon | b.2012-01-01 | gen=A/a ce/ce | var=beige | breeder=Henry Von Raaij
+      Dam:                     name=HVR Petunia | b.2012-01-01 | gen=a/a d/d ce/ch | var=color point blue | breeder=henry Von Raaij
+
+48. CTC6842  NM Shuka  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=SIL Leo | b.2012-08-20 | gen=ae/ae ch/ch | var=siamese EB | breeder=SourIsLand
+      Dam:                     name=NM Gaelle | b.2012-08-20 | var=burmese | breeder=Nana Mousery
+
+49. CTC6848  J.R Hank  [Fancy Rat]  - 1 manual slot(s)  (canonical: sire=- dam=CTC6438)
+      Sire:                    name=Mister
+
+50. CTC6849  J.R Whiskey  [Fancy Rat]  - 1 manual slot(s)  (canonical: sire=CTC6462 dam=-)
+      Dam:                     name=Ghost | var=Fawn
+
+51. CTC6921  DPR MERLIN  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=CTC1412 dam=CTC6933)
+      Dam's Dam:               name=Aneth | b.2022-01-19 | var=Siamois mink dumbo lisse | breeder=PANDO RATS
+      Dam's Dam's Dam:         name=VANILLE | var=Mink irish dumbo lisse
+
+52. CTC7029  NPB Anicara  [Fancy Rat]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Malok | b.2025-01-20 | var=Mink Irish standard lisse | breeder=NPB Rattery (France)
+      Dam:                     name=Love | b.2024-10-17 | var=Noir uni velours standard | breeder=NPB Rattery (France)
+      Sire's Sire:             name=Destin | b.2024-07-04 | var=Harley champagne standard yeux rose | breeder=NPB Rattery (France)
+      Sire's Dam:              name=Testa | b.2024-07-03 | var=Siamois yeux rose standard | breeder=NPB Rattery (France)
+      Dam's Sire:              name=Axelle | var=Noir velours irish standard | breeder=NPB Rattery (France)
+      Dam's Dam:               name=Emeline | b.2024-04-07 | var=Noir silvermane hooded étoilée standard | breeder=NPB Rattery (France)
+
+53. CTC7130  Umami  [Fancy Mouse]  - 8 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Umarlak | var=short hair rosette black | breeder=Ray's
+      Dam:                     name=Fela | var=short hair rosette black broken | breeder=FromMouseHouse
+      Sire's Sire:             name=Sempervivum | var=short hair rosette black broken | breeder=Ray's Rodents
+      Sire's Dam:              name=Hitaxa Junior | var=short hair rosette black broken | breeder=Ray's Rodents
+      Sire's Sire's Sire:      name=Owlbear | var=short hair rosette siamese seal point | breeder=Ray's Rodents
+      Sire's Sire's Dam:       name=Ron | var=short hair rosette black | breeder=Ray's Rodents
+      Sire's Dam's Sire:       name=Xenon | var=short hair rosette black hereford | breeder=Ray's Rodents
+      Sire's Dam's Dam:        name=Hitaxa | var=short hair rosette black broken | breeder=Ray's Rodents
+
+54. CTC7141  Tadeusz  [Fancy Mouse]  - 5 manual slot(s)  (canonical: sire=CTC7128 dam=CTC7130)
+      Dam's Sire:              name=Umarlak | var=short hair rosette black | breeder=Ray's Rodents
+      Dam's Dam:               name=Fela | var=short hair rosette black broken | breeder=FromMouseHouse
+      Sire's Dam's Sire:       var=short hair rosette siamese seal piont | breeder=Ray's Rodents
+      Dam's Sire's Sire:       name=Sempervivum | var=Short hair rosette blue tan | breeder=Ray's Rodents
+      Dam's Sire's Dam:        name=Hitaxa Junior | var=Short hair rosette black broken | breeder=Ray's Rodents
+
+55. CTC7150  Almound  [Fancy Mouse]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Halny | var=Colourpoint beige | breeder=Mohanah
+      Dam:                     name=Istota | var=Colourpoint beige | breeder=Mohanah
+      Sire's Sire:             name=Softvare | var=fuzzy siamese seal point | breeder=Mohanah
+      Sire's Dam:              name=Amelia | var=blue splashed | breeder=Mohanah
+      Dam's Sire:              name=Iloraz | var=Splashed | breeder=Mohanah
+      Dam's Dam:               name=Tona | var=Fuzzy colourpoint beige | breeder=Mohanah
+
+56. CTC7151  Nougat  [Fancy Mouse]  - 6 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Toruk | var=Colourpoint beige | breeder=Mohanah
+      Dam:                     name=Eta | var=Fuzzy siamese seal point
+      Sire's Sire:             name=Jacek | var=Fuzzy colourpoint beige | breeder=Mohanah
+      Sire's Dam:              name=Gloria | var=Siamese seal point | breeder=Mohanah
+      Dam's Sire:              name=Soft | var=Fuzzy siamese | breeder=Mohanah
+      Dam's Dam:               name=Tirna | var=Fuzzy colourpoint beige | breeder=Mohanah
+
+57. CTC7217  JLWC Star / LAVENDER - MYSTIC -  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Spyro | var=Russian Blue Silverman Dumbo
+      Dam:                     name=Nixie | var=?? | breeder=JLWC
+
+58. CTC7218  JWLC Lizzy / RAVEN - MYSTIC -  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Spruce | var=??
+      Dam:                     name=Cora | var=??
+
+59. CTC7258  Baby Tutorial  [Fancy Mouse]  - 12 manual slot(s)  (canonical: sire=CTC7252 dam=CTC7257)
+      Sire's Sire:             name=test grandsire 1 | var=Variety
+      Sire's Dam:              name=test granddam 1 | var=Variety
+      Dam's Sire:              name=test grandsire 2 | var=Variety
+      Dam's Dam:               name=test granddam 2 | var=Variety
+      Sire's Sire's Sire:      name=test | var=Variety
+      Sire's Sire's Dam:       name=test | var=Variety
+      Sire's Dam's Sire:       name=test | var=Variety
+      Sire's Dam's Dam:        name=test | var=Variety
+      Dam's Sire's Sire:       name=test | var=Variety
+      Dam's Sire's Dam:        name=test | var=Variety
+      Dam's Dam's Sire:        name=test | var=Variety
+      Dam's Dam's Dam:         name=test | var=Variety
+
+60. CTC7341  Nutella  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=CTC7128 dam=CTC7127)
+      Sire's Sire:             name=Tornado | sex=Male | b.2025-07-09 | var=Short hair Black | breeder=Halmaus
+      Sire's Dam:              name=Janeczka | sex=Female | var=Short hair Black hereford | breeder=Ray's Rodents
+
+61. CTC7347  C3  [Fancy Mouse]  - 2 manual slot(s)  (canonical: sire=CTC7183 dam=CTC7337)
+      Sire's Sire:             name=Tikvah | sex=Male | var=Blue Short hair Splashed | breeder=Mohanah
+      Sire's Dam:              name=Elsa | sex=Female | b.2026-01-05 | var=Black Short hair Roan tan
+
+62. CTC7373  KH Alyosha  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Lorsd | var=Mink pearl silvermane uni standard lisse yeux noir | breeder=Rattery Knabbelhoek (Belgique)
+      Dam:                     name=Rose | var=Cannelle pearl berkshire blazed standard lisse | breeder=Rattery Knabbelhoek (Belgique)
+
+63. CTC7428  KH Lyle  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Fortune | b.2024-06-24 | var=Cannelle uni dumbo velours | breeder=Rattery Knabbelhoek (Belgique)
+      Dam:                     name=Fortune | var=Marble berkshire étoilée dumbo lisse | breeder=Rattery Knabbelhoek (Belgique)
+
+64. CTC7437  RK Zouko  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Finistère | var=Noir masqué down under velours dumbo yeux noir | breeder=Rattery Knabbelhoek (Belgique)
+      Dam:                     name=France | var=Noir silvermane variberk étoilée standard lisse yeux noir | breeder=Rattery Knabbelhoek (Belgique)
+
+65. CTC7641  ADD 1  [Fancy Mouse]  - 5 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Pa
+      Dam:                     name=Ma
+      Sire's Sire:             name=Elion | var=Siamois Satin | breeder=The Royal Mousery
+      Sire's Dam:              name=Grandma | breeder=Les petits Mystics
+      Dam's Dam:               name=Gaiko | b.2023-08-19 | gen=at/a D/d P/p sa/sa | var=Black Tan Satin | breeder=TnS
+
+66. CTC7686  Pixel  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=TBS Zoro | b.2025-09-20 | var=Bleu russe silvermane Berkshire Dumbo lisse yeux noirs | breeder=Les Rats-Tiboiseur
+      Dam:                     name=TBS Zora | b.2025-08-27 | var=Mink irish standard nue fuzz | breeder=Les Rats-Tiboiseur
+
+67. CTC7696  Zeila Van Ratsmore  [Fancy Rat]  - 9 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Urmel Van Rastmore | b.2025-01-03 | gen=aa Mm Cc | var=Noir dalmatien down under standard lisse | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Ursaluna Van Ratsmore | b.2026-01-03 | gen=aa rr Mm Rbrb Cc | var=Beige variberk blazed snowflake down under | breeder=Ratsmore (Allemagne)
+      Sire's Dam:              name=Kimba Van Ratsmore | b.2024-01-01 | gen=aa | var=Noir | breeder=Ratsmore (Allemagne)
+      Dam's Sire:              name=Qumuru Van Ratsmore | b.2024-12-28 | gen=aa rr Mm Rbrb Dd | var=Beige | breeder=Ratsmore (Allemagne)
+      Dam's Dam:               name=Tracey Van Ratsmore | b.2025-07-16 | gen=aa rr Mm Rbrb Cc | var=Beige | breeder=Ratsmore (Allemagne)
+      Sire's Dam's Sire:       name=Herzog Von Pitzbühl Van Ratsmore | gen=aa Rbrb dd dudu | var=English blue dumbo | breeder=Ratsmore (Allemagne)
+      Sire's Dam's Dam:        name=Iduna Van Ratsmore | gen=aa Cc Mm Dd Rbrb Dudu | var=Noir | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Sire:        name=Quill Van Ratsmore | gen=aa mm Rr Dd Cc | var=Mink | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Dam:         name=Blue Van Ratsmore | gen=aa Momo Mm rbrb | var=Russian blue | breeder=Ratsmore (Allemagne)
+
+68. CTC7700  Genesis Van Ratsmore  [Fancy Rat]  - 5 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Xerneas Van Ratsmore | b.2026-01-16 | gen=aa Rbrb Cch Smsm Lh1h Sasa | var=Noir uni silvermane standard lisse yeux noir | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Palika Van Ratsmore | b.2025-11-08 | gen=aa rbrb 1h1h sasa Dudu Cch | var=Bleu russe harley satin whiteside standard yeux noir | breeder=Ratsmore (Allemagne)
+      Sire's Sire:             name=Sisa of WonderRatz | b.2025-07-01 | gen=aa chah Dudu LhLh SaSa Smsm Bebe RbRb | var=Black eyed seal point siamese silvermane | breeder=WonderRatz
+      Sire's Dam:              name=Lian Van Ratsmore | b.2024-12-11 | gen=aa rbrb Cch sasa 1h1h | var=Russian blue Harley Satin
+      Sire's Dam's Sire:       name=Jupiter Van Ratmore | var=Russian n
+
+69. CTC7713  Hunter Van Ratsmore  [Fancy Rat]  - 13 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Rufus Van Ratsmore | b.2024-12-30 | gen=aa rbrb Dwdw Dudu | var=Russian blue | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Bailonda Van Ratsmore | b.2025-10-16 | gen=aa Rr Mm Rbrb Dudu Dwndwn | var=Black opossum variberk | breeder=Ratsmore (Allemagne)
+      Sire's Sire:             name=Dexter Van Ratsmore | gen=aa Rr Mm Rbrb Dd Dwdw Dudu | var=Noir | breeder=Ratsmore (Allemagne)
+      Sire's Dam:              name=Chloe Van Ratsmore | gen=aa Rr Mm Rbrb Dd Dwdw dudu | var=Noir dumbo | breeder=Ratsmore (Allemagne)
+      Dam's Sire:              name=Urmel Van Ratsmore | b.2025-01-03 | gen=aa Mm Cc | var=Noir | breeder=Ratsmore (Allemagne)
+      Dam's Dam:               name=Blossom Van Ratsmore | b.2025-04-05 | gen=aa Momo Mm Rr rbrb | var=Russian blue blazed variberk | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Sire:      name=Karni Mata's Bandit | gen=aa Rr Mm Rbrb Dd dwdw Dudu | var=Noir dwarf
+      Sire's Sire's Dam:       name=Loor Van Ratsmore | gen=aa Rbrb Dd Rr dudu DwDw | var=Noir dumbo
+      Sire's Dam's Sire:       name=Milo Von Der Bremer Rattenbande | gen=Aa Rr Mm Rbrb Dudu Dwdw | var=Agouti | breeder=Ratsmore (Allemagne)
+      Sire's Dam's Dam:        name=Leilani Van Ratsmore | gen=aa Rr Mm Rbrb Dd Dudu DwDw | var=Noir | breeder=Ratsmore (Allemagne)
+      Dam's Sire's Dam:        name=Kimba Van Ratsmore | gen=aa | var=Noir | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Sire:        name=Tamino Von Der Bremer Rattenbande | gen=aa Rr mm dudu Momo | var=Mink dumbo | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Dam:         name=Chloe Van Ratsmore | gen=aa Rr Mm Rbrb Dd Dwdw dudu | var=Noir dumbo | breeder=Ratsmore (Allemagne)
+
+70. CTC7714  Melbourne Van Ratsmore  [Fancy Rat]  - 7 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Quill Van Ratsmore | b.2024-12-28 | gen=aa mm Rr Dd Cc | var=Mink | breeder=Ratsmore (Allemagne)
+      Dam:                     name=Ronja Van Ratsmore | b.2025-07-15 | gen=aa Dd Mm Bebe | var=Black eyed marten | breeder=Ratsmore (Allemagne)
+      Dam's Sire:              name=Valentin Van Ratsmore | gen=aa dd mm Ve/ve Bebe cmc | var=Black eyed platinum marten velveteen | breeder=Ratsmore (Allemagne)
+      Dam's Dam:               name=Robin Von Der Bremer Rattenbande | var=Marten | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Sire:      name=Herzog Von Pitzbühl Van Ratsmore | gen=aa Rbrb dd dudu | var=English blue dumbo | breeder=Ratsmore (Allemagne)
+      Sire's Sire's Dam:       name=Iduna Van Ratsmore | gen=aa cc Mm Dd Rbrb Dudu | var=Noir | breeder=Ratsmore (Allemagne)
+      Dam's Dam's Dam:         name=Firefly Van Ratsmore | gen=aa Mm Dd cmc Ve/ve Dwdw dudu | var=Marten velveteen dumbo | breeder=Ratsmore (Allemagne)
+
+71. CTC7877  IND Eywa  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Jacob | var=Siamois Agouti Dumbo Double Rex yeux Noirs | breeder=Elevage Indépendant
+      Dam:                     name=Yasmine | var=Hooded Agouti Dumbo Lisse yeux Noirs | breeder=Elevage Indépendant
+
+72. CTC7881  LMM Asmar  [Fancy Rat]  - 6 manual slot(s)  (canonical: sire=CTC7878 dam=CTC7877)
+      Dam's Sire:              name=Jacob | suffix=Van Ratsmore | sex=Male | var=Siamois Agouti Dumbo Double Rex yeux Noirs | breeder=Elevage Indépendant
+      Dam's Dam:               name=Yasmine | sex=Female | var=Hooded Agouti Dumbo Lisse yeux Noirs | breeder=Elevage Indépendant
+      Dam's Sire's Sire:       suffix=van Ratsmore | sex=Male
+      Dam's Sire's Dam:        suffix=van Ratsmore | sex=Female
+      Dam's Dam's Sire:        prefix=RK | sex=Male
+      Dam's Dam's Dam:         prefix=RK | sex=Female
+
+73. CTC7893  PAR Vi  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Abunis | var=Siamois Noir Dumbo lisse yeux Noirs | breeder=Elevage Indépendant (77)
+      Dam:                     name=Vénus | var=Hooded Agouti Dumbo Lisse yeux Noirs | breeder=Elevage Indépendant (77)
+
+74. CTC7907  PAR Hayley  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=??? | var=Uni topaze Dumbo lisse yeux Rouges | breeder=Elevage Professionnel
+      Dam:                     name=??? | var=Irish agouti Standard lisse yeux Noirs | breeder=Elevage Professionnel
+
+75. CTC7927  IND Edward  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=- dam=-)
+      Sire:                    name=Aladin | var=Hooded Noir Silvermane Dumbo Rex yeux Noirs | breeder=Elevage Indépendant (80)
+      Dam:                     name=Milka | var=Irish Mink Dumbo Lisse yeux Noirs | breeder=Elevage Indépendant (80)
+
+76. CTC7988  LRE Phoenix  [Fancy Rat]  - 2 manual slot(s)  (canonical: sire=CTC7122 dam=CTC2463)
+      Sire's Sire:             name=KH Sun | b.2025-09-01 | var=Topaze Dumbo rex
+      Sire's Dam:              name=Ela | b.2026-01-01 | var=Bleu pearl Dumbo lisse

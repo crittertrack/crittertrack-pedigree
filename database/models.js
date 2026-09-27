@@ -1,4 +1,5 @@
 ﻿﻿const mongoose = require('mongoose');
+const { ENCLOSURE_PURPOSE_VALUES, DEFAULT_ENCLOSURE_PURPOSE } = require('../utils/enclosurePurpose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
 // Note: We only export the model here. The getNextSequence function moves to db_service.js.
@@ -1776,7 +1777,13 @@ const EnclosureSchema = new mongoose.Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
-    purpose: { type: String, enum: ['general', 'reproduction', 'health', ''], default: 'general' }, // e.g. General holding, Breeding, Quarantine/Medical
+    // Enum comes from utils/enclosurePurpose.js — add new purposes there, not inline.
+    // 'health' and '' are legacy values kept so pre-existing enclosures still validate.
+    purpose: {
+        type: String,
+        enum: [...ENCLOSURE_PURPOSE_VALUES, 'health', ''],
+        default: DEFAULT_ENCLOSURE_PURPOSE,
+    }, // e.g. General, Nursery/Breeding, Medical, Quarantine, For Sale, Other
     purposeDescription: { type: String, default: '', trim: true, maxlength: 250 },
     buildingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },
     roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', default: null, index: true },

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Enclosure, Animal, SupplyItem, EnclosureLog, UserActivityLog, Location } = require('../database/models');
 const { logUserActivity } = require('../utils/userActivityLogger');
+const { normalizeEnclosurePurpose } = require('../utils/enclosurePurpose');
 
 // ── Helper: Compute field diffs between old and new enclosure data ──────────
 const FIELD_LABELS = {
@@ -291,11 +292,18 @@ router.post('/', async (req, res) => {
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
 
+        // Validate before constructing the document — an unrecognised purpose otherwise only
+        // surfaces as a generic 500 from the enum check inside enc.save().
+        const normalizedPurpose = normalizeEnclosurePurpose(purpose);
+        if (!normalizedPurpose) {
+            return res.status(400).json({ message: `Invalid enclosure purpose: ${purpose}` });
+        }
+
         const enc = new Enclosure({
             creatorId: req.user.id,
             name: name.trim(),
             enclosureType: enclosureType?.trim() || '',
-            purpose: purpose || 'general',
+            purpose: normalizedPurpose,
             purposeDescription: purposeDescription?.trim() || '',
             location: location?.trim() || '',
             dimensions: dimensions || { length: null, width: null, height: null, unit: 'in' },
@@ -354,6 +362,14 @@ router.put('/:id', async (req, res) => {
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
 
+        // Same up-front validation as POST. This one matters more: findOneAndUpdate skips
+        // schema validation by default, so a bad purpose here used to be written to the DB
+        // unvalidated and only blow up on the next read.
+        const normalizedPurpose = normalizeEnclosurePurpose(purpose);
+        if (!normalizedPurpose) {
+            return res.status(400).json({ message: `Invalid enclosure purpose: ${purpose}` });
+        }
+
         // Fetch old enclosure to compute diffs
         const oldEnclosure = await Enclosure.findOne({ _id: req.params.id, creatorId: req.user.id }).lean();
         if (!oldEnclosure) return res.status(404).json({ message: 'Enclosure not found' });
@@ -361,7 +377,7 @@ router.put('/:id', async (req, res) => {
         const setData = {
             name: name.trim(),
             enclosureType: enclosureType?.trim() || '',
-            purpose: purpose || 'general',
+            purpose: normalizedPurpose,
             purposeDescription: purposeDescription?.trim() || '',
             location: location?.trim() || '',
             dimensions: dimensions || { length: null, width: null, height: null, unit: 'in' },
