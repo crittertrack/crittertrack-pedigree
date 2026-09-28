@@ -48,6 +48,11 @@ const buildPublicAnimalFields = (a) => ({
     studFeeCurrency: a.studFeeCurrency || 'USD',
     publicRemarks: a.publicRemarks || null,
     tags: a.tags || [],
+    // NOTE: originalCreatorId_public does NOT exist on the Animal schema - the transfer flow only
+    // ever sets animal.originalCreatorId (an ObjectId ref to the original breeder). Reading
+    // a.originalCreatorId_public here always yielded null, so the transfer icon could never render
+    // on a public card. The public id is derived from the original creator's User record instead;
+    // resyncAnimalToPublic passes it in as originalCreatorId_public (see below).
     originalCreatorId_public: a.originalCreatorId_public || null,
     originalBreederName: a.originalBreederName || null,
     remarks: a.remarks || '',
@@ -148,9 +153,22 @@ async function resyncAnimalToPublic(animal) {
         if (!animal || !animal.id_public) return;
 
         if (animal.isDisplay) {
+            // animal.originalCreatorId is an ObjectId ref to the original breeder; the public mirror
+            // needs the matching id_public so a public card can show the transfer icon. Resolved
+            // here rather than in buildPublicAnimalFields, which stays a pure field mapping.
+            const fields = buildPublicAnimalFields(animal);
+            if (animal.originalCreatorId && !fields.originalCreatorId_public) {
+                try {
+                    const { User } = require('../database/models');
+                    const originalCreator = await User.findById(animal.originalCreatorId).select('id_public').lean();
+                    fields.originalCreatorId_public = originalCreator?.id_public || null;
+                } catch (lookupError) {
+                    console.error('[resyncAnimalToPublic] Could not resolve original creator id_public:', lookupError);
+                }
+            }
             await PublicAnimal.updateOne(
                 { id_public: animal.id_public },
-                { $set: buildPublicAnimalFields(animal) },
+                { $set: fields },
                 { upsert: true }
             );
         } else {
@@ -187,7 +205,21 @@ async function syncAnimalToPublic(animal) {
         if (animal.isDisplay === true) {
             // Remove _id to avoid immutable field error
             const { _id, ...animalWithoutId } = animal.toObject ? animal.toObject() : animal;
-            
+
+            // replaceOne copies the raw Animal doc, which carries originalCreatorId (an ObjectId)
+            // but never originalCreatorId_public - the field a public card reads to decide whether
+            // to draw the transfer icon. Resolve it from the original breeder's User record so this
+            // write path matches resyncAnimalToPublic().
+            if (animalWithoutId.originalCreatorId && !animalWithoutId.originalCreatorId_public) {
+                try {
+                    const { User } = require('../database/models');
+                    const originalCreator = await User.findById(animalWithoutId.originalCreatorId).select('id_public').lean();
+                    animalWithoutId.originalCreatorId_public = originalCreator?.id_public || null;
+                } catch (lookupError) {
+                    console.error('[syncAnimalToPublic] Could not resolve original creator id_public:', lookupError);
+                }
+            }
+
             // When public, sync all data
             await PublicAnimal.replaceOne(
                 { id_public: animal.id_public },
