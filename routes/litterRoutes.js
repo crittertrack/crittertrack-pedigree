@@ -390,9 +390,21 @@ router.delete('/:id_backend', async (req, res) => {
 });
 
 
+// Wrap the multer middleware so its errors become readable JSON. Without this, multer
+// rejects oversized/unsupported files BEFORE the route handler runs, Express emits an HTML
+// 500 with no body, and the client can only show a generic "Failed to upload image".
+const litterImageUpload = (req, res, next) =>
+    litterUpload.single('image')(req, res, (err) => {
+        if (!err) return next();
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ message: 'Image too large (maximum 500 KB). Please pick a smaller image or crop it first.' });
+        }
+        return res.status(400).json({ message: err.message || 'Invalid image file' });
+    });
+
 // POST /api/litters/:id_backend/images
 // Upload one image to a born litter (max 5). Only works on non-planned litters.
-router.post('/:id_backend/images', litterUpload.single('image'), async (req, res) => {
+router.post('/:id_backend/images', litterImageUpload, async (req, res) => {
     try {
         const litter = await Litter.findById(req.params.id_backend);
         if (!litter) return res.status(404).json({ message: 'Litter not found' });
