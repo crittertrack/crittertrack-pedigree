@@ -4,6 +4,7 @@
 const cron = require('node-cron');
 const { Animal, Litter, Enclosure, SupplyItem, SystemSettings, PublicProfile } = require('../database/models');
 const { sendPushToUser } = require('./pushService');
+const { formatAnimalName, formatAlertDigest } = require('./alertNames');
 
 const LAST_RUN_KEY = 'animalAlertsCron_lastRunDate';
 
@@ -68,54 +69,65 @@ const SCHEDULE_FIELD_KEYS = [
 
 const HEALTH_STATUSES_OF_CONCERN = ['Concern', 'Critical'];
 
-// Bumps a per-user counter map, e.g. counts.set(userId, { animalCare: 3, health: 1 })
-const bump = (counts, userId, category, n = 1) => {
+// Tracks due counts and distinct display names per user/category.
+const bump = (alerts, userId, category, name, n = 1) => {
     if (!n) return;
     const key = userId.toString();
-    if (!counts.has(key)) counts.set(key, {});
-    const entry = counts.get(key);
-    entry[category] = (entry[category] || 0) + n;
+    if (!alerts.has(key)) alerts.set(key, {});
+    const categories = alerts.get(key);
+    if (!categories[category]) categories[category] = { count: 0, names: new Set() };
+    const alert = categories[category];
+    alert.count += n;
+    if (name) alert.names.add(name);
 };
 
 const runAnimalAlertsCheck = async () => {
-    const counts = new Map(); // userId -> { feeding, careTasks, enclosureCare, health, breeding }
+    const alerts = new Map(); // userId -> category -> { count, names }
 
     // --- Animals: feeding, grooming/training schedules, custom care tasks, health ---
     const animals = await Animal.find({ archived: { $ne: true } })
-        .select('creatorId lastFedDate feedingIntervalHours animalCareTasks quarantineDetails healthStatus healthStatusOverride medications ' + SCHEDULE_FIELD_KEYS.join(' '))
+        .select('creatorId id_public prefix name suffix lastFedDate feedingIntervalHours animalCareTasks quarantineDetails healthStatus healthStatusOverride medications ' + SCHEDULE_FIELD_KEYS.join(' '))
         .lean();
 
+    const animalNamesById = new Map(animals.map((animal) => [animal.id_public, formatAnimalName(animal)]));
     animals.forEach((a) => {
         if (!a.creatorId) return;
-        if (isFeedingDue(a.lastFedDate, a.feedingIntervalHours)) bump(counts, a.creatorId, 'feeding', 1);
+        const animalName = formatAnimalName(a);
+        if (isFeedingDue(a.lastFedDate, a.feedingIntervalHours)) bump(alerts, a.creatorId, 'feeding', animalName);
 
-        let careTaskCount = 0;
-        careTaskCount += (a.animalCareTasks || []).filter((t) => isTaskDue(t.lastDoneDate, t.frequencyDays)).length;
-        careTaskCount += SCHEDULE_FIELD_KEYS.filter((key) => isTaskDue(a[key]?.lastDoneDate, a[key]?.frequencyDays)).length;
-        bump(counts, a.creatorId, 'careTasks', careTaskCount);
+        (a.animalCareTasks || []).filter((task) => isTaskDue(task.lastDoneDate, task.frequencyDays))
+            .forEach((task) => bump(alerts, a.creatorId, 'careTasks', `${animalName} — ${task.taskName}`));
+        SCHEDULE_FIELD_KEYS.filter((key) => isTaskDue(a[key]?.lastDoneDate, a[key]?.frequencyDays))
+            .forEach((key) => {
+                const taskName = key.replace(/Schedule$/, '').replace(/([A-Z])/g, ' $1').trim();
+                bump(alerts, a.creatorId, 'careTasks', `${animalName} — ${taskName}`);
+            });
 
-        let healthCount = 0;
         // Only count a passed quarantine end date while quarantine is still marked active —
         // once a user ends it, status resets to 'None' but endDate is deliberately kept as the
         // "ended on" record for the health timeline (see AnimalFormModalV2.jsx), so checking
         // endDate alone fired this every single day forever for any animal that ever finished one.
         const quarantineActive = a.quarantineDetails?.status && a.quarantineDetails.status !== 'None';
-        if (quarantineActive && a.quarantineDetails?.endDate && daysSince(a.quarantineDetails.endDate) >= 0) healthCount += 1;
+        if (quarantineActive && a.quarantineDetails?.endDate && daysSince(a.quarantineDetails.endDate) >= 0) {
+            bump(alerts, a.creatorId, 'health', `${animalName} — quarantine end date`);
+        }
         const status = a.healthStatusOverride || a.healthStatus;
-        if (HEALTH_STATUSES_OF_CONCERN.includes(status)) healthCount += 1;
-        healthCount += (a.medications || [])
+        if (HEALTH_STATUSES_OF_CONCERN.includes(status)) {
+            bump(alerts, a.creatorId, 'health', `${animalName} — ${status} health status`);
+        }
+        const dueMedications = (a.medications || [])
             .filter((m) => !m.status || m.status === 'active')
-            .map((m) => calcNextDose(m))
-            .filter((next) => next && next.getTime() <= Date.now()).length;
-        bump(counts, a.creatorId, 'health', healthCount);
+            .map((medication) => ({ medication, nextDose: calcNextDose(medication) }))
+            .filter(({ nextDose }) => nextDose && nextDose.getTime() <= Date.now());
+        dueMedications.forEach(({ medication }) => bump(alerts, a.creatorId, 'health', `${animalName} — ${medication.name || 'medication'}`));
     });
 
     // --- Enclosures: cleaning/maintenance tasks ---
-    const enclosures = await Enclosure.find({}).select('creatorId cleaningTasks').lean();
+    const enclosures = await Enclosure.find({}).select('creatorId name cleaningTasks').lean();
     enclosures.forEach((e) => {
         if (!e.creatorId) return;
-        const due = (e.cleaningTasks || []).filter((t) => isTaskDue(t.lastDoneDate, cleaningTaskFreqDays(t))).length;
-        bump(counts, e.creatorId, 'enclosureCare', due);
+        (e.cleaningTasks || []).filter((task) => isTaskDue(task.lastDoneDate, cleaningTaskFreqDays(task)))
+            .forEach((task) => bump(alerts, e.creatorId, 'enclosureCare', `${e.name || 'Unnamed enclosure'} — ${task.taskName || task.type || 'task'}`));
     });
 
     // --- Standalone (not animal/enclosure-linked) general Feeding & Care tasks ---
@@ -126,39 +138,45 @@ const runAnimalAlertsCheck = async () => {
         (p.generalCareTasks || []).forEach((t) => {
             if (!isTaskDue(t.lastDoneDate, cleaningTaskFreqDays(t))) return;
             const category = t.type === 'Feeding' ? 'feeding' : t.type === 'Cleaning' || t.type === 'Maintenance' ? 'enclosureCare' : 'careTasks';
-            bump(counts, p.userId_backend, category, 1);
+            const assignedNames = (t.assignedAnimals || []).map((id) => animalNamesById.get(id)).filter(Boolean);
+            const taskLabel = t.taskName || 'General care task';
+            bump(alerts, p.userId_backend, category, assignedNames.length ? `${taskLabel} — ${assignedNames.join(', ')}` : taskLabel);
         });
     });
 
     // --- Litters: planned mating date reached, due date reached, weaning date reached ---
-    const littersAll = await Litter.find({}).select('creatorId isPlanned matingDate pregnancyDate expectedDueDate birthDate weaningDate weaningConfirmed pregnancyLost').lean();
+    const littersAll = await Litter.find({}).select('creatorId litter_id_public breedingPairCodeName sireId_public damId_public isPlanned matingDate pregnancyDate expectedDueDate birthDate weaningDate weaningConfirmed pregnancyLost').lean();
     littersAll.forEach((l) => {
         if (!l.creatorId) return;
-        let reproCount = 0;
+        const litterLabel = l.litter_id_public || l.breedingPairCodeName || 'Litter';
+        const sireName = animalNamesById.get(l.sireId_public);
+        const damName = animalNamesById.get(l.damId_public);
         if (l.isPlanned && !l.pregnancyDate && !l.birthDate && l.matingDate) {
             const days = daysSince(l.matingDate);
-            if (days !== null && days >= 0) reproCount += 1;
+            if (days !== null && days >= 0) {
+                const parents = [damName, sireName].filter(Boolean);
+                bump(alerts, l.creatorId, 'breeding', parents.length ? parents.join(' × ') : litterLabel);
+            }
         }
         if (l.pregnancyDate && !l.birthDate && l.expectedDueDate) {
             const days = daysSince(l.expectedDueDate);
-            if (days !== null && days >= 0) reproCount += 1;
+            if (days !== null && days >= 0) bump(alerts, l.creatorId, 'breeding', damName || litterLabel);
         }
         const stillNursing = !l.weaningConfirmed && !l.pregnancyLost;
         if (l.birthDate && l.weaningDate && stillNursing) {
             const days = daysSince(l.weaningDate);
-            if (days !== null && days >= 0) reproCount += 1;
+            if (days !== null && days >= 0) bump(alerts, l.creatorId, 'breeding', damName || litterLabel);
         }
-        bump(counts, l.creatorId, 'breeding', reproCount);
     });
 
     // --- Supplies: reorder due (grouped with enclosure/logistics care, not feeding) ---
-    const supplies = await SupplyItem.find({}).select('userId currentStock reorderThreshold nextOrderDate').lean();
+    const supplies = await SupplyItem.find({}).select('userId name currentStock reorderThreshold nextOrderDate').lean();
     const today = new Date(); today.setHours(0, 0, 0, 0);
     supplies.forEach((s) => {
         if (!s.userId) return;
         const due = (s.reorderThreshold != null && s.currentStock <= s.reorderThreshold) ||
             (s.nextOrderDate && new Date(s.nextOrderDate) <= today);
-        if (due) bump(counts, s.userId, 'enclosureCare', 1);
+        if (due) bump(alerts, s.userId, 'enclosureCare', s.name || 'Unnamed supply');
     });
 
     // --- Send one digest push per user per category with anything due ---
@@ -170,13 +188,13 @@ const runAnimalAlertsCheck = async () => {
         breeding: { emoji: '🐣', label: 'Reproduction', url: '/litters' },
     };
 
-    for (const [userId, entry] of counts.entries()) {
-        for (const [category, count] of Object.entries(entry)) {
-            if (!count) continue;
+    for (const [userId, entry] of alerts.entries()) {
+        for (const [category, alert] of Object.entries(entry)) {
+            if (!alert.count) continue;
             const meta = CATEGORY_LABELS[category];
             await sendPushToUser(userId, {
                 title: `${meta.emoji} ${meta.label} needs attention`,
-                body: `${count} item${count !== 1 ? 's' : ''} due — tap to review.`,
+                body: formatAlertDigest(alert.count, [...alert.names]),
                 url: meta.url,
                 tag: `daily-${category}`
             }, category).catch((err) => console.error(`[animalAlertsCron] Push failed for user ${userId} (${category}):`, err.message || err));
@@ -189,7 +207,7 @@ const runAnimalAlertsCheck = async () => {
         { upsert: true }
     );
 
-    console.log(`[animalAlertsCron] Digest sent for ${counts.size} user(s) with due items.`);
+    console.log(`[animalAlertsCron] Digest sent for ${alerts.size} user(s) with due items.`);
 };
 
 // Guards against double-runs on the same calendar day (e.g. a redeploy restarting the process
