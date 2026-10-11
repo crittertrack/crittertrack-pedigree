@@ -35,7 +35,11 @@ const formatPublicEnclosure = (enclosure, locations = []) => {
             frequencyDays: task.frequencyDays,
             frequencyUnit: task.frequencyUnit,
             notes: task.notes,
-            assignedSupplies: (task.assignedSupplies || []).map(({ supplyName, quantity }) => ({ supplyName, quantity })),
+            assignedSupplies: (task.assignedSupplies || []).map(({ supplyName, quantity, unit }) => ({
+                supplyName,
+                quantity,
+                ...(unit ? { unit } : {}),
+            })),
         })),
     };
 };

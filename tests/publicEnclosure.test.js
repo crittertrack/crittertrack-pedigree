@@ -17,7 +17,7 @@ test('formats public enclosure details and tasks without exposing private identi
         cleaningTasks: [{
             taskName: 'Replace water',
             type: 'Maintenance',
-            assignedSupplies: [{ supplyId: 'private-supply-id', supplyName: 'Water conditioner', quantity: 1 }],
+            assignedSupplies: [{ supplyId: 'private-supply-id', supplyName: 'Water conditioner', quantity: 1.5, unit: 'ml' }],
         }],
     }, [
         { type: 'building', name: 'Reptile Room' },
@@ -27,7 +27,7 @@ test('formats public enclosure details and tasks without exposing private identi
     assert.equal(result.name, 'Terrarium A');
     assert.equal(result.buildingName, 'Reptile Room');
     assert.equal(result.roomName, 'North Wall');
-    assert.deepEqual(result.cleaningTasks[0].assignedSupplies, [{ supplyName: 'Water conditioner', quantity: 1 }]);
+    assert.deepEqual(result.cleaningTasks[0].assignedSupplies, [{ supplyName: 'Water conditioner', quantity: 1.5, unit: 'ml' }]);
     assert.equal('creatorId' in result, false);
     assert.equal('buildingId' in result, false);
     assert.equal('supplyId' in result.cleaningTasks[0].assignedSupplies[0], false);

@@ -1830,7 +1830,8 @@ const EnclosureSchema = new mongoose.Schema({
         assignedSupplies: [{
             supplyId: { type: mongoose.Schema.Types.ObjectId, ref: 'SupplyItem' },
             supplyName: { type: String }, // Denormalized for display
-            quantity: { type: Number, default: 1 }
+            quantity: { type: Number, default: 1 },
+            unit: { type: String, default: '' }
         }],
         notes: { type: String, default: '' }
     }],
