@@ -120,6 +120,7 @@ const buildPublicAnimalFields = (a) => ({
     feedingSchedule: a.feedingSchedule || null,
     supplements: a.supplements || null,
     housingType: a.housingType || null,
+    enclosureId: a.enclosureId || null,
     bedding: a.bedding || null,
     enrichment: a.enrichment || null,
     temperatureRange: a.temperatureRange || '',

@@ -3,6 +3,7 @@ const router = express.Router();
 const { Enclosure, Animal, SupplyItem, EnclosureLog, UserActivityLog, Location } = require('../database/models');
 const { logUserActivity } = require('../utils/userActivityLogger');
 const { normalizeEnclosurePurpose } = require('../utils/enclosurePurpose');
+const { resyncAnimalToPublic, resyncAnimalToPublicById } = require('../utils/syncPublicAnimals');
 
 // ── Helper: Compute field diffs between old and new enclosure data ──────────
 const FIELD_LABELS = {
@@ -287,7 +288,7 @@ router.post('/', async (req, res) => {
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
             cleaningTasks, tags, speciesLabels, imageUrl,
             buildingId, roomId,
-            bedding, lightingType, enrichment
+            bedding, lightingType, enrichment, showDetailsOnPublicProfile
         } = req.body;
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
@@ -326,6 +327,7 @@ router.post('/', async (req, res) => {
             bedding: bedding || null,
             lightingType: lightingType || null,
             enrichment: enrichment || null,
+            showDetailsOnPublicProfile: Boolean(showDetailsOnPublicProfile),
         });
 
         await enc.save();
@@ -357,7 +359,7 @@ router.put('/:id', async (req, res) => {
             lightsOnTime, lightsOffTime, lightTimeFormat, notes,
             cleaningTasks, tags, speciesLabels, imageUrl,
             buildingId, roomId,
-            bedding, lightingType, enrichment
+            bedding, lightingType, enrichment, showDetailsOnPublicProfile
         } = req.body;
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
@@ -400,6 +402,7 @@ router.put('/:id', async (req, res) => {
             bedding: bedding || null,
             lightingType: lightingType || null,
             enrichment: enrichment || null,
+            showDetailsOnPublicProfile: Boolean(showDetailsOnPublicProfile),
         };
 
         const enc = await Enclosure.findOneAndUpdate(
@@ -457,7 +460,7 @@ router.patch('/assign-animal', async (req, res) => {
         if (!animalId_public) return res.status(400).json({ message: 'animalId_public is required' });
 
         // Fetch the animal to get its name
-        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: req.user.id }).select('_id name prefix suffix status').lean();
+        const animal = await Animal.findOne({ id_public: animalId_public, creatorId: req.user.id }).select('_id name prefix suffix status enclosureId').lean();
         if (!animal) return res.status(404).json({ message: 'Animal not found' });
 
         if (animal.status === 'Deceased' || animal.status === 'Rehomed') {
@@ -499,6 +502,7 @@ router.patch('/assign-animal', async (req, res) => {
             { new: true }
         );
         if (!result) return res.status(404).json({ message: 'Animal not found' });
+        await resyncAnimalToPublic(result);
 
         // --- Two-way route logging ---
         // 1. Log assignment to the new enclosure
@@ -697,11 +701,17 @@ router.delete('/:id', async (req, res) => {
             userAgent: req.get('User-Agent'),
         });
 
-        // Unassign all animals from this enclosure
+        // Unassign all animals and update their public mirrors so public profiles do not retain
+        // a stale reference to the deleted enclosure.
+        const affectedAnimals = await Animal.find({
+            creatorId: req.user.id,
+            enclosureId: req.params.id,
+        }).select('id_public').lean();
         await Animal.updateMany(
             { creatorId: req.user.id, enclosureId: req.params.id },
             { $set: { enclosureId: null } }
         );
+        await Promise.all(affectedAnimals.map((animal) => resyncAnimalToPublicById(animal.id_public)));
 
         res.json({ message: 'Enclosure deleted' });
     } catch (err) {

@@ -3,8 +3,9 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
-const { PublicAnimal, Animal, PublicProfile, User, GeneticsData, Litter, BreederRating } = require('../database/models');
+const { PublicAnimal, Animal, Enclosure, Location, PublicProfile, User, GeneticsData, Litter, BreederRating } = require('../database/models');
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics } = require('../utils/inbreeding');
+const { formatPublicEnclosure } = require('../utils/publicEnclosure');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
 
@@ -282,6 +283,37 @@ router.get('/animal/:id_public', async (req, res) => {
     } catch (error) {
         console.error('Error fetching public animal:', error);
         return res.status(500).json({ message: 'Internal server error while fetching public animal.' });
+    }
+});
+
+// GET /api/public/animal/:id_public/enclosure
+// Enclosure details and tasks are only shared when the enclosure owner explicitly enables it.
+router.get('/animal/:id_public/enclosure', async (req, res) => {
+    try {
+        const publicAnimal = await PublicAnimal.findOne({ id_public: req.params.id_public }).select('_id').lean();
+        if (!publicAnimal) return res.status(404).json({ message: 'Public animal not found.' });
+
+        const animal = await Animal.findOne({ id_public: req.params.id_public, isDisplay: true })
+            .select('enclosureId')
+            .lean();
+        if (!animal?.enclosureId) return res.status(404).json({ message: 'No public enclosure details available.' });
+
+        const enclosure = await Enclosure.findOne({
+            _id: animal.enclosureId,
+            showDetailsOnPublicProfile: true,
+        })
+            .select('creatorId name enclosureType purpose purposeDescription buildingId roomId dimensions capacity tempMin tempMax temperatureUnit humidityMin humidityMax lightsOnTime lightsOffTime lightTimeFormat lightingType bedding enrichment notes tags speciesLabels imageUrl cleaningTasks')
+            .lean();
+        if (!enclosure) return res.status(404).json({ message: 'No public enclosure details available.' });
+
+        const locationIds = [enclosure.buildingId, enclosure.roomId].filter(Boolean);
+        const locations = locationIds.length
+            ? await Location.find({ _id: { $in: locationIds }, creatorId: enclosure.creatorId }).select('name type').lean()
+            : [];
+        return res.status(200).json(formatPublicEnclosure(enclosure, locations));
+    } catch (error) {
+        console.error('Error fetching public enclosure details:', error);
+        return res.status(500).json({ message: 'Internal server error while fetching public enclosure details.' });
     }
 });
 
