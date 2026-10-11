@@ -5,7 +5,7 @@ const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
 const { PublicAnimal, Animal, Enclosure, Location, PublicProfile, User, GeneticsData, Litter, BreederRating } = require('../database/models');
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics } = require('../utils/inbreeding');
-const { formatPublicEnclosure } = require('../utils/publicEnclosure');
+const { formatPublicEnclosure, formatPublicEnclosureSummary } = require('../utils/publicEnclosure');
 
 // --- Public Access Route Controllers (NO AUTH REQUIRED) ---
 
@@ -290,21 +290,22 @@ router.get('/animal/:id_public', async (req, res) => {
 // Enclosure details and tasks are only shared when the enclosure owner explicitly enables it.
 router.get('/animal/:id_public/enclosure', async (req, res) => {
     try {
-        const publicAnimal = await PublicAnimal.findOne({ id_public: req.params.id_public }).select('_id').lean();
+        const publicAnimal = await PublicAnimal.findOne({ id_public: req.params.id_public }).select('_id enclosureId').lean();
         if (!publicAnimal) return res.status(404).json({ message: 'Public animal not found.' });
 
         const animal = await Animal.findOne({ id_public: req.params.id_public, isDisplay: true })
             .select('enclosureId')
             .lean();
-        if (!animal?.enclosureId) return res.status(404).json({ message: 'No public enclosure details available.' });
+        const enclosureId = animal?.enclosureId || publicAnimal.enclosureId;
+        if (!enclosureId) return res.status(404).json({ message: 'No enclosure is assigned to this animal.' });
 
-        const enclosure = await Enclosure.findOne({
-            _id: animal.enclosureId,
-            showDetailsOnPublicProfile: true,
-        })
-            .select('creatorId name enclosureType purpose purposeDescription buildingId roomId dimensions capacity tempMin tempMax temperatureUnit humidityMin humidityMax lightsOnTime lightsOffTime lightTimeFormat lightingType bedding enrichment notes tags speciesLabels imageUrl cleaningTasks')
+        const enclosure = await Enclosure.findById(enclosureId)
+            .select('creatorId name enclosureType showDetailsOnPublicProfile purpose purposeDescription buildingId roomId dimensions capacity tempMin tempMax temperatureUnit humidityMin humidityMax lightsOnTime lightsOffTime lightTimeFormat lightingType bedding enrichment notes tags speciesLabels imageUrl cleaningTasks')
             .lean();
-        if (!enclosure) return res.status(404).json({ message: 'No public enclosure details available.' });
+        if (!enclosure) return res.status(404).json({ message: 'Assigned enclosure not found.' });
+        if (!enclosure.showDetailsOnPublicProfile) {
+            return res.status(200).json(formatPublicEnclosureSummary(enclosure));
+        }
 
         const locationIds = [enclosure.buildingId, enclosure.roomId].filter(Boolean);
         const locations = locationIds.length

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { formatPublicEnclosure } = require('../utils/publicEnclosure');
+const { formatPublicEnclosure, formatPublicEnclosureSummary } = require('../utils/publicEnclosure');
 const { buildPublicAnimalFields } = require('../utils/syncPublicAnimals');
 
 test('mirrors current enclosure assignments to public animals', () => {
@@ -31,4 +31,26 @@ test('formats public enclosure details and tasks without exposing private identi
     assert.equal('creatorId' in result, false);
     assert.equal('buildingId' in result, false);
     assert.equal('supplyId' in result.cleaningTasks[0].assignedSupplies[0], false);
+});
+
+test('formats the default public enclosure card without exposing full details or tasks', () => {
+    const result = formatPublicEnclosureSummary({
+        name: 'Group 1 - Tricolor',
+        enclosureType: 'Terrarium',
+        purpose: 'general',
+        dimensions: { length: 80, width: 50, height: 40, unit: 'cm' },
+        tempMin: 22,
+        tempMax: 26,
+        temperatureUnit: 'C',
+        bedding: "Kil'n Dried Pine Shavings",
+        notes: 'Private notes',
+        cleaningTasks: [{ taskName: 'Deep clean' }],
+    });
+
+    assert.equal(result.name, 'Group 1 - Tricolor');
+    assert.equal(result.detailsShared, false);
+    assert.deepEqual(result.dimensions, { length: 80, width: 50, height: 40, unit: 'cm' });
+    assert.equal(result.bedding, "Kil'n Dried Pine Shavings");
+    assert.equal('notes' in result, false);
+    assert.equal('cleaningTasks' in result, false);
 });

@@ -3,6 +3,7 @@ const formatPublicEnclosure = (enclosure, locations = []) => {
     const room = locations.find((location) => location.type === 'room');
 
     return {
+        detailsShared: true,
         name: enclosure.name,
         enclosureType: enclosure.enclosureType,
         purpose: enclosure.purpose,
@@ -44,4 +45,23 @@ const formatPublicEnclosure = (enclosure, locations = []) => {
     };
 };
 
-module.exports = { formatPublicEnclosure };
+const formatPublicEnclosureSummary = (enclosure) => ({
+    detailsShared: false,
+    name: enclosure.name,
+    enclosureType: enclosure.enclosureType || null,
+    purpose: enclosure.purpose || null,
+    dimensions: enclosure.dimensions || null,
+    tempMin: enclosure.tempMin ?? null,
+    tempMax: enclosure.tempMax ?? null,
+    temperatureUnit: enclosure.temperatureUnit || 'C',
+    humidityMin: enclosure.humidityMin ?? null,
+    humidityMax: enclosure.humidityMax ?? null,
+    lightsOnTime: enclosure.lightsOnTime || null,
+    lightsOffTime: enclosure.lightsOffTime || null,
+    lightingType: enclosure.lightingType || null,
+    bedding: enclosure.bedding || null,
+    enrichment: enclosure.enrichment || null,
+    imageUrl: enclosure.imageUrl || null,
+});
+
+module.exports = { formatPublicEnclosure, formatPublicEnclosureSummary };
