@@ -973,7 +973,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
           'color coat earset markings eyeColor size carrierTraits geneticCode lifeStage ' +
           'ringId eartagNumber ' +
           // Feeding & Care management view (Feeding, Scheduled Care, Grooming & Special Care, Training clusters)
-          'lastFedDate feedingIntervalHours dietType animalCareTasks ' +
+          'lastFedDate feedingIntervalHours dietType dietSupplies animalCareTasks ' +
           'groomingSchedule brushingSchedule bathingSchedule specializedCareSchedule specialCareSchedule ' +
           'nailCareSchedule beakHoofScaleSchedule skinEarCareSchedule dentalCareSchedule healthMonitoringSchedule ' +
           'exerciseSchedule crateTrainingSchedule litterTrainingSchedule leashTrainingSchedule freeFlightTrainingSchedule ' +
