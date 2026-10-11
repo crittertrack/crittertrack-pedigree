@@ -1838,7 +1838,7 @@ const EnclosureSchema = new mongoose.Schema({
     tags: [{ type: String, trim: true }],
     speciesLabels: [{ type: String, trim: true }],
     imageUrl: { type: String, default: null },
-    showDetailsOnPublicProfile: { type: Boolean, default: false },
+    showDetailsOnPublicProfile: { type: Boolean, default: true },
 }, { timestamps: true });
 const Enclosure = mongoose.model('Enclosure', EnclosureSchema);
 

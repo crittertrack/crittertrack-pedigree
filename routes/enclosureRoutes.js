@@ -327,7 +327,7 @@ router.post('/', async (req, res) => {
             bedding: bedding || null,
             lightingType: lightingType || null,
             enrichment: enrichment || null,
-            showDetailsOnPublicProfile: Boolean(showDetailsOnPublicProfile),
+            showDetailsOnPublicProfile: showDetailsOnPublicProfile !== false,
         });
 
         await enc.save();
@@ -402,8 +402,10 @@ router.put('/:id', async (req, res) => {
             bedding: bedding || null,
             lightingType: lightingType || null,
             enrichment: enrichment || null,
-            showDetailsOnPublicProfile: Boolean(showDetailsOnPublicProfile),
         };
+        if (showDetailsOnPublicProfile !== undefined) {
+            setData.showDetailsOnPublicProfile = Boolean(showDetailsOnPublicProfile);
+        }
 
         const enc = await Enclosure.findOneAndUpdate(
             { _id: req.params.id, creatorId: req.user.id },
