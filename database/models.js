@@ -196,6 +196,12 @@ const PublicProfileSchema = new mongoose.Schema({
         default: 'pending'
     },
     betaSurveyLastPromptedAt: { type: Date, default: null }, // Drives the once-per-day "Skip for now" re-prompt throttle
+    betaSurveyFollowupStatus: {
+        type: String,
+        enum: ['pending', 'skipped', 'dismissed', 'completed'],
+        default: 'pending'
+    },
+    betaSurveyFollowupLastPromptedAt: { type: Date, default: null },
     speciesOrder: { type: [String], default: [] }, // User's custom order for species display
     speciesFavorites: { type: [String], default: [] }, // User's favorite species (starred)
     breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
@@ -1299,6 +1305,42 @@ const BetaSurveyResponseSchema = new mongoose.Schema({
 }, { timestamps: true });
 const BetaSurveyResponse = mongoose.model('BetaSurveyResponse', BetaSurveyResponseSchema);
 
+const BetaSurveyFollowupResponseSchema = new mongoose.Schema({
+    userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    id_public: { type: String, required: true, index: true },
+    difficultArea: {
+        type: String,
+        enum: [
+            'My Animals (main list)', 'Collections', 'Enclosures',
+            'Animal Care (Reproduction, Health, Feeding & Care)', 'Litter Management',
+            'Budget Tracker', 'Marketplace', 'Community', 'Calendar',
+            'Tools (calculators and family trees)', 'Other', 'Nothing was difficult'
+        ],
+        required: true
+    },
+    difficultyType: {
+        type: String,
+        enum: [
+            'Finding where to start', 'Understanding a term or label',
+            'Understanding how sections connect', 'Entering or editing information',
+            'Understanding a result', 'Something else'
+        ],
+        default: null
+    },
+    expectedVsActual: { type: String, maxlength: 2000, default: null },
+    helpfulSupport: {
+        type: String,
+        enum: [
+            'A short guided checklist', 'Step-by-step examples',
+            'Clearer explanations in the app', 'Something else', 'No extra help needed'
+        ],
+        default: null
+    },
+    stillHappening: { type: String, enum: ['Yes', 'No', 'Not sure'], default: null },
+    additionalDetail: { type: String, maxlength: 2000, default: null }
+}, { timestamps: true });
+const BetaSurveyFollowupResponse = mongoose.model('BetaSurveyFollowupResponse', BetaSurveyFollowupResponseSchema);
+
 
 // --- 10. MESSAGE SCHEMA ---
 const MessageSchema = new mongoose.Schema({
@@ -1978,6 +2020,7 @@ module.exports = {
     BugReport,
     Feedback,
     BetaSurveyResponse,
+    BetaSurveyFollowupResponse,
     Message,
     MessageReport,
     ProfileReport,

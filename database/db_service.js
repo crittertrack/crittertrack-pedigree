@@ -433,6 +433,8 @@ const getUserProfileById = async (appUserId_backend) => {
         hasSeenProfileSetupGuide: publicProfile?.hasSeenProfileSetupGuide || false,
         betaSurveyStatus: publicProfile?.betaSurveyStatus || 'pending',
         betaSurveyLastPromptedAt: publicProfile?.betaSurveyLastPromptedAt || null,
+        betaSurveyFollowupStatus: publicProfile?.betaSurveyFollowupStatus || 'pending',
+        betaSurveyFollowupLastPromptedAt: publicProfile?.betaSurveyFollowupLastPromptedAt || null,
         // Android Play Store closed-testing opt-in (see routes/androidBetaRoutes.js)
         androidBetaOptIn: {
             googleEmail: user.androidBetaOptIn?.googleEmail || null,
