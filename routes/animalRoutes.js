@@ -4,6 +4,7 @@ const { Animal, AnimalLog, SupplyItem, Litter, User, PublicAnimal, Transaction, 
 const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals, getAvkReferencePopulation } = require('../database/db_service');
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding, calculateAverageKinship } = require('../utils/inbreeding');
 const { logFeedingEvent } = require('../utils/animalLogger');
+const { convertQuantity } = require('../utils/quantityUnits');
 const { protect } = require('../middleware/authMiddleware');
 const { ProfanityError } = require('../utils/profanityFilter');
 
@@ -540,28 +541,42 @@ router.post('/:id_public/feeding', async (req, res) => {
     try {
         const { id_public } = req.params;
         const userId = req.user.id;
-        const { supplyId, quantity, notes, skipped } = req.body;
+        const { supplyId, quantity, quantityUnit, notes, skipped } = req.body;
 
         const animal = await Animal.findOne({ id_public, creatorId: userId });
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found or you do not have permission to edit it.' });
         }
 
-        animal.lastFedDate = new Date();
-        await animal.save();
-
         let supply = null;
         let foodName = null;
+        let quantityToDeduct = null;
         if (supplyId) {
             supply = await SupplyItem.findOne({ _id: supplyId, userId });
             if (supply) {
                 foodName = supply.name;
                 if (quantity !== undefined && quantity !== null && quantity !== '') {
-                    const qty = Number(quantity) || 0;
-                    supply.currentStock = Math.max(0, (supply.currentStock || 0) - qty);
-                    await supply.save();
+                    const enteredQuantity = Number(quantity);
+                    if (!Number.isFinite(enteredQuantity) || enteredQuantity <= 0) {
+                        return res.status(400).json({ message: 'Feeding quantity must be a positive number.' });
+                    }
+                    const stockUnit = supply.unit || quantityUnit;
+                    quantityToDeduct = quantityUnit
+                        ? convertQuantity(enteredQuantity, quantityUnit, stockUnit)
+                        : enteredQuantity;
+                    if (quantityToDeduct == null) {
+                        return res.status(400).json({ message: `Cannot convert ${quantityUnit} to the inventory unit ${supply.unit}. Choose compatible units.` });
+                    }
                 }
             }
+        }
+
+        animal.lastFedDate = new Date();
+        await animal.save();
+        if (supply && quantityToDeduct != null) {
+            if (!supply.unit && quantityUnit) supply.unit = quantityUnit;
+            supply.currentStock = Math.max(0, (supply.currentStock || 0) - quantityToDeduct);
+            await supply.save();
         }
 
         await logFeedingEvent({
@@ -569,7 +584,7 @@ router.post('/:id_public/feeding', async (req, res) => {
             animalId: animal._id,
             animalId_public: animal.id_public,
             foodName,
-            quantity,
+            quantity: quantityUnit ? `${quantity} ${quantityUnit}` : quantity,
             notes,
             skipped: !!skipped,
         });
