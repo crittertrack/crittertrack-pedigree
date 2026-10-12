@@ -879,7 +879,9 @@ const PublicAnimalSchema = new mongoose.Schema({
     noise: { type: String, default: null },
     
     // Health Records (stored as JSON strings)
-    medicalProcedures: { type: String, default: null },
+    // Array to match AnimalSchema.medicalProcedures ([HealthRecordSchema]) — a String here made
+    // every mirror write of this field fail casting, so public rows silently kept stale values.
+    medicalProcedures: { type: [mongoose.Schema.Types.Mixed], default: [] },
     sheddingRecords: { type: String, default: null },
     moltingRecords: { type: String, default: null },
     waterParameterChecks: { type: String, default: null },
