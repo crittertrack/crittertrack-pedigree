@@ -25,8 +25,8 @@ router.post('/start', requireAdmin, async (req, res) => {
     if (!mongoose.isValidObjectId(targetUserId)) {
         return res.status(400).json({ message: 'A valid target user ID is required.' });
     }
-    if (reason.length < 10 || reason.length > 1000) {
-        return res.status(400).json({ message: 'Provide a reason between 10 and 1000 characters.' });
+    if (reason.length < 1 || reason.length > 1000) {
+        return res.status(400).json({ message: 'Provide a reason between 1 and 1000 characters.' });
     }
 
     try {
