@@ -32,6 +32,8 @@ const reportRoutes = require('./routes/reportRoutes');
 const moderationRoutes = require('./routes/moderationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const locationsRoutes = require('./routes/locations');
+const adminAccountRoutes = require('./routes/adminAccountRoutes');
+const adminAccountModeMiddleware = require('./middleware/adminAccountMode');
 
 
 const app = express();
@@ -121,6 +123,7 @@ app.use(cors({
 
 app.use(bodyParser.json({ limit: '10mb' })); // Increase limit for base64 images
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+app.use('/api', adminAccountModeMiddleware);
 // Set Cross-Origin-Resource-Policy to allow cross-origin embedding of uploaded assets
 app.use((req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -138,6 +141,7 @@ app.use('/uploads', express.static(uploadsDir));
 // Ko-fi webhook + public fundraiser/supporter endpoints (unauthenticated — Ko-fi calls this directly)
 const kofiRoutes = require('./routes/kofiRoutes');
 app.use('/api/kofi', kofiRoutes);
+app.use('/api/admin-account', authMiddleware, adminAccountRoutes);
 
 // Admin routes (protected by authMiddleware and restricted by ADMIN_USER_ID)
 const legacyAdminRoutes = require('./routes/admin');

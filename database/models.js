@@ -1430,6 +1430,17 @@ const AuditLogSchema = new mongoose.Schema({
 }, { timestamps: true });
 const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
 
+const AdminAccountSessionSchema = new mongoose.Schema({
+    adminUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    targetUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    reason: { type: String, required: true, trim: true, maxlength: 1000 },
+    status: { type: String, enum: ['active', 'ended'], default: 'active', index: true },
+    expiresAt: { type: Date, required: true, index: true },
+    endedAt: { type: Date, default: null },
+}, { timestamps: true });
+AdminAccountSessionSchema.index({ status: 1, expiresAt: 1 });
+const AdminAccountSession = mongoose.model('AdminAccountSession', AdminAccountSessionSchema);
+
 
 // --- 14. USER ACTIVITY LOG SCHEMA (separate from mod audit logs) ---
 const UserActivityLogSchema = new mongoose.Schema({
@@ -1972,6 +1983,7 @@ module.exports = {
     ProfileReport,
     AnimalReport,
     AuditLog,
+    AdminAccountSession,
     UserActivityLog,
     SystemSettings,
     Species,

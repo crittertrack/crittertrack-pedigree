@@ -409,10 +409,18 @@ router.post('/verify-moderation-password', (req, res, next) => {
 
             // Check if user has 2FA enabled
             const requiresTwoFactor = user.two_factor_enabled || false;
+            const moderationProofToken = !requiresTwoFactor
+                ? jwt.sign({
+                    userId: user._id.toString(),
+                    type: 'moderation-proof',
+                    moderationPasswordVerified: true,
+                }, process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me', { expiresIn: '10m' })
+                : null;
 
             res.status(200).json({
                 success: true,
                 requiresTwoFactor,
+                moderationProofToken,
                 message: 'Password verified successfully'
             });
         } catch (error) {
@@ -588,8 +596,15 @@ router.post('/verify-moderation-2fa', async (req, res, next) => {
             twoFACode.used = true;
             await twoFACode.save();
 
+            const moderationProofToken = jwt.sign({
+                userId: user._id.toString(),
+                type: 'moderation-proof',
+                twoFactorVerified: true,
+            }, process.env.JWT_SECRET || 'your_default_jwt_secret_please_change_me', { expiresIn: '10m' });
+
             res.status(200).json({
                 success: true,
+                moderationProofToken,
                 message: '2FA verified successfully - moderation mode activated'
             });
     } catch (error) {
