@@ -22,7 +22,9 @@ const adminAccountModeMiddleware = async (req, res, next) => {
 
     const context = decoded.adminAccountMode;
     if (!context) return next();
-    if (!context.sessionId || !context.adminUserId || !context.targetUserId) {
+    const tokenTargetUserId = decoded.user?.id || decoded.user?._id || decoded.userId || decoded.id;
+    if (decoded.type !== 'admin-account' || !context.sessionId || !context.adminUserId ||
+        !context.targetUserId || String(tokenTargetUserId) !== String(context.targetUserId)) {
         return res.status(401).json({ message: 'Invalid admin account session.', adminAccountSessionExpired: true });
     }
 
