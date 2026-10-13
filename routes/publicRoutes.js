@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { getPublicProfile, getPublicAnimalsByOwner } = require('../database/db_service');
-const { PublicAnimal, Animal, Enclosure, Location, PublicProfile, User, GeneticsData, Litter, BreederRating } = require('../database/models');
+const { PublicAnimal, Animal, Enclosure, Location, PublicProfile, User, GeneticsData, Litter, BreederRating, Notification } = require('../database/models');
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics } = require('../utils/inbreeding');
 const { formatPublicEnclosure, formatPublicEnclosureSummary } = require('../utils/publicEnclosure');
 
@@ -34,6 +34,50 @@ router.get('/profile/:id_public', async (req, res) => {
     }
 });
 
+
+// GET /api/public/news?limit=1 (defaults to the single most recent article)
+// Public news for the logged-out landing page. Broadcasts are stored as one Notification per
+// recipient, so identical title+message+timestamp copies are grouped into a single item.
+// Only broadcasts that reached at least NEWS_MIN_RECIPIENTS users are shown, so a test broadcast
+// sent to a handful of accounts is never exposed publicly. Warnings, alerts and polls are excluded.
+const NEWS_MIN_RECIPIENTS = 5;
+router.get('/news', async (req, res) => {
+    try {
+        const limit = Math.min(Math.max(parseInt(req.query.limit || '1', 10) || 1, 1), 20);
+        const now = new Date();
+        const items = await Notification.aggregate([
+            {
+                $match: {
+                    type: { $in: ['broadcast', 'announcement'] },
+                    broadcastType: { $nin: ['warning', 'alert', 'poll'] },
+                    title: { $type: 'string', $ne: '' },
+                    createdAt: { $lte: now },
+                    $or: [{ isPending: { $ne: true } }, { sendAt: { $lte: now } }],
+                },
+            },
+            {
+                $group: {
+                    _id: { title: '$title', message: '$message', createdAt: '$createdAt' },
+                    recipients: { $sum: 1 },
+                    id: { $first: '$_id' },
+                },
+            },
+            { $match: { recipients: { $gte: NEWS_MIN_RECIPIENTS } } },
+            { $sort: { '_id.createdAt': -1 } },
+            { $limit: limit },
+        ]);
+
+        res.status(200).json(items.map(g => ({
+            id: String(g.id),
+            title: g._id.title,
+            message: g._id.message || '',
+            createdAt: g._id.createdAt,
+        })));
+    } catch (error) {
+        console.error('Error fetching public news:', error);
+        res.status(500).json({ message: 'Failed to fetch news.' });
+    }
+});
 
 // GET /api/public/animals/newest?limit=12
 // Newly published public animal profiles for the Community page. MUST stay above
