@@ -18,9 +18,13 @@ const validateModerationInput = (req, res, next) => {
             }
 
             if (req.body.message && typeof req.body.message === 'string') {
-                req.body.message = validator.trim(req.body.message).slice(0, 2000);
-                if (req.body.message && !validator.isLength(req.body.message, { min: 1, max: 2000 })) {
-                    return res.status(400).json({ error: 'Message must be between 1 and 2000 characters' });
+                // Broadcast/news articles can be long-form (the admin form allows 20000);
+                // every other moderation message keeps the 2000 cap.
+                const isBroadcastRoute = req.method === 'POST' && /\/broadcast\/?$/.test(req.path);
+                const maxMessageLength = isBroadcastRoute ? 20000 : 2000;
+                req.body.message = validator.trim(req.body.message).slice(0, maxMessageLength);
+                if (req.body.message && !validator.isLength(req.body.message, { min: 1, max: maxMessageLength })) {
+                    return res.status(400).json({ error: `Message must be between 1 and ${maxMessageLength} characters` });
                 }
             }
 
