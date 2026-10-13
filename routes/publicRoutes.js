@@ -35,6 +35,45 @@ router.get('/profile/:id_public', async (req, res) => {
 });
 
 
+// GET /api/public/animals/newest?limit=12
+// Newly published public animal profiles for the Community page. MUST stay above
+// '/animals/:creatorId_public' or Express would treat "newest" as a creator ID.
+router.get('/animals/newest', async (req, res) => {
+    try {
+        const limit = Math.min(Math.max(parseInt(req.query.limit || '12', 10) || 12, 1), 50);
+        const animals = await PublicAnimal.find({ isDisplay: true })
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .select('id_public prefix name suffix species gender imageUrl photoUrl breederId_public manualBreederName creatorId_public createdAt')
+            .lean();
+
+        // Resolve breeder display names (only when the breeder opted to show them)
+        const breederIds = [...new Set(animals.map(a => a.breederId_public).filter(Boolean))];
+        const profiles = breederIds.length
+            ? await PublicProfile.find({ id_public: { $in: breederIds } })
+                .select('id_public breederName showBreederName personalName showPersonalName')
+                .lean()
+            : [];
+        const profileMap = {};
+        for (const p of profiles) profileMap[p.id_public] = p;
+
+        const result = animals.map(a => {
+            const p = profileMap[a.breederId_public];
+            let breederName = a.manualBreederName || null;
+            if (p) {
+                if (p.showBreederName && p.breederName) breederName = p.breederName;
+                else if (p.showPersonalName && p.personalName) breederName = p.personalName;
+            }
+            return { ...a, breederName };
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching newest public animals:', error);
+        res.status(500).json({ message: 'Failed to fetch newest animals.' });
+    }
+});
+
 // GET /api/public/animals/:creatorId_public
 // 2. Gets all publicly visible animals belonging to a specific owner.
 router.get('/animals/:creatorId_public', async (req, res) => {
