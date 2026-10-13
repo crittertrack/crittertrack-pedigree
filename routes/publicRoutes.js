@@ -41,8 +41,12 @@ router.get('/profile/:id_public', async (req, res) => {
 router.get('/animals/newest', async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(req.query.limit || '12', 10) || 12, 1), 50);
-        const animals = await PublicAnimal.find({ isDisplay: true })
-            .sort({ createdAt: -1 })
+        // Order by the highest CTC number (IDs come from an incrementing counter, so higher =
+        // newer animal). numericOrdering makes CTC1001 rank above CTC999 instead of sorting
+        // the strings alphabetically. Legacy/non-CTC IDs are excluded.
+        const animals = await PublicAnimal.find({ isDisplay: true, id_public: /^CTC\d+$/ })
+            .collation({ locale: 'en', numericOrdering: true })
+            .sort({ id_public: -1 })
             .limit(limit)
             .select('id_public prefix name suffix species gender imageUrl photoUrl breederId_public manualBreederName creatorId_public createdAt')
             .lean();
