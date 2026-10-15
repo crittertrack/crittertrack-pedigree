@@ -1054,6 +1054,11 @@ const LitterSchema = new mongoose.Schema({
     maleLossesCount: { type: Number, default: null },
     femaleLossesCount: { type: Number, default: null },
     unknownLossesCount: { type: Number, default: null },
+
+    // Extraction flags — when true, the M/F/U counts above have already been reduced
+    // by the corresponding stillborn/losses breakdown (i.e., they represent live/surviving only)
+    extractStillbornFromTotal: { type: Boolean, default: false },
+    extractLossesFromTotal: { type: Boolean, default: false },
     
     // Public IDs of offspring animals that came from this litter
     offspringIds_public: { type: [String], default: [] }, 
