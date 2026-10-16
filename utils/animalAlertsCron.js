@@ -5,6 +5,21 @@ const cron = require('node-cron');
 const { Animal, Litter, Enclosure, SupplyItem, SystemSettings, PublicProfile } = require('../database/models');
 const { sendPushToUser } = require('./pushService');
 const { formatAnimalName, formatAlertDigest } = require('./alertNames');
+const { buildNursingCutoffMap, DEFAULT_MAX_NURSING_DAYS, syncParentReproStatus } = require('./reproStatusSync');
+
+// Whether a litter's weaning reminder should fire: the weaning date has arrived AND the
+// litter is still inside its species' nursing window (age since birth <= Species.maxNursingDays,
+// DEFAULT_MAX_NURSING_DAYS when unset — the same safety-net cutoff reproStatusSync uses to
+// auto-close the dam's Nursing flag). Without this, a litter nobody ever confirmed with
+// "Wean Today" keeps alerting forever (e.g. after a weaning-date backfill). Shared with
+// pushRoutes /alert-count so both paths always agree (uses daysSince defined below).
+const isWeaningReminderDue = (l, cutoffDays = DEFAULT_MAX_NURSING_DAYS) => {
+    if (!l.birthDate || !l.weaningDate || l.weaningConfirmed || l.pregnancyLost) return false;
+    const daysSinceBirth = daysSince(l.birthDate);
+    if (daysSinceBirth === null || daysSinceBirth > cutoffDays) return false; // past the safety-net cutoff
+    const days = daysSince(l.weaningDate);
+    return days !== null && days >= 0;
+};
 
 const LAST_RUN_KEY = 'animalAlertsCron_lastRunDate';
 
@@ -146,6 +161,10 @@ const runAnimalAlertsCheck = async () => {
 
     // --- Litters: planned mating date reached, due date reached, weaning date reached ---
     const littersAll = await Litter.find({}).select('creatorId litter_id_public breedingPairCodeName sireId_public damId_public isPlanned matingDate pregnancyDate expectedDueDate birthDate weaningDate weaningConfirmed pregnancyLost').lean();
+    // Species safety-net cutoff per litter (Species.maxNursingDays, default 90) — the same
+    // one reproStatusSync uses to auto-close the dam's Nursing flag, so a litter nobody ever
+    // confirmed with "Wean Today" stops reminding once past any realistic nursing window.
+    const nursingCutoffByLitter = await buildNursingCutoffMap(littersAll);
     littersAll.forEach((l) => {
         if (!l.creatorId) return;
         const litterLabel = l.litter_id_public || l.breedingPairCodeName || 'Litter';
@@ -158,16 +177,45 @@ const runAnimalAlertsCheck = async () => {
                 bump(alerts, l.creatorId, 'breeding', parents.length ? parents.join(' × ') : litterLabel);
             }
         }
-        if (l.pregnancyDate && !l.birthDate && l.expectedDueDate) {
+        // Due-date reminder: no pregnancyDate required (only ~15% of records ever got
+        // "Pregnant Today"), but skip planned-but-not-yet-mated litters and lost pregnancies —
+        // same shape as NotificationBar/NotificationsHub.
+        if (!l.isPlanned && !l.pregnancyLost && !l.birthDate && l.expectedDueDate) {
             const days = daysSince(l.expectedDueDate);
             if (days !== null && days >= 0) bump(alerts, l.creatorId, 'breeding', damName || litterLabel);
         }
-        const stillNursing = !l.weaningConfirmed && !l.pregnancyLost;
-        if (l.birthDate && l.weaningDate && stillNursing) {
-            const days = daysSince(l.weaningDate);
-            if (days !== null && days >= 0) bump(alerts, l.creatorId, 'breeding', damName || litterLabel);
+        const cutoff = nursingCutoffByLitter.get(String(l._id)) ?? DEFAULT_MAX_NURSING_DAYS;
+        if (isWeaningReminderDue(l, cutoff)) bump(alerts, l.creatorId, 'breeding', damName || litterLabel);
+    });
+
+    // Self-heal: a dam's derived isNursing flag normally only recomputes on a litter write,
+    // so a litter that ages past Species.maxNursingDays without any edit would leave the flag
+    // — and the frontend reminders (NotificationBar/NotificationsHub/AnimalList) that trust
+    // it — saying "weaning due" forever. Refresh only the dams that are actually stale:
+    // litters past the cutoff (still open) whose dam still carries isNursing: true.
+    const openPastCutoffByDam = new Map();
+    littersAll.forEach((l) => {
+        if (!l.creatorId || !l.damId_public || !l.birthDate || l.weaningConfirmed || l.pregnancyLost) return;
+        const cutoffDays = nursingCutoffByLitter.get(String(l._id)) ?? DEFAULT_MAX_NURSING_DAYS;
+        const ageDays = daysSince(l.birthDate);
+        if (ageDays !== null && ageDays > cutoffDays) {
+            openPastCutoffByDam.set(l.damId_public, { creatorId: l.creatorId, damId: l.damId_public });
         }
     });
+    if (openPastCutoffByDam.size) {
+        const staleDams = await Animal.find({ id_public: { $in: [...openPastCutoffByDam.keys()] }, isNursing: true })
+            .select('id_public')
+            .lean();
+        for (const dam of staleDams) {
+            const { creatorId, damId } = openPastCutoffByDam.get(dam.id_public);
+            try {
+                await syncParentReproStatus(creatorId, [damId]);
+            } catch (err) {
+                console.error(`[animalAlertsCron] Repro-flag self-heal failed for ${dam.id_public}:`, err.message);
+            }
+        }
+        if (staleDams.length) console.log(`[animalAlertsCron] Self-healed ${staleDams.length} stale isNursing flag(s).`);
+    }
 
     // --- Supplies: reorder due (grouped with enclosure/logistics care, not feeding) ---
     const supplies = await SupplyItem.find({}).select('userId name currentStock reorderThreshold nextOrderDate').lean();
@@ -238,4 +286,7 @@ module.exports = {
     // due-date/frequency logic instead of re-implementing it and risking drift.
     daysSince, isTaskDue, isFeedingDue, cleaningTaskFreqDays, calcNextDose,
     SCHEDULE_FIELD_KEYS, HEALTH_STATUSES_OF_CONCERN,
+    // Shared weaning-reminder check (due date arrived + still inside the species' nursing
+    // window) so pushRoutes /alert-count always agrees with what the cron would send.
+    isWeaningReminderDue,
 };

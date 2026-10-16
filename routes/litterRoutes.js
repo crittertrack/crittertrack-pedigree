@@ -6,6 +6,7 @@ const { addLitter, adoptLitter, getUsersLitters, getLittersForAnimal, updateLitt
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 const { Animal, User, Notification, Litter, PublicAnimal } = require('../database/models');
 const { syncParentReproStatus } = require('../utils/reproStatusSync');
+const { applyAutoWeaningOnCreate, applyAutoWeaningOnUpdate } = require('../utils/autoWeaningDate');
 const r2 = require('../storage/r2_client');
 // This router requires authMiddleware to be applied in index.js
 
@@ -31,7 +32,12 @@ router.post('/', async (req, res) => {
     try {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
-        const litterData = req.body;
+        // CTU2 only: auto-set weaningDate = birthDate + species' weaning age (31/35/28/24d)
+        // and expectedDueDate = matingDate + species' gestation (19/21/16/18d) — see
+        // utils/autoWeaningDate.js — so the weaning and birth-due reminders fire without
+        // anyone typing the dates.
+        const litterData = await applyAutoWeaningOnCreate({ ...req.body }, req.user.id_public);
+        await applyAutoDueDateOnCreate(litterData, req.user.id_public);
 
         const newLitter = await addLitter(appUserId_backend, litterData);
 
@@ -269,8 +275,15 @@ router.put('/:id_backend', async (req, res) => {
         const updates = req.body; // Updates object
 
         const priorLitter = await Litter.findOne({ _id: litterId_backend, $or: [{ creatorId: appUserId_backend }, { linkedOwners: appUserId_backend }] })
-            .select('sireId_public damId_public')
+            .select('sireId_public damId_public birthDate weaningDate weaningConfirmed matingDate expectedDueDate pregnancyLost')
             .lean();
+
+        // CTU2 only: keep weaningDate = birthDate + the species' weaning age, and
+        // expectedDueDate = matingDate + the species' gestation, in sync. Hand-entered
+        // values and "Wean Today" confirmations are never overwritten — see
+        // utils/autoWeaningDate.js. (Both mutate `updates` in place.)
+        await applyAutoWeaningOnUpdate(updates, priorLitter, req.user.id_public);
+        await applyAutoDueDateOnUpdate(updates, priorLitter, req.user.id_public);
 
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
 
