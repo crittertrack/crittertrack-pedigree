@@ -10,7 +10,7 @@ function enclosures(userId, bOid, roomAOid, roomNOid) {
       lightingType: 'Ambient room light', bedding: 'Kiln-dried aspen', enrichment: 'Hammocks, tunnels, dig box',
       notes: 'Main everyday housing. Spot cleaned twice weekly, full clean weekly.',
       cleaningTasks: [T('Spot clean', 2), T('Full clean', 5), T('Health check round', 1)],
-      tags: ['colony', 'showcase'], speciesLabels: ['Fancy Rat'], imageUrl: null,
+      tags: ['colony', 'showcase'], speciesLabels: ['Fancy Rat'], imageUrl: 'https://placehold.co/600x400/4E7D96/FFFFFF?text=Main+Colony+Rack&font=arial',
       notesHistory: [], history: [], showDetailsOnPublicProfile: true, key: 'encMain' },
     { creatorId: userId, name: 'Nursery Bin', enclosureType: 'Bin Cage 110qt', purpose: 'reproduction',
       purposeDescription: 'Maternity and nursing setup',
@@ -21,7 +21,7 @@ function enclosures(userId, bOid, roomAOid, roomNOid) {
       lightingType: 'Ambient, dim corner', bedding: 'Aspen + paper nesting strips', enrichment: 'Hide, nesting material',
       notes: 'Willow and autumn pups. Extra food and water stations while nursing.',
       cleaningTasks: [T('Spot clean', 1), T('Nesting check', 1)],
-      tags: ['nursery'], speciesLabels: ['Fancy Rat'], imageUrl: null,
+      tags: ['nursery'], speciesLabels: ['Fancy Rat'], imageUrl: 'https://placehold.co/600x400/D98FA0/FFFFFF?text=Nursery+Bin&font=arial',
       notesHistory: [], history: [], showDetailsOnPublicProfile: true, key: 'encNursery' },
     { creatorId: userId, name: 'Quarantine Tub', enclosureType: 'Bin Cage 60qt', purpose: 'quarantine',
       purposeDescription: 'New arrival intake, 14 day observation',
@@ -32,8 +32,21 @@ function enclosures(userId, bOid, roomAOid, roomNOid) {
       lightingType: 'Ambient', bedding: 'Paper bedding', enrichment: 'Hide, chew',
       notes: 'Oakley intake until 2026-10-24. Separate supplies, wash hands between rooms.',
       cleaningTasks: [T('Spot clean', 1), T('Quarantine health check', 0)],
-      tags: ['quarantine'], speciesLabels: ['Fancy Rat'], imageUrl: null,
+      tags: ['quarantine'], speciesLabels: ['Fancy Rat'], imageUrl: 'https://placehold.co/600x400/E0A030/FFFFFF?text=Quarantine+Tub&font=arial',
       notesHistory: [], history: [], showDetailsOnPublicProfile: false, key: 'encQuar' },
+    // Appended last on purpose: the seed refers to enclosures by array index (encDocs[0..2]).
+    // Intentionally has no image and no animals assigned.
+    { creatorId: userId, name: 'Spare Cage', enclosureType: 'Wire Cage', purpose: 'general',
+      purposeDescription: 'General-purpose spare housing',
+      buildingId: bOid, roomId: roomAOid,
+      dimensions: { length: 30, width: 18, height: 30, unit: 'in' }, capacity: 4,
+      tempMin: 20, tempMax: 24, temperatureUnit: 'C', humidityMin: 40, humidityMax: 60,
+      lightsOnTime: '08:00', lightsOffTime: '20:00', lightTimeFormat: '24h',
+      lightingType: 'Ambient room light', bedding: 'Paper bedding', enrichment: 'Hide, chew toys',
+      notes: 'Empty spare cage for overflow or temporary housing.',
+      cleaningTasks: [T('Full clean', 10)],
+      tags: ['spare'], speciesLabels: ['Fancy Rat'], imageUrl: null,
+      notesHistory: [], history: [], showDetailsOnPublicProfile: true, key: 'encSpare' },
   ];
 }
 module.exports = { enclosures };
