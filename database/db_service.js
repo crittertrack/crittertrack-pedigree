@@ -1820,8 +1820,15 @@ const getUsersLitters = async (appUserId_backend) => {
         return publicMap.get(id_public) || null;
     };
 
+    // Species nursing window per litter (Species.maxNursingDays, default 90) so clients can
+    // apply the same safety-net cutoff as the backend reminders without needing the dam
+    // record (archived/deceased dams are often missing from client animal lists).
+    const { buildNursingCutoffMap } = require('../utils/reproStatusSync');
+    const nursingCutoffByLitter = await buildNursingCutoffMap(litters);
+
     return litters.map(litter => ({
         ...litter,
+        nursingCutoffDays: nursingCutoffByLitter.get(String(litter._id)),
         sire: getParent(litter.sireId_public),
         dam:  getParent(litter.damId_public),
     }));
