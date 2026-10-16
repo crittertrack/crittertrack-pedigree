@@ -1,5 +1,5 @@
 /**
- * Auto litter-date rules — FOR USER CTU2 ONLY. (Historic filename: the module also
+ * Auto litter-date rules — FOR USERS CTU2, CTU5, CTU107 AND CTU80 ONLY. (Historic filename: the module also
  * auto-fills expectedDueDate, hence both rule sets living here.)
  *
  * 1) weaningDate = birthDate + the SPECIES' WEANING AGE:
@@ -18,7 +18,7 @@
  * Species resolution order (both rules): an explicit payload.species, else the litter's
  * dam's species (then the sire's) looked up in Animal with a PublicAnimal fallback.
  *
- * Every other user (id_public !== CTU2) gets the payload back unchanged.
+ * Every other user (id_public not in AUTO_WEANING_USER_IDS_PUBLIC) gets the payload back unchanged.
  *
  * Entry points (all async because of the species lookup, all MUTATE and return the
  * payload; `lookupSpecies` is an optional injectable override used by tests):
@@ -36,7 +36,8 @@
  *     pregnancyLost — those are recorded events, not plans.
  */
 
-const AUTO_WEANING_USER_ID_PUBLIC = 'CTU2';
+const AUTO_WEANING_USER_IDS_PUBLIC = ['CTU2', 'CTU5', 'CTU107', 'CTU80'];
+const AUTO_WEANING_USER_ID_PUBLIC = AUTO_WEANING_USER_IDS_PUBLIC[0]; // kept for back-compat
 const DEFAULT_WEANING_AGE_DAYS = 31;
 
 // Ordered species → weaning-age rules; first match wins against the normalised species
@@ -54,7 +55,7 @@ const WEANING_AGE_RULES = [
 const KNOWN_WEANING_AGE_DAYS = [...new Set([DEFAULT_WEANING_AGE_DAYS, ...WEANING_AGE_RULES.map((r) => r.days)])];
 
 const isAutoWeaningUser = (idPublic) =>
-    !!idPublic && String(idPublic).toUpperCase() === AUTO_WEANING_USER_ID_PUBLIC;
+    !!idPublic && AUTO_WEANING_USER_IDS_PUBLIC.includes(String(idPublic).toUpperCase());
 
 const normaliseSpecies = (species) => String(species || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -322,6 +323,7 @@ const applyAutoDueDateOnUpdate = async (payload, prior, idPublic, lookupSpecies 
 };
 
 module.exports = {
+    AUTO_WEANING_USER_IDS_PUBLIC,
     AUTO_WEANING_USER_ID_PUBLIC,
     DEFAULT_WEANING_AGE_DAYS,
     KNOWN_WEANING_AGE_DAYS,

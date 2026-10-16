@@ -16,10 +16,15 @@ const {
 const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
 const CTU2 = 'CTU2';
 
-test('scopes the rule to CTU2 only', () => {
+test('scopes the rule to CTU2, CTU5, CTU107 and CTU80 only', () => {
     assert.equal(isAutoWeaningUser('CTU2'), true);
     assert.equal(isAutoWeaningUser('ctu2'), true);
-    assert.equal(isAutoWeaningUser('CTU5'), false);
+    assert.equal(isAutoWeaningUser('CTU5'), true);
+    assert.equal(isAutoWeaningUser('CTU107'), true);
+    assert.equal(isAutoWeaningUser('CTU80'), true);
+    assert.equal(isAutoWeaningUser('CTU1'), false);
+    assert.equal(isAutoWeaningUser('CTU10'), false);
+    assert.equal(isAutoWeaningUser('CTU8'), false);
     assert.equal(isAutoWeaningUser(null), false);
 });
 
@@ -79,7 +84,7 @@ test('create: species resolved from the parents when the payload has none (stub 
 });
 
 test('create: leaves every other user untouched', async () => {
-    const p = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Fancy Rat' }, 'CTU5');
+    const p = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Fancy Rat' }, 'CTU1');
     assert.equal('weaningDate' in p, false);
 });
 
@@ -170,7 +175,7 @@ test('update: other users are never touched', async () => {
     const p = await applyAutoWeaningOnUpdate(
         { birthDate: '2026-03-01', weaningDate: null },
         { birthDate: '2026-03-01' },
-        'CTU5'
+        'CTU1'
     );
     assert.equal(p.weaningDate, null);
 });
@@ -231,7 +236,7 @@ test('due create: manual value, missing mating, unknown species, lost pregnancy,
     assert.equal('expectedDueDate' in unknown, false);
     const lost = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse', pregnancyLost: true }, CTU2);
     assert.equal('expectedDueDate' in lost, false);
-    const other = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse' }, 'CTU5');
+    const other = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse' }, 'CTU1');
     assert.equal('expectedDueDate' in other, false);
 });
 
@@ -275,6 +280,6 @@ test('due update: clearing the field re-fills; lost pregnancy and other users un
     assert.equal(day(cleared.expectedDueDate), '2026-10-24');
     const lost = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05', pregnancyLost: true }, CTU2, stub);
     assert.equal('expectedDueDate' in lost, false);
-    const other = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05' }, 'CTU5', stub);
+    const other = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05' }, 'CTU1', stub);
     assert.equal('expectedDueDate' in other, false);
 });
