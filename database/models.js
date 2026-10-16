@@ -149,7 +149,11 @@ const UserSchema = new mongoose.Schema({
         enclosureShowBooked: { type: Boolean, default: true },
         enclosureShowRehomed: { type: Boolean, default: false },
         // Per-species map of hidden Animal Form tabs/sections: { [species]: { tabs: [id...], sections: [id...] } }
-        hiddenFormSections: { type: mongoose.Schema.Types.Mixed, default: {} }
+        hiddenFormSections: { type: mongoose.Schema.Types.Mixed, default: {} },
+        // Litter Management switches for the auto-calculated dates (utils/autoWeaningDate.js).
+        // Only honoured for users the auto-calc is enabled for; default ON.
+        autoCalcDueDate: { type: Boolean, default: true },
+        autoCalcWeaningDate: { type: Boolean, default: true }
     }
 });
 const User = mongoose.model('User', UserSchema);

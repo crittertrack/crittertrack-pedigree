@@ -6,6 +6,7 @@ const { assertCleanText } = require('../utils/profanityFilter');
 const { computeIsInTreatment, computeHealthStatus } = require('../utils/healthStatusSync');
 const { logFieldEdits, logCareUpdates, logAnimalCreated } = require('../utils/animalLogger');
 const { resyncAnimalToPublic } = require('../utils/syncPublicAnimals');
+const { isAutoWeaningUser } = require('../utils/autoWeaningDate');
 
 const {
     User,
@@ -422,6 +423,9 @@ const getUserProfileById = async (appUserId_backend) => {
         showBio: user.showBio !== undefined ? user.showBio : true,
         showStatsTab: user.showStatsTab !== undefined ? user.showStatsTab : true,
         uiMode: user.uiMode || 'full',
+        // Whether the auto-calculated due/weaning dates are enabled for this account at all
+        // (drives whether Litter Management shows the on/off switches).
+        autoCalcAvailable: isAutoWeaningUser(user.id_public),
         profileImage: user.profileImage,
         creationDate: user.creationDate,
         warningCount: user.warningCount || 0,
@@ -453,6 +457,8 @@ const getUserProfileById = async (appUserId_backend) => {
             enclosureShowBooked: user.uiPreferences?.enclosureShowBooked !== false,
             enclosureShowRehomed: user.uiPreferences?.enclosureShowRehomed === true,
             hiddenFormSections: user.uiPreferences?.hiddenFormSections || {},
+            autoCalcDueDate: user.uiPreferences?.autoCalcDueDate !== false,
+            autoCalcWeaningDate: user.uiPreferences?.autoCalcWeaningDate !== false,
         },
     };
 };

@@ -6,7 +6,11 @@ const { addLitter, adoptLitter, getUsersLitters, getLittersForAnimal, updateLitt
 const { logUserActivity, USER_ACTIONS } = require('../utils/userActivityLogger');
 const { Animal, User, Notification, Litter, PublicAnimal } = require('../database/models');
 const { syncParentReproStatus } = require('../utils/reproStatusSync');
-const { applyAutoWeaningOnCreate, applyAutoWeaningOnUpdate } = require('../utils/autoWeaningDate');
+const {
+    applyAutoWeaningOnCreate, applyAutoWeaningOnUpdate,
+    applyAutoDueDateOnCreate, applyAutoDueDateOnUpdate,
+    getAutoCalcPrefs,
+} = require('../utils/autoWeaningDate');
 const r2 = require('../storage/r2_client');
 // This router requires authMiddleware to be applied in index.js
 
@@ -36,8 +40,11 @@ router.post('/', async (req, res) => {
         // and expectedDueDate = matingDate + species' gestation (19/21/16/18d) — see
         // utils/autoWeaningDate.js — so the weaning and birth-due reminders fire without
         // anyone typing the dates.
-        const litterData = await applyAutoWeaningOnCreate({ ...req.body }, req.user.id_public);
-        await applyAutoDueDateOnCreate(litterData, req.user.id_public);
+        // Each auto-calculation can be switched off separately from the Litter Management header.
+        const autoCalc = await getAutoCalcPrefs(appUserId_backend);
+        const litterData = { ...req.body };
+        if (autoCalc.weaning) await applyAutoWeaningOnCreate(litterData, req.user.id_public);
+        if (autoCalc.dueDate) await applyAutoDueDateOnCreate(litterData, req.user.id_public);
 
         const newLitter = await addLitter(appUserId_backend, litterData);
 
@@ -282,8 +289,9 @@ router.put('/:id_backend', async (req, res) => {
         // expectedDueDate = matingDate + the species' gestation, in sync. Hand-entered
         // values and "Wean Today" confirmations are never overwritten — see
         // utils/autoWeaningDate.js. (Both mutate `updates` in place.)
-        await applyAutoWeaningOnUpdate(updates, priorLitter, req.user.id_public);
-        await applyAutoDueDateOnUpdate(updates, priorLitter, req.user.id_public);
+        const autoCalc = await getAutoCalcPrefs(appUserId_backend);
+        if (autoCalc.weaning) await applyAutoWeaningOnUpdate(updates, priorLitter, req.user.id_public);
+        if (autoCalc.dueDate) await applyAutoDueDateOnUpdate(updates, priorLitter, req.user.id_public);
 
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
 

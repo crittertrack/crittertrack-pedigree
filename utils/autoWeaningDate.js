@@ -3,17 +3,22 @@
  * auto-fills expectedDueDate, hence both rule sets living here.)
  *
  * 1) weaningDate = birthDate + the SPECIES' WEANING AGE:
- *      Fancy Mouse 31 · Fancy Rat 35 · Syrian Hamster 28 · Dwarf Hamsters 24
- *      (Russian/Campbells/Chinese/Roborovski) · any other/unresolvable -> 31
+ *      Fancy Mouse 31 · Fancy Rat 40 · Syrian Hamster 28 · Dwarf Hamsters 24 · Guinea Pig 21
+ *      (Russian/Campbells/Chinese/Roborovski) · any other/unresolvable -> left blank (no fallback)
  *    Driving the weaning reminders: utils/animalAlertsCron.js daily push digest,
  *    NotificationsHub/NotificationBar "weaning due", routes/pushRoutes.js bell count.
  *    Reminders only fire inside the species' nursing window — reproStatusSync's
  *    Species.maxNursingDays safety-net cutoff closes them afterwards.
  *
  * 2) expectedDueDate = matingDate + the SPECIES' GESTATION:
- *      Fancy Mouse 19 · Fancy Rat 21 · Syrian Hamster 16 · Dwarf Hamsters 18
+ *      Fancy Mouse 19 · Fancy Rat 21 · Syrian Hamster 16 · Dwarf Hamsters 18 · Guinea Pig 63
  *      · unknown species -> left blank (gestations vary too widely to guess)
  *    Driving the "births due" reminders in the same four places + the Calendar.
+ *
+ *    Other mammals (all low end of range): Rabbit 28/28 · Gerbil 24/21 · Fat-tailed Gerbil
+ *    19/21 · Ferret 41/42 · Natal Rats 23/21 · Cat 63/42 · Dog 58/42 · Hedgehog 34/28 ·
+ *    Degu 87/28 · Chinchilla 105/42 · Prairie Dog 34/42 · Deer mouse 22/21 · African
+ *    Pygmy Mouse 18/21   (gestation/weaning). Mouse rules match ONLY Fancy Mouse / Mouse.
  *
  * Species resolution order (both rules): an explicit payload.species, else the litter's
  * dam's species (then the sire's) looked up in Animal with a PublicAnimal fallback.
@@ -38,7 +43,6 @@
 
 const AUTO_WEANING_USER_IDS_PUBLIC = ['CTU2', 'CTU5', 'CTU107', 'CTU80'];
 const AUTO_WEANING_USER_ID_PUBLIC = AUTO_WEANING_USER_IDS_PUBLIC[0]; // kept for back-compat
-const DEFAULT_WEANING_AGE_DAYS = 31;
 
 // Ordered species → weaning-age rules; first match wins against the normalised species
 // name (lowercased, non-alphanumerics stripped). Matches the live catalogue strings
@@ -47,31 +51,50 @@ const DEFAULT_WEANING_AGE_DAYS = 31;
 const WEANING_AGE_RULES = [
     { days: 28, match: (n) => n.includes('syrian') && n.includes('hamster') }, // Syrian Hamster
     { days: 24, match: (n) => n.includes('dwarf') && n.includes('hamster') },  // * Dwarf Hamster
-    { days: 35, match: (n) => n === 'rat' || n.includes('fancyrat') },         // Fancy Rat / Rat
-    { days: 31, match: (n) => n.includes('mouse') },                           // Fancy Mouse / Mouse
+    { days: 40, match: (n) => n === 'rat' || n.includes('fancyrat') },         // Fancy Rat / Rat
+    { days: 31, match: (n) => n === 'mouse' || n.includes('fancymouse') },     // Fancy Mouse / Mouse
+    { days: 21, match: (n) => n.includes('guineapig') },                       // Guinea Pig (low end of 3-4 wks)
+    { days: 28, match: (n) => n.includes('rabbit') },                          // Rabbit / Rabbit (Domesticated)
+    { days: 21, match: (n) => n.includes('fattailedgerbil') },                 // Fat-tailed Gerbil
+    { days: 21, match: (n) => n.includes('gerbil') },                          // Gerbil
+    { days: 42, match: (n) => n.includes('ferret') },                          // Ferret
+    { days: 21, match: (n) => n.includes('natalrat') },                        // Natal Rats
+    { days: 42, match: (n) => n === 'cat' },                                   // Cat
+    { days: 42, match: (n) => n === 'dog' },                                   // Dog
+    { days: 28, match: (n) => n.includes('hedgehog') },                        // Hedgehog
+    { days: 28, match: (n) => n.includes('degu') },                            // Degu
+    { days: 42, match: (n) => n.includes('chinchilla') },                      // Chinchilla
+    { days: 42, match: (n) => n.includes('prairiedog') },                      // Prairie Dog
+    { days: 21, match: (n) => n.includes('deermouse') },                       // Deer mouse
+    { days: 21, match: (n) => n.includes('africanpygmymouse') },               // African Pygmy Mouse
+    { days: 35, match: (n) => n.includes('africanpygmydormouse') },            // African Pygmy Dormouse (leaves nest ~5 wks)
 ];
 
 // Every age the rule can produce — used to detect a stored "auto-derived" weaningDate.
-const KNOWN_WEANING_AGE_DAYS = [...new Set([DEFAULT_WEANING_AGE_DAYS, ...WEANING_AGE_RULES.map((r) => r.days)])];
+// Ages that earlier versions of the rules produced (Fancy Rat was 35 before it was raised
+// to 40) — kept so dates auto-filled back then are still recognised as auto-derived and get
+// re-derived on the next edit instead of being mistaken for hand-entered values.
+const LEGACY_WEANING_AGE_DAYS = [35];
+const KNOWN_WEANING_AGE_DAYS = [...new Set([...WEANING_AGE_RULES.map((r) => r.days), ...LEGACY_WEANING_AGE_DAYS])];
 
 const isAutoWeaningUser = (idPublic) =>
     !!idPublic && AUTO_WEANING_USER_IDS_PUBLIC.includes(String(idPublic).toUpperCase());
 
 const normaliseSpecies = (species) => String(species || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-/** Days after birth to auto-set for a species name (unresolvable/unknown -> default 31). */
+/** Days after birth to auto-set for a species name; null when unresolvable/unknown (no auto-fill). */
 const weaningAgeDaysForSpecies = (species) => {
     const n = normaliseSpecies(species);
-    if (!n) return DEFAULT_WEANING_AGE_DAYS;
+    if (!n) return null;
     const rule = WEANING_AGE_RULES.find((r) => r.match(n));
-    return rule ? rule.days : DEFAULT_WEANING_AGE_DAYS;
+    return rule ? rule.days : null;
 };
 
 // Calendar-day maths in UTC, matching how <input type="date"> values are stored
 // (YYYY-MM-DD is cast to UTC midnight), so "+N days" lands on the same wall-clock
 // day regardless of the server's timezone.
-const computeWeaningDate = (birthDate, days = DEFAULT_WEANING_AGE_DAYS) => {
-    if (!birthDate) return null;
+const computeWeaningDate = (birthDate, days) => {
+    if (!birthDate || days === null || days === undefined || isNaN(Number(days))) return null;
     const d = new Date(birthDate);
     if (isNaN(d.getTime())) return null;
     d.setUTCDate(d.getUTCDate() + Number(days));
@@ -211,13 +234,27 @@ const applyAutoWeaningOnUpdate = async (payload, prior, idPublic, lookupSpecies 
 // Gestation: matingDate + species' days -> expectedDueDate, which drives the "births
 // due" reminders (animalAlertsCron/pushRoutes digest + NotificationBar/NotificationsHub/
 // Calendar). Same normalised-species matching as the weaning ages; UNKNOWN species get
-// NO auto-fill (gestations vary too widely to guess) — unlike weaning, which falls back
-// to 31.
+// NO auto-fill (gestations vary too widely to guess) — same as weaning.
 const GESTATION_DAYS_RULES = [
     { days: 16, match: (n) => n.includes('syrian') && n.includes('hamster') }, // Syrian Hamster
     { days: 18, match: (n) => n.includes('dwarf') && n.includes('hamster') },  // * Dwarf Hamster
     { days: 21, match: (n) => n === 'rat' || n.includes('fancyrat') },         // Fancy Rat / Rat
-    { days: 19, match: (n) => n.includes('mouse') },                           // Fancy Mouse / Mouse
+    { days: 19, match: (n) => n === 'mouse' || n.includes('fancymouse') },     // Fancy Mouse / Mouse
+    { days: 63, match: (n) => n.includes('guineapig') },                       // Guinea Pig (low end of 63-68)
+    { days: 28, match: (n) => n.includes('rabbit') },                          // Rabbit / Rabbit (Domesticated)
+    { days: 19, match: (n) => n.includes('fattailedgerbil') },                 // Fat-tailed Gerbil
+    { days: 24, match: (n) => n.includes('gerbil') },                          // Gerbil
+    { days: 41, match: (n) => n.includes('ferret') },                          // Ferret
+    { days: 23, match: (n) => n.includes('natalrat') },                        // Natal Rats
+    { days: 63, match: (n) => n === 'cat' },                                   // Cat
+    { days: 58, match: (n) => n === 'dog' },                                   // Dog
+    { days: 34, match: (n) => n.includes('hedgehog') },                        // Hedgehog
+    { days: 87, match: (n) => n.includes('degu') },                            // Degu
+    { days: 105, match: (n) => n.includes('chinchilla') },                     // Chinchilla
+    { days: 34, match: (n) => n.includes('prairiedog') },                      // Prairie Dog
+    { days: 22, match: (n) => n.includes('deermouse') },                       // Deer mouse
+    { days: 18, match: (n) => n.includes('africanpygmymouse') },               // African Pygmy Mouse
+    { days: 24, match: (n) => n.includes('africanpygmydormouse') },            // African Pygmy Dormouse (24-28)
 ];
 
 // Every gestation the rule can produce — used to detect a stored "auto-derived" due date.
@@ -322,10 +359,31 @@ const applyAutoDueDateOnUpdate = async (payload, prior, idPublic, lookupSpecies 
     return payload; // otherwise the user supplied/changed it by hand -> respect it
 };
 
+// ── Per-user on/off switches (Litter Management header) ───────────────────────
+// Stored in User.uiPreferences.autoCalcDueDate / autoCalcWeaningDate. Both default to ON
+// (anything other than an explicit `false` counts as on), so existing users are unaffected
+// until they flip a switch. Only meaningful for users in AUTO_WEANING_USER_IDS_PUBLIC.
+const resolveAutoCalcPrefs = (uiPreferences) => ({
+    dueDate: !(uiPreferences && uiPreferences.autoCalcDueDate === false),
+    weaning: !(uiPreferences && uiPreferences.autoCalcWeaningDate === false),
+});
+
+/** Loads a user's switches by backend _id; falls back to both ON if the lookup fails. */
+const getAutoCalcPrefs = async (userId_backend) => {
+    try {
+        const { User } = require('../database/models');
+        const user = await User.findById(userId_backend).select('uiPreferences').lean();
+        return resolveAutoCalcPrefs(user && user.uiPreferences);
+    } catch (e) {
+        return resolveAutoCalcPrefs(null);
+    }
+};
+
 module.exports = {
+    resolveAutoCalcPrefs,
+    getAutoCalcPrefs,
     AUTO_WEANING_USER_IDS_PUBLIC,
     AUTO_WEANING_USER_ID_PUBLIC,
-    DEFAULT_WEANING_AGE_DAYS,
     KNOWN_WEANING_AGE_DAYS,
     isAutoWeaningUser,
     weaningAgeDaysForSpecies,

@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const { Animal, Litter } = require('../database/models');
 const { getNextSequence } = require('../database/db_service');
-const { applyAutoWeaningOnCreate } = require('../utils/autoWeaningDate');
+const { applyAutoWeaningOnCreate, applyAutoDueDateOnCreate, getAutoCalcPrefs } = require('../utils/autoWeaningDate');
 
 // ─── Multer: accept up to 2 CSV files in memory ───────────────────────────────
 const upload = multer({
@@ -626,6 +626,7 @@ router.post('/', upload.fields([
     }
 
     // ── Litters ───────────────────────────────────────────────────────────────
+    const autoCalc = await getAutoCalcPrefs(userId);
     for (const [litterIndex, litter] of transformedLitters.entries()) {
         const { _maleRegNum, _femaleRegNum, ...rec } = litter;
 
@@ -688,8 +689,8 @@ router.post('/', upload.fields([
             rec.creatorId = userId;
             // CTU2 only: auto-set weaningDate = birthDate + the species' weaning age and
             // expectedDueDate = matingDate + gestation — utils/autoWeaningDate.js.
-            await applyAutoWeaningOnCreate(rec, req.user.id_public);
-            await applyAutoDueDateOnCreate(rec, req.user.id_public);
+            if (autoCalc.weaning) await applyAutoWeaningOnCreate(rec, req.user.id_public);
+            if (autoCalc.dueDate) await applyAutoDueDateOnCreate(rec, req.user.id_public);
             await Litter.create(rec);
             written.litters++;
         } catch (err) {

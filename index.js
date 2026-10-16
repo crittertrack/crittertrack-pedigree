@@ -536,7 +536,16 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
             enclosureShowRehomed,
             hiddenFormSectionsSpecies,
             hiddenFormSections,
+            autoCalcDueDate,
+            autoCalcWeaningDate,
         } = req.body;
+
+        if (autoCalcDueDate !== undefined && typeof autoCalcDueDate !== 'boolean') {
+            return res.status(400).json({ message: 'Invalid autoCalcDueDate value' });
+        }
+        if (autoCalcWeaningDate !== undefined && typeof autoCalcWeaningDate !== 'boolean') {
+            return res.status(400).json({ message: 'Invalid autoCalcWeaningDate value' });
+        }
 
         const allowed = ['list', 'collections', 'management'];
         if (defaultAnimalView !== undefined && !allowed.includes(defaultAnimalView)) {
@@ -565,6 +574,12 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
         }
 
         const update = {};
+        if (autoCalcDueDate !== undefined) {
+            update['uiPreferences.autoCalcDueDate'] = autoCalcDueDate;
+        }
+        if (autoCalcWeaningDate !== undefined) {
+            update['uiPreferences.autoCalcWeaningDate'] = autoCalcWeaningDate;
+        }
         if (defaultAnimalView !== undefined) {
             update['uiPreferences.defaultAnimalView'] = defaultAnimalView;
         }

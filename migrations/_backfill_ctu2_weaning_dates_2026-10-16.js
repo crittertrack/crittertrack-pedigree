@@ -66,11 +66,13 @@ const label = (l) => l.litter_id_public || l.breedingPairCodeName || String(l._i
     const confirmed = [];
     const alreadyOk = [];
     const noBirth = [];
+    const noSpecies = [];
 
     for (const l of litters) {
         if (!l.birthDate) { noBirth.push(l); continue; }
         if (l.weaningConfirmed) { confirmed.push(l); continue; }
         const days = ageDaysFor(l);
+        if (days === null) { noSpecies.push(l); continue; } // no weaning rule for this species -> leave blank
         const target = computeWeaningDate(l.birthDate, days);
         if (!target) { noBirth.push(l); continue; }
         if (l.weaningDate && dayKey(l.weaningDate) === dayKey(target)) { alreadyOk.push(l); continue; }
@@ -80,7 +82,7 @@ const label = (l) => l.litter_id_public || l.breedingPairCodeName || String(l._i
     console.log('='.repeat(70));
     console.log(APPLY ? 'APPLYING' : 'DRY RUN (pass --apply to write)');
     console.log('CTU2 weaningDate backfill — birthDate + per-species weaning age');
-    console.log('  Fancy Mouse 31 / Fancy Rat 35 / Syrian Hamster 28 / Dwarf Hamster 24 / other 31');
+    console.log('  Per-species ages from utils/autoWeaningDate.js; species with no rule are skipped (no fallback)');
     console.log('='.repeat(70));
     console.log(`Owner        : ${owner.id_public} (${owner._id})`);
     console.log(`Total litters: ${litters.length}`);
@@ -88,6 +90,7 @@ const label = (l) => l.litter_id_public || l.breedingPairCodeName || String(l._i
     console.log(`  to update  : ${changes.length}`);
     console.log(`  confirmed via "Wean Today" (kept as-is): ${confirmed.length}`);
     console.log(`  no birthDate (skipped)                 : ${noBirth.length}`);
+    console.log(`  no weaning rule for species (skipped)  : ${noSpecies.length}`);
 
     if (changes.length) {
         console.log('\nChanges:');

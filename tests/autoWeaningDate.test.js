@@ -1,7 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-    DEFAULT_WEANING_AGE_DAYS,
     isAutoWeaningUser,
     weaningAgeDaysForSpecies,
     computeWeaningDate,
@@ -15,10 +14,10 @@ const {
 
 const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
 const CTU2 = 'CTU2';
+const MOUSE = async () => 'Fancy Mouse'; // stub species lookup for litters with no species of their own
 
 test('scopes the rule to CTU2, CTU5, CTU107 and CTU80 only', () => {
     assert.equal(isAutoWeaningUser('CTU2'), true);
-    assert.equal(isAutoWeaningUser('ctu2'), true);
     assert.equal(isAutoWeaningUser('CTU5'), true);
     assert.equal(isAutoWeaningUser('CTU107'), true);
     assert.equal(isAutoWeaningUser('CTU80'), true);
@@ -28,42 +27,93 @@ test('scopes the rule to CTU2, CTU5, CTU107 and CTU80 only', () => {
     assert.equal(isAutoWeaningUser(null), false);
 });
 
+test('auto-calc switches: both default ON, each can be turned off independently', () => {
+    const { resolveAutoCalcPrefs } = require('../utils/autoWeaningDate');
+    assert.deepEqual(resolveAutoCalcPrefs(undefined), { dueDate: true, weaning: true });
+    assert.deepEqual(resolveAutoCalcPrefs({}), { dueDate: true, weaning: true });
+    assert.deepEqual(resolveAutoCalcPrefs({ autoCalcDueDate: false }), { dueDate: false, weaning: true });
+    assert.deepEqual(resolveAutoCalcPrefs({ autoCalcWeaningDate: false }), { dueDate: true, weaning: false });
+    assert.deepEqual(resolveAutoCalcPrefs({ autoCalcDueDate: false, autoCalcWeaningDate: false }), { dueDate: false, weaning: false });
+    assert.deepEqual(resolveAutoCalcPrefs({ autoCalcDueDate: true, autoCalcWeaningDate: true }), { dueDate: true, weaning: true });
+});
+
 test('maps each species to its weaning age', () => {
-    assert.equal(DEFAULT_WEANING_AGE_DAYS, 31);
     assert.equal(weaningAgeDaysForSpecies('Fancy Mouse'), 31);
     assert.equal(weaningAgeDaysForSpecies('Mouse'), 31);            // back-compat alias
-    assert.equal(weaningAgeDaysForSpecies('Fancy Rat'), 35);
-    assert.equal(weaningAgeDaysForSpecies('Rat'), 35);              // back-compat alias
+    assert.equal(weaningAgeDaysForSpecies('Fancy Rat'), 40);
+    assert.equal(weaningAgeDaysForSpecies('Rat'), 40);              // back-compat alias
     assert.equal(weaningAgeDaysForSpecies('Syrian Hamster'), 28);
     assert.equal(weaningAgeDaysForSpecies('Russian Dwarf Hamster'), 24);
     assert.equal(weaningAgeDaysForSpecies('Campbells Dwarf Hamster'), 24);
     assert.equal(weaningAgeDaysForSpecies('Chinese Dwarf Hamster'), 24);
     assert.equal(weaningAgeDaysForSpecies('Roborovski Dwarf Hamster'), 24);
-    assert.equal(weaningAgeDaysForSpecies('Gerbil'), 31);           // unspecified -> default
-    assert.equal(weaningAgeDaysForSpecies(null), 31);
-    assert.equal(weaningAgeDaysForSpecies(''), 31);
+    assert.equal(weaningAgeDaysForSpecies('Sugar Glider'), null);   // no rule -> no auto-fill
+    assert.equal(weaningAgeDaysForSpecies('Whitetail Antsangy'), null);
+    assert.equal(weaningAgeDaysForSpecies(null), null);
+    assert.equal(weaningAgeDaysForSpecies(''), null);
+});
+
+test('guinea pig: weaning 21 days, gestation 63 days (low end of range)', async () => {
+    assert.equal(weaningAgeDaysForSpecies('Guinea Pig'), 21);
+    assert.equal(weaningAgeDaysForSpecies('guinea-pigs'), 21);
+    assert.equal(gestationDaysForSpecies('Guinea Pig'), 63);
+    assert.equal(gestationDaysForSpecies('guinea-pigs'), 63);
+    const w = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Guinea Pig' }, CTU2);
+    assert.equal(day(w.weaningDate), '2026-03-22');
+    const d = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Guinea Pig' }, CTU2);
+    assert.equal(day(d.expectedDueDate), '2026-12-04');
+});
+
+test('other mammals: gestation/weaning at the low end of range', () => {
+    const expected = {
+        'Rabbit': [28, 28], 'Rabbit (Domesticated)': [28, 28],
+        'Gerbil': [24, 21], 'Fat-tailed Gerbil': [19, 21], 'Ferret': [41, 42], 'Natal Rats': [23, 21],
+        'Cat': [63, 42], 'Dog': [58, 42], 'Hedgehog': [34, 28], 'Degu': [87, 28],
+        'Chinchilla': [105, 42], 'Prairie Dog': [34, 42], 'Deer mouse': [22, 21], 'African Pygmy Mouse': [18, 21],
+        'African Pygmy Dormouse': [24, 35],
+    };
+    for (const [name, [gest, wean]] of Object.entries(expected)) {
+        assert.equal(gestationDaysForSpecies(name), gest, `${name} gestation`);
+        assert.equal(weaningAgeDaysForSpecies(name), wean, `${name} weaning`);
+    }
+});
+
+test('mouse rule only matches Fancy Mouse / Mouse (not other mouse species)', () => {
+    assert.equal(gestationDaysForSpecies('Fancy Mouse'), 19);
+    assert.equal(gestationDaysForSpecies('Mouse'), 19);
+    assert.equal(gestationDaysForSpecies('African Pygmy Dormouse'), 24); // own rule, not the mouse one
+    assert.equal(gestationDaysForSpecies('African Pygmy Mouse'), 18);
+    assert.equal(gestationDaysForSpecies('Deer mouse'), 22);
+    assert.equal(gestationDaysForSpecies('Sugar Glider'), null);   // deliberately left out
+    assert.equal(gestationDaysForSpecies('Whitetail Antsangy'), null); // deliberately left out
 });
 
 test('computes weaning dates per species (UTC-safe calendar days)', () => {
-    assert.equal(day(computeWeaningDate('2026-01-01')), '2026-02-01');       // mouse default 31
-    assert.equal(day(computeWeaningDate('2026-01-01', 35)), '2026-02-05');   // rat
+    assert.equal(day(computeWeaningDate('2026-01-01', 31)), '2026-02-01');   // mouse 31
+    assert.equal(computeWeaningDate('2026-01-01'), null);                    // no age -> no date
+    assert.equal(computeWeaningDate('2026-01-01', null), null);
+    assert.equal(day(computeWeaningDate('2026-01-01', 40)), '2026-02-10');   // rat
     assert.equal(day(computeWeaningDate('2026-01-01', 28)), '2026-01-29');   // syrian
     assert.equal(day(computeWeaningDate('2026-01-01', 24)), '2026-01-25');   // dwarf
-    assert.equal(day(computeWeaningDate('2024-02-10')), '2024-03-12');       // leap-year birth
-    assert.equal(computeWeaningDate(null), null);
-    assert.equal(computeWeaningDate('not-a-date'), null);
+    assert.equal(day(computeWeaningDate('2024-02-10', 31)), '2024-03-12');   // leap-year birth
+    assert.equal(computeWeaningDate(null, 31), null);
+    assert.equal(computeWeaningDate('not-a-date', 31), null);
 });
 
 // ── CREATE (POST /api/litters, imports) ────────────────────────────────────
 
-test('create: fills weaningDate = birthDate + 31 for an unresolvable species', async () => {
-    const p = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01' }, CTU2);
-    assert.equal(day(p.weaningDate), '2026-04-01');
+test('create: an unresolvable species gets NO auto weaningDate (no fallback)', async () => {
+    const none = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01' }, CTU2);
+    assert.equal('weaningDate' in none, false);
+    const glider = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Sugar Glider' }, CTU2);
+    assert.equal('weaningDate' in glider, false);
+    const mouse = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Fancy Mouse' }, CTU2);
+    assert.equal(day(mouse.weaningDate), '2026-04-01');
 });
 
 test('create: an explicit payload species drives the age', async () => {
     const rat = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Fancy Rat' }, CTU2);
-    assert.equal(day(rat.weaningDate), '2026-04-05');
+    assert.equal(day(rat.weaningDate), '2026-04-10');
     const syrian = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Syrian Hamster' }, CTU2);
     assert.equal(day(syrian.weaningDate), '2026-03-29');
     const dwarf = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Campbells Dwarf Hamster' }, CTU2);
@@ -80,7 +130,7 @@ test('create: species resolved from the parents when the payload has none (stub 
         { birthDate: '2026-03-01', sireId_public: 'CTC1', damId_public: 'CTC2' },
         CTU2, stub
     );
-    assert.equal(day(p.weaningDate), '2026-04-05');
+    assert.equal(day(p.weaningDate), '2026-04-10');
 });
 
 test('create: leaves every other user untouched', async () => {
@@ -98,27 +148,43 @@ test('create: respects an explicit weaningDate; does nothing without a birthDate
 // ── UPDATE (PUT /api/litters/:id) ──────────────────────────────────────────
 
 test('update: auto-fills a blank weaningDate from the stored birthDate', async () => {
-    const p = await applyAutoWeaningOnUpdate({ weaningDate: null }, { birthDate: '2026-03-01' }, CTU2);
+    const p = await applyAutoWeaningOnUpdate({ weaningDate: null }, { birthDate: '2026-03-01' }, CTU2, MOUSE);
     assert.equal(day(p.weaningDate), '2026-04-01');
+});
+
+test('update: an unresolvable species leaves the weaningDate blank (no fallback)', async () => {
+    const none = async () => null;
+    const p = await applyAutoWeaningOnUpdate({ weaningDate: null }, { birthDate: '2026-03-01' }, CTU2, none);
+    assert.equal(p.weaningDate, null);
 });
 
 test('update: re-derives an auto value when the birthDate is corrected', async () => {
     const p = await applyAutoWeaningOnUpdate(
         { birthDate: '2026-03-05', weaningDate: '2026-04-01' }, // form echoes the stored value
         { birthDate: '2026-03-01', weaningDate: '2026-04-01' }, // stored was auto-derived
-        CTU2
+        CTU2, MOUSE
     );
     assert.equal(day(p.weaningDate), '2026-04-05');
 });
 
-test('update: re-derives when the species changes (mouse 31 -> rat 35)', async () => {
+test('update: re-derives when the species changes (mouse 31 -> rat 40)', async () => {
     const stub = async () => 'Fancy Rat';
     const p = await applyAutoWeaningOnUpdate(
         { birthDate: '2026-03-01', weaningDate: '2026-04-01' }, // echo of the old auto value
         { birthDate: '2026-03-01', weaningDate: '2026-04-01', sireId_public: 'CTC1', damId_public: 'CTC2' },
         CTU2, stub
     );
-    assert.equal(day(p.weaningDate), '2026-04-05');
+    assert.equal(day(p.weaningDate), '2026-04-10');
+});
+
+test('update: a rat date auto-filled at the old 35 days is re-derived to 40, not treated as manual', async () => {
+    const stub = async () => 'Fancy Rat';
+    const p = await applyAutoWeaningOnUpdate(
+        { birthDate: '2026-03-01', weaningDate: '2026-04-05' }, // echo of the legacy 35-day value
+        { birthDate: '2026-03-01', weaningDate: '2026-04-05', sireId_public: 'CTC1', damId_public: 'CTC2' },
+        CTU2, stub
+    );
+    assert.equal(day(p.weaningDate), '2026-04-10');
 });
 
 test('update: never overwrites a hand-entered weaningDate', async () => {
@@ -149,7 +215,7 @@ test('update: later edits on a confirmed litter leave the weaning date alone', a
 });
 
 test('update: patch-style payload without weaningDate fills a missing one (Born Today)', async () => {
-    const p = await applyAutoWeaningOnUpdate({ birthDate: '2026-03-01' }, { weaningDate: null }, CTU2);
+    const p = await applyAutoWeaningOnUpdate({ birthDate: '2026-03-01' }, { weaningDate: null }, CTU2, MOUSE);
     assert.equal(day(p.weaningDate), '2026-04-01');
 });
 
@@ -166,7 +232,7 @@ test('update: clearing the field re-applies the rule', async () => {
     const p = await applyAutoWeaningOnUpdate(
         { birthDate: '2026-03-01', weaningDate: null },
         { birthDate: '2026-03-01', weaningDate: '2026-04-10' },
-        CTU2
+        CTU2, MOUSE
     );
     assert.equal(day(p.weaningDate), '2026-04-01');
 });
@@ -197,7 +263,7 @@ test('maps each species to its gestation', () => {
     assert.equal(gestationDaysForSpecies('Campbells Dwarf Hamster'), 18);
     assert.equal(gestationDaysForSpecies('Chinese Dwarf Hamster'), 18);
     assert.equal(gestationDaysForSpecies('Roborovski Dwarf Hamster'), 18);
-    assert.equal(gestationDaysForSpecies('Gerbil'), null); // unknown -> no auto-fill
+    assert.equal(gestationDaysForSpecies('Sugar Glider'), null); // unknown -> no auto-fill
     assert.equal(gestationDaysForSpecies(null), null);
 });
 
@@ -232,7 +298,7 @@ test('due create: manual value, missing mating, unknown species, lost pregnancy,
     assert.equal(day(manual.expectedDueDate), '2026-10-30');
     const noMating = await applyAutoDueDateOnCreate({ species: 'Fancy Mouse' }, CTU2);
     assert.equal('expectedDueDate' in noMating, false);
-    const unknown = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Gerbil' }, CTU2);
+    const unknown = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Sugar Glider' }, CTU2);
     assert.equal('expectedDueDate' in unknown, false);
     const lost = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse', pregnancyLost: true }, CTU2);
     assert.equal('expectedDueDate' in lost, false);

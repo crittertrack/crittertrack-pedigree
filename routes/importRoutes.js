@@ -4,7 +4,7 @@ const multer = require('multer');
 const JSZip = require('jszip');
 const { Animal, Litter, Enclosure, SupplyItem, Transaction } = require('../database/models');
 const { getNextSequence } = require('../database/db_service');
-const { applyAutoWeaningOnCreate } = require('../utils/autoWeaningDate');
+const { applyAutoWeaningOnCreate, applyAutoDueDateOnCreate, getAutoCalcPrefs } = require('../utils/autoWeaningDate');
 
 // Memory-only multer for import (we need the buffer, not a file on disk)
 const upload = multer({
@@ -371,13 +371,14 @@ router.post('/', upload.single('file'), async (req, res) => {
         const records = Array.isArray(importData.litters) ? importData.litters : [];
         written.litters = 0;
         skipped.litters = 0;
+        const autoCalc = await getAutoCalcPrefs(userId);
 
         for (const raw of records) {
             const rec = sanitise(raw, LITTER_SAFE);
             // CTU2 only: auto-set weaningDate = birthDate + the species' weaning age and
             // expectedDueDate = matingDate + gestation — utils/autoWeaningDate.js.
-            await applyAutoWeaningOnCreate(rec, req.user.id_public);
-            await applyAutoDueDateOnCreate(rec, req.user.id_public);
+            if (autoCalc.weaning) await applyAutoWeaningOnCreate(rec, req.user.id_public);
+            if (autoCalc.dueDate) await applyAutoDueDateOnCreate(rec, req.user.id_public);
             try {
                 const isConflict = raw.litter_id_public && existingLitterIds.has(raw.litter_id_public);
 
