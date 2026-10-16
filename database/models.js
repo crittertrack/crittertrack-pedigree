@@ -193,6 +193,9 @@ const PublicProfileSchema = new mongoose.Schema({
         of: String, // Values: 'breeder', 'retired', 'hobbyist', or null
         default: new Map()
     },
+    // When the user first appeared in the Breeder Directory (first 'breeder'/'retired' status). Drives
+    // newest-first ordering. Null for members who opted in before this was tracked (the directory orders those by highest CTU number).
+    directoryOptInAt: { type: Date, default: null },
     hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
     betaSurveyStatus: {
         type: String,

@@ -744,7 +744,7 @@ app.get('/api/users/breeder-directory', async (req, res) => {
             $or: [
                 { 'breedingStatus': { $exists: true } }
             ]
-        }).select('id_public personalName showPersonalName breederName showBreederName bio profileImage breedingStatus country state monthlyDonationActive lastDonationDate')
+        }).select('id_public personalName showPersonalName breederName showBreederName bio profileImage breedingStatus country state monthlyDonationActive lastDonationDate directoryOptInAt')
           .lean();
 
         // Filter to only include users with at least one 'breeder' or 'retired' status
@@ -759,6 +759,22 @@ app.get('/api/users/breeder-directory', async (req, res) => {
             return Object.values(statusObj).some(status => 
                 status === 'breeder' || status === 'retired'
             );
+        });
+
+        // Newest first:
+        //  1. Members with a recorded opt-in date (directoryOptInAt), most recent opt-in first
+        //  2. Everyone else (opted in before dates were tracked), highest CTU number first
+        const ctuNumber = (p) => {
+            const n = parseInt(String(p.id_public || '').replace(/\D/g, ''), 10);
+            return Number.isNaN(n) ? 0 : n;
+        };
+        filteredBreeders.sort((a, b) => {
+            const aDate = a.directoryOptInAt ? new Date(a.directoryOptInAt).getTime() : null;
+            const bDate = b.directoryOptInAt ? new Date(b.directoryOptInAt).getTime() : null;
+            if (aDate !== null && bDate !== null) return bDate - aDate || ctuNumber(b) - ctuNumber(a);
+            if (aDate !== null) return -1;
+            if (bDate !== null) return 1;
+            return ctuNumber(b) - ctuNumber(a);
         });
 
         // Convert Map to plain object for JSON response
@@ -811,7 +827,17 @@ app.put('/api/users/breeding-status', authMiddleware, async (req, res) => {
         // Also update PublicProfile
         const publicProfile = await PublicProfile.findOne({ userId_backend: req.user.id });
         if (publicProfile) {
+            const isListed = (statusMap) => Object.values(statusMap || {}).some(s => s === 'breeder' || s === 'retired');
+            const wasListed = isListed(publicProfile.breedingStatus instanceof Map
+                ? Object.fromEntries(publicProfile.breedingStatus)
+                : publicProfile.breedingStatus);
+            const nowListed = isListed(breedingStatus);
+
             publicProfile.breedingStatus = new Map(Object.entries(breedingStatus));
+            // Stamp the moment they first show up in the directory (re-stamp if they left and came back)
+            if (nowListed && !wasListed) {
+                publicProfile.directoryOptInAt = new Date();
+            }
             await publicProfile.save();
         }
 
