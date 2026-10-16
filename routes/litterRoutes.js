@@ -441,16 +441,13 @@ const litterImageUpload = (req, res, next) =>
     });
 
 // POST /api/litters/:id_backend/images
-// Upload one image to a born litter (max 5). Only works on non-planned litters.
+// Upload one image to a litter (max 5). Works at any stage — planned, mated or born.
 router.post('/:id_backend/images', litterImageUpload, async (req, res) => {
     try {
         const litter = await Litter.findById(req.params.id_backend);
         if (!litter) return res.status(404).json({ message: 'Litter not found' });
         if (String(litter.creatorId) !== String(req.user.id) && !litter.linkedOwners.some(id => String(id) === String(req.user.id))) {
             return res.status(403).json({ message: 'Not your litter' });
-        }
-        if (litter.isPlanned) {
-            return res.status(400).json({ message: 'Images can only be added to born litters' });
         }
         if ((litter.images || []).length >= 5) {
             return res.status(400).json({ message: 'Maximum of 5 images per litter' });
