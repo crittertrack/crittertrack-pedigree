@@ -42,6 +42,8 @@ function getLitterReproStatus(litter, today = new Date(), maxNursingDays = DEFAU
     const hasMatingDate = !!litter.matingDate;
 
     if (litter.pregnancyLost && !hasBirth) return null;
+    // Born with an unknown birth date: no nursing window to count and no mating/planned state.
+    if (litter.birthDateUnknown && !hasBirth) return null;
     if (hasBirth && isWeaned) return null; // fully weaned — cycle complete
 
     if (hasBirth) {
@@ -138,7 +140,7 @@ async function syncParentReproStatus(creatorId, parentIdsPublic = []) {
         const litters = await Litter.find({
             creatorId,
             $or: [{ sireId_public: id_public }, { damId_public: id_public }],
-        }).select('sireId_public damId_public isPlanned matingDate pregnancyDate birthDate weaningDate weaningConfirmed pregnancyLost createdAt').lean();
+        }).select('sireId_public damId_public isPlanned matingDate pregnancyDate birthDate birthDateUnknown weaningDate weaningConfirmed pregnancyLost createdAt').lean();
 
         const nursingCutoffByLitter = await buildNursingCutoffMap(litters);
         const flags = computeReproFlags(litters, id_public, nursingCutoffByLitter);

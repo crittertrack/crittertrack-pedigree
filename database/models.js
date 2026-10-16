@@ -1,4 +1,4 @@
-﻿﻿const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const { ENCLOSURE_PURPOSE_VALUES, DEFAULT_ENCLOSURE_PURPOSE } = require('../utils/enclosurePurpose');
 
 // --- 1. COUNTER SCHEMA (For Generating Unique Public Integer IDs) ---
@@ -1089,6 +1089,12 @@ const LitterSchema = new mongoose.Schema({
 
     // Planned mating flag — true until a birthDate is set
     isPlanned: { type: Boolean, default: false, index: true },
+    // "Born, birth date unknown": a plain born entry with NO birthDate (so no age, nursing or weaning is
+    // derived from it). Shown as its own "Born (date unknown)" class.
+    birthDateUnknown: { type: Boolean, default: false },
+    // Extended birth information (Add/Edit entry form → "Birth information")
+    birthComplications: { type: String, default: null },
+    birthOutcome: { type: String, default: null }, // e.g. Healthy litter / Some losses / Dam complications / All lost / Unknown
     // Whether this litter is shown on the breeder's public profile
     isDisplayLitter: { type: Boolean, default: false, index: true },
     // Tracks whether the mating-day reminder notification has already been sent

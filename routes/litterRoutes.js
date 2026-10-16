@@ -12,6 +12,9 @@ const {
     getAutoCalcPrefs,
 } = require('../utils/autoWeaningDate');
 const r2 = require('../storage/r2_client');
+
+// "Born, birth date unknown": a plain born entry with no birth date (see utils/unknownBirth.js).
+const { normaliseUnknownBirth, isUnknownBirth } = require('../utils/unknownBirth');
 // This router requires authMiddleware to be applied in index.js
 
 // --- Multer setup for litter image uploads ---
@@ -43,8 +46,11 @@ router.post('/', async (req, res) => {
         // Each auto-calculation can be switched off separately from the Litter Management header.
         const autoCalc = await getAutoCalcPrefs(appUserId_backend);
         const litterData = { ...req.body };
-        if (autoCalc.weaning) await applyAutoWeaningOnCreate(litterData, req.user.id_public);
-        if (autoCalc.dueDate) await applyAutoDueDateOnCreate(litterData, req.user.id_public);
+        normaliseUnknownBirth(litterData);
+        // Born with an unknown birth date: no weaning/due dates are auto-filled.
+        const unknownBirth = isUnknownBirth(litterData);
+        if (autoCalc.weaning && !unknownBirth) await applyAutoWeaningOnCreate(litterData, req.user.id_public);
+        if (autoCalc.dueDate && !unknownBirth) await applyAutoDueDateOnCreate(litterData, req.user.id_public);
 
         const newLitter = await addLitter(appUserId_backend, litterData);
 
@@ -282,16 +288,19 @@ router.put('/:id_backend', async (req, res) => {
         const updates = req.body; // Updates object
 
         const priorLitter = await Litter.findOne({ _id: litterId_backend, $or: [{ creatorId: appUserId_backend }, { linkedOwners: appUserId_backend }] })
-            .select('sireId_public damId_public birthDate weaningDate weaningConfirmed matingDate expectedDueDate pregnancyLost')
+            .select('sireId_public damId_public birthDate birthDateUnknown weaningDate weaningConfirmed matingDate expectedDueDate pregnancyLost')
             .lean();
+
+        normaliseUnknownBirth(updates);
 
         // CTU2 only: keep weaningDate = birthDate + the species' weaning age, and
         // expectedDueDate = matingDate + the species' gestation, in sync. Hand-entered
         // values and "Wean Today" confirmations are never overwritten — see
         // utils/autoWeaningDate.js. (Both mutate `updates` in place.)
         const autoCalc = await getAutoCalcPrefs(appUserId_backend);
-        if (autoCalc.weaning) await applyAutoWeaningOnUpdate(updates, priorLitter, req.user.id_public);
-        if (autoCalc.dueDate) await applyAutoDueDateOnUpdate(updates, priorLitter, req.user.id_public);
+        const unknownBirth = isUnknownBirth(updates, priorLitter);
+        if (autoCalc.weaning && !unknownBirth) await applyAutoWeaningOnUpdate(updates, priorLitter, req.user.id_public);
+        if (autoCalc.dueDate && !unknownBirth) await applyAutoDueDateOnUpdate(updates, priorLitter, req.user.id_public);
 
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
 

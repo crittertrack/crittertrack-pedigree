@@ -170,13 +170,13 @@ router.get('/alert-count', async (req, res) => {
         });
 
         const litters = await Litter.find({ creatorId: userId })
-            .select('isPlanned matingDate pregnancyDate expectedDueDate birthDate weaningDate weaningConfirmed pregnancyLost damId_public')
+            .select('isPlanned matingDate pregnancyDate expectedDueDate birthDate birthDateUnknown weaningDate weaningConfirmed pregnancyLost damId_public')
             .lean();
         // Same species safety-net cutoff as animalAlertsCron (see reproStatusSync).
         const nursingCutoffByLitter = await buildNursingCutoffMap(litters);
         litters.forEach((l) => {
             if (l.isPlanned && !l.pregnancyDate && !l.birthDate && l.matingDate && daysSince(l.matingDate) >= 0) counts.breeding += 1;
-            if (!l.isPlanned && !l.pregnancyLost && !l.birthDate && l.expectedDueDate && daysSince(l.expectedDueDate) >= 0) counts.breeding += 1;
+            if (!l.isPlanned && !l.pregnancyLost && !l.birthDate && !l.birthDateUnknown && l.expectedDueDate && daysSince(l.expectedDueDate) >= 0) counts.breeding += 1;
             const cutoff = nursingCutoffByLitter.get(String(l._id)) ?? DEFAULT_MAX_NURSING_DAYS;
             if (isWeaningReminderDue(l, cutoff)) counts.breeding += 1;
         });

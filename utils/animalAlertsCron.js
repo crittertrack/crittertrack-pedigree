@@ -160,7 +160,7 @@ const runAnimalAlertsCheck = async () => {
     });
 
     // --- Litters: planned mating date reached, due date reached, weaning date reached ---
-    const littersAll = await Litter.find({}).select('creatorId litter_id_public breedingPairCodeName sireId_public damId_public isPlanned matingDate pregnancyDate expectedDueDate birthDate weaningDate weaningConfirmed pregnancyLost').lean();
+    const littersAll = await Litter.find({}).select('creatorId litter_id_public breedingPairCodeName sireId_public damId_public isPlanned matingDate pregnancyDate expectedDueDate birthDate birthDateUnknown weaningDate weaningConfirmed pregnancyLost').lean();
     // Species safety-net cutoff per litter (Species.maxNursingDays, default 90) — the same
     // one reproStatusSync uses to auto-close the dam's Nursing flag, so a litter nobody ever
     // confirmed with "Wean Today" stops reminding once past any realistic nursing window.
@@ -180,7 +180,7 @@ const runAnimalAlertsCheck = async () => {
         // Due-date reminder: no pregnancyDate required (only ~15% of records ever got
         // "Pregnant Today"), but skip planned-but-not-yet-mated litters and lost pregnancies —
         // same shape as NotificationBar/NotificationsHub.
-        if (!l.isPlanned && !l.pregnancyLost && !l.birthDate && l.expectedDueDate) {
+        if (!l.isPlanned && !l.pregnancyLost && !l.birthDate && !l.birthDateUnknown && l.expectedDueDate) {
             const days = daysSince(l.expectedDueDate);
             if (days !== null && days >= 0) bump(alerts, l.creatorId, 'breeding', damName || litterLabel);
         }
