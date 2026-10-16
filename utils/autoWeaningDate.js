@@ -378,7 +378,12 @@ const getAutoCalcPrefs = async (userId_backend) => {
     }
 };
 
+/** True when a species already has BOTH an auto gestation and an auto weaning rule. */
+const hasCompleteAutoValues = (species) =>
+    gestationDaysForSpecies(species) != null && weaningAgeDaysForSpecies(species) != null;
+
 module.exports = {
+    hasCompleteAutoValues,
     resolveAutoCalcPrefs,
     getAutoCalcPrefs,
     KNOWN_WEANING_AGE_DAYS,

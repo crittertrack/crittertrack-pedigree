@@ -139,4 +139,20 @@ router.post('/migrate-categories', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/species/auto-calc-covered
+ * Names of species that already have BOTH an auto gestation and weaning value. The Help Center
+ * "Suggest values for a species" picker hides these (nothing left to suggest).
+ */
+router.get('/auto-calc-covered', async (req, res) => {
+    try {
+        const { hasCompleteAutoValues } = require('../utils/autoWeaningDate');
+        const all = await Species.find({}).select('name').lean();
+        res.json(all.map((s) => s.name).filter((name) => hasCompleteAutoValues(name)));
+    } catch (error) {
+        console.error('Error fetching auto-calc covered species:', error);
+        res.status(500).json({ message: 'Failed to fetch species' });
+    }
+});
+
 module.exports = router;

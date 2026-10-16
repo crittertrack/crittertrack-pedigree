@@ -3,6 +3,7 @@ const router = express.Router();
 const { Feedback } = require('../database/models');
 const { sendFeedbackNotification } = require('../utils/emailService');
 const { validateSpeciesValueSuggestion } = require('../utils/speciesValueSuggestion');
+const { hasCompleteAutoValues } = require('../utils/autoWeaningDate');
 
 // Help Center "suggest gestation / weaning values for a species" -> moderation panel.
 // Needs a species and at least one duration (gestation or weaning, or both); see
@@ -13,6 +14,11 @@ router.post('/species-values', async (req, res) => {
         const checked = validateSpeciesValueSuggestion(req.body);
         if (checked.error) return res.status(400).json({ error: checked.error });
         const { species, gestationDays, weaningDays, feedback } = checked.value;
+
+        // Nothing to suggest for a species that already has both values.
+        if (hasCompleteAutoValues(species)) {
+            return res.status(400).json({ error: `${species} already has gestation and weaning values.` });
+        }
 
         const { User } = require('../database/models');
         const user = await User.findById(req.user.id).select('id_public email personalName breederName');
