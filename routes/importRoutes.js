@@ -375,7 +375,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
         for (const raw of records) {
             const rec = sanitise(raw, LITTER_SAFE);
-            // CTU2 only: auto-set weaningDate = birthDate + the species' weaning age and
+            // Auto-set weaningDate = birthDate + the species' weaning age and
             // expectedDueDate = matingDate + gestation — utils/autoWeaningDate.js.
             if (autoCalc.weaning) await applyAutoWeaningOnCreate(rec, req.user.id_public);
             if (autoCalc.dueDate) await applyAutoDueDateOnCreate(rec, req.user.id_public);

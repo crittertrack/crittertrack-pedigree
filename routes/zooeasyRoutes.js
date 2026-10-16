@@ -687,7 +687,7 @@ router.post('/', upload.fields([
 
             rec.litter_id_public = await getNextSequence('litterId');
             rec.creatorId = userId;
-            // CTU2 only: auto-set weaningDate = birthDate + the species' weaning age and
+            // Auto-set weaningDate = birthDate + the species' weaning age and
             // expectedDueDate = matingDate + gestation — utils/autoWeaningDate.js.
             if (autoCalc.weaning) await applyAutoWeaningOnCreate(rec, req.user.id_public);
             if (autoCalc.dueDate) await applyAutoDueDateOnCreate(rec, req.user.id_public);

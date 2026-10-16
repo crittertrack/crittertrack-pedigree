@@ -1,5 +1,5 @@
 /**
- * Auto litter-date rules — FOR USERS CTU2, CTU5, CTU107 AND CTU80 ONLY. (Historic filename: the module also
+ * Auto litter-date rules — available to every user. (Historic filename: the module also
  * auto-fills expectedDueDate, hence both rule sets living here.)
  *
  * 1) weaningDate = birthDate + the SPECIES' WEANING AGE:
@@ -23,7 +23,7 @@
  * Species resolution order (both rules): an explicit payload.species, else the litter's
  * dam's species (then the sire's) looked up in Animal with a PublicAnimal fallback.
  *
- * Every other user (id_public not in AUTO_WEANING_USER_IDS_PUBLIC) gets the payload back unchanged.
+ * Available to every user; a call with no user id gets the payload back unchanged.
  *
  * Entry points (all async because of the species lookup, all MUTATE and return the
  * payload; `lookupSpecies` is an optional injectable override used by tests):
@@ -41,8 +41,6 @@
  *     pregnancyLost — those are recorded events, not plans.
  */
 
-const AUTO_WEANING_USER_IDS_PUBLIC = ['CTU2', 'CTU5', 'CTU107', 'CTU80'];
-const AUTO_WEANING_USER_ID_PUBLIC = AUTO_WEANING_USER_IDS_PUBLIC[0]; // kept for back-compat
 
 // Ordered species → weaning-age rules; first match wins against the normalised species
 // name (lowercased, non-alphanumerics stripped). Matches the live catalogue strings
@@ -77,8 +75,10 @@ const WEANING_AGE_RULES = [
 const LEGACY_WEANING_AGE_DAYS = [35];
 const KNOWN_WEANING_AGE_DAYS = [...new Set([...WEANING_AGE_RULES.map((r) => r.days), ...LEGACY_WEANING_AGE_DAYS])];
 
-const isAutoWeaningUser = (idPublic) =>
-    !!idPublic && AUTO_WEANING_USER_IDS_PUBLIC.includes(String(idPublic).toUpperCase());
+// Open to EVERY signed-in user (it started as an allow-list of a few accounts). Each user can still
+// switch the due-date / weaning-date options off separately in Litter Management. A missing id
+// (e.g. an unauthenticated/system call) gets no auto-fill.
+const isAutoWeaningUser = (idPublic) => !!idPublic;
 
 const normaliseSpecies = (species) => String(species || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -172,7 +172,7 @@ const applyAutoWeaningOnCreate = async (payload, idPublic, lookupSpecies = defau
 
 /**
  * UPDATE rule (async): keep weaningDate = birthDate + the species' weaning age in sync
- * for CTU2.
+ * for the acting user.
  *
  * @param {Object} payload  The PUT body (mutated in place).
  * @param {Object} prior    The stored litter — needs sireId_public/damId_public/
@@ -230,7 +230,7 @@ const applyAutoWeaningOnUpdate = async (payload, prior, idPublic, lookupSpecies 
     return payload;
 };
 
-// ── Expected due dates (auto-filled for CTU2 too) ─────────────────────────────
+// ── Expected due dates (auto-filled alongside weaning) ─────────────────────────────
 // Gestation: matingDate + species' days -> expectedDueDate, which drives the "births
 // due" reminders (animalAlertsCron/pushRoutes digest + NotificationBar/NotificationsHub/
 // Calendar). Same normalised-species matching as the weaning ages; UNKNOWN species get
@@ -305,7 +305,7 @@ const applyAutoDueDateOnCreate = async (payload, idPublic, lookupSpecies = defau
 
 /**
  * UPDATE rule (async): keep expectedDueDate = matingDate + the species' gestation in sync
- * for CTU2. Hand-entered due dates are respected; an auto-derived one re-derives when the
+ * for the acting user. Hand-entered due dates are respected; an auto-derived one re-derives when the
  * mating date (or species) changes — including the "Mated Today" patch, which moves a due
  * date auto-filled from the *scheduled* mating date onto the actual one. Pregnancy-lost
  * records are never touched. `prior` needs sireId_public/damId_public/matingDate/
@@ -361,8 +361,7 @@ const applyAutoDueDateOnUpdate = async (payload, prior, idPublic, lookupSpecies 
 
 // ── Per-user on/off switches (Litter Management header) ───────────────────────
 // Stored in User.uiPreferences.autoCalcDueDate / autoCalcWeaningDate. Both default to ON
-// (anything other than an explicit `false` counts as on), so existing users are unaffected
-// until they flip a switch. Only meaningful for users in AUTO_WEANING_USER_IDS_PUBLIC.
+// (anything other than an explicit `false` counts as on) until the user flips a switch.
 const resolveAutoCalcPrefs = (uiPreferences) => ({
     dueDate: !(uiPreferences && uiPreferences.autoCalcDueDate === false),
     weaning: !(uiPreferences && uiPreferences.autoCalcWeaningDate === false),
@@ -382,8 +381,6 @@ const getAutoCalcPrefs = async (userId_backend) => {
 module.exports = {
     resolveAutoCalcPrefs,
     getAutoCalcPrefs,
-    AUTO_WEANING_USER_IDS_PUBLIC,
-    AUTO_WEANING_USER_ID_PUBLIC,
     KNOWN_WEANING_AGE_DAYS,
     isAutoWeaningUser,
     weaningAgeDaysForSpecies,

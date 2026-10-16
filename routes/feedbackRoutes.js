@@ -2,6 +2,57 @@ const express = require('express');
 const router = express.Router();
 const { Feedback } = require('../database/models');
 const { sendFeedbackNotification } = require('../utils/emailService');
+const { validateSpeciesValueSuggestion } = require('../utils/speciesValueSuggestion');
+
+// Help Center "suggest gestation / weaning values for a species" -> moderation panel.
+// Needs a species and at least one duration (gestation or weaning, or both); see
+// utils/speciesValueSuggestion.js. Saved as a Feedback entry (type 'species-values') for a
+// moderator/admin to judge — nothing is applied automatically.
+router.post('/species-values', async (req, res) => {
+    try {
+        const checked = validateSpeciesValueSuggestion(req.body);
+        if (checked.error) return res.status(400).json({ error: checked.error });
+        const { species, gestationDays, weaningDays, feedback } = checked.value;
+
+        const { User } = require('../database/models');
+        const user = await User.findById(req.user.id).select('id_public email personalName breederName');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const entry = new Feedback({
+            userId: req.user.id,
+            userIdPublic: user.id_public,
+            userEmail: user.email,
+            userName: user.personalName || user.breederName || 'Anonymous',
+            species,
+            gestationDays,
+            weaningDays,
+            feedback,
+            type: 'species-values',
+            status: 'pending'
+        });
+        await entry.save();
+
+        try {
+            await sendFeedbackNotification({
+                userName: entry.userName,
+                userEmail: user.email,
+                userIdPublic: user.id_public,
+                species,
+                feedback,
+                type: 'species-values',
+                createdAt: entry.createdAt
+            });
+        } catch (emailError) {
+            console.error('Failed to send species-values notification email:', emailError);
+            // the suggestion is saved either way
+        }
+
+        res.status(201).json({ message: 'Suggestion submitted', feedbackId: entry._id });
+    } catch (error) {
+        console.error('Error submitting species values suggestion:', error);
+        res.status(500).json({ error: 'Failed to submit suggestion' });
+    }
+});
 
 // Submit general feedback (species customization, UI, etc.)
 router.post('/species', async (req, res) => {

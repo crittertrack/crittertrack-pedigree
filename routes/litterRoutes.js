@@ -15,6 +15,7 @@ const r2 = require('../storage/r2_client');
 
 // "Born, birth date unknown": a plain born entry with no birth date (see utils/unknownBirth.js).
 const { normaliseUnknownBirth, isUnknownBirth } = require('../utils/unknownBirth');
+const { checkDamAliveAtBirth } = require('../utils/damAliveAtBirth');
 // This router requires authMiddleware to be applied in index.js
 
 // --- Multer setup for litter image uploads ---
@@ -39,14 +40,17 @@ router.post('/', async (req, res) => {
     try {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
-        // CTU2 only: auto-set weaningDate = birthDate + species' weaning age (31/35/28/24d)
-        // and expectedDueDate = matingDate + species' gestation (19/21/16/18d) — see
+        // Auto-set weaningDate = birthDate + species' weaning age
+        // and expectedDueDate = matingDate + species' gestation — see
         // utils/autoWeaningDate.js — so the weaning and birth-due reminders fire without
         // anyone typing the dates.
         // Each auto-calculation can be switched off separately from the Litter Management header.
         const autoCalc = await getAutoCalcPrefs(appUserId_backend);
         const litterData = { ...req.body };
         normaliseUnknownBirth(litterData);
+        // A dam can't give birth after she has died.
+        const damProblem = await checkDamAliveAtBirth(litterData);
+        if (damProblem) return res.status(400).json({ message: damProblem });
         // Born with an unknown birth date: no weaning/due dates are auto-filled.
         const unknownBirth = isUnknownBirth(litterData);
         if (autoCalc.weaning && !unknownBirth) await applyAutoWeaningOnCreate(litterData, req.user.id_public);
@@ -293,7 +297,11 @@ router.put('/:id_backend', async (req, res) => {
 
         normaliseUnknownBirth(updates);
 
-        // CTU2 only: keep weaningDate = birthDate + the species' weaning age, and
+        // A dam can't give birth after she has died (only checked when this save sets the birth date or dam).
+        const damProblem = await checkDamAliveAtBirth(updates, priorLitter);
+        if (damProblem) return res.status(400).json({ message: damProblem });
+
+        // Keep weaningDate = birthDate + the species' weaning age, and
         // expectedDueDate = matingDate + the species' gestation, in sync. Hand-entered
         // values and "Wean Today" confirmations are never overwritten — see
         // utils/autoWeaningDate.js. (Both mutate `updates` in place.)

@@ -16,15 +16,13 @@ const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
 const CTU2 = 'CTU2';
 const MOUSE = async () => 'Fancy Mouse'; // stub species lookup for litters with no species of their own
 
-test('scopes the rule to CTU2, CTU5, CTU107 and CTU80 only', () => {
-    assert.equal(isAutoWeaningUser('CTU2'), true);
-    assert.equal(isAutoWeaningUser('CTU5'), true);
-    assert.equal(isAutoWeaningUser('CTU107'), true);
-    assert.equal(isAutoWeaningUser('CTU80'), true);
-    assert.equal(isAutoWeaningUser('CTU1'), false);
-    assert.equal(isAutoWeaningUser('CTU10'), false);
-    assert.equal(isAutoWeaningUser('CTU8'), false);
+test('the auto-calculation is open to every user (only a missing id is excluded)', () => {
+    for (const id of ['CTU2', 'CTU5', 'CTU107', 'CTU80', 'CTU1', 'CTU10', 'CTU8', 'ctu999']) {
+        assert.equal(isAutoWeaningUser(id), true, id);
+    }
     assert.equal(isAutoWeaningUser(null), false);
+    assert.equal(isAutoWeaningUser(undefined), false);
+    assert.equal(isAutoWeaningUser(''), false);
 });
 
 test('auto-calc switches: both default ON, each can be turned off independently', () => {
@@ -133,9 +131,11 @@ test('create: species resolved from the parents when the payload has none (stub 
     assert.equal(day(p.weaningDate), '2026-04-10');
 });
 
-test('create: leaves every other user untouched', async () => {
+test('create: works for any user, but not when there is no user id', async () => {
     const p = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Fancy Rat' }, 'CTU1');
-    assert.equal('weaningDate' in p, false);
+    assert.equal(day(p.weaningDate), '2026-04-10');
+    const none = await applyAutoWeaningOnCreate({ birthDate: '2026-03-01', species: 'Fancy Rat' }, null);
+    assert.equal('weaningDate' in none, false);
 });
 
 test('create: respects an explicit weaningDate; does nothing without a birthDate', async () => {
@@ -237,13 +237,15 @@ test('update: clearing the field re-applies the rule', async () => {
     assert.equal(day(p.weaningDate), '2026-04-01');
 });
 
-test('update: other users are never touched', async () => {
+test('update: works for any user, but not when there is no user id', async () => {
     const p = await applyAutoWeaningOnUpdate(
         { birthDate: '2026-03-01', weaningDate: null },
         { birthDate: '2026-03-01' },
-        'CTU1'
+        'CTU1', MOUSE
     );
-    assert.equal(p.weaningDate, null);
+    assert.equal(day(p.weaningDate), '2026-04-01');
+    const none = await applyAutoWeaningOnUpdate({ birthDate: '2026-03-01', weaningDate: null }, { birthDate: '2026-03-01' }, null, MOUSE);
+    assert.equal(none.weaningDate, null);
 });
 
 test('update: no birthDate anywhere means untouched', async () => {
@@ -302,8 +304,10 @@ test('due create: manual value, missing mating, unknown species, lost pregnancy,
     assert.equal('expectedDueDate' in unknown, false);
     const lost = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse', pregnancyLost: true }, CTU2);
     assert.equal('expectedDueDate' in lost, false);
-    const other = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse' }, 'CTU1');
-    assert.equal('expectedDueDate' in other, false);
+    const anyUser = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse' }, 'CTU1');
+    assert.equal(day(anyUser.expectedDueDate), '2026-10-21');
+    const noUser = await applyAutoDueDateOnCreate({ matingDate: '2026-10-02', species: 'Fancy Mouse' }, null);
+    assert.equal('expectedDueDate' in noUser, false);
 });
 
 test('due update: "Mated Today" moves an auto due date from the scheduled to the actual mating', async () => {
@@ -346,6 +350,8 @@ test('due update: clearing the field re-fills; lost pregnancy and other users un
     assert.equal(day(cleared.expectedDueDate), '2026-10-24');
     const lost = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05', pregnancyLost: true }, CTU2, stub);
     assert.equal('expectedDueDate' in lost, false);
-    const other = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05' }, 'CTU1', stub);
-    assert.equal('expectedDueDate' in other, false);
+    const anyUser = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05' }, 'CTU1', stub);
+    assert.equal(day(anyUser.expectedDueDate), '2026-10-24');
+    const noUser = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05' }, null, stub);
+    assert.equal('expectedDueDate' in noUser, false);
 });

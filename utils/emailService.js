@@ -198,10 +198,10 @@ const sendFeedbackNotification = async (feedbackData) => {
         await resend.emails.send({
             from: fromEmail,
             to: 'crittertrackowner@gmail.com',
-            subject: `[CritterTrack] New ${type === 'species-customization' ? 'Species' : 'General'} Feedback`,
+            subject: `[CritterTrack] New ${type === 'species-values' ? 'Species Values Suggestion' : type === 'species-customization' ? 'Species' : 'General'} Feedback`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #ec4899;">New ${type === 'species-customization' ? 'Species Customization' : 'General'} Feedback</h2>
+                    <h2 style="color: #ec4899;">New ${type === 'species-values' ? 'Species Gestation/Weaning Values' : type === 'species-customization' ? 'Species Customization' : 'General'} Feedback</h2>
                     <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
                         <p><strong>From:</strong> ${userName} (${userEmail})</p>
                         <p><strong>User ID:</strong> ${userIdPublic}</p>

@@ -1279,10 +1279,13 @@ const FeedbackSchema = new mongoose.Schema({
     userEmail: { type: String, required: true },
     userName: { type: String, required: true },
     species: { type: String, default: null },
+    // Only for type 'species-values' (Help Center suggestion): the durations the user proposes, in days
+    gestationDays: { type: Number, default: null },
+    weaningDays: { type: Number, default: null },
     feedback: { type: String, required: true },
     type: { 
         type: String, 
-        enum: ['species-customization', 'ui-feedback', 'feature-request', 'general'], 
+        enum: ['species-customization', 'ui-feedback', 'feature-request', 'general', 'species-values'], 
         default: 'general' 
     },
     status: { 
