@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { WaitlistEntry, Animal } = require('../database/models');
+const Contact = require('../database/contactModel');
 
 const VALID_GENDERS = ['Male', 'Female', 'Any'];
 
@@ -29,10 +30,70 @@ function normalizeSpeciesRequest(r) {
     };
 }
 
+// Resolve a contactId coming from the client into { contactId, contactName }.
+//
+// Rules:
+//   - no id            → no link (a waitlist entry may simply have no contact)
+//   - malformed id     → an error: the client sent something that can never be a contact
+//   - unknown/foreign  → an error, worded identically either way so the response
+//                        can't be used to probe which contact ids exist
+// The contact must belong to the current user, so a link can never point at
+// somebody else's contact record.
+async function resolveContact(contactId, userId) {
+    if (!contactId) return { contactId: null, contactName: '' };
+    if (!/^[a-f\d]{24}$/i.test(String(contactId))) {
+        return { error: 'Invalid contactId' };
+    }
+    const contact = await Contact.findOne({ _id: contactId, userId }).lean();
+    if (!contact) return { error: 'Contact not found' };
+    return { contactId: contact._id, contactName: getContactName(contact) };
+}
+
+// Apply an incoming contactId to an existing waitlist entry during a PATCH.
+//
+// Rules:
+//   - contactId === undefined → leave the current link untouched
+//   - contactId === null     → explicitly unlink
+//   - same id as the current link → no-op (don't re-resolve): editing an unrelated
+//                                  field on an entry whose contact has since been
+//                                  deleted must not fail with "Contact not found"
+//   - otherwise              → resolve it (must be a contact of the current user)
+//
+// Returns null on success, or { error } to be reported as a 400.
+async function applyContactToEntry(entry, contactId, userId) {
+    if (contactId === undefined) return null;
+    if (contactId === null) {
+        entry.contactId = null;
+        entry.contactName = '';
+        return null;
+    }
+    const alreadyLinked = entry.contactId && String(entry.contactId) === String(contactId);
+    if (alreadyLinked) return null;
+    const resolved = await resolveContact(contactId, userId);
+    if (resolved.error) return { error: resolved.error };
+    entry.contactId = resolved.contactId;
+    entry.contactName = resolved.contactName;
+    return null;
+}
+
+// Display name for a contact record, mirroring the frontend's contact picker.
+function getContactName(contact) {
+    const personal = (contact.personalName || '').trim();
+    const breeder = (contact.breederName || '').trim();
+    if (personal && breeder) return `${personal} (${breeder})`;
+    if (personal) return personal;
+    if (breeder) return breeder;
+    return (contact.linkedCTUID || '').trim() || 'Unnamed Contact';
+}
+
 // GET /api/waitlist — list all entries owned by the current user (newest first)
 router.get('/', async (req, res) => {
     try {
-        const entries = await WaitlistEntry.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        const entries = await WaitlistEntry.find({ userId: req.user.id })
+            .sort({ createdAt: -1 })
+            // Populate the linked contact so the client can show its details without
+            // an extra request. contactName stays as the snapshot taken when linking.
+            .populate('contactId', 'personalName breederName prefix suffix linkedCTUID address');
         res.json(entries);
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch waitlist', error: err.message });
@@ -42,7 +103,7 @@ router.get('/', async (req, res) => {
 // POST /api/waitlist — create a new waitlist entry (multi-species)
 router.post('/', async (req, res) => {
     try {
-        const { name, contactInfo, speciesRequests, species, genders, amount, notes } = req.body;
+        const { name, contactInfo, speciesRequests, species, genders, amount, notes, contactId } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
 
         // Normalize speciesRequests: array of { species, genders, amount }
@@ -59,11 +120,15 @@ router.post('/', async (req, res) => {
         requests = requests.filter(r => r.species?.trim());
         if (requests.length === 0) return res.status(400).json({ message: 'At least one species is required' });
         const normalized = requests.map(normalizeSpeciesRequest);
+        const resolved = await resolveContact(contactId, req.user.id);
+        if (resolved.error) return res.status(400).json({ message: resolved.error });
 
         const entry = new WaitlistEntry({
             userId: req.user.id,
             name: name.trim(),
             contactInfo: contactInfo || '',
+            contactId: resolved.contactId,
+            contactName: resolved.contactName,
             speciesRequests: normalized,
             // Mirror canonical request into legacy fields for quick lookup.
             species: normalized[0]?.species || '',
@@ -83,9 +148,12 @@ router.patch('/:id', async (req, res) => {
     try {
         const entry = await WaitlistEntry.findOne({ _id: req.params.id, userId: req.user.id });
         if (!entry) return res.status(404).json({ message: 'Waitlist entry not found' });
-        const { name, contactInfo, speciesRequests, species, genders, amount, notes, isActive } = req.body;
+        const { name, contactInfo, speciesRequests, species, genders, amount, notes, isActive, contactId } = req.body;
         if (name !== undefined) entry.name = name.trim();
         if (contactInfo !== undefined) entry.contactInfo = contactInfo;
+        // contactId === null explicitly unlinks the contact; undefined leaves it as-is.
+        const contactError = await applyContactToEntry(entry, contactId, req.user.id);
+        if (contactError) return res.status(400).json({ message: contactError.error });
         if (Array.isArray(speciesRequests)) {
             entry.speciesRequests = speciesRequests.filter(r => r.species?.trim()).map(normalizeSpeciesRequest);
             const first = entry.speciesRequests[0];
@@ -142,3 +210,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+// Exposed for unit tests (contact resolution / linking rules).
+module.exports.resolveContact = resolveContact;
+module.exports.getContactName = getContactName;
+module.exports.applyContactToEntry = applyContactToEntry;

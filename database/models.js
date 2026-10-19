@@ -1619,6 +1619,14 @@ const WaitlistEntrySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true },
     contactInfo: { type: String, default: '' }, // phone, email, address — one text field
+    // Optional link to a record from the Contacts collection. The Contacts page owns
+    // keeper/breeder identities; a waitlist entry can be tied to one of them so the
+    // attendee's details live in a single place (same idea as the Sale record's
+    // contactInfo picker in the animal modal).
+    contactId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contact', default: null, index: true },
+    // Snapshot of the contact's display name at the time of linking, so the waitlist
+    // card can show it without an extra lookup (and survives a contact being deleted).
+    contactName: { type: String, default: '' },
     // Multi-species waitlist request: one entry can want several species, each with
     // its own amount + genders (e.g. "7 mice: 3F/4M AND 4 rats: 2F/2M").
     speciesRequests: [{
@@ -1639,9 +1647,13 @@ const WaitlistEntrySchema = new mongoose.Schema({
     notes: { type: String, default: '' },
     isActive: { type: Boolean, default: true, index: true }, // false = moved to history
     // Snapshot kept when "finalized" — which animals were assigned to them via the picker.
+    // species/gender are part of the snapshot on purpose: the Reservations page computes
+    // per-species/per-gender fulfillment from these values, so they must survive the save.
     assignedAnimals: [{
         id_public: { type: String },
         name: { type: String },
+        species: { type: String, default: '' },
+        gender: { type: String, default: '' },
         assignedAt: { type: Date, default: Date.now },
     }],
     finalizedAt: { type: Date, default: null },

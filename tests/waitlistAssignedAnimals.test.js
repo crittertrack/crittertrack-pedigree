@@ -1,0 +1,218 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const mongoose = require('mongoose');
+const { WaitlistEntry } = require('../database/models');
+const Contact = require('../database/contactModel');
+const waitlistRouter = require('../routes/waitlistRoutes');
+const { resolveContact, getContactName, applyContactToEntry } = waitlistRouter;
+
+const USER_ID = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60701');
+const OTHER_USER_ID = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60702');
+
+const originalFindOne = Contact.findOne;
+
+// Replace the Contact lookup with a stub so the linking rules can be tested
+// without a live MongoDB connection.
+function stubContactFindOne(behaviour) {
+    Contact.findOne = behaviour;
+}
+
+test.afterEach(() => {
+    Contact.findOne = originalFindOne;
+});
+
+test('resolveContact returns null link when contactId is missing', async () => {
+    stubContactFindOne(() => { throw new Error('should not query the database'); });
+    const result = await resolveContact(undefined, USER_ID);
+    assert.equal(result.contactId, null);
+    assert.equal(result.contactName, '');
+    assert.equal(result.error, undefined);
+});
+
+test('resolveContact reports an error for a malformed contactId', async () => {
+    stubContactFindOne(() => { throw new Error('should not query the database'); });
+    const result = await resolveContact('not-an-object-id', USER_ID);
+    assert.equal(result.error, 'Invalid contactId');
+    assert.equal(result.contactId, undefined);
+});
+
+test('resolveContact links a contact that belongs to the current user', async () => {
+    const contact = {
+        _id: new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60703'),
+        personalName: 'Jane Doe',
+        breederName: 'Doe Rats',
+    };
+    let seenQuery = null;
+    stubContactFindOne((query) => {
+        seenQuery = query;
+        return { lean: async () => contact };
+    });
+
+    const result = await resolveContact(contact._id, USER_ID);
+    assert.equal(String(result.contactId), String(contact._id));
+    assert.equal(result.contactName, 'Jane Doe (Doe Rats)');
+    assert.equal(result.error, undefined);
+    // The lookup must be scoped to the current user.
+    assert.equal(String(seenQuery._id), String(contact._id));
+    assert.equal(String(seenQuery.userId), String(USER_ID));
+});
+
+test('resolveContact reports an error when the contact belongs to another user', async () => {
+    const contact = {
+        _id: new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60704'),
+        personalName: 'Someone Else',
+    };
+    // The stub emulates mongo's query scoping: nothing matches for a foreign userId.
+    stubContactFindOne((query) => ({
+        lean: async () => (String(query.userId) === String(USER_ID) ? contact : null),
+    }));
+
+    const result = await resolveContact(contact._id, OTHER_USER_ID);
+    assert.equal(result.error, 'Contact not found');
+    assert.equal(result.contactId, undefined);
+});
+
+test('resolveContact reports an error when the contact does not exist', async () => {
+    stubContactFindOne(() => ({ lean: async () => null }));
+    const result = await resolveContact(new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60705'), USER_ID);
+    assert.equal(result.error, 'Contact not found');
+    assert.equal(result.contactId, undefined);
+});
+
+test('resolveContact treats an explicit null contactId as an unlink', async () => {
+    stubContactFindOne(() => { throw new Error('should not query the database'); });
+    const result = await resolveContact(null, USER_ID);
+    assert.equal(result.contactId, null);
+    assert.equal(result.contactName, '');
+    assert.equal(result.error, undefined);
+});
+
+test('getContactName falls back through personal name, breeder name and CTU id', () => {
+    assert.equal(getContactName({ personalName: 'Ann', breederName: 'AnnB' }), 'Ann (AnnB)');
+    assert.equal(getContactName({ personalName: 'Ann' }), 'Ann');
+    assert.equal(getContactName({ breederName: 'Bob' }), 'Bob');
+    assert.equal(getContactName({ linkedCTUID: 'CTU-9' }), 'CTU-9');
+    assert.equal(getContactName({}), 'Unnamed Contact');
+});
+
+test('waitlist entry stores the linked contact id and the name snapshot', () => {
+    const contactId = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60706');
+    const entry = new WaitlistEntry({
+        userId: USER_ID,
+        name: 'Jane',
+        contactId,
+        contactName: 'Jane Doe',
+        speciesRequests: [{ species: 'Fancy Mouse', genders: ['Female'], amount: 1 }],
+    });
+    const obj = entry.toObject();
+    assert.equal(String(obj.contactId), String(contactId));
+    assert.equal(obj.contactName, 'Jane Doe');
+});
+
+test('waitlist entries without a contact keep the link empty', () => {
+    const entry = new WaitlistEntry({
+        userId: USER_ID,
+        name: 'Sam',
+        speciesRequests: [{ species: 'Fancy Rat', genders: ['Any'], amount: 1 }],
+    });
+    const obj = entry.toObject();
+    assert.equal(obj.contactId, null);
+    assert.equal(obj.contactName, '');
+});
+
+test('waitlist assignedAnimals snapshot keeps species and gender', () => {
+    const entry = new WaitlistEntry({
+        userId: new (require('mongoose').Types.ObjectId)('64b7f1c2a1b2c3d4e5f60718'),
+        name: 'Jane',
+        speciesRequests: [{ species: 'Fancy Mouse', genders: ['Female'], amount: 2 }],
+        assignedAnimals: [
+            { id_public: 'CTC1', name: 'Peanut', species: 'Fancy Mouse', gender: 'Female' },
+            { id_public: 'CTC2', name: 'Butter', species: 'Fancy Rat', gender: 'Male' },
+        ],
+    });
+    const snapshot = entry.toObject().assignedAnimals;
+    assert.equal(snapshot.length, 2);
+    assert.equal(snapshot[0].species, 'Fancy Mouse');
+    assert.equal(snapshot[0].gender, 'Female');
+    assert.equal(snapshot[1].species, 'Fancy Rat');
+    assert.equal(snapshot[1].gender, 'Male');
+});
+
+test('waitlist assignedAnimals snapshot defaults species/gender to empty strings', () => {
+    const entry = new WaitlistEntry({
+        userId: new (require('mongoose').Types.ObjectId)('64b7f1c2a1b2c3d4e5f60718'),
+        name: 'Sam',
+        assignedAnimals: [{ id_public: 'CTC9' }],
+    });
+    const snapshot = entry.toObject().assignedAnimals;
+    assert.equal(snapshot[0].species, '');
+    assert.equal(snapshot[0].gender, '');
+});
+
+
+test('applyContactToEntry leaves the link untouched when contactId is undefined', async () => {
+    const contactId = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60710');
+    const entry = { contactId, contactName: 'Jane Doe' };
+    stubContactFindOne(() => { throw new Error('should not query the database'); });
+    const result = await applyContactToEntry(entry, undefined, USER_ID);
+    assert.equal(result, null);
+    assert.equal(String(entry.contactId), String(contactId));
+    assert.equal(entry.contactName, 'Jane Doe');
+});
+
+test('applyContactToEntry explicitly unlinks when contactId is null', async () => {
+    const entry = {
+        contactId: new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60711'),
+        contactName: 'Jane Doe',
+    };
+    stubContactFindOne(() => { throw new Error('should not query the database'); });
+    const result = await applyContactToEntry(entry, null, USER_ID);
+    assert.equal(result, null);
+    assert.equal(entry.contactId, null);
+    assert.equal(entry.contactName, '');
+});
+
+test('applyContactToEntry replaces the link when a different contact is assigned', async () => {
+    const contact = {
+        _id: new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60712'),
+        personalName: 'New Person',
+    };
+    stubContactFindOne(() => ({ lean: async () => contact }));
+    const entry = {
+        contactId: new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60713'),
+        contactName: 'Old Person',
+    };
+    const result = await applyContactToEntry(entry, contact._id, USER_ID);
+    assert.equal(result, null);
+    assert.equal(String(entry.contactId), String(contact._id));
+    assert.equal(entry.contactName, 'New Person');
+});
+
+test('applyContactToEntry is a no-op when the same contact is re-sent', async () => {
+    // The contact may have been deleted in the meantime; re-sending the same id must not
+    // fail the whole PATCH (e.g. when only the notes were edited).
+    const contactId = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60714');
+    const entry = { contactId, contactName: 'Jane Doe' };
+    stubContactFindOne(() => { throw new Error('should not query the database'); });
+    const result = await applyContactToEntry(entry, String(contactId), USER_ID);
+    assert.equal(result, null);
+    assert.equal(String(entry.contactId), String(contactId));
+    assert.equal(entry.contactName, 'Jane Doe');
+});
+
+test('applyContactToEntry reports an error for an unknown contact', async () => {
+    stubContactFindOne(() => ({ lean: async () => null }));
+    const entry = { contactId: null, contactName: '' };
+    const result = await applyContactToEntry(entry, new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60715'), USER_ID);
+    assert.equal(result.error, 'Contact not found');
+    // The entry must be left untouched when the link could not be resolved.
+    assert.equal(entry.contactId, null);
+});
+
+test('applyContactToEntry reports an error for a malformed contactId', async () => {
+    stubContactFindOne(() => { throw new Error('should not query the database'); });
+    const entry = { contactId: null, contactName: '' };
+    const result = await applyContactToEntry(entry, 'not-an-object-id', USER_ID);
+    assert.equal(result.error, 'Invalid contactId');
+    assert.equal(entry.contactId, null);
+});
