@@ -998,6 +998,10 @@ app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
 const suppliesRoutes = require('./routes/suppliesRoutes');
 app.use('/api/supplies', authMiddleware, suppliesRoutes);
 
+// Waitlist Routes (Reservations page — Require authMiddleware)
+const waitlistRoutes = require('./routes/waitlistRoutes');
+app.use('/api/waitlist', authMiddleware, waitlistRoutes);
+
 // Contact Routes (Require authMiddleware)
 const contactRoutes = require('./routes/contactRoutes');
 app.use('/api/contacts', authMiddleware, contactRoutes);

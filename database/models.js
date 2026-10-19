@@ -721,6 +721,17 @@ const AnimalSchema = new mongoose.Schema({
     buyerContact: { type: String, default: null },
     // Links to the Budget Tracker Transaction auto-created/synced from saleDate+salePrice above.
     saleTransactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', default: null },
+    // Reservations page (Finance → Reservations): planned sale held per animal BEFORE the
+    // actual rehome. Mirrors the Sale info shape so "Rehomed" can promote it into sale* above.
+    reservedBuyerName: { type: String, default: null },
+    reservedBuyerContact: { type: String, default: null },
+    reservedWaitlistEntryId: { type: mongoose.Schema.Types.ObjectId, ref: 'WaitlistEntry', default: null },
+    reservedPrice: { type: Number, default: null },
+    reservedPriceCurrency: { type: String, default: 'USD' },
+    reservedDeposit: { type: Number, default: null },
+    reservedDepositStatus: { type: String, enum: ['due', 'done', null], default: null },
+    reservedPaymentStatus: { type: String, enum: ['due', 'done', null], default: null },
+    reservedDate: { type: Date, default: null },
     breedingRightsPurchased: { type: String, default: null },
     showRightsPurchased: { type: String, default: null },
     exportRightsPurchased: { type: String, default: null },
@@ -1061,6 +1072,12 @@ const LitterSchema = new mongoose.Schema({
     maleLossesCount: { type: Number, default: null },
     femaleLossesCount: { type: Number, default: null },
     unknownLossesCount: { type: Number, default: null },
+
+    // Cull tracking — when hasCulls is true, cullsCount records how many of the
+    // total losses were deliberate culls (extracted into their own "Culls" stat
+    // on the overview; the remaining "Losses" stat shows non-cull losses only).
+    hasCulls: { type: Boolean, default: false },
+    cullsCount: { type: Number, default: null },
 
     // Extraction flags — when true, the M/F/U counts above have already been reduced
     // by the corresponding stillborn/losses breakdown (i.e., they represent live/surviving only)
@@ -1597,6 +1614,27 @@ const TransactionSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Transaction = mongoose.model('Transaction', TransactionSchema);
 
+// --- WAITLIST ENTRY SCHEMA (Reservations page → Waitlist tab) ---
+const WaitlistEntrySchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    name: { type: String, required: true },
+    contactInfo: { type: String, default: '' }, // phone, email, address — one text field
+    species: { type: String, default: '' },
+    genders: { type: [String], default: [] }, // e.g. ['Female'], ['Male','Female'], ['Any']
+    amount: { type: Number, default: 1 },
+    notes: { type: String, default: '' },
+    isActive: { type: Boolean, default: true, index: true }, // false = moved to history
+    // Snapshot kept when "finalized" — which animals were assigned to them via the picker.
+    assignedAnimals: [{
+        id_public: { type: String },
+        name: { type: String },
+        assignedAt: { type: Date, default: Date.now },
+    }],
+    finalizedAt: { type: Date, default: null },
+    createdAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+const WaitlistEntry = mongoose.model('WaitlistEntry', WaitlistEntrySchema);
+
 
 // --- 17. ANIMAL TRANSFER SCHEMA ---
 // --- ANIMAL TRANSFER SCHEMA (REFINED) ---
@@ -2057,6 +2095,7 @@ module.exports = {
     ResourceSuggestion,
     GeneticsData,
     Transaction,
+    WaitlistEntry,
     AnimalTransfer,
     Enclosure,
     EnclosureLog,
