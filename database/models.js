@@ -1623,8 +1623,14 @@ const WaitlistEntrySchema = new mongoose.Schema({
     // its own amount + genders (e.g. "7 mice: 3F/4M AND 4 rats: 2F/2M").
     speciesRequests: [{
         species: { type: String, default: '' },
-        genders: { type: [String], default: [] }, // ['Male'], ['Female','Male'], ['Any']
-        amount: { type: Number, default: 1 },
+        genders: { type: [String], default: [] }, // derived from genderCounts (kept for older readers)
+        // Per-gender split, e.g. 3 Male + 2 Female. 'Any' = gender doesn't matter.
+        genderCounts: [{
+            _id: false,
+            gender: { type: String, enum: ['Male', 'Female', 'Any'] },
+            count: { type: Number, min: 1, default: 1 },
+        }],
+        amount: { type: Number, default: 1 }, // total = sum of genderCounts
     }],
     // Legacy single-species fields (kept for backward compat; speciesRequests is canonical).
     species: { type: String, default: '' },

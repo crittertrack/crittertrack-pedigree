@@ -2,6 +2,33 @@ const express = require('express');
 const router = express.Router();
 const { WaitlistEntry, Animal } = require('../database/models');
 
+const VALID_GENDERS = ['Male', 'Female', 'Any'];
+
+// Normalise one species request into { species, genderCounts, genders, amount }.
+// Accepts the new `genderCounts` shape or the legacy `genders` + total `amount`.
+function normalizeSpeciesRequest(r) {
+    const species = r.species.trim();
+    let genderCounts = [];
+    if (Array.isArray(r.genderCounts)) {
+        genderCounts = r.genderCounts
+            .filter(c => VALID_GENDERS.includes(c?.gender) && Number(c.count) > 0)
+            .map(c => ({ gender: c.gender, count: Math.floor(Number(c.count)) }));
+    }
+    if (genderCounts.length === 0) {
+        const total = r.amount !== '' && r.amount != null && Number(r.amount) > 0 ? Math.floor(Number(r.amount)) : 1;
+        const g = (Array.isArray(r.genders) ? r.genders : []).filter(x => VALID_GENDERS.includes(x));
+        genderCounts = g.length === 1 && g[0] !== 'Any'
+            ? [{ gender: g[0], count: total }]
+            : [{ gender: 'Any', count: total }];
+    }
+    return {
+        species,
+        genderCounts,
+        genders: genderCounts.map(c => c.gender),
+        amount: genderCounts.reduce((s, c) => s + c.count, 0),
+    };
+}
+
 // GET /api/waitlist — list all entries owned by the current user (newest first)
 router.get('/', async (req, res) => {
     try {
@@ -30,20 +57,18 @@ router.post('/', async (req, res) => {
             }];
         }
         requests = requests.filter(r => r.species?.trim());
+        if (requests.length === 0) return res.status(400).json({ message: 'At least one species is required' });
+        const normalized = requests.map(normalizeSpeciesRequest);
 
         const entry = new WaitlistEntry({
             userId: req.user.id,
             name: name.trim(),
             contactInfo: contactInfo || '',
-            speciesRequests: requests.map(r => ({
-                species: r.species.trim(),
-                genders: Array.isArray(r.genders) ? r.genders : [],
-                amount: r.amount !== '' && r.amount != null ? Number(r.amount) : 1,
-            })),
+            speciesRequests: normalized,
             // Mirror canonical request into legacy fields for quick lookup.
-            species: requests[0]?.species || '',
-            genders: requests[0]?.genders || [],
-            amount: requests[0]?.amount ?? 1,
+            species: normalized[0]?.species || '',
+            genders: normalized[0]?.genders || [],
+            amount: normalized[0]?.amount ?? 1,
             notes: notes || '',
         });
         await entry.save();
@@ -62,11 +87,7 @@ router.patch('/:id', async (req, res) => {
         if (name !== undefined) entry.name = name.trim();
         if (contactInfo !== undefined) entry.contactInfo = contactInfo;
         if (Array.isArray(speciesRequests)) {
-            entry.speciesRequests = speciesRequests.filter(r => r.species?.trim()).map(r => ({
-                species: r.species.trim(),
-                genders: Array.isArray(r.genders) ? r.genders : [],
-                amount: r.amount !== '' && r.amount != null ? Number(r.amount) : 1,
-            }));
+            entry.speciesRequests = speciesRequests.filter(r => r.species?.trim()).map(normalizeSpeciesRequest);
             const first = entry.speciesRequests[0];
             if (first) { entry.species = first.species; entry.genders = first.genders; entry.amount = first.amount; }
         } else {
