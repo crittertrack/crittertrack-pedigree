@@ -1619,8 +1619,16 @@ const WaitlistEntrySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true },
     contactInfo: { type: String, default: '' }, // phone, email, address — one text field
+    // Multi-species waitlist request: one entry can want several species, each with
+    // its own amount + genders (e.g. "7 mice: 3F/4M AND 4 rats: 2F/2M").
+    speciesRequests: [{
+        species: { type: String, default: '' },
+        genders: { type: [String], default: [] }, // ['Male'], ['Female','Male'], ['Any']
+        amount: { type: Number, default: 1 },
+    }],
+    // Legacy single-species fields (kept for backward compat; speciesRequests is canonical).
     species: { type: String, default: '' },
-    genders: { type: [String], default: [] }, // e.g. ['Female'], ['Male','Female'], ['Any']
+    genders: { type: [String], default: [] },
     amount: { type: Number, default: 1 },
     notes: { type: String, default: '' },
     isActive: { type: Boolean, default: true, index: true }, // false = moved to history

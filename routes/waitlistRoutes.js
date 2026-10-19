@@ -12,18 +12,38 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/waitlist — create a new waitlist entry
+// POST /api/waitlist — create a new waitlist entry (multi-species)
 router.post('/', async (req, res) => {
     try {
-        const { name, contactInfo, species, genders, amount, notes } = req.body;
+        const { name, contactInfo, speciesRequests, species, genders, amount, notes } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
+
+        // Normalize speciesRequests: array of { species, genders, amount }
+        let requests = speciesRequests;
+        if (!Array.isArray(requests) || requests.length === 0) {
+            // Backward compat: build a single request from legacy fields
+            if (!species?.trim()) return res.status(400).json({ message: 'At least one species is required' });
+            requests = [{
+                species: species.trim(),
+                genders: Array.isArray(genders) ? genders : [],
+                amount: amount !== '' && amount != null ? Number(amount) : 1,
+            }];
+        }
+        requests = requests.filter(r => r.species?.trim());
+
         const entry = new WaitlistEntry({
             userId: req.user.id,
             name: name.trim(),
             contactInfo: contactInfo || '',
-            species: species || '',
-            genders: Array.isArray(genders) ? genders : [],
-            amount: amount !== '' && amount != null ? Number(amount) : 1,
+            speciesRequests: requests.map(r => ({
+                species: r.species.trim(),
+                genders: Array.isArray(r.genders) ? r.genders : [],
+                amount: r.amount !== '' && r.amount != null ? Number(r.amount) : 1,
+            })),
+            // Mirror canonical request into legacy fields for quick lookup.
+            species: requests[0]?.species || '',
+            genders: requests[0]?.genders || [],
+            amount: requests[0]?.amount ?? 1,
             notes: notes || '',
         });
         await entry.save();
@@ -33,17 +53,27 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PATCH /api/waitlist/:id — update a waitlist entry
+// PATCH /api/waitlist/:id — update a waitlist entry (multi-species)
 router.patch('/:id', async (req, res) => {
     try {
         const entry = await WaitlistEntry.findOne({ _id: req.params.id, userId: req.user.id });
         if (!entry) return res.status(404).json({ message: 'Waitlist entry not found' });
-        const { name, contactInfo, species, genders, amount, notes, isActive } = req.body;
+        const { name, contactInfo, speciesRequests, species, genders, amount, notes, isActive } = req.body;
         if (name !== undefined) entry.name = name.trim();
         if (contactInfo !== undefined) entry.contactInfo = contactInfo;
-        if (species !== undefined) entry.species = species;
-        if (genders !== undefined) entry.genders = Array.isArray(genders) ? genders : [];
-        if (amount !== undefined) entry.amount = amount !== '' && amount != null ? Number(amount) : 1;
+        if (Array.isArray(speciesRequests)) {
+            entry.speciesRequests = speciesRequests.filter(r => r.species?.trim()).map(r => ({
+                species: r.species.trim(),
+                genders: Array.isArray(r.genders) ? r.genders : [],
+                amount: r.amount !== '' && r.amount != null ? Number(r.amount) : 1,
+            }));
+            const first = entry.speciesRequests[0];
+            if (first) { entry.species = first.species; entry.genders = first.genders; entry.amount = first.amount; }
+        } else {
+            if (species !== undefined) entry.species = species;
+            if (genders !== undefined) entry.genders = Array.isArray(genders) ? genders : [];
+            if (amount !== undefined) entry.amount = amount !== '' && amount != null ? Number(amount) : 1;
+        }
         if (notes !== undefined) entry.notes = notes;
         if (isActive !== undefined) entry.isActive = !!isActive;
         await entry.save();
@@ -62,8 +92,14 @@ router.post('/:id/finalize', async (req, res) => {
         const assigned = await Animal.find({
             creatorId: req.user.id,
             reservedWaitlistEntryId: entry._id,
-        }).select('id_public name').lean();
-        entry.assignedAnimals = assigned.map(a => ({ id_public: a.id_public, name: a.name, assignedAt: new Date() }));
+        }).select('id_public name species gender').lean();
+        entry.assignedAnimals = assigned.map(a => ({
+            id_public: a.id_public,
+            name: a.name,
+            species: a.species,
+            gender: a.gender,
+            assignedAt: new Date(),
+        }));
         entry.isActive = false;
         entry.finalizedAt = new Date();
         await entry.save();
