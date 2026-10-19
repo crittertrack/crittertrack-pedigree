@@ -87,11 +87,14 @@ test('resolveContact treats an explicit null contactId as an unlink', async () =
     assert.equal(result.error, undefined);
 });
 
-test('getContactName falls back through personal name, breeder name and CTU id', () => {
+test('getContactName mirrors the frontend contact picker display name', () => {
     assert.equal(getContactName({ personalName: 'Ann', breederName: 'AnnB' }), 'Ann (AnnB)');
     assert.equal(getContactName({ personalName: 'Ann' }), 'Ann');
     assert.equal(getContactName({ breederName: 'Bob' }), 'Bob');
-    assert.equal(getContactName({ linkedCTUID: 'CTU-9' }), 'CTU-9');
+    // Prefix/suffix are included when there is no breeder name, matching the picker.
+    assert.equal(getContactName({ prefix: 'Dr', personalName: 'Ann', suffix: 'Jr' }), 'Dr Ann Jr');
+    assert.equal(getContactName({ prefix: 'Dr', breederName: 'Bob', suffix: 'Jr' }), 'Dr Bob Jr');
+    assert.equal(getContactName({ linkedCTUID: 'CTU-9' }), 'Unnamed Contact');
     assert.equal(getContactName({}), 'Unnamed Contact');
 });
 

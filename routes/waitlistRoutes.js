@@ -76,14 +76,18 @@ async function applyContactToEntry(entry, contactId, userId) {
     return null;
 }
 
-// Display name for a contact record, mirroring the frontend's contact picker.
+// Display name for a contact record, mirroring the frontend's contact picker
+// (ContactAssignModal.getContactDisplayName) so the name shown on the waitlist card
+// and the attendee name stored in the entry are always the same string.
 function getContactName(contact) {
     const personal = (contact.personalName || '').trim();
     const breeder = (contact.breederName || '').trim();
+    const prefix = (contact.prefix || '').trim();
+    const suffix = (contact.suffix || '').trim();
     if (personal && breeder) return `${personal} (${breeder})`;
-    if (personal) return personal;
-    if (breeder) return breeder;
-    return (contact.linkedCTUID || '').trim() || 'Unnamed Contact';
+    if (personal) return [prefix, personal, suffix].filter(Boolean).join(' ');
+    if (breeder) return [prefix, breeder, suffix].filter(Boolean).join(' ');
+    return [prefix, personal, suffix].filter(Boolean).join(' ') || 'Unnamed Contact';
 }
 
 // GET /api/waitlist — list all entries owned by the current user (newest first)
