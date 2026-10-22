@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const { WaitlistEntry } = require('../database/models');
 const Contact = require('../database/contactModel');
 const waitlistRouter = require('../routes/waitlistRoutes');
-const { resolveContact, getContactName, applyContactToEntry } = waitlistRouter;
+const { resolveContact, getContactName, applyContactToEntry, sortWaitlistEntries } = waitlistRouter;
 
 const USER_ID = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60701');
 const OTHER_USER_ID = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60702');
@@ -150,6 +150,86 @@ test('waitlist assignedAnimals snapshot defaults species/gender to empty strings
     const snapshot = entry.toObject().assignedAnimals;
     assert.equal(snapshot[0].species, '');
     assert.equal(snapshot[0].gender, '');
+});
+
+test('waitlist assignedAnimals snapshot keeps prefix and suffix', () => {
+    const entry = new WaitlistEntry({
+        userId: new (require('mongoose').Types.ObjectId)('64b7f1c2a1b2c3d4e5f60718'),
+        name: 'Jane',
+        assignedAnimals: [
+            { id_public: 'CTC1', name: 'Peanut', prefix: 'Fancy', suffix: 'of Windwhistle', species: 'Fancy Mouse', gender: 'Female' },
+        ],
+    });
+    const snapshot = entry.toObject().assignedAnimals;
+    assert.equal(snapshot[0].prefix, 'Fancy');
+    assert.equal(snapshot[0].suffix, 'of Windwhistle');
+});
+
+test('waitlist assignedAnimals snapshot defaults prefix/suffix to empty strings', () => {
+    const entry = new WaitlistEntry({
+        userId: new (require('mongoose').Types.ObjectId)('64b7f1c2a1b2c3d4e5f60718'),
+        name: 'Sam',
+        assignedAnimals: [{ id_public: 'CTC9' }],
+    });
+    const snapshot = entry.toObject().assignedAnimals;
+    assert.equal(snapshot[0].prefix, '');
+    assert.equal(snapshot[0].suffix, '');
+});
+
+// --- Waitlist ordering -----------------------------------------------------------------
+
+const mkEntry = (name, entryDate, sortOrder) => ({ name, entryDate, sortOrder });
+
+test('sortWaitlistEntries orders by entry date for oldest and newest', () => {
+    const entries = [
+        mkEntry('B', '2026-01-02', 0),
+        mkEntry('A', '2026-01-01', 0),
+        mkEntry('C', '2026-01-03', 0),
+    ];
+    assert.deepEqual(
+        sortWaitlistEntries(entries, 'oldest').map(e => e.name),
+        ['A', 'B', 'C']
+    );
+    assert.deepEqual(
+        sortWaitlistEntries(entries, 'newest').map(e => e.name),
+        ['C', 'B', 'A']
+    );
+});
+
+test('sortWaitlistEntries honours the requested order even when entries are positioned', () => {
+    // The old implementation force-switched to the manual order as soon as any entry
+    // had a position, which silently broke the oldest/newest toggle.
+    const entries = [
+        mkEntry('A', '2026-01-01', 2),
+        mkEntry('B', '2026-01-02', 1),
+    ];
+    assert.deepEqual(
+        sortWaitlistEntries(entries, 'oldest').map(e => e.name),
+        ['A', 'B']
+    );
+    assert.deepEqual(
+        sortWaitlistEntries(entries, 'newest').map(e => e.name),
+        ['B', 'A']
+    );
+});
+
+test('sortWaitlistEntries puts never-positioned entries last in the custom order', () => {
+    const entries = [
+        mkEntry('Unpositioned', '2026-01-01', 0),
+        mkEntry('Third', '2026-01-02', 3),
+        mkEntry('First', '2026-01-03', 1),
+        mkEntry('Second', '2026-01-04', 2),
+    ];
+    assert.deepEqual(
+        sortWaitlistEntries(entries, 'manual').map(e => e.name),
+        ['First', 'Second', 'Third', 'Unpositioned']
+    );
+});
+
+test('sortWaitlistEntries does not mutate the input array', () => {
+    const entries = [mkEntry('B', '2026-01-02', 0), mkEntry('A', '2026-01-01', 0)];
+    sortWaitlistEntries(entries, 'oldest');
+    assert.deepEqual(entries.map(e => e.name), ['B', 'A']);
 });
 
 

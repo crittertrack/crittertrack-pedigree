@@ -1652,6 +1652,10 @@ const WaitlistEntrySchema = new mongoose.Schema({
     assignedAnimals: [{
         id_public: { type: String },
         name: { type: String },
+        // Display parts of the animal's name, snapshotted with the assignment so the
+        // waitlist card can show the full name (prefix + name + suffix).
+        prefix: { type: String, default: '' },
+        suffix: { type: String, default: '' },
         species: { type: String, default: '' },
         gender: { type: String, default: '' },
         assignedAt: { type: Date, default: Date.now },

@@ -90,28 +90,51 @@ function getContactName(contact) {
     return [prefix, personal, suffix].filter(Boolean).join(' ') || 'Unnamed Contact';
 }
 
+// Sort a list of waitlist entries into the requested order.
+//
+// 'oldest' / 'newest' order by entry date. 'manual' is the custom order set with the
+// chevrons on each card: entries with a stored position come first in that order, and
+// entries that were never positioned (sortOrder 0) go LAST — otherwise every newly
+// added entry jumped to the top and scrambled the order the user had set.
+//
+// Sorting happens in JS rather than in mongo so the "never positioned" rule can be
+// applied (mongo would sort those 0s to the front).
+function sortWaitlistEntries(entries, sortParam) {
+    const byEntryDate = (a, b) => {
+        const da = new Date(a.entryDate || a.createdAt).getTime();
+        const db = new Date(b.entryDate || b.createdAt).getTime();
+        return da - db;
+    };
+    const sorted = [...entries];
+    if (sortParam === 'newest') {
+        sorted.sort((a, b) => byEntryDate(b, a));
+    } else if (sortParam === 'manual') {
+        sorted.sort((a, b) => {
+            const sa = a.sortOrder > 0 ? a.sortOrder : Infinity;
+            const sb = b.sortOrder > 0 ? b.sortOrder : Infinity;
+            if (sa !== sb) return sa - sb;
+            return byEntryDate(a, b);
+        });
+    } else {
+        sorted.sort(byEntryDate);
+    }
+    return sorted;
+}
+
 // GET /api/waitlist — list all entries owned by the current user.
+// Query: ?sort=oldest|newest|manual — the order the caller wants.
+//
+// The order is honoured exactly. The old implementation force-switched to the
+// manual order as soon as *any* entry had been positioned, which silently broke
+// the "Oldest/Newest" toggle for everyone who had ever used the chevrons.
 router.get('/', async (req, res) => {
     try {
         const sortParam = (req.query.sort || 'oldest').toString();
-        const hasManualOrder = await WaitlistEntry.exists({
-            userId: req.user.id,
-            sortOrder: { $ne: 0 },
-        });
-        let sort = {};
-        if (hasManualOrder) {
-            sort = { sortOrder: 1, entryDate: 1 };
-        } else if (sortParam === 'newest') {
-            sort = { entryDate: -1 };
-        } else {
-            sort = { entryDate: 1 };
-        }
         const entries = await WaitlistEntry.find({ userId: req.user.id })
-            .sort(sort)
             // Populate the linked contact so the client can show its details without
             // an extra request. contactName stays as the snapshot taken when linking.
             .populate('contactId', 'personalName breederName prefix suffix linkedCTUID address');
-        res.json(entries);
+        res.json(sortWaitlistEntries(entries, sortParam));
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch waitlist', error: err.message });
     }
@@ -221,10 +244,14 @@ router.post('/:id/finalize', async (req, res) => {
         const assigned = await Animal.find({
             creatorId: req.user.id,
             reservedWaitlistEntryId: entry._id,
-        }).select('id_public name species gender').lean();
+        }).select('id_public name prefix suffix species gender').lean();
         entry.assignedAnimals = assigned.map(a => ({
             id_public: a.id_public,
             name: a.name,
+            // prefix/suffix are part of the snapshot so the waitlist card can show the
+            // animal's full display name (e.g. "Ratsy Doe of Windwhistle") later on.
+            prefix: a.prefix || '',
+            suffix: a.suffix || '',
             species: a.species,
             gender: a.gender,
             assignedAt: new Date(),
@@ -254,3 +281,4 @@ module.exports = router;
 module.exports.resolveContact = resolveContact;
 module.exports.getContactName = getContactName;
 module.exports.applyContactToEntry = applyContactToEntry;
+module.exports.sortWaitlistEntries = sortWaitlistEntries;
