@@ -1658,6 +1658,13 @@ const WaitlistEntrySchema = new mongoose.Schema({
         suffix: { type: String, default: '' },
         species: { type: String, default: '' },
         gender: { type: String, default: '' },
+        // The reservation money is snapshotted with the assignment so a finalized
+        // entry can still show the deposit/payment totals for its animals.
+        reservedPrice: { type: Number, default: null },
+        reservedPriceCurrency: { type: String, default: 'USD' },
+        reservedDeposit: { type: Number, default: null },
+        reservedDepositStatus: { type: String, enum: ['due', 'done', null], default: null },
+        reservedPaymentStatus: { type: String, enum: ['due', 'done', null], default: null },
         assignedAt: { type: Date, default: Date.now },
     }],
     finalizedAt: { type: Date, default: null },

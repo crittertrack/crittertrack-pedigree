@@ -176,6 +176,37 @@ test('waitlist assignedAnimals snapshot defaults prefix/suffix to empty strings'
     assert.equal(snapshot[0].suffix, '');
 });
 
+test('waitlist assignedAnimals snapshot keeps the reservation money', () => {
+    const entry = new WaitlistEntry({
+        userId: new (require('mongoose').Types.ObjectId)('64b7f1c2a1b2c3d4e5f60718'),
+        name: 'Jane',
+        assignedAnimals: [{
+            id_public: 'CTC1', name: 'Peanut', species: 'Fancy Mouse', gender: 'Female',
+            reservedPrice: 40, reservedPriceCurrency: 'EUR', reservedDeposit: 20,
+            reservedDepositStatus: 'due', reservedPaymentStatus: 'due',
+        }],
+    });
+    const snapshot = entry.toObject().assignedAnimals;
+    assert.equal(snapshot[0].reservedPrice, 40);
+    assert.equal(snapshot[0].reservedPriceCurrency, 'EUR');
+    assert.equal(snapshot[0].reservedDeposit, 20);
+    assert.equal(snapshot[0].reservedDepositStatus, 'due');
+    assert.equal(snapshot[0].reservedPaymentStatus, 'due');
+});
+
+test('waitlist assignedAnimals snapshot defaults the reservation money to empty', () => {
+    const entry = new WaitlistEntry({
+        userId: new (require('mongoose').Types.ObjectId)('64b7f1c2a1b2c3d4e5f60718'),
+        name: 'Sam',
+        assignedAnimals: [{ id_public: 'CTC9' }],
+    });
+    const snapshot = entry.toObject().assignedAnimals;
+    assert.equal(snapshot[0].reservedPrice, null);
+    assert.equal(snapshot[0].reservedDeposit, null);
+    assert.equal(snapshot[0].reservedDepositStatus, null);
+    assert.equal(snapshot[0].reservedPaymentStatus, null);
+});
+
 // --- Waitlist ordering -----------------------------------------------------------------
 
 const mkEntry = (name, entryDate, sortOrder) => ({ name, entryDate, sortOrder });

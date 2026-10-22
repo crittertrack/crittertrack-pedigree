@@ -244,7 +244,7 @@ router.post('/:id/finalize', async (req, res) => {
         const assigned = await Animal.find({
             creatorId: req.user.id,
             reservedWaitlistEntryId: entry._id,
-        }).select('id_public name prefix suffix species gender').lean();
+        }).select('id_public name prefix suffix species gender reservedPrice reservedPriceCurrency reservedDeposit reservedDepositStatus reservedPaymentStatus').lean();
         entry.assignedAnimals = assigned.map(a => ({
             id_public: a.id_public,
             name: a.name,
@@ -254,6 +254,14 @@ router.post('/:id/finalize', async (req, res) => {
             suffix: a.suffix || '',
             species: a.species,
             gender: a.gender,
+            // The reservation money is snapshotted too, so a finalized entry can still
+            // show what deposit/payment was due for its animals after the reservations
+            // have been cleared by the rehome flow.
+            reservedPrice: a.reservedPrice ?? null,
+            reservedPriceCurrency: a.reservedPriceCurrency || 'USD',
+            reservedDeposit: a.reservedDeposit ?? null,
+            reservedDepositStatus: a.reservedDepositStatus || null,
+            reservedPaymentStatus: a.reservedPaymentStatus || null,
             assignedAt: new Date(),
         }));
         entry.isActive = false;
