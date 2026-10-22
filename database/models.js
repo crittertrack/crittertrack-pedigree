@@ -1657,6 +1657,10 @@ const WaitlistEntrySchema = new mongoose.Schema({
         assignedAt: { type: Date, default: Date.now },
     }],
     finalizedAt: { type: Date, default: null },
+    // Date the person was added to / requested the waitlist (user-facing entry date).
+    entryDate: { type: Date, default: Date.now },
+    // Manual position for reordering (0 = not manually positioned; sort falls back to entryDate).
+    sortOrder: { type: Number, default: 0, index: true },
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 const WaitlistEntry = mongoose.model('WaitlistEntry', WaitlistEntrySchema);

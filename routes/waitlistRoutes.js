@@ -90,11 +90,24 @@ function getContactName(contact) {
     return [prefix, personal, suffix].filter(Boolean).join(' ') || 'Unnamed Contact';
 }
 
-// GET /api/waitlist — list all entries owned by the current user (newest first)
+// GET /api/waitlist — list all entries owned by the current user.
 router.get('/', async (req, res) => {
     try {
+        const sortParam = (req.query.sort || 'oldest').toString();
+        const hasManualOrder = await WaitlistEntry.exists({
+            userId: req.user.id,
+            sortOrder: { $ne: 0 },
+        });
+        let sort = {};
+        if (hasManualOrder) {
+            sort = { sortOrder: 1, entryDate: 1 };
+        } else if (sortParam === 'newest') {
+            sort = { entryDate: -1 };
+        } else {
+            sort = { entryDate: 1 };
+        }
         const entries = await WaitlistEntry.find({ userId: req.user.id })
-            .sort({ createdAt: -1 })
+            .sort(sort)
             // Populate the linked contact so the client can show its details without
             // an extra request. contactName stays as the snapshot taken when linking.
             .populate('contactId', 'personalName breederName prefix suffix linkedCTUID address');
@@ -152,7 +165,7 @@ router.patch('/:id', async (req, res) => {
     try {
         const entry = await WaitlistEntry.findOne({ _id: req.params.id, userId: req.user.id });
         if (!entry) return res.status(404).json({ message: 'Waitlist entry not found' });
-        const { name, contactInfo, speciesRequests, species, genders, amount, notes, isActive, contactId } = req.body;
+        const { name, contactInfo, speciesRequests, species, genders, amount, notes, isActive, contactId, sortOrder, entryDate } = req.body;
         if (name !== undefined) entry.name = name.trim();
         if (contactInfo !== undefined) entry.contactInfo = contactInfo;
         // contactId === null explicitly unlinks the contact; undefined leaves it as-is.
@@ -169,10 +182,33 @@ router.patch('/:id', async (req, res) => {
         }
         if (notes !== undefined) entry.notes = notes;
         if (isActive !== undefined) entry.isActive = !!isActive;
+        if (sortOrder !== undefined) entry.sortOrder = Number(sortOrder) || 0;
+        if (entryDate !== undefined) entry.entryDate = entryDate ? new Date(entryDate) : null;
         await entry.save();
         res.json(entry);
     } catch (err) {
         res.status(500).json({ message: 'Failed to update waitlist entry', error: err.message });
+    }
+});
+
+// POST /api/waitlist/reorder — bulk-assign sortOrder from an ordered ID list (move up/down).
+// Body: { orderedIds: [id1, id2, id3, ...] } — assigns sortOrder 1, 2, 3, … in list order.
+router.post('/reorder', async (req, res) => {
+    try {
+        const { orderedIds } = req.body;
+        if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+            return res.status(400).json({ message: 'orderedIds is required' });
+        }
+        const bulkOps = orderedIds.map((id, index) => ({
+            updateOne: {
+                filter: { _id: id, userId: req.user.id },
+                update: { $set: { sortOrder: index + 1 } },
+            },
+        }));
+        await WaitlistEntry.bulkWrite(bulkOps);
+        res.json({ message: 'Reordered' });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to reorder waitlist', error: err.message });
     }
 });
 
