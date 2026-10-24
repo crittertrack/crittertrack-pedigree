@@ -34,6 +34,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const locationsRoutes = require('./routes/locations');
 const adminAccountRoutes = require('./routes/adminAccountRoutes');
 const adminAccountModeMiddleware = require('./middleware/adminAccountMode');
+const vmRoutes = require('./src/virtual-mousery/routes/vmRoutes');
 
 
 const app = express();
@@ -953,6 +954,9 @@ app.use('/api/budget', authMiddleware, budgetRoutes);
 // Transfer Routes (Require authMiddleware)
 const transferRoutes = require('./routes/transferRoutes');
 app.use('/api/transfers', authMiddleware, transferRoutes);
+
+// Virtual Mousery Routes (Require authMiddleware - uses existing JWT token)
+app.use('/api/virtual-mousery', authMiddleware, vmRoutes);
 
 // Genetics Feedback Routes (Require authMiddleware)
 const geneticsFeedbackRoutes = require('./routes/geneticsFeedbackRoutes');
