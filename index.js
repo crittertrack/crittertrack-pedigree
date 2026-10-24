@@ -34,7 +34,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const locationsRoutes = require('./routes/locations');
 const adminAccountRoutes = require('./routes/adminAccountRoutes');
 const adminAccountModeMiddleware = require('./middleware/adminAccountMode');
-const vmRoutes = require('./src/virtual-mousery/routes/vmRoutes');
+const vmRoutes = require('./routes/virtual-mousery/vmRoutes');
 
 
 const app = express();
