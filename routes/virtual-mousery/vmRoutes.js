@@ -7,7 +7,7 @@ const router = express.Router();
 // @route   POST /api/virtual-mousery/setup
 // @desc    Save user's name + logo choice to separate VM database
 // @access  Private (uses existing JWT token from login - NO changes needed!)
-router.post('/', authMiddleware.protect, async (req, res) => {
+router.post('/setup', authMiddleware.protect, async (req, res) => {
     try {
         const { name, logoIndex } = req.body;
         const userId = req.user.id; // From EXISTING login token - NO changes needed!
@@ -56,7 +56,7 @@ router.post('/', authMiddleware.protect, async (req, res) => {
 // @route   GET /api/virtual-mousery/setup
 // @desc    Fetch user's saved name + logo from separate VM database
 // @access  Private (uses existing JWT token from login - NO changes needed!)
-router.get('/', authMiddleware.protect, async (req, res) => {
+router.get('/setup', authMiddleware.protect, async (req, res) => {
     try {
         const userId = req.user.id; // From EXISTING login token - NO changes needed!
 
@@ -96,7 +96,7 @@ router.get('/', authMiddleware.protect, async (req, res) => {
 // @route   PUT /api/virtual-mousery/setup
 // @desc    Update user's name + logo choice
 // @access  Private (uses existing JWT token from login)
-router.put('/', authMiddleware.protect, async (req, res) => {
+router.put('/setup', authMiddleware.protect, async (req, res) => {
     try {
         const { name, logoIndex } = req.body;
         const userId = req.user.id; // From EXISTING login token
