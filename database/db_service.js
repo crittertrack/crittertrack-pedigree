@@ -1896,6 +1896,22 @@ const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
         sanitizedUpdates.isPlanned = false;
     }
 
+    // Clearing a planned mating is not a "mated" action. If the caller explicitly
+    // sends `isPlanned: false` without supplying a `matingDate`, drop the mating
+    // fields too, otherwise the pruned plan is re-derived as `isInMating`
+    // ("mated") for both parents by reproStatusSync.
+    if (updates && updates.isPlanned === false) {
+        const matingDateExplicitlySet = Object.prototype.hasOwnProperty.call(updates, 'matingDate') &&
+            updates.matingDate !== '' &&
+            updates.matingDate !== null &&
+            updates.matingDate !== undefined;
+        if (!matingDateExplicitlySet) {
+            sanitizedUpdates.matingDate = null;
+            sanitizedUpdates.pairingDate = null;
+            sanitizedUpdates.expectedDueDate = null;
+        }
+    }
+
     const updatedLitter = await Litter.findOneAndUpdate(
         { _id: litterId_backend, $or: [{ creatorId: appUserId_backend }, { linkedOwners: appUserId_backend }] },
         { $set: sanitizedUpdates },
