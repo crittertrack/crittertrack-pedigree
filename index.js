@@ -348,6 +348,9 @@ app.use('/api/auth', authRoutes);
 // Public Data Routes
 app.use('/api/public', publicRoutes);
 
+// Virtual Mousery Routes (protected internally)
+app.use('/api/virtual-mousery', vmRoutes);
+
 // Admin Routes (for migrations and admin tasks)
 // app.use('/api/admin', adminRoutes);
 
