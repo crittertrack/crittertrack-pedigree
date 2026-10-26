@@ -249,7 +249,7 @@ const sendModConversationReplyNotification = async ({ adminEmail, userIdPublic, 
         console.log('[MOD REPLY EMAIL] Notification sent to:', adminEmail);
     } catch (error) {
         console.error('[MOD REPLY EMAIL] Failed to send notification:', error);
-        // Don't throw — email failure shouldn't block the message from being saved
+        // Don't throw email failure shouldn't block the message from being saved
     }
 };
 

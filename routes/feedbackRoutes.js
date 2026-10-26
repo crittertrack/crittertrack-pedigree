@@ -8,7 +8,7 @@ const { hasCompleteAutoValues } = require('../utils/autoWeaningDate');
 // Help Center "suggest gestation / weaning values for a species" -> moderation panel.
 // Needs a species and at least one duration (gestation or weaning, or both); see
 // utils/speciesValueSuggestion.js. Saved as a Feedback entry (type 'species-values') for a
-// moderator/admin to judge — nothing is applied automatically.
+// moderator/admin to judge nothing is applied automatically.
 router.post('/species-values', async (req, res) => {
     try {
         const checked = validateSpeciesValueSuggestion(req.body);

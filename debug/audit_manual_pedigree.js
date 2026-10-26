@@ -6,7 +6,7 @@
  * 14 slots across 3 generations; a slot counts as MANUAL when it has real content but no
  * `ctcId` (i.e. the name/genetics were typed in by hand rather than picked from a real animal).
  *
- * Read-only — this script never writes. It talks to Mongo through the raw driver rather than
+ * Read-only this script never writes. It talks to Mongo through the raw driver rather than
  * the Mongoose model so the `Mixed` field comes back exactly as stored, with no schema casting.
  *
  * Usage:
@@ -19,7 +19,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 const { MongoClient } = require('mongodb');
 
 // Slot keys supported by the Pedigree tab form (mirrors MP_ALL_SLOTS in
-// crittertrack-frontend/src/components/AnimalForm/AnimalFormModalV2.jsx) — the two apps are
+// crittertrack-frontend/src/components/AnimalForm/AnimalFormModalV2.jsx) the two apps are
 // standalone and can't share an import, so keep the two lists in sync.
 const PEDIGREE_SLOTS = [
     'sire', 'dam',
@@ -101,7 +101,7 @@ function selftest() {
     assert.strictEqual(slotHasValue(manual), true, 'hand-typed slot counts as populated');
     assert.deepStrictEqual(describeEntry(manual), { name: 'Buck', prefix: 'Old', gender: 'Male', genCode: 'ch/ch' });
 
-    // Whitespace-only content must NOT count — otherwise every empty form slot would
+    // Whitespace-only content must NOT count otherwise every empty form slot would
     // register as a manual entry and the audit would be useless.
     const whitespace = { mode: 'ctc', ctcId: '', name: '   ', prefix: '\t', notes: '  ' };
     assert.strictEqual(slotHasValue(whitespace), false, 'whitespace-only slot is not populated');
@@ -127,7 +127,7 @@ function selftest() {
 
 const USAGE = `
 Audit animals for MANUAL pedigree entries (free-text ancestors not linked to a
-registered CritterTrack animal). Read-only — never writes.
+registered CritterTrack animal). Read-only • never writes.
 
 Usage:
   node debug/audit_manual_pedigree.js [options]
@@ -161,7 +161,7 @@ module.exports.selftest = selftest;
 async function runAudit() {
     const args = parseArgs(process.argv.slice(2));
     if (!process.env.MONGODB_URI) {
-        console.error('MONGODB_URI is not defined — check crittertrack-pedigree/.env');
+        console.error('MONGODB_URI is not defined • check crittertrack-pedigree/.env');
         process.exit(1);
     }
 
@@ -316,7 +316,7 @@ async function runAudit() {
         console.log('These animals have a sire/dam pedigree slot that disagrees with the canonical');
         console.log('sireId_public/damId_public fields used by parent cards and COI maths.\n');
         for (const c of conflicts) {
-            console.log(`  ${c.id_public} ${c.name} — ${c.label}`);
+            console.log(`  ${c.id_public} ${c.name} • ${c.label}`);
             console.log(`     pedigree slot: ${c.manualSlotCtcId || '(hand-typed, no ctcId)'}`);
             console.log(`     ${c.canonicalField}: ${c.canonicalValue || '(not set)'}`);
         }

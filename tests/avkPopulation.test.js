@@ -1,7 +1,7 @@
 /**
  * AVK Reference-Population Selection Unit Tests
  *
- * Verifies the query shape produced by buildAvkPopulationQuery() in database/db_service.js —
+ * Verifies the query shape produced by buildAvkPopulationQuery() in database/db_service.js
  * the isolated function that decides WHICH animals count toward an animal's AVK reference
  * population. Kept separate from the kinship math tests (tests/avk.test.js).
  *
@@ -15,7 +15,7 @@
  *   - deceased animals excluded (living only)
  *   - other species excluded
  *   - transferred animals handled correctly (via creatorId = the CURRENT owner, which the
- *     transfer-accept flow already updates — see /memories/repo/admin-ownership-transfer-system.md)
+ *     transfer-accept flow already updates see /memories/repo/admin-ownership-transfer-system.md)
  */
 
 const { buildAvkPopulationQuery } = require('../database/db_service');
@@ -48,7 +48,7 @@ test('Archived animals are excluded ($ne: true)', () => {
     assert(q.archived && q.archived['$ne'] === true, 'archived filter should exclude archived: true');
 });
 
-// 3. Deceased animals excluded (living only) — must not require the field to exist,
+// 3. Deceased animals excluded (living only) must not require the field to exist,
 // since legacy docs may simply not have deceasedDate set at all.
 test('Deceased animals are excluded, but missing-field docs are treated as living', () => {
     const q = buildAvkPopulationQuery('user123', 'Fancy Mouse');
@@ -66,7 +66,7 @@ test('Only currently-owned, non-stub records are included', () => {
     assert(q.isStub && q.isStub['$ne'] === true, 'expected isStub: { $ne: true }');
 });
 
-// 5. Other species excluded — different species value produces a different query.
+// 5. Other species excluded different species value produces a different query.
 test('Different species produces a query scoped to that species only', () => {
     const q1 = buildAvkPopulationQuery('user123', 'Fancy Mouse');
     const q2 = buildAvkPopulationQuery('user123', 'Fancy Rat');
@@ -76,7 +76,7 @@ test('Different species produces a query scoped to that species only', () => {
 // 6. Transferred animals: population is scoped by CURRENT creatorId, so an animal
 // transferred away (creatorId now belongs to the new owner) is naturally excluded from the
 // original owner's population, while an animal transferred in (creatorId updated to the new
-// owner) is naturally included — no special-case logic needed beyond the creatorId filter.
+// owner) is naturally included no special-case logic needed beyond the creatorId filter.
 test('Population scoping by current creatorId naturally follows transfers', () => {
     const originalOwnerQuery = buildAvkPopulationQuery('originalOwner', 'Fancy Mouse');
     const newOwnerQuery = buildAvkPopulationQuery('newOwner', 'Fancy Mouse');

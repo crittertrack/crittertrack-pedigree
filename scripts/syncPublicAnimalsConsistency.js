@@ -255,7 +255,7 @@ async function main() {
         const result = await PublicAnimal.bulkWrite(updates.slice(i, i + BATCH_SIZE), { ordered: false });
         written += result.modifiedCount || 0;
         // mongoose silently drops ops whose values fail schema casting (they show up here
-        // instead of throwing) — surface them so drift can't quietly survive a run.
+        // instead of throwing) surface them so drift can't quietly survive a run.
         for (const err of result.mongoose?.validationErrors || []) {
             validationErrors.push(`${err.path}: ${err.message}`);
         }

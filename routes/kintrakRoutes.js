@@ -18,7 +18,7 @@ const upload = multer({
 
 // ─── Kintraks CSV parser ──────────────────────────────────────────────────────
 // Kintraks exports use standard comma-delimited RFC 4180 CSV with double-quote
-// escaping. The animals export has duplicate "Breeder" column headers — the
+// escaping. The animals export has duplicate "Breeder" column headers the
 // parser renames them Breeder, Breeder_2, Breeder_3.
 
 function parseKintrakCSV(buffer) {
@@ -152,7 +152,7 @@ function transformKintrakAnimalRow(row, species) {
     const rawPrefix = (row['Prefix'] || '').trim();
     const rawSuffix = (row['Suffix'] || '').trim();
 
-    // Full name: Name + Call Name (if meaningful — not blank, not same as Name, not same as Registration)
+    // Full name: Name + Call Name (if meaningful not blank, not same as Name, not same as Registration)
     const nameParts = [rawName, effectiveCallName].filter(Boolean);
     const name = nameParts.join(' ') || '(unnamed)';
 
@@ -174,7 +174,7 @@ function transformKintrakAnimalRow(row, species) {
     const geneticCode = assembleKintrakGeneticCode(row);
 
     // manualBreederName: combine Breeder (col 13) and Breeder_3 (col 44) if both
-    // exist and differ. Breeder_2 is a True/False checkbox — ignored.
+    // exist and differ. Breeder_2 is a True/False checkbox ignored.
     const breeder1 = (row['Breeder']   || '').trim();
     const breeder3 = (row['Breeder_3'] || '').trim();
     let manualBreederName = null;
@@ -229,7 +229,7 @@ function transformKintrakAnimalRow(row, species) {
 }
 
 function transformKintrakLitterRow(row) {
-    // Rows with empty sire AND dam are artifact duplicates — skip them
+    // Rows with empty sire AND dam are artifact duplicates skip them
     if (!(row['Sire'] || '').trim() && !(row['Dam'] || '').trim()) return null;
 
     const rawSire = (row['Sire'] || '').trim();
@@ -328,7 +328,7 @@ async function findGlobalDuplicate(regNum, nameVariants, birthDate, userId, spec
             if (byPfx) return { match: byPfx, matchType: 'name+birthDate', confidence: 'high' };
         }
     }
-    // Tertiary: name-only — own animals first, then global
+    // Tertiary: name-only own animals first, then global
     if (nameVariants?.length) {
         const speciesFilter = species ? { species } : {};
         for (const n of nameVariants) {
@@ -664,7 +664,7 @@ router.post('/', upload.fields([
     for (const animal of transformedAnimals) {
         const { _kintrakId, _fatherKintrakId, _motherKintrakId, _registration, ...rec } = animal;
         try {
-            // Deselected — skip, but honour map_to for lineage
+            // Deselected skip, but honour map_to for lineage
             const _aKey = _registration || _kintrakId;
             if (selectedSet && !selectedSet.has(_aKey)) {
                 const res_ = conflictResolutions[_aKey] || '';
@@ -683,7 +683,7 @@ router.post('/', upload.fields([
                 continue;
             }
 
-            // Use pre-fetched batch maps — name+DOB first (definitive), then reg#, then name-only
+            // Use pre-fetched batch maps name+DOB first (definitive), then reg#, then name-only
             let hit = null;
             if (animal.birthDate && animal._nameVariants?.length) {
                 const ts = animal.birthDate.getTime?.() ?? new Date(animal.birthDate).getTime();
@@ -831,7 +831,7 @@ router.post('/', upload.fields([
             rec.litter_id_public = await getNextSequence('litterId');
             rec.creatorId = userId;
             // Auto-set weaningDate = birthDate + the species' weaning age and
-            // expectedDueDate = matingDate + gestation — utils/autoWeaningDate.js.
+            // expectedDueDate = matingDate + gestation utils/autoWeaningDate.js.
             if (autoCalc.weaning) await applyAutoWeaningOnCreate(rec, req.user.id_public);
             if (autoCalc.dueDate) await applyAutoDueDateOnCreate(rec, req.user.id_public);
             await Litter.create(rec);

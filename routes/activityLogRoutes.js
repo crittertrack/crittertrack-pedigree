@@ -11,7 +11,7 @@ const MANAGEMENT_ACTIONS = new Set([
     'reproduction_update',
 ]);
 
-// POST /api/activity-logs — log a management panel action from the client
+// POST /api/activity-logs log a management panel action from the client
 router.post('/', async (req, res) => {
     try {
         const { action, targetId_public, details } = req.body;

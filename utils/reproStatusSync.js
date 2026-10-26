@@ -6,7 +6,7 @@
  * records. This is called automatically after every litter create/update/
  * delete (see routes/litterRoutes.js) so that the flags on the Animal /
  * PublicAnimal documents always reflect the current state of that animal's
- * litters — regardless of which UI (LitterManagement, AnimalList's
+ * litters regardless of which UI (LitterManagement, AnimalList's
  * Reproduction tab, imports, admin tools, etc.) triggered the change.
  *
  * It is also used by migrations/backfill-repro-status.js to correct any
@@ -25,14 +25,14 @@ const DEFAULT_MAX_NURSING_DAYS = 90;
  *
  * Stage transitions (planned -> mating, nursing -> closed) are driven by explicit user
  * actions (the "Mated Today" / "Wean Today" buttons), not merely by a date field being
- * present or having arrived — a breeder must be able to record/correct a mating or
+ * present or having arrived a breeder must be able to record/correct a mating or
  * weaning date without that alone silently flipping the animal's status.
  *
  * A litter is considered "closed" (contributes no active status) once:
  *  - it has a birthDate and weaning was explicitly confirmed (weaningConfirmed === true),
  *  - the pregnancy was recorded as lost (pregnancyLost === true) with no birth, or
  *  - it has a birthDate but wasn't confirmed weaned and more than `maxNursingDays` have
- *    passed since birth — a safety-net cutoff so a litter the breeder forgot
+ *    passed since birth a safety-net cutoff so a litter the breeder forgot
  *    to mark as weaned doesn't leave the dam flagged "nursing" forever.
  */
 function getLitterReproStatus(litter, today = new Date(), maxNursingDays = DEFAULT_MAX_NURSING_DAYS) {
@@ -44,16 +44,16 @@ function getLitterReproStatus(litter, today = new Date(), maxNursingDays = DEFAU
     if (litter.pregnancyLost && !hasBirth) return null;
     // Born with an unknown birth date: no nursing window to count and no mating/planned state.
     if (litter.birthDateUnknown && !hasBirth) return null;
-    if (hasBirth && isWeaned) return null; // fully weaned — cycle complete
+    if (hasBirth && isWeaned) return null; // fully weaned cycle complete
 
     if (hasBirth) {
         const daysSinceBirth = (today.getTime() - new Date(litter.birthDate).getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSinceBirth > maxNursingDays) return null; // past the species' realistic nursing window — auto-close
+        if (daysSinceBirth > maxNursingDays) return null; // past the species' realistic nursing window auto-close
         return 'nursing';
     }
     if (hasPregnancy) return 'pregnant';
 
-    // isPlanned only clears via the explicit "Mated Today" action — a matingDate arriving
+    // isPlanned only clears via the explicit "Mated Today" action a matingDate arriving
     // (or being entered/corrected) on its own does not advance a planned mating to "mating".
     if (!litter.isPlanned && hasMatingDate) return 'mating';
     if (litter.isPlanned) return 'planned';
@@ -81,10 +81,10 @@ function computeReproFlags(litters, id_public, nursingCutoffByLitter = new Map()
     for (const litter of sorted) {
         const maxNursingDays = nursingCutoffByLitter.get(String(litter._id)) ?? DEFAULT_MAX_NURSING_DAYS;
         const status = getLitterReproStatus(litter, today, maxNursingDays);
-        if (!status) continue; // this litter is closed/resolved — check the next most recent one
+        if (!status) continue; // this litter is closed/resolved check the next most recent one
 
         const isDamRole = litter.damId_public === id_public;
-        // Pregnant/nursing only ever apply to the dam's own body — for a sire (or the non-dam
+        // Pregnant/nursing only ever apply to the dam's own body for a sire (or the non-dam
         // side of the pairing), this litter carries no status for THIS animal, so it must not
         // block older litters from being checked (e.g. a sire's separate, more recent planned
         // mating elsewhere).

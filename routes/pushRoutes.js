@@ -10,7 +10,7 @@ const { buildNursingCutoffMap, DEFAULT_MAX_NURSING_DAYS } = require('../utils/re
 
 // Note: GET /vapid-public-key is registered directly in index.js (unauthenticated), not here.
 
-// POST /api/push/subscribe — save (or refresh) a browser's push subscription
+// POST /api/push/subscribe save (or refresh) a browser's push subscription
 router.post('/subscribe', async (req, res) => {
     try {
         const { subscription } = req.body;
@@ -38,7 +38,7 @@ router.post('/subscribe', async (req, res) => {
     }
 });
 
-// POST /api/push/unsubscribe — remove a single browser's subscription (e.g. user disabled it)
+// POST /api/push/unsubscribe remove a single browser's subscription (e.g. user disabled it)
 router.post('/unsubscribe', async (req, res) => {
     try {
         const { endpoint } = req.body;
@@ -56,7 +56,7 @@ router.post('/unsubscribe', async (req, res) => {
     }
 });
 
-// GET /api/push/preferences — current per-category on/off state plus whether this browser is subscribed
+// GET /api/push/preferences current per-category on/off state plus whether this browser is subscribed
 router.get('/preferences', async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('pushSubscriptions pushCategoryPreferences');
@@ -76,7 +76,7 @@ router.get('/preferences', async (req, res) => {
     }
 });
 
-// PUT /api/push/preferences — update one or more category toggles, e.g. { messages: false }
+// PUT /api/push/preferences update one or more category toggles, e.g. { messages: false }
 router.put('/preferences', async (req, res) => {
     try {
         const updates = req.body || {};
@@ -98,7 +98,7 @@ router.put('/preferences', async (req, res) => {
     }
 });
 
-// POST /api/push/register-device — save (or refresh) a native app's FCM device token
+// POST /api/push/register-device save (or refresh) a native app's FCM device token
 router.post('/register-device', async (req, res) => {
     try {
         const { token, platform } = req.body;
@@ -117,7 +117,7 @@ router.post('/register-device', async (req, res) => {
     }
 });
 
-// POST /api/push/unregister-device — remove a single device's FCM token (e.g. on logout)
+// POST /api/push/unregister-device remove a single device's FCM token (e.g. on logout)
 router.post('/unregister-device', async (req, res) => {
     try {
         const { token } = req.body;
@@ -132,7 +132,7 @@ router.post('/unregister-device', async (req, res) => {
     }
 });
 
-// GET /api/push/alert-count — on-demand due-item counts for the bell icon badge, scoped to the
+// GET /api/push/alert-count on-demand due-item counts for the bell icon badge, scoped to the
 // current user only. Mirrors animalAlertsCron.js's per-category logic exactly (same helpers,
 // same creatorId-only convention) so this always agrees with what would actually trigger a push.
 router.get('/alert-count', async (req, res) => {

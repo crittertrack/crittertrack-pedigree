@@ -179,7 +179,7 @@ test('calculatePairingInbreeding: unrelated → 0%', async () => {
 });
 
 // 9. Compound ancestry: both parents are full siblings of EACH OTHER
-// (same as #3 — they share both grandparents, two separate contributions)
+// (same as #3 they share both grandparents, two separate contributions)
 test('Compound ancestry: two shared grandparents each contribute independently', async () => {
     const db = {
         GS: { sire: null, dam: null },

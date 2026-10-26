@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/appearance-options — add a new value to the user's list for a species+field.
+// POST /api/appearance-options  add a new value to the user's list for a species+field.
 // Idempotent/case-insensitive: silently no-ops if the value already exists.
 router.post('/', async (req, res) => {
     try {
@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PATCH /api/appearance-options/:id — rename a value (e.g. fixing a typo). Cascades the rename
+// PATCH /api/appearance-options/:id  rename a value (e.g. fixing a typo). Cascades the rename
 // to this user's existing animals (and their public mirrors) currently using the old value, so
 // the fix doesn't leave old records out of sync with the corrected list.
 router.patch('/:id', async (req, res) => {
@@ -103,7 +103,7 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/appearance-options/:id — remove a user-added option (for future management UI).
+// DELETE /api/appearance-options/:id  remove a user-added option (for future management UI).
 router.delete('/:id', async (req, res) => {
     try {
         const result = await AppearanceFieldOption.deleteOne({ _id: req.params.id, userId: req.user.id });

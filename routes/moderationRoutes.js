@@ -1385,7 +1385,7 @@ router.patch('/content/:contentType/:contentId/edit', requireModerator, validate
                 }
             }
 
-            // "True transfer" — mirrors what happens when a user accepts a real transfer
+            // "True transfer" mirrors what happens when a user accepts a real transfer
             // (transferRoutes.js): previous owner becomes the permanent originalCreatorId
             // (if not already set), animal is marked sold, and the previous owner keeps
             // view-only access so it still shows up in their Sold Animals archive.
@@ -1636,7 +1636,7 @@ router.post('/broadcast', requireAdmin, validateModerationInput, async (req, res
             }
         }
 
-        // Get target users — optionally limited to specific CTU IDs for test broadcasts
+        // Get target users optionally limited to specific CTU IDs for test broadcasts
         const allUsers = await User.find({}).select('_id email accountStatus id_public').lean();
         let activeUsers = allUsers.filter(u => u.accountStatus === 'normal');
 

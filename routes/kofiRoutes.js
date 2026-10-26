@@ -24,9 +24,9 @@ async function findMatchingUser(event) {
     return null;
 }
 
-// POST /api/kofi/webhook — Ko-fi calls this on every successful payment (one-time or subscription).
+// POST /api/kofi/webhook Ko-fi calls this on every successful payment (one-time or subscription).
 // Ko-fi POSTs a single urlencoded field named "data" containing a JSON string (parsed by the
-// global bodyParser.urlencoded() in index.js), not a raw JSON body — there's no HMAC signature,
+// global bodyParser.urlencoded() in index.js), not a raw JSON body there's no HMAC signature,
 // just a verification_token embedded in the payload to compare against your own secret.
 // Register this URL in Ko-fi's Settings > API page:
 //   https://crittertrack-pedigree-production.up.railway.app/api/kofi/webhook
@@ -87,7 +87,7 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
-// GET /api/kofi/supporters — public list for the supporter credits feature. Only includes
+// GET /api/kofi/supporters public list for the supporter credits feature. Only includes
 // pledges with a name and where the supporter didn't opt out of Ko-fi's public visibility.
 router.get('/supporters', async (req, res) => {
     try {

@@ -9,7 +9,7 @@ const OWNER_NOTIFICATION_EMAIL = 'crittertrackowner@gmail.com';
 // POST /api/android-beta/opt-in
 // Records the Google account email a signed-in user wants added to the Play Store closed
 // testing tester list for the crittertrack-frontend Android app (com.crittertrack.app). There's
-// no Google Play Developer API integration here — the developer adds submitted emails to the
+// no Google Play Developer API integration here the developer adds submitted emails to the
 // Play Console's tester list by hand, which is why the frontend banner warns it can take up to
 // 24 hours to take effect.
 router.post('/opt-in', protect, async (req, res) => {
@@ -44,7 +44,7 @@ router.post('/opt-in', protect, async (req, res) => {
         console.log(`[Android Beta] Opt-in submitted by ${updatedUser.id_public}: ${trimmedEmail}`);
 
         // Notify the developer so the email can be manually added to the Play Console's closed
-        // testing tester list — fire-and-forget, a failed notification shouldn't block the
+        // testing tester list fire-and-forget, a failed notification shouldn't block the
         // opt-in submission itself (the email is already saved on the user's account either way).
         sendEmail(
             OWNER_NOTIFICATION_EMAIL,
@@ -72,7 +72,7 @@ router.post('/opt-in', protect, async (req, res) => {
     }
 });
 
-// GET /api/android-beta/opt-ins — admin-only list of submitted emails, so the developer can
+// GET /api/android-beta/opt-ins admin-only list of submitted emails, so the developer can
 // copy them into the Play Console's closed testing tester list.
 router.get('/opt-ins', protect, async (req, res) => {
     try {

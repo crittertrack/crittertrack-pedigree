@@ -77,7 +77,7 @@ async function computeFieldDiffs(oldData, newData) {
             oldVal = resolveId(oldVal);
             newVal = resolveId(newVal);
         }
-        // Normalize for comparison — arrays to JSON, objects to JSON
+        // Normalize for comparison arrays to JSON, objects to JSON
         const a = JSON.stringify(oldVal);
         const b = JSON.stringify(newVal);
         if (a !== b) {
@@ -212,7 +212,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /:id — Get single enclosure
+// GET /:id  Get single enclosure
 router.get('/:id', async (req, res) => {
     try {
         const enc = await Enclosure.findOne({ _id: req.params.id, creatorId: req.user.id }).lean();
@@ -224,7 +224,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// GET /:id/activity — Get aggregated activity for this enclosure
+// GET /:id/activity Get aggregated activity for this enclosure
 router.get('/:id/activity', async (req, res) => {
     try {
         const { page = 1, limit = 50 } = req.query;
@@ -293,7 +293,7 @@ router.post('/', async (req, res) => {
 
         if (!name?.trim()) return res.status(400).json({ message: 'Enclosure name is required' });
 
-        // Validate before constructing the document — an unrecognised purpose otherwise only
+        // Validate before constructing the document an unrecognised purpose otherwise only
         // surfaces as a generic 500 from the enum check inside enc.save().
         const normalizedPurpose = normalizeEnclosurePurpose(purpose);
         if (!normalizedPurpose) {
@@ -350,7 +350,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PUT update enclosure — with field-level diff tracking
+// PUT update enclosure with field-level diff tracking
 router.put('/:id', async (req, res) => {
     try {
         const {
@@ -414,7 +414,7 @@ router.put('/:id', async (req, res) => {
         );
         if (!enc) return res.status(404).json({ message: 'Enclosure not found' });
 
-// Compute field diffs (now async — resolves building/room IDs to names)
+// Compute field diffs (now async resolves building/room IDs to names)
         const changes = await computeFieldDiffs(oldEnclosure, setData);
 
         // Also detect task additions/removals
@@ -549,7 +549,7 @@ router.patch('/assign-animal', async (req, res) => {
     }
 });
 
-// PATCH /:id — Partial update (used by frontend for notes, history entries, task updates)
+// PATCH /:id Partial update (used by frontend for notes, history entries, task updates)
 router.patch('/:id', async (req, res) => {
     try {
         const enc = await Enclosure.findOne({ _id: req.params.id, creatorId: req.user.id });
@@ -598,7 +598,7 @@ router.patch('/:id', async (req, res) => {
                 userAgent: req.get('User-Agent'),
             });
         } else if (cleaningTasks) {
-            // Tasks updated — detect additions/removals
+            // Tasks updated detect additions/removals
             const taskChanges = compareTaskLists(enc.cleaningTasks, cleaningTasks);
             for (const tc of taskChanges) {
                 await logEnclosureActivity({
@@ -683,7 +683,7 @@ router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
     }
 });
 
-// DELETE enclosure — also clears enclosureId from all assigned animals
+// DELETE enclosure also clears enclosureId from all assigned animals
 router.delete('/:id', async (req, res) => {
     try {
         const enc = await Enclosure.findOneAndDelete({ _id: req.params.id, creatorId: req.user.id });

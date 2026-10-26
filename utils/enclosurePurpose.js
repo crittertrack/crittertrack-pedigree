@@ -1,5 +1,5 @@
 /**
- * Canonical enclosure "purpose" values — the single source of truth shared by the
+ * Canonical enclosure "purpose" values the single source of truth shared by the
  * Enclosure schema and the POST/PUT routes.
  *
  * The option list historically lived in three places that had drifted apart: the Mongoose
@@ -9,7 +9,7 @@
  * it to the two frontend dropdowns (they are standalone apps and cannot import this file).
  */
 
-// Order matters — it drives the order of the dropdown in every enclosure form.
+// Order matters it drives the order of the dropdown in every enclosure form.
 const ENCLOSURE_PURPOSE_OPTIONS = [
     { value: 'general', label: 'General' },
     { value: 'reproduction', label: 'Nursery / Breeding' },

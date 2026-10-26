@@ -184,7 +184,7 @@ router.get('/profiles/search', async (req, res) => {
             ];
 
             if (digitsMatch) {
-                // Pure/near-ID search term (digits, optionally prefixed) — match id_public exactly
+                // Pure/near-ID search term (digits, optionally prefixed) match id_public exactly
                 // (case-insensitive) once rebuilt as CTU<digits>, e.g. "1001" or "ctu 1001" -> CTU1001.
                 const rebuiltId = `CTU${digitsMatch[1]}`;
                 orClauses.unshift({ id_public: { $regex: `^${rebuiltId}$`, $options: 'i' } });
@@ -466,7 +466,7 @@ router.get('/global/animals', async (req, res) => {
         const privateParentMap = {};
         for (const p of privateParents) privateParentMap[p.id_public] = p;
 
-        // All docs in the PublicAnimal collection are public by definition — ensure isDisplay
+        // All docs in the PublicAnimal collection are public by definition ensure isDisplay
         // is explicitly true in the response even if a stale doc were ever missing it.
         const publicDocs = docs.map(doc => {
             const priv = privateParentMap[doc.id_public];

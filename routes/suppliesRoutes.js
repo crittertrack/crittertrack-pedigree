@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { SupplyItem } = require('../database/models');
 
-// GET /api/supplies — list all items owned by the current user
+// GET /api/supplies list all items owned by the current user
 router.get('/', async (req, res) => {
     try {
         const items = await SupplyItem.find({ userId: req.user.id }).sort({ category: 1, name: 1 });
@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/supplies — create a new supply item
+// POST /api/supplies create a new supply item
 router.post('/', async (req, res) => {
     try {
         const { name, category, currentStock, unit, reorderThreshold, notes, isFeederAnimal, feederType, feederSize, costPerUnit, nextOrderDate, orderFrequency, orderFrequencyUnit } = req.body;
@@ -40,7 +40,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PATCH /api/supplies/:id — update a supply item
+// PATCH /api/supplies/:id update a supply item
 router.patch('/:id', async (req, res) => {
     try {
         const item = await SupplyItem.findOne({ _id: req.params.id, userId: req.user.id });
@@ -66,7 +66,7 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/supplies/:id — delete a supply item
+// DELETE /api/supplies/:id delete a supply item
 router.delete('/:id', async (req, res) => {
     try {
         const result = await SupplyItem.findOneAndDelete({ _id: req.params.id, userId: req.user.id });

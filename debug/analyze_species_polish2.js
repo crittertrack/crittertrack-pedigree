@@ -27,7 +27,7 @@ const SMALL_WORDS = new Set(['and', 'or', 'of', 'the', 'x', 'sp']);
     }
   }
   console.log('=== Common names with lowercase words mid-name: ' + mixed.length + ' ===');
-  mixed.forEach(m => console.log('- "' + m.name + '" ' + (m.isDefault ? '(default)' : '(custom)') + ' — lowercase: ' + m.badWords.join(', ')));
+  mixed.forEach(m => console.log('- "' + m.name + '" ' + (m.isDefault ? '(default)' : '(custom)') + ' • lowercase: ' + m.badWords.join(', ')));
 
   // Context: animals using each custom species
   console.log('\n=== Animals on custom species ===');
@@ -46,7 +46,7 @@ const SMALL_WORDS = new Set(['and', 'or', 'of', 'the', 'x', 'sp']);
   // Context: existing invertebrate default naming conventions
   console.log('\n=== Existing invertebrate default naming conventions ===');
   species.filter(s => s.isDefault && s.category === 'Invertebrate').forEach(s =>
-    console.log('- "' + s.name + '" | ' + (s.latinName || '—')));
+    console.log('- "' + s.name + '" | ' + (s.latinName || '•')));
 
   await client.close();
 })().catch(err => { console.error(err); process.exit(1); });

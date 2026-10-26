@@ -26,7 +26,7 @@ async function calculateInbreedingCoefficient(animalId, fetchAnimal, generations
     const damId = animal.damId_public;
     if (!sireId || !damId) return 0;
 
-    // An animal's own COI is, by definition, the kinship coefficient of its two parents —
+    // An animal's own COI is, by definition, the kinship coefficient of its two parents 
     // reuse the DAG+DP pairing calculation (O(unique_animals × generations)) instead of the
     // old tree/findPathsToAncestor approach below, which enumerates every root→ancestor path
     // and blows up combinatorially on deep/heavily-linebred pedigrees (see history note above
@@ -51,7 +51,7 @@ async function calculateInbreedingCoefficientWithDiagnostics(animalId, fetchAnim
     const damId = animal.damId_public;
     if (!sireId || !damId) return { inbreedingCoefficient: 0, commonAncestorCount: 0 };
 
-    // Same DAG+DP delegation as calculateInbreedingCoefficient above — see its comment.
+    // Same DAG+DP delegation as calculateInbreedingCoefficient above  see its comment.
     const { total, breakdown } = await explainPairingInbreeding(sireId, damId, fetchAnimal, generations - 2);
     return {
         inbreedingCoefficient: parseFloat(total.toFixed(2)),
@@ -64,7 +64,7 @@ async function calculateInbreedingCoefficientWithDiagnostics(animalId, fetchAnim
  *
  * Performance: nodeCache memoises completed subtrees keyed by `${animalId}:${depth}`.
  * This prevents the exponential node explosion that occurs in linebred pedigrees
- * where the same common ancestors appear in hundreds of branches — turning
+ * where the same common ancestors appear in hundreds of branches  turning
  * O(2^generations) construction into O(unique_animals × generations).
  *
  * The path-local `visited` set is kept separately to catch genuine data cycles
@@ -85,7 +85,7 @@ async function buildPedigree(animalId, fetchAnimal, depth, visited = new Set(), 
     // Cycle guard: animal appears on this exact ancestry path (data error)
     if (visited.has(animalId)) {
         const animal = await fetchAnimal(animalId);
-        // Do not cache — this leaf is path-specific
+        // Do not cache this leaf is path-specific
         return animal ? {
             id: animalId,
             name: animal.name,
@@ -245,7 +245,7 @@ async function buildPedigreeDAG(rootId, fetchAnimal, maxGenerations) {
  *   dp[ancestor] = Σ_{all paths from rootId to ancestor} (0.5)^path_length
  *   where path_length = number of nodes including start and end.
  *
- * This is a simple BFS propagation on the DAG — O(unique_animals), not O(2^G).
+ * This is a simple BFS propagation on the DAG  O(unique_animals), not O(2^G).
  * The BFS naturally handles an ancestor reachable via multiple paths: each time
  * a predecessor is processed it adds its contribution to dp[ancestor],
  * and the ancestor is enqueued only once (after its first discovery) so it
@@ -256,7 +256,7 @@ async function buildPedigreeDAG(rootId, fetchAnimal, maxGenerations) {
  * value is fully accumulated before it propagates. This relies on BFS ordering
  * (breadth ≈ topological order from root): a node's dp is complete before it is
  * dequeued as long as ALL paths to it come through nodes at strictly shallower
- * depth — which holds for pedigrees without true cycles (biologically impossible).
+ * depth  which holds for pedigrees without true cycles (biologically impossible).
  */
 function computePathSums(rootId, dag) {
     const dp = new Map([[rootId, 0.5]]); // path [root] has length 1 → (0.5)^1
@@ -370,11 +370,11 @@ async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations 
  *   f(X,Y) = Σ over every ancestor A reachable from BOTH X and Y of 2 × dpX[A] × dpY[A]
  *
  * This is the exact same summation calculatePairingInbreeding()/explainPairingInbreeding()
- * already use to compute a hypothetical offspring's COI — because F_offspring(sire,dam) is,
+ * already use to compute a hypothetical offspring's COI because F_offspring(sire,dam) is,
  * by definition, equal to the kinship coefficient f(sire,dam) of its two parents.
  *
  * IMPORTANT: this must only be used for X ≠ Y. Passing the same dp map for both sides does
- * NOT correctly yield self-kinship f(X,X) — it double-counts X's own ancestors beyond what
+ * NOT correctly yield self-kinship f(X,X)  it double-counts X's own ancestors beyond what
  * F_X already captures. Self-kinship uses the separate, well-established identity
  * f(X,X) = (1 + F_X) / 2 instead (see calculateAverageKinship below).
  *
@@ -391,7 +391,7 @@ function kinshipFromPathSums(dpA, dpB) {
 }
 
 /**
- * Calculate an individual's Average Kinship (AVK), a.k.a. Mean Kinship (MK) —
+ * Calculate an individual's Average Kinship (AVK), a.k.a. Mean Kinship (MK) 
  * a standard pedigree-based population-management metric (used in studbooks/SSPs)
  * distinct from COI: COI measures an individual's OWN inbreeding, while AVK measures
  * how represented/redundant that individual's ancestry is across a reference population.
@@ -405,7 +405,7 @@ function kinshipFromPathSums(dpA, dpB) {
  * heavily represented.
  *
  * Reuses the existing buildPedigreeDAG/computePathSums machinery (same functions
- * calculatePairingInbreeding relies on) — no separate/simplified pedigree walk, and no
+ * calculatePairingInbreeding relies on) no separate/simplified pedigree walk, and no
  * changes to the existing COI functions above.
  *
  * Handles incomplete pedigrees, one known parent, deep pedigrees, and duplicated ancestors
@@ -431,13 +431,13 @@ async function calculateAverageKinship(animalId, populationIds, fetchAnimal, gen
     const rootDag = await buildPedigreeDAG(animalId, fetchAnimal, generations);
     const rootDP = computePathSums(animalId, rootDag);
 
-    // Self-kinship f(X,X) = (1 + F_X) / 2 — reuses the EXISTING, untouched
+    // Self-kinship f(X,X) = (1 + F_X) / 2 reuses the EXISTING, untouched
     // calculateInbreedingCoefficient() for F_X rather than re-deriving it from the DP maps
     // (see kinshipFromPathSums' doc comment for why the DP-map approach can't be reused here).
     const selfCOI = await calculateInbreedingCoefficient(animalId, fetchAnimal, generations);
     const selfKinship = (1 + selfCOI / 100) / 2;
 
-    // Process the population in concurrent batches (not one-at-a-time) — for a
+    // Process the population in concurrent batches (not one-at-a-time) for a
     // reference population of any real size, sequential awaits here were serializing
     // hundreds of DB round-trips behind the COI response, which the caller (the
     // /:id_public/inbreeding route) waits on before responding at all.

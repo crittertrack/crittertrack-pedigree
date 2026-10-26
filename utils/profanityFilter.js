@@ -34,7 +34,7 @@ const isProfane = (value) => {
 };
 
 // leoProfanity.check() only says whether the whole string is flagged, not which
-// word did it — check word-by-word so the error can name the actual offender.
+// word did it check word-by-word so the error can name the actual offender.
 const findProfaneWords = (value) => {
     return value.split(/\s+/).filter(word => leoProfanity.check(word));
 };

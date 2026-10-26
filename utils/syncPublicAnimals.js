@@ -147,7 +147,7 @@ const buildPublicAnimalFields = (a) => ({
 });
 
 // Upserts/removes a PublicAnimal mirror from an already-fetched Animal doc/lean-object.
-// Safe to call unconditionally after any write to Animal — no-ops cleanly either way.
+// Safe to call unconditionally after any write to Animal no-ops cleanly either way.
 async function resyncAnimalToPublic(animal) {
     try {
         const { PublicAnimal } = require('../database/models');

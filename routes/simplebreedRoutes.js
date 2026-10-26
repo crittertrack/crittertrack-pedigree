@@ -116,7 +116,7 @@ function splitSbName(rawName) {
     }
 
     const nameVariants = [...new Set([
-        trimmed,                                                         // "MM Curry Jr" — full
+        trimmed,                                                         // "MM Curry Jr" full
         baseName,                                                        // "Curry"
         suffix ? `${baseName} ${suffix}` : null,                        // "Curry Jr"
         prefix ? `${prefix} ${baseName}` : null,                        // "MM Curry"
@@ -128,13 +128,13 @@ function splitSbName(rawName) {
 
 // ─── Duplicate detection (mirrors zooeasyRoutes findGlobalDuplicate) ──────────
 
-// idKeys: string | string[] — all breederAssignedId values to check (e.g. internalId)
+// idKeys: string | string[] all breederAssignedId values to check (e.g. internalId)
 // sbIdKey: the SimpleBreed animal ID to check against the dedicated sbId field
 async function findGlobalDuplicate(idKeys, sbIdKey, nameVariants, birthDate, userId, species, prefix) {
     const idKeyArr = Array.isArray(idKeys) ? idKeys.filter(Boolean) : (idKeys ? [idKeys] : []);
     const sel = 'id_public name prefix suffix creatorId creatorId_public breederAssignedId sbId birthDate';
 
-    // 1. Name + birthDate (any owner) — highest signal
+    // 1. Name + birthDate (any owner) highest signal
     if (birthDate && nameVariants?.length) {
         const start = new Date(birthDate); start.setHours(0, 0, 0, 0);
         const end = new Date(birthDate); end.setHours(23, 59, 59, 999);
@@ -153,7 +153,7 @@ async function findGlobalDuplicate(idKeys, sbIdKey, nameVariants, birthDate, use
         }
     }
 
-    // 2. Name only — own animals (high), then global (possible)
+    // 2. Name only own animals (high), then global (possible)
     if (nameVariants?.length) {
         const speciesFilter = species && species !== 'Unknown' ? { species } : {};
         for (const n of nameVariants) {
@@ -273,7 +273,7 @@ async function parseProfilePage(html) {
             animals.push({ sbId, name, birthDate, status, species });
         });
 
-        // Collect nextData elements — carry species context forward
+        // Collect nextData elements carry species context forward
         const nextItems = [];
         $('.nextData').each((_, el) => {
             let nextHref = ($(el).attr('href') || '').trim();
@@ -356,7 +356,7 @@ function parseAnimalDetail(html, sbId) {
     if (statusMatch) status = mapStatus(statusMatch[1]);
 
     let species = 'Unknown';
-    // Don't require line-start — the species appears in the page title e.g. "MF DONUT - FANCY MOUSE"
+    // Don't require line-start the species appears in the page title e.g. "MF DONUT - FANCY MOUSE"
     const speciesMatch = bodyText.match(/\b(Fancy mouse|Fancy rat|Syrian hamster|Dwarf hamster|Campbells|Russian dwarf|Roborovski|Guinea pig|Rabbit|Chinchilla|Gerbil|Sugar glider|Ferret|Hedgehog)\b/i);
     if (speciesMatch) {
         species = speciesMatch[1].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -443,7 +443,7 @@ async function resolveSbImageBuffer(url) {
         if (ct.startsWith('image/')) {
             return { buffer: Buffer.from(resp.data), contentType: ct };
         }
-        // HTML page (e.g. /picread) — parse the actual img src
+        // HTML page (e.g. /picread) parse the actual img src
         const html = Buffer.from(resp.data).toString('utf8');
         const $ = cheerio.load(html);
         let imgSrc = null;
@@ -522,7 +522,7 @@ router.post('/preview', async (req, res) => {
     const userId = req.user.id;
 
     // Preview is fast: no detail-page fetching. Profile page gives us name, birthDate,
-    // sbId, status and species — enough for duplicate detection and species dropdown.
+    // sbId, status and species enough for duplicate detection and species dropdown.
     const items = profileAnimals.map(a => ({
         sbId: a.sbId,
         name: a.name,
@@ -765,7 +765,7 @@ router.post('/import', async (req, res) => {
             const uploadedUrl = await uploadSbImage(d.sbImageUrl, existingId);
             if (uploadedUrl) {
                 await Animal.updateOne({ id_public: existingId }, { $set: { imageUrl: uploadedUrl } });
-                // existingId may already be a public animal — keep its mirror's imageUrl in sync
+                // existingId may already be a public animal keep its mirror's imageUrl in sync
                 // (no-op if it isn't public since no matching PublicAnimal doc exists).
                 await PublicAnimal.updateOne({ id_public: existingId }, { $set: { imageUrl: uploadedUrl } });
                 imagesUploaded++;

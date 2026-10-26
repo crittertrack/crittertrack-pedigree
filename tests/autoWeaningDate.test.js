@@ -313,7 +313,7 @@ test('due create: manual value, missing mating, unknown species, lost pregnancy,
 test('due update: "Mated Today" moves an auto due date from the scheduled to the actual mating', async () => {
     const stub = async () => 'Fancy Mouse';
     const p = await applyAutoDueDateOnUpdate(
-        { matingDate: '2026-10-05', isPlanned: false }, // Mated Today patch — no due key
+        { matingDate: '2026-10-05', isPlanned: false }, // Mated Today patch no due key
         { matingDate: '2026-11-02', expectedDueDate: '2026-11-21', isPlanned: true, sireId_public: 'CTC1', damId_public: 'CTC2' }, // auto due from the scheduled date
         CTU2, stub
     );

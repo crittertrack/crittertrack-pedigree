@@ -55,7 +55,7 @@ const UserSchema = new mongoose.Schema({
         userAgent: { type: String, default: null },
         createdAt: { type: Date, default: Date.now }
     }],
-    // Native (FCM) push tokens — one per installed native app instance (e.g. CritterTrack Lite on Android)
+    // Native (FCM) push tokens one per installed native app instance (e.g. CritterTrack Lite on Android)
     deviceTokens: [{
         token: { type: String, required: true },
         platform: { type: String, enum: ['android', 'ios'], default: 'android' },
@@ -139,7 +139,7 @@ const UserSchema = new mongoose.Schema({
         // Map of animal id_public -> array of collection IDs the animal belongs to
         animalMap: { type: mongoose.Schema.Types.Mixed, default: {} }
     },
-    // Full-site "Lite" mode preference — swaps the web app into a simplified UI mirroring
+    // Full-site "Lite" mode preference swaps the web app into a simplified UI mirroring
     // crittertrack-lite's own scope/nav. Defaults to 'full' for all existing/new users.
     uiMode: { type: String, enum: ['full', 'lite'], default: 'full' },
     uiPreferences: {
@@ -214,7 +214,7 @@ const PublicProfileSchema = new mongoose.Schema({
     breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
     animalBreedingLines: { type: mongoose.Schema.Types.Mixed, default: {} }, // { animalId_public: [lineIds] }
 
-    // Standalone Feeding & Care tasks not tied to any single animal or enclosure — e.g.
+    // Standalone Feeding & Care tasks not tied to any single animal or enclosure e.g.
     // "Feed the mouse colony" so a user with 100+ animals gets ONE recurring reminder instead
     // of maintaining/receiving 100 separate per-animal feeding schedules.
     generalCareTasks: [{
@@ -227,7 +227,7 @@ const PublicProfileSchema = new mongoose.Schema({
         frequencyUnit: { type: String, enum: ['days', 'weeks', 'months', 'years'], default: 'days' },
         lastSkipped: { type: Boolean, default: false },
         // Optional, informational-only list of animals this task applies to (e.g. "the mouse
-        // colony") — does NOT create per-animal due-dates/notifications, purely for display/
+        // colony") does NOT create per-animal due-dates/notifications, purely for display/
         // filtering context on an otherwise fully standalone task.
         assignedAnimals: { type: [String], default: [] }, // id_public values
     }],
@@ -240,7 +240,7 @@ const PublicProfileSchema = new mongoose.Schema({
     breederInfo: {
         aboutProgram:       { type: String, default: '' },
         adoptionRules:      { type: String, default: '' },
-        careRequirements:   { type: String, default: '' }, // legacy — kept for backward compat, replaced by two fields below
+        careRequirements:   { type: String, default: '' }, // legacy kept for backward compat, replaced by two fields below
         enclosureCare:      { type: String, default: '' },
         routineCare:        { type: String, default: '' },
         healthGuarantee:    { type: String, default: '' },
@@ -346,14 +346,14 @@ const AnimalSchema = new mongoose.Schema({
     isInMating: { type: Boolean, default: false },
     isQuarantine: { type: Boolean, default: false }, // Animal is in quarantine/isolation
     isInTreatment: { type: Boolean, default: false }, // Animal is actively undergoing treatment
-    // Derived overall health status pill (Healthy/Monitoring/Concern/Critical) — recomputed on
+    // Derived overall health status pill (Healthy/Monitoring/Concern/Critical) recomputed on
     // every save from quarantine/treatment/medications/conditions/allergies (see
     // utils/healthStatusSync.js's computeHealthStatus). healthStatusOverride, if set, takes
     // precedence for display but does not affect this stored calculated value.
     healthStatus: { type: String, default: 'Healthy' },
     healthStatusOverride: { type: String, default: null },
     healthStatusOverrideNotes: { type: String, default: null },
-    // Structured quarantine/isolation record — was previously accepted by the frontend
+    // Structured quarantine/isolation record was previously accepted by the frontend
     // form but silently dropped on save since it wasn't declared on this schema.
     quarantineDetails: {
         status: { type: String, default: 'None' },
@@ -362,7 +362,7 @@ const AnimalSchema = new mongoose.Schema({
         startDate: { type: Date, default: null },
         endDate: { type: Date, default: null },
     },
-    // Structured treatment record — descriptive metadata only (type/reason/dates for the
+    // Structured treatment record descriptive metadata only (type/reason/dates for the
     // timeline). isInTreatment is derived from active medications/critical conditions
     // (see utils/healthStatusSync.js), not from this record's status/dates.
     treatmentDetails: {
@@ -391,7 +391,7 @@ const AnimalSchema = new mongoose.Schema({
         lastSkipped: { type: Boolean, default: false },
     }],
 
-    // Custom milestones — one-time or recurring events tracked per animal
+    // Custom milestones one-time or recurring events tracked per animal
     milestones: [{
         label: { type: String, required: true, trim: true },
         startDate: { type: Date, required: true },
@@ -418,7 +418,7 @@ const AnimalSchema = new mongoose.Schema({
     remarks: { type: String, default: '' },
     geneticCode: { type: String, default: null },
     // Unconfirmed/probability-based het status (e.g. "66% Het Clown"), separate from the
-    // confirmed genotype in geneticCode — doesn't affect phenotype, purely a breeding-record note.
+    // confirmed genotype in geneticCode doesn't affect phenotype, purely a breeding-record note.
     possibleHets: [{
         locus: { type: String, required: true },
         percent: { type: Number, required: true },
@@ -447,7 +447,7 @@ const AnimalSchema = new mongoose.Schema({
     lifeStage: { type: String, enum: ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed', 'Unknown'], default: 'Unknown' },
     // Universal animal appearance fields
     eyeColor: { type: String, default: null }, // Eye color
-    body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. — formerly "size")
+    body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. formerly "size")
     carrierTraits: { type: String, default: null }, // Genetics calculator: recessive/het traits carried
     // Current measurements (snapshot - growth records track history)
     weight: { type: String, default: null }, // Current weight
@@ -605,7 +605,7 @@ const AnimalSchema = new mongoose.Schema({
     leashTrained: { type: Boolean, default: null },
     freeFlightTrained: { type: Boolean, default: null },
 
-    // Grooming & Coat Care — descriptive fields (Routine Care tab)
+    // Grooming & Coat Care descriptive fields (Routine Care tab)
     brushingFrequency: { type: String, default: null },
     bathingFrequency: { type: String, default: null },
     coatCareNotes: { type: String, default: null },
@@ -614,11 +614,11 @@ const AnimalSchema = new mongoose.Schema({
     skinEarCareNeeds: { type: String, default: null },
     dentalCareRequirements: { type: String, default: null },
     groomingNotes: { type: String, default: null },
-    // Grooming & Coat Care — optional recurring schedules (each tracked independently; shown in Feeding & Care management view)
+    // Grooming & Coat Care optional recurring schedules (each tracked independently; shown in Feeding & Care management view)
     groomingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     brushingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     bathingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
-    specializedCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } }, // deprecated — superseded by the 4 schedules below
+    specializedCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } }, // deprecated superseded by the 4 schedules below
     nailCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     beakHoofScaleSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     skinEarCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
@@ -631,7 +631,7 @@ const AnimalSchema = new mongoose.Schema({
     specialCareNeeds: { type: String, default: null },
     healthMonitoringNotes: { type: String, default: null },
     additionalSpecialRequirements: { type: String, default: null },
-    // Special Care Needs — optional recurring schedule
+    // Special Care Needs optional recurring schedule
     specialCareSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     
     // Tab 9: Behavior & Welfare Fields
@@ -658,7 +658,7 @@ const AnimalSchema = new mongoose.Schema({
     // Escape & flight risk
     escapeRiskLevel: { type: String, default: 'Low' },
     escapeBehavior: { type: String, default: null },
-    // Training schedules (Behavior tab) — optional recurring schedules, each tracked independently;
+    // Training schedules (Behavior tab) optional recurring schedules, each tracked independently;
     // shown clustered in the Feeding & Care management view (no separate Behavior management view).
     exerciseSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
     crateTrainingSchedule: { lastDoneDate: { type: Date, default: null }, frequencyDays: { type: Number, default: null }, lastSkipped: { type: Boolean, default: false } },
@@ -778,13 +778,13 @@ const AnimalSchema = new mongoose.Schema({
     // Average Kinship (AVK / mean kinship) vs. the reference population (cached value)
     avgKinship: { type: Number, default: null },
     avkPopulationSize: { type: Number, default: null },
-    // When the AVK background recompute last ran — used to throttle re-triggering it.
+    // When the AVK background recompute last ran used to throttle re-triggering it.
     avkComputedAt: { type: Date, default: null },
 
-    // Manual Pedigree (Beta) — free-text ancestor entries not linked to registered animals
+    // Manual Pedigree (Beta) free-text ancestor entries not linked to registered animals
     manualPedigree: { type: mongoose.Schema.Types.Mixed, default: null },
     
-    // Public visibility toggle — single source of truth, do not add another field for this.
+    // Public visibility toggle single source of truth, do not add another field for this.
     isDisplay: { type: Boolean, default: false, index: true },
 
 }, { timestamps: true });
@@ -815,7 +815,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     carrierTraits: { type: String, default: null }, // Genetic traits the animal carries
     // Universal animal appearance fields
     eyeColor: { type: String, default: null },
-    body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. — formerly "size")
+    body: { type: String, default: null }, // Body type/size (Standard, Dwarf, Manx, etc. formerly "size")
     // Current measurements
     weight: { type: String, default: null },
     length: { type: String, default: null },
@@ -897,7 +897,7 @@ const PublicAnimalSchema = new mongoose.Schema({
     noise: { type: String, default: null },
     
     // Health Records (stored as JSON strings)
-    // Array to match AnimalSchema.medicalProcedures ([HealthRecordSchema]) — a String here made
+    // Array to match AnimalSchema.medicalProcedures ([HealthRecordSchema]) a String here made
     // every mirror write of this field fail casting, so public rows silently kept stale values.
     medicalProcedures: { type: [mongoose.Schema.Types.Mixed], default: [] },
     sheddingRecords: { type: String, default: null },
@@ -1054,7 +1054,7 @@ const LitterSchema = new mongoose.Schema({
     stillbornCount: { type: Number, default: null }, // Number of stillborn
     lossesCount: { type: Number, default: null }, // Number of losses
     weaningDate: { type: Date, default: null },
-    // Set only via the explicit "Wean Today" action — distinguishes a confirmed weaning
+    // Set only via the explicit "Wean Today" action distinguishes a confirmed weaning
     // from merely recording/correcting a weaningDate value, which should not alone end nursing.
     weaningConfirmed: { type: Boolean, default: false },
     
@@ -1073,13 +1073,13 @@ const LitterSchema = new mongoose.Schema({
     femaleLossesCount: { type: Number, default: null },
     unknownLossesCount: { type: Number, default: null },
 
-    // Cull tracking — when hasCulls is true, cullsCount records how many of the
+    // Cull tracking when hasCulls is true, cullsCount records how many of the
     // total losses were deliberate culls (extracted into their own "Culls" stat
     // on the overview; the remaining "Losses" stat shows non-cull losses only).
     hasCulls: { type: Boolean, default: false },
     cullsCount: { type: Number, default: null },
 
-    // Extraction flags — when true, the M/F/U counts above have already been reduced
+    // Extraction flags when true, the M/F/U counts above have already been reduced
     // by the corresponding stillborn/losses breakdown (i.e., they represent live/surviving only)
     extractStillbornFromTotal: { type: Boolean, default: false },
     extractLossesFromTotal: { type: Boolean, default: false },
@@ -1107,7 +1107,7 @@ const LitterSchema = new mongoose.Schema({
     unknownCount: { type: Number, default: null },
     weaningDate: { type: Date, default: null },
 
-    // Planned mating flag — true until a birthDate is set
+    // Planned mating flag true until a birthDate is set
     isPlanned: { type: Boolean, default: false, index: true },
     // "Born, birth date unknown": a plain born entry with NO birthDate (so no age, nursing or weaning is
     // derived from it). Shown as its own "Born (date unknown)" class.
@@ -1122,7 +1122,7 @@ const LitterSchema = new mongoose.Schema({
     // Tracks whether the user has permanently dismissed the weaning notification for this litter
     weaningDismissed: { type: Boolean, default: false },
     
-    // Pregnancy loss tracking — for confirmed pregnancies that resulted in no live offspring
+    // Pregnancy loss tracking for confirmed pregnancies that resulted in no live offspring
     // (e.g., mom cannibalized litter, all stillborn, reabsorbed, etc.)
     pregnancyLost: { type: Boolean, default: false },
     pregnancyLostReason: { type: String, enum: ['Cannibalized', 'All Stillborn', 'Reabsorbed', 'Unknown', null], default: null },
@@ -1186,7 +1186,7 @@ const NotificationSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Track whether this doc was newly created, so the post-save hook below only fires
-// a push on first creation (not on later status/read updates) — scheduled/pending
+// a push on first creation (not on later status/read updates) scheduled/pending
 // broadcasts are pushed explicitly by the broadcast cron job when they actually go out.
 NotificationSchema.pre('save', function(next) {
     this._wasNew = this.isNew;
@@ -1576,7 +1576,7 @@ const Resource = mongoose.model('Resource', ResourceSchema);
 
 // --- 15c. RESOURCE SUGGESTION SCHEMA (unauthenticated visitors submit a link for admin review) ---
 const ResourceSuggestionSchema = new mongoose.Schema({
-    text: { type: String, required: true, trim: true }, // freeform — usually a URL, admin reviews and manually adds it as a Resource
+    text: { type: String, required: true, trim: true }, // freeform usually a URL, admin reviews and manually adds it as a Resource
     createdAt: { type: Date, default: Date.now, index: true }
 });
 const ResourceSuggestion = mongoose.model('ResourceSuggestion', ResourceSuggestionSchema);
@@ -1618,7 +1618,7 @@ const Transaction = mongoose.model('Transaction', TransactionSchema);
 const WaitlistEntrySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true },
-    contactInfo: { type: String, default: '' }, // phone, email, address — one text field
+    contactInfo: { type: String, default: '' }, // phone, email, address one text field
     // Optional link to a record from the Contacts collection. The Contacts page owns
     // keeper/breeder identities; a waitlist entry can be tied to one of them so the
     // attendee's details live in a single place (same idea as the Sale record's
@@ -1646,7 +1646,7 @@ const WaitlistEntrySchema = new mongoose.Schema({
     amount: { type: Number, default: 1 },
     notes: { type: String, default: '' },
     isActive: { type: Boolean, default: true, index: true }, // false = moved to history
-    // Snapshot kept when "finalized" — which animals were assigned to them via the picker.
+    // Snapshot kept when "finalized" which animals were assigned to them via the picker.
     // species/gender are part of the snapshot on purpose: the Reservations page computes
     // per-species/per-gender fulfillment from these values, so they must survive the save.
     assignedAnimals: [{
@@ -1897,7 +1897,7 @@ const SupplyItemSchema = new mongoose.Schema({
 const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
 
 // ── AppearanceFieldOption (per-user, per-species dropdown entries for appearance fields
-// like Color — starts empty and grows as the user types new values on the Animal form) ──
+// like Color starts empty and grows as the user types new values on the Animal form) 
 const AppearanceFieldOptionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     species: { type: String, required: true, trim: true },
@@ -1932,7 +1932,7 @@ const EnclosureSchema = new mongoose.Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 100 },
     enclosureType: { type: String, default: '', trim: true }, // e.g. Tank, Cage, Vivarium, Pond
-    // Enum comes from utils/enclosurePurpose.js — add new purposes there, not inline.
+    // Enum comes from utils/enclosurePurpose.js add new purposes there, not inline.
     // 'health' and '' are legacy values kept so pre-existing enclosures still validate.
     purpose: {
         type: String,
@@ -2069,7 +2069,7 @@ const KofiPledgeSchema = new mongoose.Schema({
     lastPaymentDate: { type: Date, default: Date.now },
     kofiTransactionId: { type: String, default: null },
     // 'manual' = entered by an admin for a donor outside Ko-fi (e.g. a pre-existing PayPal
-    // subscriber) — never auto-expired by the badge-expiry cron.
+    // subscriber) never auto-expired by the badge-expiry cron.
     source: { type: String, enum: ['kofi', 'manual'], default: 'kofi' },
 }, { timestamps: true });
 const KofiPledge = mongoose.model('KofiPledge', KofiPledgeSchema);
@@ -2089,7 +2089,7 @@ AnimalSchema.index({ creatorId: 1, isDisplay: 1 });
 AnimalSchema.index({ creatorId: 1, archived: 1 });
 AnimalSchema.index({ viewOnlyForUsers: 1 });
 
-// 2c. "All Animals" dashboard query's third $or branch (transferred-out animals) —
+// 2c. "All Animals" dashboard query's third $or branch (transferred-out animals)
 // was unindexed, forcing a full collection scan on every dashboard load.
 AnimalSchema.index({ originalCreatorId: 1 });
 

@@ -693,7 +693,7 @@ router.post('/animals/bulk-update', async (req, res) => {
             updates
         );
 
-        // Bulk-updated animals may be public — resync their PublicAnimal mirror so
+        // Bulk-updated animals may be public resync their PublicAnimal mirror so
         // arbitrary admin field edits don't silently go stale there.
         const { resyncAnimalToPublicById } = require('../utils/syncPublicAnimals');
         const touched = await Animal.find({ _id: { $in: animalIds } }).select('id_public').lean();

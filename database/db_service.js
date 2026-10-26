@@ -946,7 +946,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     }
     if (filters.birthdateBefore) {
         // Only show animals born before/on the specified date (for parent selection)
-        // Also include animals with no birthDate (unknown DOB — can't exclude them)
+        // Also include animals with no birthDate (unknown DOB can't exclude them)
         const dt = new Date(filters.birthdateBefore);
         if (!isNaN(dt.getTime())) {
             const birthdateCondition = {
@@ -969,7 +969,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
     }
 
     // Sort by birth date descending (most recent first)
-    // slim=true: return only the fields needed to render list cards — cuts payload by ~85%
+    // slim=true: return only the fields needed to render list cards cuts payload by ~85%
     // Safety cap: only apply the 2000-doc limit for full (non-slim) calls to avoid OOM
     const slimFields = filters.slim === 'true' || filters.slim === true
         ? 'id_public creatorId creatorId_public originalCreatorId name prefix suffix species gender birthDate ' +
@@ -1039,7 +1039,7 @@ const getUsersAnimals = async (appUserId_backend, filters = {}) => {
  * the pedigree/kinship calculation itself.
  *
  * Initial population rule, per current spec: animals that
- *   - belong to `creatorId` (the animal-being-scored's current owner — mirrors the same
+ *   - belong to `creatorId` (the animal-being-scored's current owner mirrors the same
  *     "currently owned" semantics as getUsersAnimals' `onlyOwned` branch, so transferred-away
  *     animals are naturally excluded since their creatorId has already moved to the new
  *     owner, and transferred-in animals are naturally included since creatorId is updated
@@ -1125,9 +1125,9 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     };
 
     try {
-        // isDisplay is the single source of truth for public visibility — no mapping needed.
+        // isDisplay is the single source of truth for public visibility no mapping needed.
 
-        // Resolve sireId_public/damId_public updates (single canonical field name for parents) —
+        // Resolve sireId_public/damId_public updates (single canonical field name for parents)
         // trust `updates.sireId_public`/`updates.damId_public` whenever present.
         if (updates.sireId_public !== undefined) {
             if (!updates.sireId_public) {
@@ -1164,7 +1164,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         // SYNC: When manualPedigree is updated, extract sire/dam CTC IDs and sync to sireId_public/damId_public
         // This ensures Pedigree entries automatically populate the canonical parent fields.
         // Runs unconditionally (taking precedence over the sireId_public/damId_public set above)
-        // above) since manualPedigree.sire/dam.ctcId comes from the Pedigree tab's own CTC picker —
+        // above) since manualPedigree.sire/dam.ctcId comes from the Pedigree tab's own CTC picker
         // the most specific and freshest source of intent when present.
         if (updates.manualPedigree && typeof updates.manualPedigree === 'object') {
             const mp = updates.manualPedigree;
@@ -1257,7 +1257,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
         updates.parasitePreventionSchedule = [];
     }
 
-    // isInTreatment/healthStatus are derived from active medical records, not manually-set —
+    // isInTreatment/healthStatus are derived from active medical records, not manually-set
     // recompute both on every save using the post-merge state so they never drift from the
     // actual data (healthStatusOverride, if set, is applied on top by the frontend when displaying).
     const mergedMedications = updates.medications !== undefined ? updates.medications : originalAnimal.medications;
@@ -1318,15 +1318,15 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     });
 
     // Keep the PublicAnimal mirror in sync with every field this route can touch.
-    // (Shared with any other route that writes to Animal directly — see resyncAnimalToPublic
-    // in utils/syncPublicAnimals.js — so the field list can't drift out of sync in one place
+    // (Shared with any other route that writes to Animal directly see resyncAnimalToPublic
+    // in utils/syncPublicAnimals.js  so the field list can't drift out of sync in one place
     // but not another.)
     await resyncAnimalToPublic(updatedAnimal);
 
     // Auto-create/sync a Budget Tracker "sale" Transaction from the animal form's Sale Date +
     // Sale Price fields, so users don't have to log the same sale twice. The edit form always
     // echoes back every existing field on every save (see the parent-field comment above), so we
-    // can't just check "updates.saleDate !== undefined" — that's true on nearly every save. Only
+    // can't just check "updates.saleDate !== undefined"  that's true on nearly every save. Only
     // act when the actual stored sale values changed vs. the pre-update record.
     try {
         const saleDateChanged = new Date(originalAnimal.saleDate || 0).getTime() !== new Date(updatedAnimal.saleDate || 0).getTime();
@@ -1431,7 +1431,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     // Log whatever changed (core fields vs. care schedule) so the animal's Timeline tab
     // stays up to date. Each helper is a no-op if nothing relevant changed.
     // IMPORTANT: `updatedAnimal` above is a hydrated Mongoose document, and Mongoose auto-applies
-    // schema defaults to any field missing from the raw DB doc during hydration — comparing it
+    // schema defaults to any field missing from the raw DB doc during hydration  comparing it
     // directly against `originalAnimal` (fetched via .lean(), so it never gets defaults applied)
     // produces false-positive diffs for every untouched field. Re-fetch a lean copy here so both
     // sides of every diff reflect the animal's true stored state, guaranteeing only real changes get logged.
@@ -1458,7 +1458,7 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
  * Gets archived and sold/transferred animals for a user.
  */
 const getArchivedAndSoldAnimals = async (appUserId_backend) => {
-    // Archive list cards only need enough fields to render MgmtAnimalCard —
+    // Archive list cards only need enough fields to render MgmtAnimalCard 
     // fetching full documents (breeding/health/growth history, etc.) for users
     // with thousands of archived animals made this endpoint extremely slow to transfer/render.
     const archiveSlimFields = 'id_public creatorId creatorId_public originalCreatorId name prefix suffix ' +
@@ -1483,7 +1483,7 @@ const getArchivedAndSoldAnimals = async (appUserId_backend) => {
     // userId_backend) for each transferred animal, so the recipient shown here always
     // matches what's shown on their public profile page (/user/:id_public). This has
     // nothing to do with the animal's own static manualownerName/manualBreederName
-    // fields — those are unrelated free-text fields, not the transfer recipient.
+    // fields those are unrelated free-text fields, not the transfer recipient.
     const recipientIds = [...new Set(
         soldTransferred
             .filter(a => a.creatorId && a.creatorId.toString() !== appUserId_backend.toString())
@@ -1521,7 +1521,7 @@ const getArchivedAndSoldAnimals = async (appUserId_backend) => {
         const creatorIdStr = animal.creatorId ? animal.creatorId.toString() : null;
         return {
             ...animal,
-            // Recipient's resolved PublicProfile name only — never fall back to the
+            // Recipient's resolved PublicProfile name only never fall back to the
             // animal's own manualownerName/manualBreederName fields, which are unrelated
             // free-text fields, not the transfer recipient. Leave empty if unresolved.
             manualownerName: creatorIdStr ? (recipientNameMap[creatorIdStr] || null) : null,
@@ -1708,7 +1708,7 @@ const addLitter = async (appUserId_backend, litterData) => {
     }
 
     // Duplicate detection: warn instead of silently creating a second Litter document for a
-    // pairing/date that's already tracked — same-user re-submits are almost always accidental,
+    // pairing/date that's already tracked same-user re-submits are almost always accidental,
     // and cross-user pairs should "adopt" the existing record (see adoptLitter) rather than fork it.
     // Skipped once the caller has explicitly confirmed ("create anyway").
     if (!litterData.confirmDuplicate && litterData.sireId_public && litterData.damId_public) {
@@ -1791,7 +1791,7 @@ const getUsersLitters = async (appUserId_backend) => {
     
     if (!litters.length) return [];
 
-    // Collect all unique parent IDs in one pass — avoids N×6 parallel queries
+    // Collect all unique parent IDs in one pass avoids N×6 parallel queries
     const parentIdSet = new Set();
     litters.forEach(l => {
         if (l.sireId_public) parentIdSet.add(l.sireId_public);
@@ -1807,7 +1807,7 @@ const getUsersLitters = async (appUserId_backend) => {
         PublicAnimal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
     ]);
 
-    // Build lookup maps — owned preferred → any Animal → PublicAnimal
+    // Build lookup maps owned preferred → any Animal → PublicAnimal
     const ownedMap = new Map(ownedAnimals.map(a => [a.id_public, a]));
     const anyMap = new Map(anyAnimals.map(a => [a.id_public, a]));
     const publicMap = new Map(publicAnimals.map(a => [a.id_public, a]));
@@ -1842,7 +1842,7 @@ const getUsersLitters = async (appUserId_backend) => {
 
 /**
  * Returns ALL litters referencing this animal as sire or dam, regardless of who created
- * the litter — this lets an animal's owner see planned matings/litters that other users
+ * the litter this lets an animal's owner see planned matings/litters that other users
  * registered using their animal, not just litters they created themselves.
  * The other parent is always resolved to safe display fields, even if privately owned.
  */
@@ -2049,7 +2049,7 @@ const deleteAnimal = async (appUserId_backend, animalId_backend) => {
         throw new Error('Animal not found or does not own this animal.');
     }
 
-    // Block deletion while a transfer is pending — otherwise the recipient is left with a
+    // Block deletion while a transfer is pending otherwise the recipient is left with a
     // notification/transfer record pointing at an animal that no longer exists.
     if (animal.pendingTransferId) {
         throw new Error('This animal has a pending transfer request. Withdraw it before deleting.');

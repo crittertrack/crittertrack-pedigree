@@ -1,5 +1,5 @@
 /**
- * "Born, birth date unknown" — a plain born entry with its own class.
+ * "Born, birth date unknown" a plain born entry with its own class.
  *
  * Saved as: birthDateUnknown = true, birthDate = null (NO date is ever invented), isPlanned = false.
  * Because there is no birthDate nothing is derived from it: no age, no nursing status, no weaning

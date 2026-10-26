@@ -19,7 +19,7 @@ const upload = multer({
 // ─── ZooEasy CSV parser ──────────────────────────────────────────────────────
 // ZooEasy exports use semicolons as delimiters and wrap every value in triple
 // double-quotes ("""value"""), which is standard RFC 4180 quoting where the
-// inner "" becomes a literal " — leaving the parsed value as "value".
+// inner "" becomes a literal " leaving the parsed value as "value".
 // After parsing we strip those surrounding quotes.
 
 function parseZooEasyCSV(buffer) {
@@ -292,7 +292,7 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
             }
         }
     }
-    // Tertiary: name-only — own animals first (high), then global (possible)
+    // Tertiary: name-only own animals first (high), then global (possible)
     if (nameVariants?.length) {
         const speciesFilter = species ? { species } : {};
         // Check own animals first
@@ -308,7 +308,7 @@ async function findGlobalDuplicate(zeRegNum, nameVariants, birthDate, userId, sp
                 .select('id_public name prefix creatorId_public breederAssignedId birthDate').lean();
             if (ownByPrefix) return { match: ownByPrefix, matchType: 'name_only', confidence: 'high' };
         }
-        // Then global (any user) — flag as possible match
+        // Then global (any user) flag as possible match
         for (const n of nameVariants) {
             const global = await Animal.findOne({ name: n, ...speciesFilter })
                 .select('id_public name prefix creatorId_public breederAssignedId birthDate')
@@ -455,7 +455,7 @@ router.post('/', upload.fields([
             for (const a of transformedAnimals) {
                 if (a._zooEasyRegNum) {
                     parentCache.set(a._zooEasyRegNum, {
-                        id_public: null, // not yet created — no CT ID yet in preview
+                        id_public: null, // not yet created no CT ID yet in preview
                         name: [a.prefix, a.name, a.suffix].filter(Boolean).join(' '),
                     });
                 }
@@ -548,7 +548,7 @@ router.post('/', upload.fields([
     for (const animal of transformedAnimals) {
         const { _zooEasyRegNum, _fatherRegNum, _motherRegNum, ...rec } = animal;
         try {
-            // If user deselected this animal, skip — but still honour map_to for lineage
+            // If user deselected this animal, skip but still honour map_to for lineage
             if (selectedSet && !selectedSet.has(_zooEasyRegNum)) {
                 const resolution = conflictResolutions[_zooEasyRegNum] || '';
                 if (resolution.startsWith('map_to:')) {
@@ -558,7 +558,7 @@ router.post('/', upload.fields([
                 continue;
             }
 
-            // Check for manual map_to resolution BEFORE duplicate detection —
+            // Check for manual map_to resolution BEFORE duplicate detection
             // the user may have mapped a "New" (green) animal that the backend
             // didn't detect as a duplicate, so we must honour the mapping here.
             const preResolution = conflictResolutions[_zooEasyRegNum] || '';
@@ -688,7 +688,7 @@ router.post('/', upload.fields([
             rec.litter_id_public = await getNextSequence('litterId');
             rec.creatorId = userId;
             // Auto-set weaningDate = birthDate + the species' weaning age and
-            // expectedDueDate = matingDate + gestation — utils/autoWeaningDate.js.
+            // expectedDueDate = matingDate + gestation utils/autoWeaningDate.js.
             if (autoCalc.weaning) await applyAutoWeaningOnCreate(rec, req.user.id_public);
             if (autoCalc.dueDate) await applyAutoDueDateOnCreate(rec, req.user.id_public);
             await Litter.create(rec);

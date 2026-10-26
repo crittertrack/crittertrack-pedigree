@@ -17,7 +17,7 @@ router.post('/send', async (req, res) => {
         const { receiverId, message, images = [], adminOverride = false, isModeratorMessage = false } = req.body;
         const senderId = req.user.id;
 
-        // message may legitimately be empty when the user is sending image(s) only —
+        // message may legitimately be empty when the user is sending image(s) only
         // only receiverId and a string-typed message are required here.
         if (!receiverId || typeof message !== 'string') {
             return res.status(400).json({ error: 'receiverId and message are required' });
@@ -100,7 +100,7 @@ router.post('/send', async (req, res) => {
 
         await newMessage.save();
 
-        // Push notification to the receiver — fire-and-forget, don't delay the response
+        // Push notification to the receiver fire-and-forget, don't delay the response
         const senderDisplayName = sender.breederName || sender.personalName || 'Someone';
         sendPushToUser(receiver, {
             title: senderDisplayName,
@@ -117,7 +117,7 @@ router.post('/send', async (req, res) => {
                 userIdPublic: senderPublicProfile?.id_public || sender.id_public || 'Unknown',
                 userName: sender.personalName || sender.breederName || null,
                 messagePreview: normalizedMessage.length > 500 ? normalizedMessage.slice(0, 500) + '…' : normalizedMessage
-            }); // fire-and-forget — no await so it doesn't delay the response
+            }); // fire-and-forget no await so it doesn't delay the response
         }
 
         res.status(201).json({ 

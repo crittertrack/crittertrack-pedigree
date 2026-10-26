@@ -9,7 +9,7 @@ const { buildNursingCutoffMap, DEFAULT_MAX_NURSING_DAYS, syncParentReproStatus }
 
 // Whether a litter's weaning reminder should fire: the weaning date has arrived AND the
 // litter is still inside its species' nursing window (age since birth <= Species.maxNursingDays,
-// DEFAULT_MAX_NURSING_DAYS when unset — the same safety-net cutoff reproStatusSync uses to
+// DEFAULT_MAX_NURSING_DAYS when unset the same safety-net cutoff reproStatusSync uses to
 // auto-close the dam's Nursing flag). Without this, a litter nobody ever confirmed with
 // "Wean Today" keeps alerting forever (e.g. after a weaning-date backfill). Shared with
 // pushRoutes /alert-count so both paths always agree (uses daysSince defined below).
@@ -111,30 +111,30 @@ const runAnimalAlertsCheck = async () => {
         if (isFeedingDue(a.lastFedDate, a.feedingIntervalHours)) bump(alerts, a.creatorId, 'feeding', animalName);
 
         (a.animalCareTasks || []).filter((task) => isTaskDue(task.lastDoneDate, task.frequencyDays))
-            .forEach((task) => bump(alerts, a.creatorId, 'careTasks', `${animalName} — ${task.taskName}`));
+            .forEach((task) => bump(alerts, a.creatorId, 'careTasks', `${animalName} • ${task.taskName}`));
         SCHEDULE_FIELD_KEYS.filter((key) => isTaskDue(a[key]?.lastDoneDate, a[key]?.frequencyDays))
             .forEach((key) => {
                 const taskName = key.replace(/Schedule$/, '').replace(/([A-Z])/g, ' $1').trim();
-                bump(alerts, a.creatorId, 'careTasks', `${animalName} — ${taskName}`);
+                bump(alerts, a.creatorId, 'careTasks', `${animalName} • ${taskName}`);
             });
 
-        // Only count a passed quarantine end date while quarantine is still marked active —
+        // Only count a passed quarantine end date while quarantine is still marked active
         // once a user ends it, status resets to 'None' but endDate is deliberately kept as the
         // "ended on" record for the health timeline (see AnimalFormModalV2.jsx), so checking
         // endDate alone fired this every single day forever for any animal that ever finished one.
         const quarantineActive = a.quarantineDetails?.status && a.quarantineDetails.status !== 'None';
         if (quarantineActive && a.quarantineDetails?.endDate && daysSince(a.quarantineDetails.endDate) >= 0) {
-            bump(alerts, a.creatorId, 'health', `${animalName} — quarantine end date`);
+            bump(alerts, a.creatorId, 'health', `${animalName} • quarantine end date`);
         }
         const status = a.healthStatusOverride || a.healthStatus;
         if (HEALTH_STATUSES_OF_CONCERN.includes(status)) {
-            bump(alerts, a.creatorId, 'health', `${animalName} — ${status} health status`);
+            bump(alerts, a.creatorId, 'health', `${animalName} • ${status} health status`);
         }
         const dueMedications = (a.medications || [])
             .filter((m) => !m.status || m.status === 'active')
             .map((medication) => ({ medication, nextDose: calcNextDose(medication) }))
             .filter(({ nextDose }) => nextDose && nextDose.getTime() <= Date.now());
-        dueMedications.forEach(({ medication }) => bump(alerts, a.creatorId, 'health', `${animalName} — ${medication.name || 'medication'}`));
+        dueMedications.forEach(({ medication }) => bump(alerts, a.creatorId, 'health', `${animalName} • ${medication.name || 'medication'}`));
     });
 
     // --- Enclosures: cleaning/maintenance tasks ---
@@ -142,7 +142,7 @@ const runAnimalAlertsCheck = async () => {
     enclosures.forEach((e) => {
         if (!e.creatorId) return;
         (e.cleaningTasks || []).filter((task) => isTaskDue(task.lastDoneDate, cleaningTaskFreqDays(task)))
-            .forEach((task) => bump(alerts, e.creatorId, 'enclosureCare', `${e.name || 'Unnamed enclosure'} — ${task.taskName || task.type || 'task'}`));
+            .forEach((task) => bump(alerts, e.creatorId, 'enclosureCare', `${e.name || 'Unnamed enclosure'} • ${task.taskName || task.type || 'task'}`));
     });
 
     // --- Standalone (not animal/enclosure-linked) general Feeding & Care tasks ---
@@ -155,13 +155,13 @@ const runAnimalAlertsCheck = async () => {
             const category = t.type === 'Feeding' ? 'feeding' : t.type === 'Cleaning' || t.type === 'Maintenance' ? 'enclosureCare' : 'careTasks';
             const assignedNames = (t.assignedAnimals || []).map((id) => animalNamesById.get(id)).filter(Boolean);
             const taskLabel = t.taskName || 'General care task';
-            bump(alerts, p.userId_backend, category, assignedNames.length ? `${taskLabel} — ${assignedNames.join(', ')}` : taskLabel);
+            bump(alerts, p.userId_backend, category, assignedNames.length ? `${taskLabel} • ${assignedNames.join(', ')}` : taskLabel);
         });
     });
 
     // --- Litters: planned mating date reached, due date reached, weaning date reached ---
     const littersAll = await Litter.find({}).select('creatorId litter_id_public breedingPairCodeName sireId_public damId_public isPlanned matingDate pregnancyDate expectedDueDate birthDate birthDateUnknown weaningDate weaningConfirmed pregnancyLost').lean();
-    // Species safety-net cutoff per litter (Species.maxNursingDays, default 90) — the same
+    // Species safety-net cutoff per litter (Species.maxNursingDays, default 90) the same
     // one reproStatusSync uses to auto-close the dam's Nursing flag, so a litter nobody ever
     // confirmed with "Wean Today" stops reminding once past any realistic nursing window.
     const nursingCutoffByLitter = await buildNursingCutoffMap(littersAll);
@@ -178,7 +178,7 @@ const runAnimalAlertsCheck = async () => {
             }
         }
         // Due-date reminder: no pregnancyDate required (only ~15% of records ever got
-        // "Pregnant Today"), but skip planned-but-not-yet-mated litters and lost pregnancies —
+        // "Pregnant Today"), but skip planned-but-not-yet-mated litters and lost pregnancies
         // same shape as NotificationBar/NotificationsHub.
         if (!l.isPlanned && !l.pregnancyLost && !l.birthDate && !l.birthDateUnknown && l.expectedDueDate) {
             const days = daysSince(l.expectedDueDate);
@@ -190,8 +190,8 @@ const runAnimalAlertsCheck = async () => {
 
     // Self-heal: a dam's derived isNursing flag normally only recomputes on a litter write,
     // so a litter that ages past Species.maxNursingDays without any edit would leave the flag
-    // — and the frontend reminders (NotificationBar/NotificationsHub/AnimalList) that trust
-    // it — saying "weaning due" forever. Refresh only the dams that are actually stale:
+    // and the frontend reminders (NotificationBar/NotificationsHub/AnimalList) that trust
+    // it saying "weaning due" forever. Refresh only the dams that are actually stale:
     // litters past the cutoff (still open) whose dam still carries isNursing: true.
     const openPastCutoffByDam = new Map();
     littersAll.forEach((l) => {
@@ -271,7 +271,7 @@ const runIfNotAlreadyDoneToday = async () => {
 };
 
 const startAnimalAlertsCron = () => {
-    // Runs every hour and no-ops unless it's a new calendar day and past 09:00 UTC — resilient to
+    // Runs every hour and no-ops unless it's a new calendar day and past 09:00 UTC resilient to
     // exact restart timing without needing a single fragile fixed-minute cron expression.
     cron.schedule('0 * * * *', () => {
         const hourUtc = new Date().getUTCHours();

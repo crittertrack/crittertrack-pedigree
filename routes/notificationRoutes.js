@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
             ...sendAtFilter,
         }).sort({ createdAt: -1 }).lean();
 
-        // All other notification types — capped at 50 most recent
+        // All other notification types capped at 50 most recent
         const others = await Notification.find({
             userId,
             type: { $nin: ['broadcast', 'announcement'] },
@@ -89,7 +89,7 @@ router.patch('/:notificationId/read', async (req, res) => {
     }
 });
 
-// Approve a notification (breeder or parent request) — the link was already applied
+// Approve a notification (breeder or parent request) the link was already applied
 // optimistically when the request was created, so approving just confirms it and lets
 // the requester know.
 router.post('/:notificationId/approve', async (req, res) => {
@@ -125,7 +125,7 @@ router.post('/:notificationId/approve', async (req, res) => {
                 parentType: notification.parentType,
                 targetAnimalId_public: notification.targetAnimalId_public,
                 // Wording matters here: the link was already applied when the request was sent,
-                // not just now — "approved" would wrongly imply it only just took effect.
+                // not just now "approved" would wrongly imply it only just took effect.
                 message: `Your ${notification.type === 'breeder_request' ? 'breeder' : notification.type === 'owner_request' ? 'owner' : notification.parentType} request for ${notification.animalName} was acknowledged.`,
                 read: false
             });
@@ -215,7 +215,7 @@ router.post('/:notificationId/reject', async (req, res) => {
                 read: false
             });
         } else if (notification.type === 'litter_assignment') {
-            // Owner is rejecting having their animal used as a sire/dam in someone else's litter —
+            // Owner is rejecting having their animal used as a sire/dam in someone else's litter 
             // clear the assignment on the Litter itself (the animal record has no link to clear).
             const litterId_public = notification.metadata?.litterId_public;
             const role = notification.parentType;
@@ -235,7 +235,7 @@ router.post('/:notificationId/reject', async (req, res) => {
 
                     // Offspring already registered under this litter may have independently copied
                     // this animal onto their own sireId_public/damId_public (that's a separate field
-                    // from the Litter's, populated when each offspring is created) — clear those too so
+                    // from the Litter's, populated when each offspring is created) clear those too so
                     // the animal actually disappears from those offspring's Pedigree tabs, not just the
                     // Litter record.
                     const offspringIds = litter.offspringIds_public || [];

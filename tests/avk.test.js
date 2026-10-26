@@ -4,12 +4,12 @@
  * AVK_i = (1/N) x sum_{j=1}^{N} f(i,j)   over the reference population (N animals),
  * where f(i,j) is Wright's pedigree kinship (coancestry) coefficient, computed via
  * calculateAverageKinship() in utils/inbreeding.js (reuses buildPedigreeDAG/computePathSums,
- * the SAME machinery calculatePairingInbreeding()/COI already use — nothing about the
+ * the SAME machinery calculatePairingInbreeding()/COI already use nothing about the
  * existing COI calculation is modified by these tests or by the AVK code itself).
  *
  * Self-kinship f(i,i) = (1 + F_i) / 2 falls out of the same summation automatically
  * (no special-cased formula), so an animal that is a member of its own reference
- * population always contributes at least 0.5/N to its own AVK — this is why an
+ * population always contributes at least 0.5/N to its own AVK this is why an
  * unrelated founder with no pedigree still gets a small nonzero AVK rather than a
  * misleading 0%.
  *
@@ -104,7 +104,7 @@ test('Simple pedigree, unrelated population → AVK = 50%/N', async () => {
 });
 
 // 4. Shared ancestors: X and Y are full siblings (share both parents). Kinship f(X,Y) for
-// full siblings = 25% (same value as the COI of their mated offspring — a well-known
+// full siblings = 25% (same value as the COI of their mated offspring a well-known
 // pedigree identity). Population = {X, Y}: AVK(X) = (f(X,X) + f(X,Y)) / 2 = (50 + 25)/2 = 37.5%
 test('Shared ancestors (full siblings) → AVK reflects sibling kinship', async () => {
     const db = {
@@ -129,7 +129,7 @@ test('Heavily represented lineage → high AVK relative to an unrelated outsider
         X: { sire: null, dam: null },
         U1: { sire: null, dam: null }, U2: { sire: null, dam: null }, U3: { sire: null, dam: null },
         U4: { sire: null, dam: null }, U5: { sire: null, dam: null },
-        // Five of X's offspring, each out of an unrelated mate — X's lineage saturates the group.
+        // Five of X's offspring, each out of an unrelated mate X's lineage saturates the group.
         C1: { sire: 'X', dam: 'U1' }, C2: { sire: 'X', dam: 'U2' }, C3: { sire: 'X', dam: 'U3' },
         C4: { sire: 'X', dam: 'U4' }, C5: { sire: 'X', dam: 'U5' },
         // A totally unrelated outsider founder, for comparison.
@@ -146,7 +146,7 @@ test('Heavily represented lineage → high AVK relative to an unrelated outsider
     }
 });
 
-// 6. Multiple unrelated lineages: two separate founder lines with no crossover — every
+// 6. Multiple unrelated lineages: two separate founder lines with no crossover every
 // cross-line kinship is 0%, so AVK for a member of line A against a population drawn from
 // BOTH lines should be lower than against a population drawn ONLY from its own line.
 test('Multiple unrelated lineages → cross-line kinship is 0, lowering AVK', async () => {
@@ -183,7 +183,7 @@ test('Incomplete pedigree (one known parent) → computes without error', async 
     if (!(avgKinship > 25)) throw new Error(`Expected AVK > 25% for half-sibling pairing, got ${avgKinship}%`);
 });
 
-// 8. Empty reference population → null (not 0%, not an error) — cannot be computed.
+// 8. Empty reference population → null (not 0%, not an error) cannot be computed.
 test('Empty reference population → avgKinship is null', async () => {
     const db = { A: { sire: null, dam: null } };
     const { avgKinship, populationSize } = await calculateAverageKinship('A', [], makeFetchAnimal(db));
@@ -196,7 +196,7 @@ test('Empty reference population → avgKinship is null', async () => {
 // so a data error where an animal is its own ancestor must terminate, not hang/crash.
 test('Malformed cyclic pedigree does not cause infinite recursion', async () => {
     const db = {
-        // A's sire is B, B's sire is A — a data-entry cycle.
+        // A's sire is B, B's sire is A a data-entry cycle.
         A: { sire: 'B', dam: null },
         B: { sire: 'A', dam: null },
         C: { sire: null, dam: null }

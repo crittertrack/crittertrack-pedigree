@@ -8,7 +8,7 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const { MongoClient } = require('mongodb');
 
-// Latin binomial: Genus species( subspecies? ) — Genus capitalized, rest lowercase
+// Latin binomial: Genus species( subspecies? ) Genus capitalized, rest lowercase
 // (also handles "Oryctolagus cuniculus domesticus")
 const LATIN_OK = /^[A-Z][a-z]+(?:\s[a-z][a-z.-]+)+$/;
 const COMMON_CAP_OK = /^[A-Z0-9]/; // first char uppercase or digit
@@ -44,9 +44,9 @@ const COMMON_CAP_OK = /^[A-Z0-9]/; // first char uppercase or digit
     console.log(`\n"${s.name}" [${s.category}] ${s.latinName ? `(${s.latinName})` : 'NO LATIN NAME'}`);
     console.log(`  added by ${s.createdBy_public || 'unknown'} on ${new Date(s.createdAt).toISOString().slice(0, 10)}`);
     console.log(`  animal usage: ${animals}`);
-    console.log(`  latin name check: ${!s.latinName ? 'MISSING' : LATIN_OK.test(s.latinName) ? 'OK' : `SUSPECT — "${s.latinName}"`}`);
+    console.log(`  latin name check: ${!s.latinName ? 'MISSING' : LATIN_OK.test(s.latinName) ? 'OK' : `SUSPECT • "${s.latinName}"`}`);
     console.log(`  possible default overlap: ${overlaps.length ? overlaps.join('; ') : 'none'}`);
-    console.log(`  name capitalization: ${COMMON_CAP_OK.test(s.name) ? 'OK' : `MISSING CAPITAL — "${s.name}"`}`);
+    console.log(`  name capitalization: ${COMMON_CAP_OK.test(s.name) ? 'OK' : `MISSING CAPITAL • "${s.name}"`}`);
   }
 
   // ---- 2. Capitalization audit (all species) ----

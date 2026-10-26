@@ -41,8 +41,8 @@ router.post('/', async (req, res) => {
         // req.user is added by authMiddleware and contains the user's backend _id
         const appUserId_backend = req.user.id; 
         // Auto-set weaningDate = birthDate + species' weaning age
-        // and expectedDueDate = matingDate + species' gestation — see
-        // utils/autoWeaningDate.js — so the weaning and birth-due reminders fire without
+        // and expectedDueDate = matingDate + species' gestation see
+        // utils/autoWeaningDate.js so the weaning and birth-due reminders fire without
         // anyone typing the dates.
         // Each auto-calculation can be switched off separately from the Litter Management header.
         const autoCalc = await getAutoCalcPrefs(appUserId_backend);
@@ -196,7 +196,7 @@ router.post('/:litterId_backend/adopt', async (req, res) => {
 
 
 // GET /api/litters/for-animal/:id_public
-// Returns litters (registered by ANY user) that reference this animal as sire or dam —
+// Returns litters (registered by ANY user) that reference this animal as sire or dam 
 // lets an owner see planned matings/litters other users created using their animal.
 // Non-owners only see litters the litter's own creator has marked isDisplayLitter (public),
 // so a private litter management record never leaks to anyone besides its owner.
@@ -303,7 +303,7 @@ router.put('/:id_backend', async (req, res) => {
 
         // Keep weaningDate = birthDate + the species' weaning age, and
         // expectedDueDate = matingDate + the species' gestation, in sync. Hand-entered
-        // values and "Wean Today" confirmations are never overwritten — see
+        // values and "Wean Today" confirmations are never overwritten see
         // utils/autoWeaningDate.js. (Both mutate `updates` in place.)
         const autoCalc = await getAutoCalcPrefs(appUserId_backend);
         const unknownBirth = isUnknownBirth(updates, priorLitter);
@@ -441,7 +441,7 @@ const litterImageUpload = (req, res, next) =>
     });
 
 // POST /api/litters/:id_backend/images
-// Upload one image to a litter (max 5). Works at any stage — planned, mated or born.
+// Upload one image to a litter (max 5). Works at any stage planned, mated or born.
 router.post('/:id_backend/images', litterImageUpload, async (req, res) => {
     try {
         const litter = await Litter.findById(req.params.id_backend);

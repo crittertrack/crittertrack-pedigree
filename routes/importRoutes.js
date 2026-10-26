@@ -332,7 +332,7 @@ router.post('/', upload.single('file'), async (req, res) => {
                 const isConflict = raw.id_public && existingAnimalIds.has(raw.id_public);
 
                 if (!isConflict) {
-                    // New animal — assign fresh id_public if not provided or already exists
+                    // New animal assign fresh id_public if not provided or already exists
                     if (!raw.id_public) rec.id_public = await getNextSequence('animalId');
                     else rec.id_public = raw.id_public;
                     rec.creatorId = userId;
@@ -376,7 +376,7 @@ router.post('/', upload.single('file'), async (req, res) => {
         for (const raw of records) {
             const rec = sanitise(raw, LITTER_SAFE);
             // Auto-set weaningDate = birthDate + the species' weaning age and
-            // expectedDueDate = matingDate + gestation — utils/autoWeaningDate.js.
+            // expectedDueDate = matingDate + gestation utils/autoWeaningDate.js.
             if (autoCalc.weaning) await applyAutoWeaningOnCreate(rec, req.user.id_public);
             if (autoCalc.dueDate) await applyAutoDueDateOnCreate(rec, req.user.id_public);
             try {

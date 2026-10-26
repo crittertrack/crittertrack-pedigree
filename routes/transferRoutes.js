@@ -120,7 +120,7 @@ router.post('/:id/accept', async (req, res) => {
     try {
         // withTransaction auto-retries the whole callback on transient errors (e.g. two
         // transfers from the same sender being accepted concurrently, both touching the
-        // sender's User.ownedAnimals array at once — the exact WriteConflict seen in prod).
+        // sender's User.ownedAnimals array at once the exact WriteConflict seen in prod).
         await session.withTransaction(async () => {
         const userId = req.user.id;
         const transferId = req.params.id;
@@ -185,7 +185,7 @@ router.post('/:id/accept', async (req, res) => {
         console.log('[Transfer Accept] New owner found:', newOwner?.id_public);
 
         if (isReturn) {
-            // A return fully restores ownership to the original breeder — no transfer
+            // A return fully restores ownership to the original breeder no transfer
             // relationship remains, so originalCreatorId/soldStatus must be cleared (matching
             // the revert-on-delete logic in db_service.js), otherwise the recipient keeps
             // showing up as "received" (arrows) and loses their own Transfer button.
@@ -286,7 +286,7 @@ router.post('/:id/accept', async (req, res) => {
         });
 
         // PublicAnimal is not part of the transaction (resyncAnimalToPublic manages its own
-        // write) — run after commit so a public mirror update never causes/blocks a retry.
+        // write)  run after commit so a public mirror update never causes/blocks a retry.
         await resyncAnimalToPublic(animal);
 
         console.log('[Transfer Accept] ✓ Transfer accepted successfully');

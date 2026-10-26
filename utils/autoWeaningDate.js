@@ -1,5 +1,5 @@
 /**
- * Auto litter-date rules — available to every user. (Historic filename: the module also
+ * Auto litter-date rules available to every user. (Historic filename: the module also
  * auto-fills expectedDueDate, hence both rule sets living here.)
  *
  * 1) weaningDate = birthDate + the SPECIES' WEANING AGE:
@@ -7,7 +7,7 @@
  *      (Russian/Campbells/Chinese/Roborovski) · any other/unresolvable -> left blank (no fallback)
  *    Driving the weaning reminders: utils/animalAlertsCron.js daily push digest,
  *    NotificationsHub/NotificationBar "weaning due", routes/pushRoutes.js bell count.
- *    Reminders only fire inside the species' nursing window — reproStatusSync's
+ *    Reminders only fire inside the species' nursing window reproStatusSync's
  *    Species.maxNursingDays safety-net cutoff closes them afterwards.
  *
  * 2) expectedDueDate = matingDate + the SPECIES' GESTATION:
@@ -38,7 +38,7 @@
  *   - Never overwrite a date the user typed themselves (an explicit payload value that
  *     differs from the stored one is respected).
  *   - Never touch a litter confirmed via "Wean Today" (weaningConfirmed) or flagged
- *     pregnancyLost — those are recorded events, not plans.
+ *     pregnancyLost those are recorded events, not plans.
  */
 
 
@@ -68,9 +68,9 @@ const WEANING_AGE_RULES = [
     { days: 35, match: (n) => n.includes('africanpygmydormouse') },            // African Pygmy Dormouse (leaves nest ~5 wks)
 ];
 
-// Every age the rule can produce — used to detect a stored "auto-derived" weaningDate.
+// Every age the rule can produce used to detect a stored "auto-derived" weaningDate.
 // Ages that earlier versions of the rules produced (Fancy Rat was 35 before it was raised
-// to 40) — kept so dates auto-filled back then are still recognised as auto-derived and get
+// to 40) kept so dates auto-filled back then are still recognised as auto-derived and get
 // re-derived on the next edit instead of being mistaken for hand-entered values.
 const LEGACY_WEANING_AGE_DAYS = [35];
 const KNOWN_WEANING_AGE_DAYS = [...new Set([...WEANING_AGE_RULES.map((r) => r.days), ...LEGACY_WEANING_AGE_DAYS])];
@@ -120,7 +120,7 @@ const isBlank = (v) => v === undefined || v === null || v === '';
 
 // Resolves a litter's species from its parents (dam first, then sire): Animal with a
 // PublicAnimal fallback. Lazy-requires models so this module loads cleanly in unit
-// tests, and returns null when no DB connection is open or the lookup fails — which
+// tests, and returns null when no DB connection is open or the lookup fails which
 // simply means "use the default weaning age".
 const defaultSpeciesLookup = async (sireId_public, damId_public) => {
     const ids = [...new Set([damId_public, sireId_public].filter(Boolean))];
@@ -175,7 +175,7 @@ const applyAutoWeaningOnCreate = async (payload, idPublic, lookupSpecies = defau
  * for the acting user.
  *
  * @param {Object} payload  The PUT body (mutated in place).
- * @param {Object} prior    The stored litter — needs sireId_public/damId_public/
+ * @param {Object} prior    The stored litter needs sireId_public/damId_public/
  *                          birthDate/weaningDate/weaningConfirmed (may be null on a
  *                          not-found lookup).
  * @param {String} idPublic The acting user's id_public (req.user.id_public).
@@ -234,7 +234,7 @@ const applyAutoWeaningOnUpdate = async (payload, prior, idPublic, lookupSpecies 
 // Gestation: matingDate + species' days -> expectedDueDate, which drives the "births
 // due" reminders (animalAlertsCron/pushRoutes digest + NotificationBar/NotificationsHub/
 // Calendar). Same normalised-species matching as the weaning ages; UNKNOWN species get
-// NO auto-fill (gestations vary too widely to guess) — same as weaning.
+// NO auto-fill (gestations vary too widely to guess) same as weaning.
 const GESTATION_DAYS_RULES = [
     { days: 16, match: (n) => n.includes('syrian') && n.includes('hamster') }, // Syrian Hamster
     { days: 18, match: (n) => n.includes('dwarf') && n.includes('hamster') },  // * Dwarf Hamster
@@ -257,7 +257,7 @@ const GESTATION_DAYS_RULES = [
     { days: 24, match: (n) => n.includes('africanpygmydormouse') },            // African Pygmy Dormouse (24-28)
 ];
 
-// Every gestation the rule can produce — used to detect a stored "auto-derived" due date.
+// Every gestation the rule can produce used to detect a stored "auto-derived" due date.
 const KNOWN_GESTATION_DAYS = [...new Set(GESTATION_DAYS_RULES.map((r) => r.days))]; // 16,18,21,19
 
 /** Gestation days after mating for a species name; null when unresolvable (no auto-fill). */
@@ -268,7 +268,7 @@ const gestationDaysForSpecies = (species) => {
     return rule ? rule.days : null;
 };
 
-// Calendar-day add in UTC — same convention as computeWeaningDate.
+// Calendar-day add in UTC same convention as computeWeaningDate.
 const computeExpectedDueDate = (matingDate, days) => {
     if (!matingDate || !days) return null;
     const d = new Date(matingDate);
@@ -306,7 +306,7 @@ const applyAutoDueDateOnCreate = async (payload, idPublic, lookupSpecies = defau
 /**
  * UPDATE rule (async): keep expectedDueDate = matingDate + the species' gestation in sync
  * for the acting user. Hand-entered due dates are respected; an auto-derived one re-derives when the
- * mating date (or species) changes — including the "Mated Today" patch, which moves a due
+ * mating date (or species) changes including the "Mated Today" patch, which moves a due
  * date auto-filled from the *scheduled* mating date onto the actual one. Pregnancy-lost
  * records are never touched. `prior` needs sireId_public/damId_public/matingDate/
  * expectedDueDate/pregnancyLost.

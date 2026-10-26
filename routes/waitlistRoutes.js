@@ -94,7 +94,7 @@ function getContactName(contact) {
 //
 // 'oldest' / 'newest' order by entry date. 'manual' is the custom order set with the
 // chevrons on each card: entries with a stored position come first in that order, and
-// entries that were never positioned (sortOrder 0) go LAST — otherwise every newly
+// entries that were never positioned (sortOrder 0) go LAST otherwise every newly
 // added entry jumped to the top and scrambled the order the user had set.
 //
 // Sorting happens in JS rather than in mongo so the "never positioned" rule can be
@@ -121,8 +121,8 @@ function sortWaitlistEntries(entries, sortParam) {
     return sorted;
 }
 
-// GET /api/waitlist — list all entries owned by the current user.
-// Query: ?sort=oldest|newest|manual — the order the caller wants.
+// GET /api/waitlist list all entries owned by the current user.
+// Query: ?sort=oldest|newest|manual the order the caller wants.
 //
 // The order is honoured exactly. The old implementation force-switched to the
 // manual order as soon as *any* entry had been positioned, which silently broke
@@ -140,7 +140,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/waitlist — create a new waitlist entry (multi-species)
+// POST /api/waitlist create a new waitlist entry (multi-species)
 router.post('/', async (req, res) => {
     try {
         const { name, contactInfo, speciesRequests, species, genders, amount, notes, contactId } = req.body;
@@ -183,7 +183,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PATCH /api/waitlist/:id — update a waitlist entry (multi-species)
+// PATCH /api/waitlist/:id update a waitlist entry (multi-species)
 router.patch('/:id', async (req, res) => {
     try {
         const entry = await WaitlistEntry.findOne({ _id: req.params.id, userId: req.user.id });
@@ -214,8 +214,8 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
-// POST /api/waitlist/reorder — bulk-assign sortOrder from an ordered ID list (move up/down).
-// Body: { orderedIds: [id1, id2, id3, ...] } — assigns sortOrder 1, 2, 3, … in list order.
+// POST /api/waitlist/reorder bulk-assign sortOrder from an ordered ID list (move up/down).
+// Body: { orderedIds: [id1, id2, id3, ...] } assigns sortOrder 1, 2, 3, … in list order.
 router.post('/reorder', async (req, res) => {
     try {
         const { orderedIds } = req.body;
@@ -235,7 +235,7 @@ router.post('/reorder', async (req, res) => {
     }
 });
 
-// POST /api/waitlist/:id/finalize — move to history, snapshotting animals assigned via the picker
+// POST /api/waitlist/:id/finalize move to history, snapshotting animals assigned via the picker
 // (animals whose reservedWaitlistEntryId points at this entry)
 router.post('/:id/finalize', async (req, res) => {
     try {
@@ -273,7 +273,7 @@ router.post('/:id/finalize', async (req, res) => {
     }
 });
 
-// DELETE /api/waitlist/:id — delete a waitlist entry
+// DELETE /api/waitlist/:id delete a waitlist entry
 router.delete('/:id', async (req, res) => {
     try {
         const result = await WaitlistEntry.findOneAndDelete({ _id: req.params.id, userId: req.user.id });

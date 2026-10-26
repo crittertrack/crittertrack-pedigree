@@ -205,7 +205,7 @@ router.get('/admin/stats', async (req, res) => {
                 percentage: totalResponses > 0 ? Number(((d.count / totalResponses) * 100).toFixed(1)) : 0
             }));
         }
-        // Multi-select fields are stored as arrays — unwind so each chosen option is counted once per respondent
+        // Multi-select fields are stored as arrays  unwind so each chosen option is counted once per respondent
         for (const q of multiChoiceQuestions) {
             const dist = await BetaSurveyResponse.aggregate([
                 { $match: { [q]: { $ne: null } } },

@@ -77,7 +77,7 @@ async function embedImageAsBase64(url) {
 //   format        json | csv  (default: json)
 //   includeArchived  true | false  (default: false)
 //   includeSold      true | false  (default: false)
-//   embedImages      true | false  (default: false) — JSON only; embeds images as base64 data URIs
+//   embedImages      true | false  (default: false) JSON only; embeds images as base64 data URIs
 router.get('/', async (req, res) => {
     try {
         const userId = req.user.id;

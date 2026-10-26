@@ -10,10 +10,10 @@ if (vapidPublicKey && vapidPrivateKey) {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
     vapidConfigured = true;
 } else {
-    console.warn('[push] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY not set — push notifications are disabled.');
+    console.warn('[push] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY not set • push notifications are disabled.');
 }
 
-// Native push (FCM) for Capacitor apps (e.g. CritterTrack Lite) — separate from the VAPID/web-push
+// Native push (FCM) for Capacitor apps (e.g. CritterTrack Lite)  separate from the VAPID/web-push
 // setup above, which only delivers to browser PushSubscriptions.
 let fcmConfigured = false;
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -25,7 +25,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
         console.error('[push] Failed to initialize firebase-admin from FIREBASE_SERVICE_ACCOUNT:', err.message || err);
     }
 } else {
-    console.warn('[push] FIREBASE_SERVICE_ACCOUNT not set — native (FCM) push notifications are disabled.');
+    console.warn('[push] FIREBASE_SERVICE_ACCOUNT not set • native (FCM) push notifications are disabled.');
 }
 
 // Maps every Notification.type enum value to a user-facing preference category.

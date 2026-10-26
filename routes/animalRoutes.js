@@ -13,12 +13,12 @@ router.use(protect);
 
 // Guards against the AVK background recompute (triggered on every /inbreeding fetch) piling up
 // concurrent, expensive pedigree traversals across a user's whole reference population when the
-// same animal's detail view is opened/switched-away-from-and-back repeatedly in a short window —
+// same animal's detail view is opened/switched-away-from-and-back repeatedly in a short window 
 // this was overwhelming the DB connection pool and causing unrelated requests to time out (499s).
 const avkRecomputeInFlight = new Set();
 const AVK_RECOMPUTE_COOLDOWN_MS = 10 * 60 * 1000;
 
-// The per-animal guard above only stops the SAME animal's recompute from overlapping itself —
+// The per-animal guard above only stops the SAME animal's recompute from overlapping itself 
 // it does nothing to stop DIFFERENT animals (opened by different users/tabs) from all recomputing
 // at once. Each job traverses the full pedigree of every animal in the owner's same-species
 // population, so a handful of concurrent jobs server-wide was enough to starve the DB connection
@@ -233,7 +233,7 @@ router.post('/duplicates/merge', async (req, res) => {
             Notification.updateMany({ animalId_public: deleteId }, { $set: { animalId_public: keepId } }),
             Notification.updateMany({ targetAnimalId_public: deleteId }, { $set: { targetAnimalId_public: keepId } })
         ]);
-        // Litter offspring lists hold an array of IDs — add the keeper before pulling the
+        // Litter offspring lists hold an array of IDs add the keeper before pulling the
         // duplicate out, since Mongo disallows $addToSet and $pull on the same path at once.
         await Litter.updateMany({ offspringIds_public: deleteId }, { $addToSet: { offspringIds_public: keepId } });
         await Litter.updateMany({ offspringIds_public: deleteId }, { $pull: { offspringIds_public: deleteId } });
@@ -352,9 +352,9 @@ router.get('/:id_public/offspring', async (req, res) => {
         let relevantOffspring = offspring;
         if (!includeManaged) {
             // Exclude offspring only if they're tracked by a Litter Management record the
-            // viewer can actually see (own litters, litters on an animal the viewer owns —
+            // viewer can actually see (own litters, litters on an animal the viewer owns 
             // even if another user created the litter, or another user's litter marked
-            // isDisplayLitter) — that litter is represented by GET /litters/for-animal instead.
+            // isDisplayLitter) that litter is represented by GET /litters/for-animal instead.
             // Offspring whose only litter link is someone else's PRIVATE litter (on an animal
             // the viewer doesn't own) fall through and are shown here instead, so a public
             // offspring is never hidden behind another user's private litter record.
@@ -666,7 +666,7 @@ router.get('/:id_public/inbreeding', async (req, res) => {
         // Update the animal's record with the cached value if the user owns it
         await Animal.updateOne({ id_public, creatorId: req.user.id }, { inbreedingCoefficient: result.inbreedingCoefficient });
 
-        // AVK (Average Kinship) — additive alongside COI above; does not alter the COI
+        // AVK (Average Kinship)  additive alongside COI above; does not alter the COI
         // calculation itself. Reference population is the target animal's own owner's
         // living, non-archived, same-species animals (see getAvkReferencePopulation).
         //
@@ -674,7 +674,7 @@ router.get('/:id_public/inbreeding', async (req, res) => {
         // real reference population can be large enough (hundreds of same-species
         // animals) that computing it synchronously here was serializing behind the COI
         // response and made the whole endpoint appear to hang. AVK is eventually
-        // consistent — it refreshes on the next fetch after a background recompute
+        // consistent  it refreshes on the next fetch after a background recompute
         // finishes, instead of ever blocking this request.
         let avgKinship = null;
         let avkPopulationSize = null;
@@ -685,7 +685,7 @@ router.get('/:id_public/inbreeding', async (req, res) => {
                 avkPopulationSize = targetAnimal.avkPopulationSize ?? null;
 
                 // Skip re-triggering if a recompute for this animal is already running, or
-                // if one finished recently — repeatedly opening/switching the same animal's
+                // if one finished recently  repeatedly opening/switching the same animal's
                 // detail view was stacking up duplicate full-population traversals.
                 const recentlyComputed = targetAnimal.avkComputedAt &&
                     (Date.now() - new Date(targetAnimal.avkComputedAt).getTime()) < AVK_RECOMPUTE_COOLDOWN_MS;

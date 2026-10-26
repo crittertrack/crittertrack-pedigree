@@ -13,7 +13,7 @@
 const { Animal, AnimalLog } = require('../database/models');
 
 // Curated label overrides for the auto-generated tracked-field list below (FIELD_EDIT_TRACKED_FIELDS)
-// — any scalar field not listed here still gets tracked, just with a camelCase -> Title Case fallback.
+// any scalar field not listed here still gets tracked, just with a camelCase -> Title Case fallback.
 const FIELD_LABELS = {
     name: 'Name',
     prefix: 'Prefix',
@@ -59,7 +59,7 @@ const CARE_LABELS = {
 };
 const CARE_SCALAR_FIELDS = Object.keys(CARE_LABELS);
 
-// Dedicated, individually-tracked schedules ({ lastDoneDate, frequencyDays }) — Grooming/Special
+// Dedicated, individually-tracked schedules ({ lastDoneDate, frequencyDays }) Grooming/Special
 // Care (Routine Care tab) and Training (Behavior tab, surfaced in Feeding & Care management view).
 const SCHEDULE_FIELD_LABELS = {
     groomingSchedule: 'Grooming Schedule',
@@ -84,26 +84,26 @@ const SCHEDULE_FIELD_LABELS = {
 };
 const SCHEDULE_FIELDS = new Set(Object.keys(SCHEDULE_FIELD_LABELS));
 
-// System/internal/computed fields — must NEVER be logged as field edits.
+// System/internal/computed fields must NEVER be logged as field edits.
 const EXCLUDED_FIELDS = new Set([
     '_id', '__v', 'id_public', 'creatorId', 'creatorId_public', 'originalCreatorId', 'soldStatus',
     'viewOnlyForUsers', 'pendingTransferId', 'hiddenForUsers', 'healthStatus', 'isInTreatment',
     'isPlannedMating', 'inbreedingCoefficient', 'sbId', 'litterId', 'timelineNotes', 'pinnedEvents',
     'measurementUnits', 'manualPedigree', 'createdAt', 'updatedAt',
     // isOwned/isDisplay flip frequently (transfers, batch visibility toggles)
-    // and were crowding the timeline with noise — excluded from field-edit logging entirely.
+    // and were crowding the timeline with noise excluded from field-edit logging entirely.
     'isOwned', 'isDisplay',
 ]);
 
 // Scalar fields already surfaced via their own derived timeline-event types (health/breeding/
-// ownership) in TimelineTabContent.jsx & AnimalFormModalV2.jsx's aggregateAllEvents — excluded here
+// ownership) in TimelineTabContent.jsx & AnimalFormModalV2.jsx's aggregateAllEvents excluded here
 // so the same change doesn't show up twice on the timeline.
 const DERIVED_EVENT_FIELDS = new Set([
     'spayNeuterDate', 'lastHeatDate', 'lastMatingDate', 'expectedDueDate', 'nursingStartDate',
     'weaningDate', 'lastPregnancyDate', 'purchaseDate', 'saleDate',
 ]);
 
-// Fields already logged under the 'care'/'feeding' categories elsewhere in this file — excluded
+// Fields already logged under the 'care'/'feeding' categories elsewhere in this file excluded
 // from the 'field' category so they don't get logged twice.
 const CARE_OR_FEEDING_TRACKED_FIELDS = new Set([...CARE_SCALAR_FIELDS, 'lastFedDate']);
 
@@ -113,7 +113,7 @@ const getFieldLabel = (field) => FIELD_LABELS[field] || toTitleCase(field);
 
 // Auto-derive every trackable top-level scalar field straight from the Mongoose schema instead of
 // hand-maintaining a small allowlist, so newly added Animal fields get logged automatically.
-// Also captures each field's static schema default (if any) — needed so a field that was never
+// Also captures each field's static schema default (if any) needed so a field that was never
 // actually stored in the DB (before = undefined) isn't falsely diffed against Mongoose's
 // auto-applied default on the freshly-hydrated `after` document (see FIELD_DEFAULTS usage below).
 const FIELD_DEFAULTS = {};
@@ -133,7 +133,7 @@ const buildTrackedFieldList = () => {
 const FIELD_EDIT_TRACKED_FIELDS = buildTrackedFieldList();
 
 // Array/list fields with no dedicated derived-event generation elsewhere (Health tab-only
-// conditions/allergies, gallery, misc records) — logged as a single generic "Updated" entry per
+// conditions/allergies, gallery, misc records) logged as a single generic "Updated" entry per
 // save rather than diffed item-by-item, since they have no stable per-item key to diff against.
 const GENERIC_ARRAY_FIELDS = {
     tags: 'Tags',
@@ -150,7 +150,7 @@ const GENERIC_ARRAY_FIELDS = {
 const toComparable = (value) => {
     // Treat "no value" consistently regardless of whether it arrived as undefined, null, or an
     // empty string (forms routinely send '' for untouched text fields while the DB has the field
-    // as missing/null) — otherwise these compare as "different" forever, on every save.
+    // as missing/null) otherwise these compare as "different" forever, on every save.
     if (value === undefined || value === null || value === '') return null;
     if (value instanceof Date) return value.getTime();
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
@@ -170,8 +170,8 @@ const valuesEqual = (a, b) => {
 /**
  * Diffs `before` vs `after` for every trackable core "field edit" field (auto-derived from the
  * Animal schema, see FIELD_EDIT_TRACKED_FIELDS) plus quarantine/treatment status and the generic
- * array/list fields. Each individual change gets its OWN AnimalLog document (category 'field') —
- * never piled together into one entry — so the Timeline shows one card per actual change.
+ * array/list fields. Each individual change gets its OWN AnimalLog document (category 'field')
+ * never piled together into one entry so the Timeline shows one card per actual change.
  */
 const logFieldEdits = async ({ userId, animalId, animalId_public, before, after }) => {
     try {

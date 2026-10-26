@@ -35,7 +35,7 @@ const protect = async (req, res, next) => {
 
         req.user = user;
 
-        // Update lastActive throttled — fire and forget, update at most once every 5 minutes
+        // Update lastActive throttled fire and forget, update at most once every 5 minutes
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         if (!user.lastActive || user.lastActive < fiveMinutesAgo) {
             User.updateOne({ _id: user._id }, { lastActive: new Date() }).catch(() => {});

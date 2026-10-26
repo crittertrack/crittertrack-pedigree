@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); // <-- REQUIRED for inlined Auth Middleware
-// Deployment trigger: 2026-03-13 — isPlanned schema field active
+// Deployment trigger: 2026-03-13 isPlanned schema field active
 require('dotenv').config();
 const { ProfanityError } = require('./utils/profanityFilter');
 
@@ -115,7 +115,7 @@ app.use(helmet());
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    // Cache-Control/Pragma are sent by the Marketplace fetch (to bypass caching) — must be
+    // Cache-Control/Pragma are sent by the Marketplace fetch (to bypass caching) must be
     // explicitly allowed or the CORS preflight fails. This only matters for the native
     // Android app, which calls the API cross-origin; the web app is same-origin (via the
     // Vercel proxy rewrite) so it never triggers a preflight at all.
@@ -139,7 +139,7 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
-// Ko-fi webhook + public fundraiser/supporter endpoints (unauthenticated — Ko-fi calls this directly)
+// Ko-fi webhook + public fundraiser/supporter endpoints (unauthenticated Ko-fi calls this directly)
 const kofiRoutes = require('./routes/kofiRoutes');
 app.use('/api/kofi', kofiRoutes);
 app.use('/api/admin-account', authMiddleware, adminAccountRoutes);
@@ -462,7 +462,7 @@ app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
 });
 
 // General (standalone, not animal/enclosure-linked) Feeding & Care tasks
-// NOTE: generalCareTasks is declared on PublicProfileSchema, not UserSchema — must use PublicProfile here.
+// NOTE: generalCareTasks is declared on PublicProfileSchema, not UserSchema must use PublicProfile here.
 app.get('/api/users/general-tasks', authMiddleware, async (req, res) => {
     try {
         const { PublicProfile } = require('./database/models');
@@ -528,7 +528,7 @@ app.post('/api/users/dismiss-profile-setup-guide', authMiddleware, async (req, r
     }
 });
 
-// PATCH /api/users/preferences — save UI preferences (e.g. default animal view)
+// PATCH /api/users/preferences save UI preferences (e.g. default animal view)
 app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
     try {
         const { User } = require('./database/models');
@@ -600,7 +600,7 @@ app.patch('/api/users/preferences', authMiddleware, async (req, res) => {
             update['uiPreferences.enclosureShowRehomed'] = enclosureShowRehomed;
         }
         if (hiddenFormSections !== undefined) {
-            // Species is used as a nested Mixed-map key — sanitize to block dot-path injection (e.g. "$set"-style keys).
+            // Species is used as a nested Mixed-map key sanitize to block dot-path injection (e.g. "$set"-style keys).
             const speciesKey = hiddenFormSectionsSpecies.trim().replace(/[.$]/g, '');
             update[`uiPreferences.hiddenFormSections.${speciesKey}`] = {
                 tabs: hiddenFormSections.tabs.filter(v => typeof v === 'string'),
@@ -985,7 +985,7 @@ app.use('/api/beta-survey', authMiddleware, betaSurveyRoutes);
 const messageRoutes = require('./routes/messageRoutes');
 app.use('/api/messages', authMiddleware, messageRoutes);
 
-// Push Notification Routes — vapid-public-key must stay unauthenticated (needed before subscribing),
+// Push Notification Routes vapid-public-key must stay unauthenticated (needed before subscribing),
 // so it's handled directly here; the rest of the router (subscribe/preferences) requires auth.
 const pushRoutes = require('./routes/pushRoutes');
 const { vapidPublicKey } = require('./utils/pushService');
@@ -1005,7 +1005,7 @@ app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
 const suppliesRoutes = require('./routes/suppliesRoutes');
 app.use('/api/supplies', authMiddleware, suppliesRoutes);
 
-// Waitlist Routes (Reservations page — Require authMiddleware)
+// Waitlist Routes (Reservations page Require authMiddleware)
 const waitlistRoutes = require('./routes/waitlistRoutes');
 app.use('/api/waitlist', authMiddleware, waitlistRoutes);
 
@@ -1013,11 +1013,11 @@ app.use('/api/waitlist', authMiddleware, waitlistRoutes);
 const contactRoutes = require('./routes/contactRoutes');
 app.use('/api/contacts', authMiddleware, contactRoutes);
 
-// Appearance Field Option Routes (per-user dropdown+custom-entry lists, e.g. Color) — Require authMiddleware
+// Appearance Field Option Routes (per-user dropdown+custom-entry lists, e.g. Color) Require authMiddleware
 const appearanceFieldOptionsRoutes = require('./routes/appearanceFieldOptionsRoutes');
 app.use('/api/appearance-options', authMiddleware, appearanceFieldOptionsRoutes);
 
-// Data Portability — Export / Import (Require authMiddleware)
+// Data Portability Export / Import (Require authMiddleware)
 const exportRoutes = require('./routes/exportRoutes');
 const importRoutes = require('./routes/importRoutes');
 const zooeasyRoutes = require('./routes/zooeasyRoutes');
@@ -1114,7 +1114,7 @@ const broadcastCronJob = async () => {
                     notification.sentAt = new Date();
                     await notification.save();
 
-                    // Push notification (not sent on creation for pending broadcasts — send it now that it's due)
+                    // Push notification (not sent on creation for pending broadcasts send it now that it's due)
                     require('./utils/pushService').sendPushForNotification(notification).catch(err => {
                         console.error('[BROADCAST CRON] Push send failed:', err.message || err);
                     });
@@ -1181,7 +1181,7 @@ const matingReminderCronJob = async () => {
                 const sireName = fmtAnimal(sireDoc, litter.sireId_public);
                 const damName  = fmtAnimal(damDoc,  litter.damId_public);
 
-                console.log(`[MATING REMINDER] Due today: ${litter.litter_id_public || litter._id} — ${sireName} × ${damName}`);
+                console.log(`[MATING REMINDER] Due today: ${litter.litter_id_public || litter._id} • ${sireName} × ${damName}`);
             } catch (err) {
                 console.error(`[MATING REMINDER] Error for litter ${litter._id}:`, err);
             }
@@ -1200,7 +1200,7 @@ setTimeout(matingReminderCronJob, 10000);
 // supporter badge would otherwise stay on forever once granted. This clears it for any user
 // whose most recent matched Ko-fi subscription payment has aged past the grace window.
 // Manually-tracked badges (source: 'manual', e.g. a pre-existing PayPal subscriber added by an
-// admin) are deliberately never touched here — only an admin can grant/clear those.
+// admin) are deliberately never touched here only an admin can grant/clear those.
 const kofiBadgeExpiryCronJob = async () => {
     try {
         const { User, PublicProfile, KofiPledge } = require('./database/models');
