@@ -7,6 +7,7 @@ const { computeIsInTreatment, computeHealthStatus } = require('../utils/healthSt
 const { logFieldEdits, logCareUpdates, logAnimalCreated } = require('../utils/animalLogger');
 const { resyncAnimalToPublic } = require('../utils/syncPublicAnimals');
 const { isAutoWeaningUser } = require('../utils/autoWeaningDate');
+const { calculateLifeStageFromBirthDate } = require('../utils/lifeStageUtils');
 
 const {
     User,
@@ -801,6 +802,19 @@ const addAnimal = async (appUserId_backend, animalData) => {
         animalData.lifeStage = 'Unknown';
     }
     
+    // Auto-calculate lifeStage from birthDate if not provided by user
+    // Only override if the lifeStage is still 'Unknown' or empty string
+    if (animalData.birthDate) {
+        const calculatedStage = calculateLifeStageFromBirthDate(animalData.birthDate);
+        // Only auto-fill if user hasn't explicitly set a stage
+        if (animalData.lifeStage === 'Unknown' || animalData.lifeStage === '') {
+            animalData.lifeStage = calculatedStage;
+        }
+    } else {
+        // No birth date provided - keep lifeStage as-is (Unknown or user-selected)
+        animalData.lifeStage = animalData.lifeStage || 'Unknown';
+    }
+    
     // Clean up invalid data before creating Animal instance
     if (typeof animalData.parasitePreventionSchedule === 'string' && animalData.parasitePreventionSchedule === '') {
         animalData.parasitePreventionSchedule = [];
@@ -1212,6 +1226,23 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     // If lifeStage is an empty string, set it to the default 'Unknown' to avoid validation error.
     if (updates.lifeStage === '') {
         updates.lifeStage = 'Unknown';
+    }
+    
+    // Auto-calculate lifeStage from birthDate if not provided or unchanged by user
+    if (updates.birthDate !== undefined && updates.birthDate !== null) {
+        // birthDate changed - recalc lifeStage
+        const calculatedStage = calculateLifeStageFromBirthDate(updates.birthDate);
+        if (updates.lifeStage === 'Unknown' || updates.lifeStage === '') {
+            updates.lifeStage = calculatedStage;
+        }
+    } else if (typeof updates.lifeStage === 'undefined') {
+        // lifeStage not in updates - check original
+        if (originalAnimal.birthDate) {
+            const calculatedStage = calculateLifeStageFromBirthDate(originalAnimal.birthDate);
+            if (originalAnimal.lifeStage === 'Unknown' || originalAnimal.lifeStage === '') {
+                updates.lifeStage = calculatedStage;
+            }
+        }
     }
 
     // Use findOneAndUpdate to ensure ownership and get the updated document
