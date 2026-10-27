@@ -805,7 +805,7 @@ const addAnimal = async (appUserId_backend, animalData) => {
     // Auto-calculate lifeStage from birthDate if not provided by user
     // Only override if the lifeStage is still 'Unknown' or empty string
     if (animalData.birthDate) {
-        const calculatedStage = calculateLifeStageFromBirthDate(animalData.birthDate);
+        const calculatedStage = calculateLifeStageFromBirthDate(animalData.birthDate, animalData.species);
         // Only auto-fill if user hasn't explicitly set a stage
         if (animalData.lifeStage === 'Unknown' || animalData.lifeStage === '') {
             animalData.lifeStage = calculatedStage;
@@ -1231,14 +1231,14 @@ const updateAnimal = async (appUserId_backend, animalId_backend, updates) => {
     // Auto-calculate lifeStage from birthDate if not provided or unchanged by user
     if (updates.birthDate !== undefined && updates.birthDate !== null) {
         // birthDate changed - recalc lifeStage
-        const calculatedStage = calculateLifeStageFromBirthDate(updates.birthDate);
+        const calculatedStage = calculateLifeStageFromBirthDate(updates.birthDate, updates.species || originalAnimal.species);
         if (updates.lifeStage === 'Unknown' || updates.lifeStage === '') {
             updates.lifeStage = calculatedStage;
         }
     } else if (typeof updates.lifeStage === 'undefined') {
         // lifeStage not in updates - check original
         if (originalAnimal.birthDate) {
-            const calculatedStage = calculateLifeStageFromBirthDate(originalAnimal.birthDate);
+            const calculatedStage = calculateLifeStageFromBirthDate(originalAnimal.birthDate, originalAnimal.species);
             if (originalAnimal.lifeStage === 'Unknown' || originalAnimal.lifeStage === '') {
                 updates.lifeStage = calculatedStage;
             }

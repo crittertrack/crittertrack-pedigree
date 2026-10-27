@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { calculateLifeStageFromBirthDate, getLifespanDays } = require('../utils/lifeStageUtils');
+const { calculateLifeStageFromBirthDate, getLifespanDays, getLifeStageThresholds } = require('../utils/lifeStageUtils');
 
 const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
 

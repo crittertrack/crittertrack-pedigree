@@ -699,7 +699,12 @@ const WEEKS_PER_DAY = 7;
  *                   or generic rodent defaults if not found.
  */
 function getLifeStageThresholds(species) {
-    if (!species) return null;
+    if (!species) return {
+        newborn: 21,
+        juvenile: 42,
+        sub_adult: 90,
+        senior_pct: 0.75,
+    };
     // Normalize species name: handle both 'guinea pig' and 'guinea_pig'
     const normalized = species.toLowerCase().trim().replace(/[\s\-_]+/g, ' ');
     const key = SPECIES_THRESHOLDS_KEY_MAP[normalized];
@@ -753,7 +758,14 @@ function calculateLifeStageFromBirthDate(birthDate, species) {
     const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
 
     // Get species-specific day cutoffs
-    const thresholds = getLifeStageThresholds(species);
+    // (getLifeStageThresholds now always returns a valid object, but guard
+    //  defensively in case it ever returns null/undefined)
+    const thresholds = getLifeStageThresholds(species) || {
+        newborn: 21,
+        juvenile: 42,
+        sub_adult: 90,
+        senior_pct: 0.75,
+    };
 
     // No lifespan known -> use generic rodent default
     const lifespanDays = getLifespanDays(species) || 730; // 2 years default
