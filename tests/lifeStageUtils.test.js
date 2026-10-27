@@ -8,15 +8,15 @@ function makeBirthDate(daysAgo) {
     return new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
 }
 
-test('calculateLifeStageFromBirthDate: newborn (0-14 days) for Fancy Mouse', () => {
+test('calculateLifeStageFromBirthDate: newborn (0-21 days) for Fancy Mouse', () => {
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(0), 'Fancy Mouse'), 'Newborn');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(1), 'Fancy Mouse'), 'Newborn');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(10), 'Fancy Mouse'), 'Newborn');
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(14), 'Fancy Mouse'), 'Newborn');
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(21), 'Fancy Mouse'), 'Newborn');
 });
 
-test('calculateLifeStageFromBirthDate: juvenile (15-42 days) for Fancy Mouse', () => {
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(15), 'Fancy Mouse'), 'Juvenile');
+test('calculateLifeStageFromBirthDate: juvenile (22-42 days) for Fancy Mouse', () => {
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(22), 'Fancy Mouse'), 'Juvenile');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(30), 'Fancy Mouse'), 'Juvenile');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(42), 'Fancy Mouse'), 'Juvenile');
 });
@@ -28,11 +28,9 @@ test('calculateLifeStageFromBirthDate: sub-adult (43-90 days) for Fancy Mouse', 
 });
 
 test('calculateLifeStageFromBirthDate: adult (91-547 days) for Fancy Mouse', () => {
-    // Sub-adult only until 180 days for Fancy Mouse (1-2 years lifespan, 75% = ~547 days)
-    // Adult starts at 181 days
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(91), 'Fancy Mouse'), 'Sub-adult');
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(180), 'Fancy Mouse'), 'Sub-adult');
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(181), 'Fancy Mouse'), 'Adult');
+    // Fancy Mouse (2yr = 730 days), senior starts at 75% = 548 days
+    // Adult: 91 days - 547 days
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(91), 'Fancy Mouse'), 'Adult');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(200), 'Fancy Mouse'), 'Adult');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(547), 'Fancy Mouse'), 'Adult');
 });
@@ -44,18 +42,29 @@ test('calculateLifeStageFromBirthDate: senior (548+ days) for Fancy Mouse', () =
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(1000), 'Fancy Mouse'), 'Senior');
 });
 
-test('calculateLifeStageFromBirthDate: juvenile (15-42 days) for Rat', () => {
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(15), 'Rat'), 'Juvenile');
+test('calculateLifeStageFromBirthDate: newborn (0-21 days) for Rat', () => {
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(0), 'Rat'), 'Newborn');
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(1), 'Rat'), 'Newborn');
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(10), 'Rat'), 'Newborn');
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(21), 'Rat'), 'Newborn');
+});
+
+test('calculateLifeStageFromBirthDate: juvenile (22-42 days) for Rat', () => {
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(22), 'Rat'), 'Juvenile');
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(30), 'Rat'), 'Juvenile');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(42), 'Rat'), 'Juvenile');
 });
 
-test('calculateLifeStageFromBirthDate: sub-adult (43-180 days) for Rat', () => {
+test('calculateLifeStageFromBirthDate: sub-adult (43-90 days) for Rat', () => {
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(43), 'Rat'), 'Sub-adult');
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(180), 'Rat'), 'Sub-adult');
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(60), 'Rat'), 'Sub-adult');
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(90), 'Rat'), 'Sub-adult');
 });
 
-test('calculateLifeStageFromBirthDate: adult (181-821 days) for Rat', () => {
-    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(181), 'Rat'), 'Adult');
+test('calculateLifeStageFromBirthDate: adult (91-821 days) for Rat', () => {
+    // Rat (3yr = 1095 days), senior starts at 75% = 821 days
+    // Adult: 91 days - 821 days
+    assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(91), 'Rat'), 'Adult');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(500), 'Rat'), 'Adult');
     assert.equal(calculateLifeStageFromBirthDate(makeBirthDate(821), 'Rat'), 'Adult');
 });
@@ -120,7 +129,7 @@ test('getLifespanDays: returns species lifespans', () => {
 });
 
 test('getLifespanDays: falls back to 2-year default for unknown species', () => {
-    assert.equal(getLifespanDays('African Pygmy Mouse'), 730);
+    assert.equal(getLifespanDays('Ball Python'), 17155);
     assert.equal(getLifespanDays(null), null);
     assert.equal(getLifespanDays(''), null);
 });

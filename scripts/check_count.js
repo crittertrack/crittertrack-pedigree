@@ -11,16 +11,16 @@ mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000, conn
         });
         console.log('Total needing migration (all species):', totalCount);
         
-        // Count only Fancy Mouse
-        const fancyMouseCount = await Animal.countDocuments({
-            species: 'Fancy Mouse',
+        // Count only Campbells Dwarf Hamster
+        const CampbellsDwarfHamsterCount = await Animal.countDocuments({
+            species: 'Campbells Dwarf Hamster',
             lifeStage: { $in: ['Unknown', ''] },
             birthDate: { $exists: true, $ne: null }
         });
-        console.log('Fancy Mouse needing migration:', fancyMouseCount);
+        console.log('Campbells Dwarf Hamster needing migration:', CampbellsDwarfHamsterCount);
         
         // Count other species
-        const otherCount = totalCount - fancyMouseCount;
+        const otherCount = totalCount - CampbellsDwarfHamsterCount;
         console.log('Other species needing migration:', otherCount);
     } catch (err) {
         console.error('Query error:', err.message);

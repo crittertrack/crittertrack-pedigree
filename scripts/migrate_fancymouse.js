@@ -23,7 +23,7 @@ async function migrateBatch() {
 
     // Find one batch of animals needing migration
     const query = {
-        species: 'Fancy Mouse',
+        species: 'Guinea Pig',
         lifeStage: { $in: ['Unknown', ''] },
         birthDate: { $exists: true, $ne: null }
     };
