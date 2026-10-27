@@ -474,6 +474,7 @@ const AnimalSchema = new mongoose.Schema({
     
     // Tab 5: Lineage & Origin Fields
     origin: { type: String, default: 'Captive-bred' },
+    conservationStatus: { type: String, enum: ['Not Evaluated', 'Data Deficient', 'Least Concern', 'Near Threatened', 'Vulnerable', 'Endangered', 'Critically Endangered', 'Extinct in the Wild', 'Extinct'], default: 'Not Evaluated' },
     
     // Tab 6: Reproduction & Breeding Fields
     isNeutered: { type: Boolean, default: false },
