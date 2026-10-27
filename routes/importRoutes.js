@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const JSZip = require('jszip');
+const XLSX = require('xlsx');
 const { Animal, Litter, Enclosure, SupplyItem, Transaction } = require('../database/models');
 const { getNextSequence } = require('../database/db_service');
 const { applyAutoWeaningOnCreate, applyAutoDueDateOnCreate, getAutoCalcPrefs } = require('../utils/autoWeaningDate');
@@ -11,10 +12,12 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
     fileFilter: (req, file, cb) => {
-        const allowed = ['application/json', 'application/zip',
-            'application/x-zip-compressed', 'application/octet-stream'];
+const allowed = ['application/json', 'application/zip',
+            'application/x-zip-compressed', 'application/octet-stream',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel'];
         const ext = (file.originalname || '').split('.').pop().toLowerCase();
-        if (allowed.includes(file.mimetype) || ext === 'json' || ext === 'zip') {
+        if (allowed.includes(file.mimetype) || ext === 'json' || ext === 'zip' || ext === 'xlsx' || ext === 'xls') {
             return cb(null, true);
         }
         cb(new Error('Only .json or .zip files are accepted'));
@@ -112,7 +115,29 @@ async function parseUpload(buffer, originalname) {
         return result;
     }
 
-    throw new Error('Unsupported file type. Upload a .json or .zip file.');
+if (ext === 'xlsx' || ext === 'xls') {
+        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        const result = {};
+        const sectionMap = {
+            'animals': 'animals', 'litters': 'litters', 'enclosures': 'enclosures',
+            'supplies': 'supplies', 'budget': 'budget',
+        };
+        for (const sheetName of workbook.SheetNames) {
+            const ws = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            if (!rows.length) continue;
+            const lower = sheetName.toLowerCase();
+            let section = null;
+            for (const [key, sec] of Object.entries(sectionMap)) {
+                if (lower.includes(key)) { section = sec; break; }
+            }
+            if (!section && workbook.SheetNames.length === 1) section = 'animals';
+            if (section) result[section] = rows;
+        }
+        return result;
+    }
+
+    throw new Error('Unsupported file type. Upload a .json, .zip, or .xlsx file.');
 }
 
 // ─── Field sanitisers: keep only schema-safe fields, strip ObjectId refs ─────
@@ -130,7 +155,7 @@ const ANIMAL_SAFE = new Set([
     'chestGirth','bodyConditionScore',
     'microchipNumber','pedigreeRegistrationId','colonyId','breed','strain',
     'licenseNumber','licenseJurisdiction','tattooId','ringId','eartagNumber',
-    'origin','isNeutered','heatStatus','lastHeatDate','ovulationDate',
+    'origin','conservationStatus','isNeutered','heatStatus','lastHeatDate','ovulationDate',
     'expectedDueDate','litterCount','litterSizeBorn','litterSizeWeaned','stillbornCount',
     'nursingStartDate','weaningDate','breedingRole','lastMatingDate','successfulMatings',
     'lastPregnancyDate','offspringCount','isStudAnimal','availableForBreeding',
