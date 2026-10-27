@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const JSZip = require('jszip');
+const XLSX = require('xlsx');
 const { Animal, Litter, Enclosure, SupplyItem, Transaction } = require('../database/models');
 
 // --- CSV helpers ---
@@ -140,6 +141,18 @@ router.get('/', async (req, res) => {
             return res.send(zipBuffer);
         }
 
+if (format === 'xlsx') {
+            const wb = XLSX.utils.book_new();
+            for (const [section, records] of Object.entries(data)) {
+                const ws = XLSX.utils.json_to_sheet(Array.isArray(records) ? records : []);
+                XLSX.utils.book_append_sheet(wb, ws, section);
+            }
+            const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="crittertrack_export_${timestamp}.xlsx"`);
+            return res.send(buffer);
+        }
+
         // JSON format (default)
         const payload = {
             exportedAt: new Date().toISOString(),
@@ -156,5 +169,35 @@ router.get('/', async (req, res) => {
         res.status(500).json({ message: 'Export failed', error: err.message });
     }
 });
+
+// GET /api/export/template
+router.get('/template', async (req, res) => {
+    try {
+        const { Animal, Litter, Enclosure, SupplyItem, Transaction } = require('../database/models');
+        const cols = [
+            { name: 'animals', Model: Animal },
+            { name: 'litters', Model: Litter },
+            { name: 'enclosures', Model: Enclosure },
+            { name: 'supplies', Model: SupplyItem },
+            { name: 'budget', Model: Transaction },
+        ];
+        const internal = new Set(['_id','__v','creatorId','originalCreatorId','viewOnlyForUsers','hiddenForUsers','userId','creatorId_public','avkPopulationSize','avkComputedAt','avgKinship','sbId','manualPedigree','enclosureId','updatedAt','createdAt','inbreedingCoefficient','litterId','id_public','litter_id_public']);
+        const wb = XLSX.utils.book_new();
+        for (const { name, Model } of cols) {
+            const sample = await Model.findOne({}).lean();
+            const headers = sample ? Object.keys(sample).filter(k => !internal.has(k)) : [];
+            const ws = XLSX.utils.json_to_sheet([], { header: headers });
+            XLSX.utils.book_append_sheet(wb, ws, name);
+        }
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="crittertrack_template.xlsx"');
+        return res.send(buffer);
+    } catch (err) {
+        console.error('[exportRoutes] Template error:', err);
+        res.status(500).json({ message: 'Template export failed', error: err.message });
+    }
+});
+
 
 module.exports = router;

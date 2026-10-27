@@ -336,6 +336,41 @@ router.post('/', upload.single('file'), async (req, res) => {
 
         for (const raw of records) {
             const rec = sanitise(raw, ANIMAL_SAFE);
+            // Normalise free-text lifeStage values to the app's allowed dropdown options.
+            if (rec.lifeStage !== undefined) {
+                const LIFESTAGE_OPTIONS = ['Newborn', 'Juvenile', 'Sub-adult', 'Adult', 'Senior', 'Mixed'];
+                const input = String(rec.lifeStage).trim().toLowerCase();
+                const exact = LIFESTAGE_OPTIONS.find(o => o.toLowerCase() === input);
+                const partial = !exact ? LIFESTAGE_OPTIONS.find(o => o.toLowerCase().includes(input) || input.includes(o.toLowerCase())) : null;
+                if (exact || partial) {
+                    rec.lifeStage = exact || partial;
+                } else {
+                    delete rec.lifeStage;
+                }
+            }
+            if (rec.gender !== undefined) {
+                const GENDER_OPTIONS = ['Male', 'Female', 'Intersex', 'Mixed', 'Unknown'];
+                const input = String(rec.gender).trim().toLowerCase();
+                const exact = GENDER_OPTIONS.find(o => o.toLowerCase() === input);
+                const partial = !exact ? GENDER_OPTIONS.find(o => o.toLowerCase().includes(input) || input.includes(o.toLowerCase())) : null;
+                if (exact || partial) {
+                    rec.gender = exact || partial;
+                } else {
+                    delete rec.gender;
+                }
+            }
+            // If no close match is found, drop the field so the schema default ('Pet') applies.
+            if (rec.status !== undefined) {
+                const STATUS_OPTIONS = ['Pet', 'Growout', 'Breeder', 'Available', 'Booked', 'Retired', 'Deceased', 'Culled', 'Rehomed', 'Unknown'];
+                const input = String(rec.status).trim().toLowerCase();
+                const exact = STATUS_OPTIONS.find(o => o.toLowerCase() === input);
+                const partial = !exact ? STATUS_OPTIONS.find(o => o.toLowerCase().includes(input) || input.includes(o.toLowerCase())) : null;
+                if (exact || partial) {
+                    rec.status = exact || partial;
+                } else {
+                    delete rec.status;
+                }
+            }
             if (!rec.name || !rec.species) {
                 errors.push({ section: 'animals', id: raw.id_public || '?', error: 'Missing required fields: name, species' });
                 continue;
