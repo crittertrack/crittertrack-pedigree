@@ -508,6 +508,26 @@ router.post('/', async (req, res) => {
     }
 });
 
+// POST /api/animals/bulk - Bulk create animals (one species per batch)
+router.post('/bulk', async (req, res) => {
+    try {
+        const species = req.query.species || req.body?.species;
+        if (!species) {
+            return res.status(400).json({ message: 'A species is required (query param "species" or "animals[0].species").' });
+        }
+        const payloads = req.body?.animals;
+        if (!Array.isArray(payloads)) {
+            return res.status(400).json({ message: 'Expected an array of animal payloads in "animals".' });
+        }
+        const enriched = payloads.map((p) => ({ ...p, species }));
+        const result = await handleBulkCreateAnimals(req.user.id, enriched);
+        res.status(201).json(result);
+    } catch (error) {
+        console.error('[ANIMALS] Error bulk creating animals:', error);
+        res.status(500).json({ message: 'Failed to bulk create animals', error: error.message });
+    }
+});
+
 // PUT /api/animals/:id_public - Update an animal
 router.put('/:id_public', async (req, res) => {
     try {

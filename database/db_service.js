@@ -869,6 +869,122 @@ const addAnimal = async (appUserId_backend, animalData) => {
 };
 
 /**
+ * Bulk create animals for a user.
+ * Each payload is a partial animal document (common fields only); species and creatorId are
+ * resolved from the requesting user. Required per payload: `name`.
+ *
+ * @param {string} appUserId_backend - MongoDB ID of the creating user
+ * @param {Array} payloads - Array of animal payload objects
+ * @returns {Promise<{ created: Array, errors: Array }>}
+ */
+const handleBulkCreateAnimals = async (appUserId_backend, payloads = []) => {
+    const LIMIT = 100;
+    if (payloads.length > LIMIT) {
+        return {
+            created: [],
+            errors: [
+                {
+                    message: `Batch limit is ${LIMIT} animals. Please split into smaller batches.`,
+                },
+            ],
+        };
+    }
+    if (payloads.length === 0) {
+        return { created: [], errors: [{ message: 'No animals provided.' }] };
+    }
+
+    const created = [];
+    const errors = [];
+    const newIds = [];
+
+    for (const payload of payloads) {
+        try {
+            if (!payload.name) {
+                throw Object.assign(new Error('Name is required.'), { statusCode: 400 });
+            }
+            if (!payload.species) {
+                throw Object.assign(new Error('Species is required.'), { statusCode: 400 });
+            }
+
+            // Normalize image fields (photoUrl falls back to imageUrl, like addAnimal).
+            if (payload.imageUrl && !payload.photoUrl) {
+                payload.photoUrl = payload.imageUrl;
+            }
+
+            // Clean text fields (name, species, prefix, etc.).
+            enforceCleanAnimalText(payload);
+
+            // Auto-calc lifeStage from birthDate if not explicitly set.
+            if (payload.birthDate) {
+                const calculatedStage = calculateLifeStageFromBirthDate(payload.birthDate, payload.species);
+                if (payload.lifeStage === 'Unknown' || payload.lifeStage === '') {
+                    payload.lifeStage = calculatedStage;
+                }
+            } else {
+                payload.lifeStage = payload.lifeStage || 'Unknown';
+            }
+
+            // Derive health flags (isInTreatment, healthStatus) like addAnimal does.
+            payload.isInTreatment = computeIsInTreatment({
+                medications: payload.medications,
+                medicalConditions: payload.medicalConditions,
+            });
+            payload.healthStatus = computeHealthStatus({
+                quarantineDetails: payload.quarantineDetails,
+                medications: payload.medications,
+                medicalConditions: payload.medicalConditions,
+                allergies: payload.allergies,
+            });
+
+            // Ensure creatorId_public is always present (required by schema).
+            if (!payload.creatorId_public) {
+                try {
+                    const owner = await User.findById(appUserId_backend).select('id_public').lean();
+                    if (owner?.id_public) payload.creatorId_public = owner.id_public;
+                } catch (e) {
+                    /* non-fatal */
+                }
+            }
+
+            // Create and save the animal (id_public is auto-generated per item via counter).
+            const newAnimal = new Animal({
+                creatorId: appUserId_backend,
+                id_public: await getNextSequence('animalId'),
+                isDisplay: false,
+                ...payload,
+            });
+            await newAnimal.save();
+
+            // Track IDs for one batched $push into User.ownedAnimals.
+            newIds.push(newAnimal._id);
+            created.push(newAnimal.toObject());
+        } catch (err) {
+            // Isolate per-item failures; continue with the rest of the batch.
+            errors.push({ message: err.message, code: err.statusCode || 500 });
+        }
+    }
+
+    // Batch-update the user's ownedAnimals array in one update.
+    if (newIds.length > 0) {
+        await User.findByIdAndUpdate(appUserId_backend, { $push: { ownedAnimals: { $each: newIds } } });
+    }
+
+    // Log each creation to the animal's timeline.
+    for (const animal of created) {
+        await logAnimalCreated({
+            userId: appUserId_backend,
+            animalId: animal._id,
+            animalId_public: animal.id_public,
+            name: animal.name,
+        });
+    }
+
+    return { created, errors };
+};
+
+
+
+/**
  * Gets a list of animals owned by the logged-in user.
  */
 const getUsersAnimals = async (appUserId_backend, filters = {}) => {
@@ -2598,6 +2714,7 @@ module.exports = {
     resetPassword,
     // Animal functions
     addAnimal,
+    handleBulkCreateAnimals,
     getUsersAnimals,
     getAnimalByIdAndUser,
     updateAnimal,
