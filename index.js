@@ -446,8 +446,9 @@ app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
         if (!Array.isArray(breedingLineDefs) || typeof animalBreedingLines !== 'object' || animalBreedingLines === null) {
             return res.status(400).json({ message: 'Invalid data format' });
         }
-        if (breedingLineDefs.length > 11) {
-            return res.status(400).json({ message: 'Maximum 11 breeding lines allowed' });
+        // Enforce size limits to prevent abuse (max 10 breeding lines)
+        if (breedingLineDefs.length > 10) {
+            return res.status(400).json({ message: 'Maximum 10 breeding lines allowed' });
         }
         const updated = await User.findByIdAndUpdate(
             req.user.id,
