@@ -430,7 +430,7 @@ app.get('/api/users/breeding-lines', authMiddleware, async (req, res) => {
         const { User } = require('./database/models');
         const user = await User.findById(req.user.id).select('breedingLineDefs animalBreedingLines').lean();
         res.json({
-            breedingLineDefs: user?.breedingLineDefs || [],
+            breedingLineDefs: (user?.breedingLineDefs || []).slice(0, 10),
             animalBreedingLines: user?.animalBreedingLines || {}
         });
     } catch (error) {
@@ -442,17 +442,17 @@ app.get('/api/users/breeding-lines', authMiddleware, async (req, res) => {
 app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
     try {
         const { User } = require('./database/models');
-        const { breedingLineDefs, animalBreedingLines } = req.body;
-        if (!Array.isArray(breedingLineDefs) || typeof animalBreedingLines !== 'object' || animalBreedingLines === null) {
-            return res.status(400).json({ message: 'Invalid data format' });
-        }
-        // Enforce size limits to prevent abuse (max 10 breeding lines)
-        if (breedingLineDefs.length > 10) {
+        const { breedingLineDefs, animalBreedingLines } = req.body || {};
+        const defs = Array.isArray(breedingLineDefs) ? breedingLineDefs.slice(0, 10) : [];
+        const assignments = (animalBreedingLines && typeof animalBreedingLines === 'object' && !Array.isArray(animalBreedingLines))
+            ? animalBreedingLines
+            : {};
+        if (defs.length > 10) {
             return res.status(400).json({ message: 'Maximum 10 breeding lines allowed' });
         }
         const updated = await User.findByIdAndUpdate(
             req.user.id,
-            { $set: { breedingLineDefs, animalBreedingLines } },
+            { $set: { breedingLineDefs: defs, animalBreedingLines: assignments } },
             { new: true }
         );
         if (!updated) return res.status(404).json({ message: 'User not found' });
