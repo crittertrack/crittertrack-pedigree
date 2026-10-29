@@ -154,7 +154,10 @@ const UserSchema = new mongoose.Schema({
         // Only honoured for users the auto-calc is enabled for; default ON.
         autoCalcDueDate: { type: Boolean, default: true },
         autoCalcWeaningDate: { type: Boolean, default: true }
-    }
+    },
+    // Breeding lines (color-coded line definitions and animal assignments)
+    breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
+    animalBreedingLines: { type: mongoose.Schema.Types.Mixed, default: {} } // { animalId_public: [lineIds] }
 });
 const User = mongoose.model('User', UserSchema);
 

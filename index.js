@@ -427,11 +427,11 @@ app.put('/api/users/profile', authMiddleware, uploadSingle.single('profileImage'
 // Breeding lines persistence
 app.get('/api/users/breeding-lines', authMiddleware, async (req, res) => {
     try {
-        const { PublicProfile } = require('./database/models');
-        const profile = await PublicProfile.findOne({ userId_backend: req.user.id }).lean();
+        const { User } = require('./database/models');
+        const user = await User.findById(req.user.id).select('breedingLineDefs animalBreedingLines').lean();
         res.json({
-            breedingLineDefs: profile?.breedingLineDefs || [],
-            animalBreedingLines: profile?.animalBreedingLines || {}
+            breedingLineDefs: user?.breedingLineDefs || [],
+            animalBreedingLines: user?.animalBreedingLines || {}
         });
     } catch (error) {
         console.error('Error fetching breeding lines:', error);
@@ -441,19 +441,20 @@ app.get('/api/users/breeding-lines', authMiddleware, async (req, res) => {
 
 app.put('/api/users/breeding-lines', authMiddleware, async (req, res) => {
     try {
-        const { PublicProfile } = require('./database/models');
+        const { User } = require('./database/models');
         const { breedingLineDefs, animalBreedingLines } = req.body;
         if (!Array.isArray(breedingLineDefs) || typeof animalBreedingLines !== 'object' || animalBreedingLines === null) {
             return res.status(400).json({ message: 'Invalid data format' });
         }
-        // Enforce size limits to prevent abuse (11 allows the dev-only 11th "Legacy" combo line)
         if (breedingLineDefs.length > 11) {
             return res.status(400).json({ message: 'Maximum 11 breeding lines allowed' });
         }
-        await PublicProfile.findOneAndUpdate(
-            { userId_backend: req.user.id },
-            { $set: { breedingLineDefs, animalBreedingLines } }
+        const updated = await User.findByIdAndUpdate(
+            req.user.id,
+            { $set: { breedingLineDefs, animalBreedingLines } },
+            { new: true }
         );
+        if (!updated) return res.status(404).json({ message: 'User not found' });
         res.json({ message: 'Breeding lines saved' });
     } catch (error) {
         console.error('Error saving breeding lines:', error);
