@@ -1,0 +1,202 @@
+# CTU2 Lines by Selected Founders
+
+## CTC46 — MM Sundae Caramel
+Owned descendants: 54
+- CTC2618 — CWR Melano 🇮🇹
+- CTC2646 — MM Umbrix
+- CTC2649 — MM Ukichi
+- CTC2651 — MM Umber
+- CTC2652 — MM Uvana
+- CTC2700 — CWR Favilla 🇮🇹
+- CTC2728 — MF Azalia
+- CTC5484 — MM Ayla
+- CTC5541 — MM Demi
+- CTC5545 — MM Darcy
+- CTC5552 — MM Eika
+- CTC5557 — MM Echo
+- CTC6169 — MM Harmony
+- CTC6177 — MM Josie
+- CTC6178 — MM Jasmine
+- CTC6181 — MM Juno
+- CTC6194 — MM Mira
+- CTC6430 — NBZH Link 🇫🇷
+- CTC7168 — MM Orabella
+- CTC7169 — MM Olivra
+- CTC7175 — MM Quivara
+- CTC7176 — MM Quirina
+- CTC7281 — MM Raffia
+- CTC7282 — MM Rakkia
+- CTC7284 — MM Raida
+- CTC7287 — MM Reena
+- CTC7297 — MM Valora
+- CTC7309 — MM Wonka
+- CTC7311 — MM W16-M1
+- CTC7313 — MM Woolly
+- CTC7315 — MM Wisper
+- CTC7316 — MM Wizkit
+- CTC7463 — MM Xito
+- CTC7466 — MM Xella
+- CTC7467 — MM Zabou
+- CTC7468 — MM Zhara
+- CTC7469 — MM Zeta
+- CTC7598 — Blueberry's Witch 🇨🇿
+- CTC7599 — Blueberry's Wicca 🇨🇿
+- CTC7649 — Fabulous Cowboy MafiaSpade 🇨🇿
+- CTC7650 — Fancy Cowgirl MafiaSpade 🇨🇿
+- CTC7651 — Foolish Calamity MafiaSpade 🇨🇿
+- CTC7655 — Blueberry’s Yenna 🇨🇿
+- CTC7657 — Blueberry’s Yewel 🇨🇿
+- CTC7658 — Karma MafiaSpade 🇨🇿
+- CTC7659 — Kirlian MafiaSpade 🇨🇿
+- CTC8452 — MM D17-F1
+- CTC8455 — MM D17-F3
+- CTC8464 — MM E17-F2
+- CTC8468 — MM E17-F1
+- CTC8470 — MM F17-F1
+- CTC8471 — MM F17-F2
+- CTC8486 — MM Hoshiru
+- CTC8492 — MM I17-F2
+
+## CTC43 — DAHV Mirabel
+Owned descendants: 54
+- CTC2618 — CWR Melano 🇮🇹
+- CTC2646 — MM Umbrix
+- CTC2649 — MM Ukichi
+- CTC2651 — MM Umber
+- CTC2652 — MM Uvana
+- CTC2700 — CWR Favilla 🇮🇹
+- CTC2728 — MF Azalia
+- CTC5484 — MM Ayla
+- CTC5541 — MM Demi
+- CTC5545 — MM Darcy
+- CTC5552 — MM Eika
+- CTC5557 — MM Echo
+- CTC6169 — MM Harmony
+- CTC6177 — MM Josie
+- CTC6178 — MM Jasmine
+- CTC6181 — MM Juno
+- CTC6194 — MM Mira
+- CTC6430 — NBZH Link 🇫🇷
+- CTC7168 — MM Orabella
+- CTC7169 — MM Olivra
+- CTC7175 — MM Quivara
+- CTC7176 — MM Quirina
+- CTC7281 — MM Raffia
+- CTC7282 — MM Rakkia
+- CTC7284 — MM Raida
+- CTC7287 — MM Reena
+- CTC7297 — MM Valora
+- CTC7309 — MM Wonka
+- CTC7311 — MM W16-M1
+- CTC7313 — MM Woolly
+- CTC7315 — MM Wisper
+- CTC7316 — MM Wizkit
+- CTC7463 — MM Xito
+- CTC7466 — MM Xella
+- CTC7467 — MM Zabou
+- CTC7468 — MM Zhara
+- CTC7469 — MM Zeta
+- CTC7598 — Blueberry's Witch 🇨🇿
+- CTC7599 — Blueberry's Wicca 🇨🇿
+- CTC7649 — Fabulous Cowboy MafiaSpade 🇨🇿
+- CTC7650 — Fancy Cowgirl MafiaSpade 🇨🇿
+- CTC7651 — Foolish Calamity MafiaSpade 🇨🇿
+- CTC7655 — Blueberry’s Yenna 🇨🇿
+- CTC7657 — Blueberry’s Yewel 🇨🇿
+- CTC7658 — Karma MafiaSpade 🇨🇿
+- CTC7659 — Kirlian MafiaSpade 🇨🇿
+- CTC8452 — MM D17-F1
+- CTC8455 — MM D17-F3
+- CTC8464 — MM E17-F2
+- CTC8468 — MM E17-F1
+- CTC8470 — MM F17-F1
+- CTC8471 — MM F17-F2
+- CTC8486 — MM Hoshiru
+- CTC8492 — MM I17-F2
+
+## CTC258 — RVE Baco
+Owned descendants: 34
+- CTC2700 — CWR Favilla 🇮🇹
+- CTC2728 — MF Azalia
+- CTC5484 — MM Ayla
+- CTC5541 — MM Demi
+- CTC5545 — MM Darcy
+- CTC5552 — MM Eika
+- CTC5557 — MM Echo
+- CTC6177 — MM Josie
+- CTC6178 — MM Jasmine
+- CTC6181 — MM Juno
+- CTC6194 — MM Mira
+- CTC6430 — NBZH Link 🇫🇷
+- CTC7168 — MM Orabella
+- CTC7169 — MM Olivra
+- CTC7281 — MM Raffia
+- CTC7282 — MM Rakkia
+- CTC7284 — MM Raida
+- CTC7287 — MM Reena
+- CTC7297 — MM Valora
+- CTC7467 — MM Zabou
+- CTC7468 — MM Zhara
+- CTC7469 — MM Zeta
+- CTC7598 — Blueberry's Witch 🇨🇿
+- CTC7599 — Blueberry's Wicca 🇨🇿
+- CTC7649 — Fabulous Cowboy MafiaSpade 🇨🇿
+- CTC7650 — Fancy Cowgirl MafiaSpade 🇨🇿
+- CTC7651 — Foolish Calamity MafiaSpade 🇨🇿
+- CTC7655 — Blueberry’s Yenna 🇨🇿
+- CTC7657 — Blueberry’s Yewel 🇨🇿
+- CTC7658 — Karma MafiaSpade 🇨🇿
+- CTC7659 — Kirlian MafiaSpade 🇨🇿
+- CTC8464 — MM E17-F2
+- CTC8468 — MM E17-F1
+- CTC8492 — MM I17-F2
+
+## CTC265 — MM Ambrosia
+Owned descendants: 27
+- CTC2618 — CWR Melano 🇮🇹
+- CTC2646 — MM Umbrix
+- CTC2649 — MM Ukichi
+- CTC2651 — MM Umber
+- CTC2652 — MM Uvana
+- CTC2700 — CWR Favilla 🇮🇹
+- CTC6169 — MM Harmony
+- CTC6194 — MM Mira
+- CTC7175 — MM Quivara
+- CTC7176 — MM Quirina
+- CTC7309 — MM Wonka
+- CTC7311 — MM W16-M1
+- CTC7313 — MM Woolly
+- CTC7315 — MM Wisper
+- CTC7316 — MM Wizkit
+- CTC7463 — MM Xito
+- CTC7466 — MM Xella
+- CTC7467 — MM Zabou
+- CTC7468 — MM Zhara
+- CTC7469 — MM Zeta
+- CTC8452 — MM D17-F1
+- CTC8455 — MM D17-F3
+- CTC8464 — MM E17-F2
+- CTC8468 — MM E17-F1
+- CTC8470 — MM F17-F1
+- CTC8471 — MM F17-F2
+- CTC8486 — MM Hoshiru
+
+## Excluded (not descending from any selected founder)
+Owned count: 17
+- CTC6632 — DM Bonbon
+- CTC6651 — FF Alabama 🇵🇱
+- CTC6652 — FF Zygota 🇵🇱
+- CTC6653 — FF Zjawa 🇵🇱
+- CTC6654 — FF Zguba 🇵🇱
+- CTC6902 — DM Caspian
+- CTC6908 — DM Ditzy
+- CTC7295 — MM Taina
+- CTC7589 — MM Aiko
+- CTC7652 — Hamburger MafiaSpade 🇨🇿
+- CTC7653 — Hašlerka MafiaSpade 🇨🇿
+- CTC7654 — Hlíva MafiaSpade 🇨🇿
+- CTC7656 — Hesle MafiaSpade 🇨🇿
+- CTC7766 — MM Aimee
+- CTC7767 — MM Astra
+- CTC7773 — MM Apero
+- CTC8445 — MM C17-F2
