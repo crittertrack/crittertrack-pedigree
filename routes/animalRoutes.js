@@ -1,7 +1,7 @@
 ﻿﻿const express = require('express');
 const router = express.Router();
 const { Animal, AnimalLog, SupplyItem, Litter, User, PublicAnimal, Transaction, Notification } = require('../database/models');
-const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals, getAvkReferencePopulation } = require('../database/db_service');
+const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals, getAvkReferencePopulation, handleBulkCreateAnimals } = require('../database/db_service');
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding, calculateAverageKinship } = require('../utils/inbreeding');
 const { logFeedingEvent } = require('../utils/animalLogger');
 const { convertQuantity } = require('../utils/quantityUnits');

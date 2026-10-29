@@ -1054,21 +1054,24 @@ app.use('/api/admin', authMiddleware, adminRoutes);
 // --- Error Handling Middleware ---
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err && err.stack ? err.stack : err);
-    // Multer file size exceeded
+    // Multer file size exceeded (client error - not a server fault)
     if (err && err.code === 'LIMIT_FILE_SIZE') {
+        console.info('[UPLOAD] File exceeds size limit:', err.message);
         return res.status(413).json({ message: 'Uploaded file exceeds 5MB limit. Please compress the image or choose a smaller file.' });
     }
-    // Invalid file type from multer fileFilter
+    // Invalid file type from multer fileFilter (client error - not a server fault)
     if (err && err.message === 'INVALID_FILE_TYPE') {
+        console.info('[UPLOAD] Invalid file type rejected');
         return res.status(415).json({ message: 'Unsupported file type. Only PNG and JPEG images are allowed.' });
     }
     // Other Multer errors
     if (err && err.name === 'MulterError') {
+        console.error('[UPLOAD] Multer error:', err && err.stack ? err.stack : err);
         return res.status(400).json({ message: err.message || 'File upload error.' });
     }
 
-    // Send a generic 500 status response for unhandled errors
+    // Log and respond to unexpected server errors
+    console.error(err && err.stack ? err.stack : err);
     res.status(500).send({ message: 'Something broke on the server!', error: err && err.message ? err.message : String(err) });
 });
 
