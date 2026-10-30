@@ -1119,6 +1119,16 @@ const LitterSchema = new mongoose.Schema({
     // Extended birth information (Add/Edit entry form → "Birth information")
     birthComplications: { type: String, default: null },
     birthOutcome: { type: String, default: null }, // e.g. Healthy litter / Some losses / Dam complications / All lost / Unknown
+    // null = not recorded, true/false = recorded answer
+    assistanceRequired: { type: Boolean, default: null },
+    birthNotes: { type: String, default: null },
+    // Weaning details (the weaning DATE itself lives in weaningDate / weaningConfirmed)
+    weaningOutcome: { type: String, default: null }, // e.g. All weaned / Some losses / Early weaning / Late weaning / Unknown
+    weaningNotes: { type: String, default: null },
+    // Breeding objectives for this pairing
+    breedingObjectives: { type: [String], default: [] }, // short badge labels, e.g. "Better type"
+    objectivesNotes: { type: String, default: null },
+    objectivesEvaluation: { type: String, default: null }, // how well the litter met the objectives
     // Whether this litter is shown on the breeder's public profile
     isDisplayLitter: { type: Boolean, default: false, index: true },
     // Tracks whether the mating-day reminder notification has already been sent
