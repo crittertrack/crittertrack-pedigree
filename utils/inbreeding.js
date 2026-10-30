@@ -217,12 +217,12 @@ async function buildPedigreeDAG(rootId, fetchAnimal, maxGenerations) {
             if (dag.has(id)) return;
             const animal = await fetchAnimal(id);
             if (!animal) {
-                dag.set(id, { id, name: id, sireId: null, damId: null });
+                dag.set(id, { id, name: id, sireId: null, damId: null, missing: true });
                 return;
             }
             const sireId = animal.sireId_public || null;
             const damId  = animal.damId_public  || null;
-            dag.set(id, { id, name: animal.name, sireId, damId });
+            dag.set(id, { id, name: animal.name, prefix: animal.prefix, suffix: animal.suffix, sireId, damId });
         }));
 
         if (gen >= maxGenerations) break;
@@ -280,6 +280,65 @@ function computePathSums(rootId, dag) {
     }
     return dp;
 }
+
+/**
+ * Per-ancestor generation depth and path count for a pedigree DAG (see buildPedigreeDAG).
+ *   depth - fewest generations between rootId and the ancestor (root = 0)
+ *   paths - number of distinct paths root -> ancestor, i.e. how many times that ancestor appears
+ *           in the fully expanded pedigree tree
+ * Path counts use a topological pass (Kahn) so an ancestor reached at several depths (a linebred
+ * pedigree) is counted correctly. Also reports the deepest generation holding a real, found animal.
+ *
+ * @returns {{ info: Map<string, {depth: number, paths: number}>, maxKnownDepth: number }}
+ */
+function describeAncestry(rootId, dag) {
+    const info = new Map();
+    if (!rootId || !dag.has(rootId)) return { info, maxKnownDepth: 0 };
+
+    // 1. Reachable animals + fewest-generations depth (BFS).
+    const depth = new Map([[rootId, 0]]);
+    const order = [rootId];
+    for (let i = 0; i < order.length; i++) {
+        const node = dag.get(order[i]);
+        if (!node) continue;
+        for (const parentId of [node.sireId, node.damId]) {
+            if (!parentId || !dag.has(parentId) || depth.has(parentId)) continue;
+            depth.set(parentId, depth.get(order[i]) + 1);
+            order.push(parentId);
+        }
+    }
+
+    // 2. In-degree of every reachable animal (edges only from reachable animals).
+    const indegree = new Map(order.map(id => [id, 0]));
+    for (const id of order) {
+        const node = dag.get(id);
+        for (const parentId of [node.sireId, node.damId]) {
+            if (parentId && indegree.has(parentId)) indegree.set(parentId, indegree.get(parentId) + 1);
+        }
+    }
+
+    // 3. Topological path counting.
+    const paths = new Map([[rootId, 1]]);
+    const ready = [rootId];
+    while (ready.length > 0) {
+        const id = ready.shift();
+        const node = dag.get(id);
+        for (const parentId of [node.sireId, node.damId]) {
+            if (!parentId || !indegree.has(parentId)) continue;
+            paths.set(parentId, (paths.get(parentId) || 0) + (paths.get(id) || 0));
+            indegree.set(parentId, indegree.get(parentId) - 1);
+            if (indegree.get(parentId) === 0) ready.push(parentId);
+        }
+    }
+
+    let maxKnownDepth = 0;
+    for (const id of order) {
+        info.set(id, { depth: depth.get(id), paths: paths.get(id) || 0 });
+        if (!dag.get(id).missing && depth.get(id) > maxKnownDepth) maxKnownDepth = depth.get(id);
+    }
+    return { info, maxKnownDepth };
+}
+
 
 /**
  * Calculate COI for a theoretical pairing (litter).
@@ -360,6 +419,58 @@ async function explainPairingInbreeding(sireId, damId, fetchAnimal, generations 
     return {
         total: parseFloat((totalCoi * 100).toFixed(4)),
         breakdown
+    };
+}
+
+/**
+ * Full pedigree analysis of a (hypothetical or real) pairing, for the litter Genetics tab.
+ * Uses exactly the same DAG / path-sum machinery as explainPairingInbreeding, so expectedCoi
+ * always equals calculatePairingInbreeding for the same inputs. Per common ancestor it adds:
+ *   sireGeneration / damGeneration - generations back from the OFFSPRING (parent = 1)
+ *   occurrences                    - appearances in the fully expanded pedigree, both sides combined
+ *   contributionPct                - that ancestor's share of the offspring COI, in percentage points
+ *
+ * @returns {null | { expectedCoi, pedigreeGenerations, sirePedigreeDepth, damPedigreeDepth, ancestors }}
+ */
+async function analyzePairing(sireId, damId, fetchAnimal, generations = 20) {
+    if (!sireId || !damId) return null;
+
+    const sireDag = await buildPedigreeDAG(sireId, fetchAnimal, generations);
+    const damDag = await buildPedigreeDAG(damId, fetchAnimal, generations);
+    const sireDP = computePathSums(sireId, sireDag);
+    const damDP = computePathSums(damId, damDag);
+    const sireInfo = describeAncestry(sireId, sireDag);
+    const damInfo = describeAncestry(damId, damDag);
+
+    let total = 0;
+    const ancestors = [];
+    for (const [ancestorId, sContrib] of sireDP) {
+        const dContrib = damDP.get(ancestorId);
+        if (dContrib == null) continue;
+        const contribution = 2 * sContrib * dContrib;
+        total += contribution;
+        const node = sireDag.get(ancestorId) || damDag.get(ancestorId) || {};
+        const s = sireInfo.info.get(ancestorId);
+        const d = damInfo.info.get(ancestorId);
+        ancestors.push({
+            ancestorId,
+            name: node.name || ancestorId,
+            prefix: node.prefix || null,
+            suffix: node.suffix || null,
+            sireGeneration: s ? s.depth + 1 : null,
+            damGeneration: d ? d.depth + 1 : null,
+            occurrences: (s ? s.paths : 0) + (d ? d.paths : 0),
+            contributionPct: parseFloat((contribution * 100).toFixed(4)),
+        });
+    }
+    ancestors.sort((a, b) => b.contributionPct - a.contributionPct);
+
+    return {
+        expectedCoi: parseFloat((total * 100).toFixed(4)),
+        pedigreeGenerations: 1 + Math.max(sireInfo.maxKnownDepth, damInfo.maxKnownDepth),
+        sirePedigreeDepth: sireInfo.maxKnownDepth,
+        damPedigreeDepth: damInfo.maxKnownDepth,
+        ancestors,
     };
 }
 
@@ -470,6 +581,8 @@ module.exports = {
     buildPedigree,
     buildPedigreeDAG,
     computePathSums,
+    describeAncestry,
+    analyzePairing,
     explainPairingInbreeding,
     calculateAverageKinship
 };
