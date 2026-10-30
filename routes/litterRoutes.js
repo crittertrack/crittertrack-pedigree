@@ -274,8 +274,24 @@ router.get('/:id_public', async (req, res) => {
         const anyMap = new Map(anyAnimals.map(a => [a.id_public, a]));
         const publicMap = new Map(publicAnimals.map(a => [a.id_public, a]));
         const getParent = (id) => (id && (anyMap.get(id) || publicMap.get(id))) || null;
+const { explainPairingInbreeding } = require('../utils/inbreeding');
+const fetchAnimal = async (id) => (id && (anyMap.get(id) || publicMap.get(id))) || (await Animal.findOne({ id_public: id }).lean()) || (await PublicAnimal.findOne({ id_public: id }).lean());
+let commonAncestors = [];
+if (litter.sireId_public && litter.damId_public) {
+    try {
+        const { total, breakdown } = await explainPairingInbreeding(litter.sireId_public, litter.damId_public, fetchAnimal, 20);
+        commonAncestors = (breakdown || []).map(a => ({
+            id_public: a.ancestorId,
+            name: a.ancestorName,
+            generations: a.generations,
+            occurrences: a.occurrences,
+            contribution: a.contribution,
+            contribution_pct: a.contribution_pct,
+        }));
+    } catch (e) { commonAncestors = []; }
+}
 
-        res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public) });
+        res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public), commonAncestors });
     } catch (error) {
         console.error('Error fetching litter by id_public:', error);
         res.status(500).json({ message: 'Internal server error while fetching litter.' });
