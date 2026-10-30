@@ -291,7 +291,8 @@ if (litter.sireId_public && litter.damId_public) {
     } catch (e) { commonAncestors = []; }
 }
 
-        res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public), commonAncestors });
+        const actualDepth = commonAncestors.length ? Math.max(...commonAncestors.map(a => a.generations || 0)) : 0;
+res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public), commonAncestors, pedigreeGenerations: actualDepth });
     } catch (error) {
         console.error('Error fetching litter by id_public:', error);
         res.status(500).json({ message: 'Internal server error while fetching litter.' });
