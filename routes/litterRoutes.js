@@ -264,7 +264,7 @@ router.get('/:id_public', async (req, res) => {
         // Additive: resolve sire/dam to safe display fields (same shape as GET /api/litters).
         const parentIds = [litter.sireId_public, litter.damId_public].filter(Boolean);
         // The full-page litter details view also shows each parent's variety, age and own COI.
-        const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId birthDate deceasedDate color coat earset markings eyeColor body inbreedingCoefficient';
+        const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId birthDate deceasedDate color coat earset markings eyeColor body inbreedingCoefficient geneticCode avgKinship';
         const [anyAnimals, publicAnimals] = parentIds.length
             ? await Promise.all([
                 Animal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
