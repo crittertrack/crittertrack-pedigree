@@ -1,0 +1,165 @@
+# Breeding Line Assignments
+
+Line 1 - Dominant Red/Brindle (Legacy)
+- CWR Melano
+- MM Umbrix
+- MM Ukichi
+- MM Uvana
+- MM Umber
+- CWR Favilla
+- MF Azalia
+- MM Ayla
+- MM Demi
+- MM Darcy
+- MM Eika
+- MM Echo
+- MM Harmony
+- MM Josie
+- MM Jasmine
+- MM Juno
+- MM Mira
+- NBZH Link
+- MM Orabella
+- MM Olivra
+- MM Quivara
+- MM Quirina
+- MM Raffia
+- MM Rakkia
+- MM Raida
+- MM Reena
+- MM Valora
+- MM Wonka
+- MM W16-M1
+- MM Woolly
+- MM Wisper
+- MM Wizkit
+- MM Xito
+- MM Xella
+- MM Zabou
+- MM Zhara
+- MM Zeta
+- Blueberry's Witch
+- Blueberry's Wicca
+- Fabulous Cowboy
+- Fancy Cowgirl
+- Foolish Calamity
+- Blueberry’s Yenna
+- Blueberry’s Yewel
+- Karma
+- Kirlian
+- MM D17-F1
+- MM D17-F3
+- MM E17-F2
+- MM E17-F1
+- MM F17-F1
+- MM F17-F2
+- MM Hoshiru
+- MM I17-F2
+
+Line 2 - Merle (Legacy)
+- CWR Favilla
+- MF Azalia
+- MM Ayla
+- MM Demi
+- MM Darcy
+- MM Eika
+- MM Echo
+- MM Josie
+- MM Jasmine
+- MM Juno
+- MM Mira
+- NBZH Link
+- MM Orabella
+- MM Olivra
+- MM Raffia
+- MM Rakkia
+- MM Raida
+- MM Reena
+- MM Valora
+- MM Zabou
+- MM Zhara
+- MM Zeta
+- Blueberry's Witch
+- Blueberry's Wicca
+- Fabulous Cowboy
+- Fancy Cowgirl
+- Foolish Calamity
+- Blueberry’s Yenna
+- Blueberry’s Yewel
+- Karma
+- Kirlian
+- MM E17-F2
+- MM E17-F1
+- MM I17-F2
+
+Line 3 - Merle (New)
+- CWR Melano
+- MM Umbrix
+- MM Ukichi
+- MM Uvana
+- MM Umber
+- CWR Favilla
+- MM Harmony
+- MM Mira
+- MM Quivara
+- MM Quirina
+- MM Wonka
+- MM W16-M1
+- MM Woolly
+- MM Wisper
+- MM Wizkit
+- MM Xito
+- MM Xella
+- MM Zabou
+- MM Zhara
+- MM Zeta
+- MM D17-F1
+- MM D17-F3
+- MM E17-F2
+- MM E17-F1
+- MM F17-F1
+- MM F17-F2
+- MM Hoshiru
+
+Line 4 - Dominant Red (New)
+- DM Caspian
+- MM Valora
+- MM Zabou
+- MM Zhara
+- MM Zeta
+- MM Aiko
+- MM Astra
+- MM Aimee
+- MM Apero
+
+Unassigned
+- M3 Smudge
+- RVV Spooky
+- M3 Fairytale
+- M3 Vixen
+- DM Ravenna
+- DM Bonbon
+- FF Alabama
+- FF Zygota
+- FF Zjawa
+- FF Zguba
+- DM Ditzy
+- MM Taina
+- Hamburger
+- Hašlerka
+- Hlíva
+- Hesle
+- BF Toetie
+- JK Cosima
+- JK Suse
+- M3 Tilda
+- M3 Wiebke
+- M3 Silva
+- MoW Plume
+- MoW Salem
+- MoW Vanta
+- MoW Muppet
+- M3 Liesel
+- MoW Mothy
+- RVV Taffy
+- MM C17-F2
