@@ -122,6 +122,29 @@ router.get('/animals/newest', async (req, res) => {
     }
 });
 
+// GET /api/public/animals?ids[]=CTC1&ids[]=CTC2  (also accepts ?ids=CTC1,CTC2)
+// Batch lookup of public animal profiles by id_public. Capped at 200 IDs per request;
+// the client should chunk larger lists.
+const PUBLIC_ANIMALS_BATCH_MAX = 200;
+router.get('/animals', async (req, res) => {
+    try {
+        let ids = req.query.ids;
+        if (typeof ids === 'string') ids = ids.split(',');
+        if (!Array.isArray(ids)) return res.status(200).json([]);
+        ids = [...new Set(ids.map(id => String(id).trim()).filter(Boolean))];
+        if (ids.length > PUBLIC_ANIMALS_BATCH_MAX) {
+            return res.status(400).json({ message: `Too many ids (max ${PUBLIC_ANIMALS_BATCH_MAX} per request).` });
+        }
+        if (ids.length === 0) return res.status(200).json([]);
+
+        const animals = await PublicAnimal.find({ id_public: { $in: ids }, isDisplay: true }).lean();
+        res.status(200).json(animals);
+    } catch (error) {
+        console.error('Error fetching public animals by ids:', error);
+        res.status(500).json({ message: 'Failed to fetch public animals.' });
+    }
+});
+
 // GET /api/public/animals/:creatorId_public
 // 2. Gets all publicly visible animals belonging to a specific owner.
 router.get('/animals/:creatorId_public', async (req, res) => {
