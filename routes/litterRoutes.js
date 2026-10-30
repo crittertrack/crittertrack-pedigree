@@ -258,9 +258,23 @@ router.get('/:id_public/offspring', async (req, res) => {
 router.get('/:id_public', async (req, res) => {
     try {
         const { Litter } = require('../database/models');
-        const litter = await Litter.findOne({ litter_id_public: req.params.id_public });
+        const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).lean();
         if (!litter) return res.status(404).json({ message: 'Litter not found.' });
-        res.status(200).json(litter);
+
+        // Additive: resolve sire/dam to safe display fields (same shape as GET /api/litters).
+        const parentIds = [litter.sireId_public, litter.damId_public].filter(Boolean);
+        const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId';
+        const [anyAnimals, publicAnimals] = parentIds.length
+            ? await Promise.all([
+                Animal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
+                PublicAnimal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
+            ])
+            : [[], []];
+        const anyMap = new Map(anyAnimals.map(a => [a.id_public, a]));
+        const publicMap = new Map(publicAnimals.map(a => [a.id_public, a]));
+        const getParent = (id) => (id && (anyMap.get(id) || publicMap.get(id))) || null;
+
+        res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public) });
     } catch (error) {
         console.error('Error fetching litter by id_public:', error);
         res.status(500).json({ message: 'Internal server error while fetching litter.' });
