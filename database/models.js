@@ -1129,6 +1129,8 @@ const LitterSchema = new mongoose.Schema({
     breedingObjectives: { type: [String], default: [] }, // short badge labels, e.g. "Better type"
     objectivesNotes: { type: String, default: null },
     objectivesEvaluation: { type: String, default: null }, // how well the litter met the objectives
+    pairingNotes: { type: String, default: null },
+    tags: { type: [String], default: [] },
     // Whether this litter is shown on the breeder's public profile
     isDisplayLitter: { type: Boolean, default: false, index: true },
     // Tracks whether the mating-day reminder notification has already been sent
