@@ -264,7 +264,7 @@ router.get('/:id_public', async (req, res) => {
         // Additive: resolve sire/dam to safe display fields (same shape as GET /api/litters).
         const parentIds = [litter.sireId_public, litter.damId_public].filter(Boolean);
         // The full-page litter details view also shows each parent's variety, age and own COI.
-        const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId birthDate deceasedDate color coat earset markings eyeColor body inbreedingCoefficient geneticCode avgKinship';
+        const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId birthDate deceasedDate color coat earset markings eyeColor body inbreedingCoefficient geneticCode avgKinship sireId_public damId_public';
         const [anyAnimals, publicAnimals] = parentIds.length
             ? await Promise.all([
                 Animal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
@@ -274,25 +274,28 @@ router.get('/:id_public', async (req, res) => {
         const anyMap = new Map(anyAnimals.map(a => [a.id_public, a]));
         const publicMap = new Map(publicAnimals.map(a => [a.id_public, a]));
         const getParent = (id) => (id && (anyMap.get(id) || publicMap.get(id))) || null;
-const { explainPairingInbreeding } = require('../utils/inbreeding');
+const { analyzePairing } = require('../utils/inbreeding');
 const fetchAnimal = async (id) => (id && (anyMap.get(id) || publicMap.get(id))) || (await Animal.findOne({ id_public: id }).lean()) || (await PublicAnimal.findOne({ id_public: id }).lean());
 let commonAncestors = [];
+let actualDepth = 0;
 if (litter.sireId_public && litter.damId_public) {
     try {
-        const { total, breakdown } = await explainPairingInbreeding(litter.sireId_public, litter.damId_public, fetchAnimal, 20);
-        commonAncestors = (breakdown || []).map(a => ({
-            id_public: a.ancestorId,
-            name: a.ancestorName,
-            generations: a.generations,
-            occurrences: a.occurrences,
-            contribution: a.contribution,
-            contribution_pct: a.contribution_pct,
-        }));
-    } catch (e) { commonAncestors = []; }
+        const result = await analyzePairing(litter.sireId_public, litter.damId_public, fetchAnimal, 20);
+        if (result) {
+            actualDepth = result.pedigreeGenerations || 0;
+            commonAncestors = (result.ancestors || []).map(a => ({
+                id_public: a.ancestorId,
+                name: a.name,
+                generations: Math.max(a.sireGeneration || 0, a.damGeneration || 0),
+                occurrences: a.occurrences,
+                contribution: (a.contributionPct || 0) / 100,
+                contribution_pct: a.contributionPct,
+            }));
+        }
+    } catch (e) { commonAncestors = []; actualDepth = 0; }
 }
 
-        const actualDepth = commonAncestors.length ? Math.max(...commonAncestors.map(a => a.generations || 0)) : 0;
-res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public), commonAncestors, pedigreeGenerations: actualDepth });
+        res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public), commonAncestors, pedigreeGenerations: actualDepth });
     } catch (error) {
         console.error('Error fetching litter by id_public:', error);
         res.status(500).json({ message: 'Internal server error while fetching litter.' });
