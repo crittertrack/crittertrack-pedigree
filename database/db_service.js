@@ -852,10 +852,33 @@ const addAnimal = async (appUserId_backend, animalData) => {
     // Update the User's ownedAnimals array
     await User.findByIdAndUpdate(appUserId_backend, { $push: { ownedAnimals: newAnimal._id } });
 
-    // Return a plain object with backward-compatible alias fields
     const saved = newAnimal.toObject();
 
     await notifyLinkageChanges(appUserId_backend, null, saved);
+
+
+    // Auto-inherit breeding lines from parents (sire/dam) into this animal's assignment.
+    try {
+        const user = await User.findById(appUserId_backend);
+        if (user) {
+            const assignments = user.animalBreedingLines || {};
+            const parentIds = [saved.sireId_public, saved.damId_public].filter(Boolean);
+            const inherited = new Set();
+            for (const pid of parentIds) {
+                const lines = assignments[pid];
+                if (Array.isArray(lines)) lines.forEach(l => inherited.add(l));
+            }
+            if (inherited.size > 0) {
+                const existing = Array.isArray(assignments[saved.id_public]) ? assignments[saved.id_public] : [];
+                const merged = [...new Set([...existing, ...inherited])];
+                assignments[saved.id_public] = merged;
+                user.animalBreedingLines = assignments;
+                await user.save();
+            }
+        }
+    } catch (inheritErr) {
+        console.warn('[addAnimal] breeding-line auto-inherit failed:', inheritErr && inheritErr.message ? inheritErr.message : inheritErr);
+    }
 
     // Log the creation itself so it shows up in the animal's Timeline tab.
     await logAnimalCreated({
