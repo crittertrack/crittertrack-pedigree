@@ -339,6 +339,78 @@ router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
     }
 });
 
+// Helper function to compute traits from genetic code using species phenotype rules
+// AND split combined trait names into individual traits (e.g., "Chocolate Pied" -> ["chocolate", "pied"])
+function computeTraitsFromGeneticCode(geneticCode, speciesKey, rulesMap) {
+    const rules = rulesMap[speciesKey];
+    if (!rules || !rules.match) return [];
+
+    try {
+        const phenotype = rules.match(geneticCode);
+        if (phenotype && typeof phenotype === 'string') {
+            // Split combined trait names into individual traits
+            // e.g., "Chocolate Pied" -> ["chocolate", "pied"]
+            const individualTraits = splitCombinedTrait(phenotype);
+            return individualTraits.map(trait => ({
+                trait: trait,
+                percentage: 100
+            }));
+        }
+    } catch (e) {
+        // If matching fails, return empty
+    }
+
+    // If no phenotype found from genetic code, return null to indicate fallback needed
+    return null;
+}
+
+/**
+ * Split a combined trait name into individual traits.
+ * For example:
+ *   "Chocolate Pied" -> ["chocolate", "pied"]
+ *   "Black Pied" -> ["black", "pied"]
+ *   "Champagne Brindle" -> ["champagne", "brindle"]
+ *   "Albino" -> ["albino"] (single trait, no splitting needed)
+ *
+ * @param {string} trait - Combined trait name
+ * @returns {string[]} Array of individual trait names (lowercase)
+ */
+function splitCombinedTrait(trait) {
+    // Common compound trait patterns - split on known combining words
+    // Each entry has a space prefix so it matches as a complete word
+    const COMBINED_WORDS = [
+        ' pied', ' brindle', ' tan', ' snow', ' cream',
+        ' white', ' black', ' blue', ' lilac', ' chocolate',
+        ' fawn', ' agouti', ' normal', ' albino', ' smoke',
+        ' dilute', ' grey', ' champagne',
+    ];
+
+    // Split the trait into words
+    const words = trait.trim().split(/\s+/);
+    const result = [];
+
+    // Find the first combined word and split by it
+    for (const combinedWord of COMBINED_WORDS) {
+        if (combinedWord.startsWith(' ')) {
+            // Word has a space prefix
+            const parts = trait.split(new RegExp(`\\s+${combinedWord.trim()}\\s*`, 'i'));
+            if (parts.length > 1) {
+                for (const part of parts) {
+                    const trimmed = part.trim();
+                    if (trimmed) {
+                        result.push(trimmed.toLowerCase());
+                    }
+                }
+                return result;
+            }
+        }
+    }
+
+    // If no split happened, return the original trait as a single entry
+    // (this handles single traits like "Albino", "Black", "Normal")
+    return [trait.toLowerCase()];
+}
+
 // GET /api/litters/:id_public
 // Gets a single litter by its public ID (any authenticated user can fetch).
 router.get('/:id_public', async (req, res) => {
