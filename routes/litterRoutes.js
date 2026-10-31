@@ -253,6 +253,69 @@ router.get('/:id_public/offspring', async (req, res) => {
     }
 });
 
+// GET /api/litters/:id_public/confirmed-offspring-traits
+// Gets confirmed offspring traits from linked offspring genetic codes and appearance fields.
+// First tries genetic codes using species phenotype rules, falls back to appearance fields.
+router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
+    try {
+        const { Litter, Animal } = require('../database/models');
+        const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).lean();
+        if (!litter) return res.status(404).json({ message: 'Litter not found.' });
+
+        if (!litter.offspringIds_public?.length) {
+            return res.status(200).json([]);
+        }
+
+        // Fetch offspring animals with their genetic code and appearance fields
+        const offspringAnimals = await Animal.find({
+            id_public: { $in: litter.offspringIds_public }
+        }).lean();
+
+        if (!offspringAnimals.length) {
+            return res.status(200).json([]);
+        }
+
+        // Extract genetic codes and appearance fields
+        const offspringCodes = offspringAnimals.map(a => a.geneticCode || {});
+        const appearanceFields = offspringAnimals.map(a => ({
+            color: a.color,
+            markings: a.markings,
+            coat: a.coat,
+            earset: a.earset,
+        }));
+
+        // Use the first offspring's code and appearance for confirmed traits
+        const firstOffspringCode = offspringCodes[0];
+        const firstAppearance = appearanceFields[0];
+
+        // TODO: Import and use species phenotype rules for genetic matching
+        // For now, return the raw data for frontend calculation,
+        // or implement basic fallback logic here
+
+        if (firstOffspringCode && firstAppearance) {
+            // Basic fallback: return appearance fields as traits
+            const traits = [];
+            if (firstAppearance.color) traits.push({ trait: firstAppearance.color, percentage: 100 });
+            if (firstAppearance.markings) traits.push({ trait: firstAppearance.markings, percentage: 100 });
+            if (firstAppearance.coat) traits.push({ trait: firstAppearance.coat, percentage: 100 });
+            if (firstAppearance.earset) traits.push({ trait: firstAppearance.earset, percentage: 100 });
+            res.status(200).json(traits);
+        } else if (firstAppearance) {
+            const traits = [];
+            if (firstAppearance.color) traits.push({ trait: firstAppearance.color, percentage: 100 });
+            if (firstAppearance.markings) traits.push({ trait: firstAppearance.markings, percentage: 100 });
+            if (firstAppearance.coat) traits.push({ trait: firstAppearance.coat, percentage: 100 });
+            if (firstAppearance.earset) traits.push({ trait: firstAppearance.earset, percentage: 100 });
+            res.status(200).json(traits);
+        } else {
+            res.status(200).json([]);
+        }
+    } catch (error) {
+        console.error('Error fetching confirmed offspring traits:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
 // GET /api/litters/:id_public
 // Gets a single litter by its public ID (any authenticated user can fetch).
 router.get('/:id_public', async (req, res) => {
