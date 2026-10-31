@@ -288,26 +288,44 @@ router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
         // Build a set of unique traits from ALL offspring, taking max percentage for duplicates
         const traitMap = new Map();
 
-        // Compute confirmed traits for EACH offspring and merge them
+        // Compute confirmed traits for EACH offspring and merge them from appearance fields
         for (let i = 0; i < offspringCodes.length; i++) {
-            const offspringCode = offspringCodes[i];
             const appearance = appearanceFields[i];
 
-            // Compute traits for this offspring
-            const traits = computeConfirmedOffspringTraits(
-                [offspringCode],
-                litter.species,
-                appearance
-            );
-
-            // Merge traits from this offspring into the overall trait map
-            for (const trait of traits) {
-                const traitKey = trait.trait.toLowerCase();
+            // Use appearance fields directly as traits
+            const { color, markings, coat, earset } = appearance || {};
+            
+            // Add color trait
+            if (color) {
+                const traitKey = 'color'.toLowerCase();
                 if (!traitMap.has(traitKey)) {
-                    traitMap.set(traitKey, { trait: trait.trait, percentage: trait.percentage, sources: [] });
+                    traitMap.set(traitKey, { trait: color, percentage: 100, sources: [] });
                 }
-                // Take the maximum percentage across all offspring
-                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, trait.percentage);
+                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
+            }
+            // Add markings trait
+            if (markings) {
+                const traitKey = 'markings'.toLowerCase();
+                if (!traitMap.has(traitKey)) {
+                    traitMap.set(traitKey, { trait: markings, percentage: 100, sources: [] });
+                }
+                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
+            }
+            // Add coat trait
+            if (coat) {
+                const traitKey = 'coat'.toLowerCase();
+                if (!traitMap.has(traitKey)) {
+                    traitMap.set(traitKey, { trait: coat, percentage: 100, sources: [] });
+                }
+                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
+            }
+            // Add earset trait
+            if (earset) {
+                const traitKey = 'earset'.toLowerCase();
+                if (!traitMap.has(traitKey)) {
+                    traitMap.set(traitKey, { trait: earset, percentage: 100, sources: [] });
+                }
+                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
             }
         }
 
