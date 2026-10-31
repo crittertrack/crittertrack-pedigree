@@ -256,6 +256,7 @@ router.get('/:id_public/offspring', async (req, res) => {
 // GET /api/litters/:id_public/confirmed-offspring-traits
 // Gets confirmed offspring traits from linked offspring genetic codes and appearance fields.
 // First tries genetic codes using species phenotype rules, falls back to appearance fields.
+// Returns combined traits from ALL offspring.
 router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
     try {
         const { Litter, Animal } = require('../database/models');
@@ -275,7 +276,7 @@ router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
             return res.status(200).json([]);
         }
 
-        // Extract genetic codes and appearance fields
+        // Extract genetic codes and appearance fields for ALL offspring
         const offspringCodes = offspringAnimals.map(a => a.geneticCode || {});
         const appearanceFields = offspringAnimals.map(a => ({
             color: a.color,
@@ -284,32 +285,36 @@ router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
             earset: a.earset,
         }));
 
-        // Use the first offspring's code and appearance for confirmed traits
-        const firstOffspringCode = offspringCodes[0];
-        const firstAppearance = appearanceFields[0];
+        // Build a set of unique traits from ALL offspring, taking max percentage for duplicates
+        const traitMap = new Map();
 
-        // TODO: Import and use species phenotype rules for genetic matching
-        // For now, return the raw data for frontend calculation,
-        // or implement basic fallback logic here
+        // Compute confirmed traits for EACH offspring and merge them
+        for (let i = 0; i < offspringCodes.length; i++) {
+            const offspringCode = offspringCodes[i];
+            const appearance = appearanceFields[i];
 
-        if (firstOffspringCode && firstAppearance) {
-            // Basic fallback: return appearance fields as traits
-            const traits = [];
-            if (firstAppearance.color) traits.push({ trait: firstAppearance.color, percentage: 100 });
-            if (firstAppearance.markings) traits.push({ trait: firstAppearance.markings, percentage: 100 });
-            if (firstAppearance.coat) traits.push({ trait: firstAppearance.coat, percentage: 100 });
-            if (firstAppearance.earset) traits.push({ trait: firstAppearance.earset, percentage: 100 });
-            res.status(200).json(traits);
-        } else if (firstAppearance) {
-            const traits = [];
-            if (firstAppearance.color) traits.push({ trait: firstAppearance.color, percentage: 100 });
-            if (firstAppearance.markings) traits.push({ trait: firstAppearance.markings, percentage: 100 });
-            if (firstAppearance.coat) traits.push({ trait: firstAppearance.coat, percentage: 100 });
-            if (firstAppearance.earset) traits.push({ trait: firstAppearance.earset, percentage: 100 });
-            res.status(200).json(traits);
-        } else {
-            res.status(200).json([]);
+            // Compute traits for this offspring
+            const traits = computeConfirmedOffspringTraits(
+                [offspringCode],
+                litter.species,
+                appearance
+            );
+
+            // Merge traits from this offspring into the overall trait map
+            for (const trait of traits) {
+                const traitKey = trait.trait.toLowerCase();
+                if (!traitMap.has(traitKey)) {
+                    traitMap.set(traitKey, { trait: trait.trait, percentage: trait.percentage, sources: [] });
+                }
+                // Take the maximum percentage across all offspring
+                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, trait.percentage);
+            }
         }
+
+        // Return merged traits from ALL offspring
+        const result = Array.from(traitMap.values());
+        result.sort((a, b) => b.percentage - a.percentage);
+        res.status(200).json(result);
     } catch (error) {
         console.error('Error fetching confirmed offspring traits:', error);
         res.status(500).json({ message: 'Internal server error.' });
