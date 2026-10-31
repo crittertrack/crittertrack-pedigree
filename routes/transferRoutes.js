@@ -592,4 +592,210 @@ router.post('/:id/withdraw', async (req, res) => {
     }
 });
 
+router.post('/bulk', async (req, res) => {
+    const session = await mongoose.startSession();
+    let createdTransfers;
+    try {
+        const { animalIds_public, toUserId, price, notes, transferType } = req.body;
+        const fromUserId = req.user.id;
+
+        // Validate input
+        if (!animalIds_public || animalIds_public.length === 0) {
+            throw Object.assign(new Error('At least one animal must be provided.'), { statusCode: 400 });
+        }
+        if (!toUserId) {
+            throw Object.assign(new Error('Recipient user ID is required.'), { statusCode: 400 });
+        }
+        if (fromUserId.toString() === toUserId) {
+            throw Object.assign(new Error('Sender cannot be the same as recipient.'), { statusCode: 400 });
+        }
+
+        // Verify recipient exists
+        const recipient = await User.findById(toUserId).session(session);
+        if (!recipient) {
+            throw Object.assign(new Error('Recipient user not found.'), { statusCode: 404 });
+        }
+
+        // Validate animals: must exist and belong to sender, must not already have pending transfers
+        const animals = await Animal.find({
+            id_public: { $in: animalIds_public },
+            creatorId: fromUserId
+        }).session(session);
+
+        if (animals.length !== animalIds_public.length) {
+            throw Object.assign(new Error('Some animals were not found or you are not the owner.'), { statusCode: 404 });
+        }
+
+        // Check for duplicate animal IDs within the batch
+        const animalIdSet = new Set(animalIds_public);
+        if (animalIdSet.size !== animalIds_public.length) {
+            throw Object.assign(new Error('Duplicate animal IDs are not allowed in a single batch.'), { statusCode: 400 });
+        }
+
+        // Check for existing pending transfers on any of the animals
+        for (const animal of animals) {
+            if (animal.pendingTransferId) {
+                throw Object.assign(new Error(`Animal ${animal.id_public} already has a pending transfer request.`), { statusCode: 409 });
+            }
+        }
+
+        // Create batch ID
+        const batchId = new mongoose.Types.ObjectId();
+
+        await session.withTransaction(async () => {
+            // Create AnimalTransfer documents for each animal
+            const transfers = await AnimalTransfer.create([
+                ...animalIds_public.map(animalId_public => ({
+                    fromUserId,
+                    toUserId,
+                    animalId_public,
+                    price: price || 0,
+                    notes: notes || '',
+                    status: 'pending',
+                    transferType: transferType || 'gift',
+                    type: 'ownership',
+                    batchId: batchId // Add batchId for grouping
+                }))
+            ], { session });
+
+            createdTransfers = transfers;
+
+            // Update each animal with pendingTransferId and create notifications
+            for (let i = 0; i < animals.length; i++) {
+                const animal = animals[i];
+                const transfer = createdTransfers[i];
+
+                animal.pendingTransferId = transfer._id;
+                await animal.save({ session });
+
+                // Create notification for the recipient
+                const sender = await User.findById(fromUserId).select('personalName breederName').session(session);
+                const recipientProfile = await PublicProfile.findOne({ userId_backend: toUserId }).session(session);
+
+                await Notification.create([{
+                    userId: toUserId,
+                    userId_public: recipientProfile?.id_public || '',
+                    type: 'transfer_request',
+                    status: 'pending',
+                    animalId_public: animal.id_public,
+                    animalName: animal.name,
+                    animalImageUrl: animal.imageUrl || '',
+                    transferId: transfer._id,
+                    message: `New transfer request for ${animal.name} from ${sender?.personalName || 'unknown'}`,
+                    metadata: {
+                        transferId: transfer._id,
+                        animalId: animal.id_public,
+                        batchId: batchId
+                    }
+                }], { session });
+            }
+        });
+
+        res.status(200).json({
+            batchId: batchId,
+            transfers: createdTransfers.map(t => ({
+                _id: t._id,
+                animalId_public: t.animalId_public
+            }))
+        });
+    } catch (error) {
+        console.error('Error creating bulk transfer:', error);
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error while creating bulk transfer.' });
+    } finally {
+        session.endSession();
+    }
+});
+// POST /api/transfers/bulk/withdraw - Withdraw all pending transfers in a batch
+// POST /api/transfers/bulk/withdraw - Withdraw all pending transfers in a batch
+
+// Keep existing bulk withdraw endpoint
+router.post('/bulk/withdraw', async (req, res) => {
+    const session = await mongoose.startSession();
+    try {
+        const { batchId } = req.body;
+        const userId = req.user.id;
+
+        if (!batchId) {
+            throw Object.assign(new Error('Batch ID is required.'), { statusCode: 400 });
+        }
+
+        // Find all pending transfers in this batch owned by the user
+        const transfers = await AnimalTransfer.find({
+            fromUserId: userId,
+            batchId: batchId,
+            status: 'pending'
+        }).session(session);
+
+        if (transfers.length === 0) {
+            throw Object.assign(new Error('No pending transfers found in this batch.'), { statusCode: 404 });
+        }
+
+        await session.withTransaction(async () => {
+            // Withdraw each transfer in the batch
+            for (const transfer of transfers) {
+                transfer.status = 'cancelled';
+                transfer.respondedAt = new Date();
+                transfer.completedAt = new Date();
+                await transfer.save({ session });
+
+                // Clear pendingTransferId on the animal
+                const animal = await Animal.findOne({ id_public: transfer.animalId_public }).session(session);
+                if (animal) {
+                    animal.pendingTransferId = undefined;
+                    await animal.save({ session });
+                }
+
+                // Update notification status
+                await Notification.updateOne(
+                    { transferId: transfer._id, type: 'transfer_request' },
+                    { $set: { status: 'cancelled' } },
+                    { session }
+                );
+
+                // Notify recipient
+                try {
+                    const senderProfile = await PublicProfile.findOne({ userId_backend: transfer.fromUserId }).session(session);
+                    const recipientProfile = await PublicProfile.findOne({ userId_backend: transfer.toUserId }).session(session);
+
+                    await Notification.create([{
+                        userId: transfer.toUserId,
+                        userId_public: recipientProfile?.id_public || '',
+                        type: 'transfer_cancelled',
+                        status: 'cancelled',
+                        animalId_public: transfer.animalId_public,
+                        animalName: animal?.name || transfer.animalId_public,
+                        animalImageUrl: animal?.imageUrl || '',
+                        transferId: transfer._id,
+                        message: `Transfer for ${animal?.name || transfer.animalId_public} was withdrawn by the sender.`,
+                        metadata: {
+                            transferId: transfer._id,
+                            animalId: transfer.animalId_public,
+                            batchId: batchId
+                        }
+                    }], { session });
+                } catch (notifError) {
+                    console.error('[Bulk Withdraw] Notification error:', notifError.message);
+                }
+            }
+        });
+
+        res.status(200).json({
+            message: 'Bulk transfer withdrawn successfully.',
+            batchId,
+            withdrawnCount: transfers.length
+        });
+    } catch (error) {
+        console.error('Error withdrawing bulk transfer:', error);
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Internal server error while withdrawing bulk transfer.' });
+    } finally {
+        session.endSession();
+    }
+});
+
 module.exports = router;

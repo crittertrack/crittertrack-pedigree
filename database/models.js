@@ -1743,6 +1743,7 @@ const AnimalTransferSchema = new mongoose.Schema(
         notes: { type: String, default: '' }, // Notes/description for the transfer
         type: { type: String, enum: ['ownership', 'view_only_grant'], default: 'ownership' }, // New field to distinguish transfer types
         isLegacyMigration: { type: Boolean, default: false }, // New field to mark legacy migrations
+        batchId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true } // For grouping bulk transfers
     },
     {
         timestamps: true, // creates createdAt + updatedAt automatically
