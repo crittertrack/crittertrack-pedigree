@@ -600,78 +600,81 @@ router.post('/bulk', async (req, res) => {
         const fromUserId = req.user.id;
 
         // Validate input
-        if (!animalIds_public || animalIds_public.length === 0) {
+        if (!Array.isArray(animalIds_public) || animalIds_public.length === 0
+            || animalIds_public.some(id => typeof id !== 'string' || !id.trim())) {
             throw Object.assign(new Error('At least one animal must be provided.'), { statusCode: 400 });
         }
         if (!toUserId) {
             throw Object.assign(new Error('Recipient user ID is required.'), { statusCode: 400 });
         }
-        if (fromUserId.toString() === toUserId) {
-            throw Object.assign(new Error('Sender cannot be the same as recipient.'), { statusCode: 400 });
-        }
-
-        // Verify recipient exists
-        const recipient = await User.findById(toUserId).session(session);
-        if (!recipient) {
-            throw Object.assign(new Error('Recipient user not found.'), { statusCode: 404 });
-        }
-
-        // Validate animals: must exist and belong to sender, must not already have pending transfers
-        const animals = await Animal.find({
-            id_public: { $in: animalIds_public },
-            creatorId: fromUserId
-        }).session(session);
-
-        if (animals.length !== animalIds_public.length) {
-            throw Object.assign(new Error('Some animals were not found or you are not the owner.'), { statusCode: 404 });
-        }
-
-        // Check for duplicate animal IDs within the batch
         const animalIdSet = new Set(animalIds_public);
         if (animalIdSet.size !== animalIds_public.length) {
             throw Object.assign(new Error('Duplicate animal IDs are not allowed in a single batch.'), { statusCode: 400 });
         }
 
-        // Check for existing pending transfers on any of the animals
-        for (const animal of animals) {
-            if (animal.pendingTransferId) {
-                throw Object.assign(new Error(`Animal ${animal.id_public} already has a pending transfer request.`), { statusCode: 409 });
-            }
+        const parsedPrice = price === undefined ? 0 : Number(price);
+        if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+            throw Object.assign(new Error('Price must be a valid, non-negative number.'), { statusCode: 400 });
+        }
+        const resolvedTransferType = transferType || 'gift';
+        if (!['sale', 'purchase', 'gift'].includes(resolvedTransferType)) {
+            throw Object.assign(new Error('Transfer type is invalid.'), { statusCode: 400 });
         }
 
-        // Create batch ID
         const batchId = new mongoose.Types.ObjectId();
 
         await session.withTransaction(async () => {
+            const recipient = await User.findById(toUserId).session(session);
+            if (!recipient) {
+                throw Object.assign(new Error('Recipient user not found.'), { statusCode: 404 });
+            }
+            if (recipient._id.equals(fromUserId)) {
+                throw Object.assign(new Error('Sender cannot be the same as recipient.'), { statusCode: 400 });
+            }
+
+            const animals = await Animal.find({
+                id_public: { $in: animalIds_public },
+                creatorId: fromUserId,
+            }).session(session);
+            if (animals.length !== animalIds_public.length) {
+                throw Object.assign(new Error('Some animals were not found or you are not the owner.'), { statusCode: 404 });
+            }
+            for (const animal of animals) {
+                if (animal.pendingTransferId) {
+                    throw Object.assign(new Error(`Animal ${animal.id_public} already has a pending transfer request.`), { statusCode: 409 });
+                }
+            }
+            const animalsById = new Map(animals.map(animal => [animal.id_public, animal]));
+            const animalsInRequestOrder = animalIds_public.map(animalId => animalsById.get(animalId));
+
             // Create AnimalTransfer documents for each animal
-            const transfers = await AnimalTransfer.create([
-                ...animalIds_public.map(animalId_public => ({
-                    fromUserId,
-                    toUserId,
-                    animalId_public,
-                    price: price || 0,
-                    notes: notes || '',
-                    status: 'pending',
-                    transferType: transferType || 'gift',
-                    type: 'ownership',
-                    batchId: batchId // Add batchId for grouping
-                }))
-            ], { session });
+            const transfers = await AnimalTransfer.create(animalsInRequestOrder.map(animal => ({
+                fromUserId,
+                toUserId,
+                animalId_public: animal.id_public,
+                price: parsedPrice,
+                notes: notes || '',
+                status: 'pending',
+                transferType: resolvedTransferType,
+                type: 'ownership',
+                batchId,
+            })), { session });
 
             createdTransfers = transfers;
+            const sender = await User.findById(fromUserId)
+                .select('personalName breederName')
+                .session(session);
+            const recipientProfile = await PublicProfile.findOne({ userId_backend: toUserId }).session(session);
 
             // Update each animal with pendingTransferId and create notifications
-            for (let i = 0; i < animals.length; i++) {
-                const animal = animals[i];
+            for (let i = 0; i < animalsInRequestOrder.length; i++) {
+                const animal = animalsInRequestOrder[i];
                 const transfer = createdTransfers[i];
 
                 animal.pendingTransferId = transfer._id;
                 await animal.save({ session });
 
                 // Create notification for the recipient
-                const sender = await User.findById(fromUserId).select('personalName breederName').session(session);
-                const recipientProfile = await PublicProfile.findOne({ userId_backend: toUserId }).session(session);
-
                 await Notification.create([{
                     userId: toUserId,
                     userId_public: recipientProfile?.id_public || '',

@@ -254,162 +254,59 @@ router.get('/:id_public/offspring', async (req, res) => {
 });
 
 // GET /api/litters/:id_public/confirmed-offspring-traits
-// Gets confirmed offspring traits from linked offspring genetic codes and appearance fields.
-// First tries genetic codes using species phenotype rules, falls back to appearance fields.
-// Returns combined traits from ALL offspring.
+// Returns the percentage of linked offspring with each recorded appearance trait.
 router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
     try {
         const { Litter, Animal } = require('../database/models');
         const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).lean();
         if (!litter) return res.status(404).json({ message: 'Litter not found.' });
 
-        if (!litter.offspringIds_public?.length) {
+        const offspringIds = [...new Set(litter.offspringIds_public || [])];
+        if (!offspringIds.length) {
             return res.status(200).json([]);
         }
 
-        // Fetch offspring animals with their genetic code and appearance fields
         const offspringAnimals = await Animal.find({
-            id_public: { $in: litter.offspringIds_public }
+            id_public: { $in: offspringIds }
         }).lean();
+        const fields = [
+            ['color', 'Color'],
+            ['markings', 'Markings'],
+            ['coat', 'Coat'],
+            ['earset', 'Earset'],
+            ['eyeColor', 'Eye color'],
+            ['body', 'Body'],
+        ];
+        const traitCounts = new Map();
 
-        if (!offspringAnimals.length) {
-            return res.status(200).json([]);
-        }
-
-        // Extract genetic codes and appearance fields for ALL offspring
-        const offspringCodes = offspringAnimals.map(a => a.geneticCode || {});
-        const appearanceFields = offspringAnimals.map(a => ({
-            color: a.color,
-            markings: a.markings,
-            coat: a.coat,
-            earset: a.earset,
-        }));
-
-        // Build a set of unique traits from ALL offspring, taking max percentage for duplicates
-        const traitMap = new Map();
-
-        // Compute confirmed traits for EACH offspring and merge them from appearance fields
-        for (let i = 0; i < offspringCodes.length; i++) {
-            const appearance = appearanceFields[i];
-
-            // Use appearance fields directly as traits
-            const { color, markings, coat, earset } = appearance || {};
-            
-            // Add color trait
-            if (color) {
-                const traitKey = 'color'.toLowerCase();
-                if (!traitMap.has(traitKey)) {
-                    traitMap.set(traitKey, { trait: color, percentage: 100, sources: [] });
+        for (const animal of offspringAnimals) {
+            const animalTraits = new Set();
+            for (const [field, label] of fields) {
+                const value = animal[field];
+                if (typeof value !== 'string' || !value.trim()) continue;
+                const trait = `${label}: ${value.trim()}`;
+                animalTraits.add(trait.toLowerCase());
+                if (!traitCounts.has(trait.toLowerCase())) {
+                    traitCounts.set(trait.toLowerCase(), { trait, count: 0 });
                 }
-                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
             }
-            // Add markings trait
-            if (markings) {
-                const traitKey = 'markings'.toLowerCase();
-                if (!traitMap.has(traitKey)) {
-                    traitMap.set(traitKey, { trait: markings, percentage: 100, sources: [] });
-                }
-                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
-            }
-            // Add coat trait
-            if (coat) {
-                const traitKey = 'coat'.toLowerCase();
-                if (!traitMap.has(traitKey)) {
-                    traitMap.set(traitKey, { trait: coat, percentage: 100, sources: [] });
-                }
-                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
-            }
-            // Add earset trait
-            if (earset) {
-                const traitKey = 'earset'.toLowerCase();
-                if (!traitMap.has(traitKey)) {
-                    traitMap.set(traitKey, { trait: earset, percentage: 100, sources: [] });
-                }
-                traitMap.get(traitKey).percentage = Math.max(traitMap.get(traitKey).percentage, 100);
+            for (const key of animalTraits) {
+                traitCounts.get(key).count += 1;
             }
         }
 
-        // Return merged traits from ALL offspring
-        const result = Array.from(traitMap.values());
-        result.sort((a, b) => b.percentage - a.percentage);
+        const result = Array.from(traitCounts.values())
+            .map(({ trait, count }) => ({
+                trait,
+                percentage: Math.round((count / offspringIds.length) * 100),
+            }))
+            .sort((a, b) => b.percentage - a.percentage || a.trait.localeCompare(b.trait));
         res.status(200).json(result);
     } catch (error) {
         console.error('Error fetching confirmed offspring traits:', error);
         res.status(500).json({ message: 'Internal server error.' });
     }
 });
-
-// Helper function to compute traits from genetic code using species phenotype rules
-// AND split combined trait names into individual traits (e.g., "Chocolate Pied" -> ["chocolate", "pied"])
-function computeTraitsFromGeneticCode(geneticCode, speciesKey, rulesMap) {
-    const rules = rulesMap[speciesKey];
-    if (!rules || !rules.match) return [];
-
-    try {
-        const phenotype = rules.match(geneticCode);
-        if (phenotype && typeof phenotype === 'string') {
-            // Split combined trait names into individual traits
-            // e.g., "Chocolate Pied" -> ["chocolate", "pied"]
-            const individualTraits = splitCombinedTrait(phenotype);
-            return individualTraits.map(trait => ({
-                trait: trait,
-                percentage: 100
-            }));
-        }
-    } catch (e) {
-        // If matching fails, return empty
-    }
-
-    // If no phenotype found from genetic code, return null to indicate fallback needed
-    return null;
-}
-
-/**
- * Split a combined trait name into individual traits.
- * For example:
- *   "Chocolate Pied" -> ["chocolate", "pied"]
- *   "Black Pied" -> ["black", "pied"]
- *   "Champagne Brindle" -> ["champagne", "brindle"]
- *   "Albino" -> ["albino"] (single trait, no splitting needed)
- *
- * @param {string} trait - Combined trait name
- * @returns {string[]} Array of individual trait names (lowercase)
- */
-function splitCombinedTrait(trait) {
-    // Common compound trait patterns - split on known combining words
-    // Each entry has a space prefix so it matches as a complete word
-    const COMBINED_WORDS = [
-        ' pied', ' brindle', ' tan', ' snow', ' cream',
-        ' white', ' black', ' blue', ' lilac', ' chocolate',
-        ' fawn', ' agouti', ' normal', ' albino', ' smoke',
-        ' dilute', ' grey', ' champagne',
-    ];
-
-    // Split the trait into words
-    const words = trait.trim().split(/\s+/);
-    const result = [];
-
-    // Find the first combined word and split by it
-    for (const combinedWord of COMBINED_WORDS) {
-        if (combinedWord.startsWith(' ')) {
-            // Word has a space prefix
-            const parts = trait.split(new RegExp(`\\s+${combinedWord.trim()}\\s*`, 'i'));
-            if (parts.length > 1) {
-                for (const part of parts) {
-                    const trimmed = part.trim();
-                    if (trimmed) {
-                        result.push(trimmed.toLowerCase());
-                    }
-                }
-                return result;
-            }
-        }
-    }
-
-    // If no split happened, return the original trait as a single entry
-    // (this handles single traits like "Albino", "Black", "Normal")
-    return [trait.toLowerCase()];
-}
 
 // GET /api/litters/:id_public
 // Gets a single litter by its public ID (any authenticated user can fetch).
