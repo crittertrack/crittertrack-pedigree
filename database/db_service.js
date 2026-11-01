@@ -252,6 +252,8 @@ const registerUser = async (userData) => {
     const userProfile = {
         id_public: user.id_public,
         email: user.email,
+        recoveryEmail: user.recoveryEmail || null,
+        recoveryEmailVerified: !!user.recoveryEmailVerified,
         role: user.role,
         personalName: user.personalName,
         showPersonalName: user.showPersonalName,
@@ -406,6 +408,8 @@ const getUserProfileById = async (appUserId_backend) => {
         _id: user._id, // Include internal ID for activity logging
         id_public: user.id_public,
         email: user.email,
+        recoveryEmail: user.recoveryEmail || null,
+        recoveryEmailVerified: !!user.recoveryEmailVerified,
         role: user.role,
         personalName: user.personalName,
         showPersonalName: user.showPersonalName,
@@ -2645,6 +2649,8 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
     const userProfile = {
         id_public: user.id_public,
         email: user.email,
+        recoveryEmail: user.recoveryEmail || null,
+        recoveryEmailVerified: !!user.recoveryEmailVerified,
         personalName: user.personalName,
         showPersonalName: user.showPersonalName,
         breederName: user.breederName,
@@ -2724,6 +2730,76 @@ const resetPassword = async (email, token, newPassword) => {
     return { message: 'Password reset successful' };
 };
 
+const requestRecoveryEmailVerification = async (userId, recoveryEmail, currentPassword) => {
+    const normalizedEmail = typeof recoveryEmail === 'string' ? recoveryEmail.trim().toLowerCase() : '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        throw new Error('Enter a valid recovery email address.');
+    }
+    if (!currentPassword) throw new Error('Current password is required.');
+
+    const user = await User.findById(userId).select(
+        '+password +recoveryEmailVerificationCode +recoveryEmailVerificationExpires +recoveryEmailVerificationAttempts'
+    );
+    if (!user) throw new Error('User not found.');
+    if (normalizedEmail === user.email) throw new Error('Recovery email must be different from your sign-in email.');
+    if (!await bcrypt.compare(currentPassword, user.password)) throw new Error('Current password is incorrect.');
+
+    const code = crypto.randomInt(100000, 1000000).toString();
+    user.pendingRecoveryEmail = normalizedEmail;
+    user.recoveryEmailVerificationCode = await bcrypt.hash(code, SALT_ROUNDS);
+    user.recoveryEmailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
+    user.recoveryEmailVerificationAttempts = 0;
+    await user.save();
+
+    return { recoveryEmail: normalizedEmail, code };
+};
+
+const verifyRecoveryEmail = async (userId, code) => {
+    const user = await User.findById(userId).select(
+        '+pendingRecoveryEmail +recoveryEmailVerificationCode +recoveryEmailVerificationExpires +recoveryEmailVerificationAttempts'
+    );
+    if (!user || !user.pendingRecoveryEmail || !user.recoveryEmailVerificationCode) {
+        throw new Error('Request a recovery email verification code first.');
+    }
+    if (!user.recoveryEmailVerificationExpires || user.recoveryEmailVerificationExpires <= new Date()) {
+        user.pendingRecoveryEmail = null;
+        user.recoveryEmailVerificationCode = null;
+        user.recoveryEmailVerificationExpires = null;
+        user.recoveryEmailVerificationAttempts = 0;
+        await user.save();
+        throw new Error('Recovery email verification code has expired. Request a new code.');
+    }
+    if (user.recoveryEmailVerificationAttempts >= 5) {
+        throw new Error('Too many incorrect codes. Request a new verification code.');
+    }
+
+    const valid = typeof code === 'string' && await bcrypt.compare(code, user.recoveryEmailVerificationCode);
+    if (!valid) {
+        user.recoveryEmailVerificationAttempts += 1;
+        await user.save();
+        throw new Error('Invalid recovery email verification code.');
+    }
+
+    user.recoveryEmail = user.pendingRecoveryEmail;
+    user.recoveryEmailVerified = true;
+    user.pendingRecoveryEmail = null;
+    user.recoveryEmailVerificationCode = null;
+    user.recoveryEmailVerificationExpires = null;
+    user.recoveryEmailVerificationAttempts = 0;
+    await user.save();
+    return { recoveryEmail: user.recoveryEmail, recoveryEmailVerified: true };
+};
+
+const getLoginEmailsForRecoveryAddress = async (recoveryEmail) => {
+    const normalizedEmail = typeof recoveryEmail === 'string' ? recoveryEmail.trim().toLowerCase() : '';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return [];
+    const users = await User.find({
+        recoveryEmail: normalizedEmail,
+        recoveryEmailVerified: true,
+    }).select('email').lean();
+    return users.map(user => user.email);
+};
+
 module.exports = {
     connectDB,
     registerUser,
@@ -2735,6 +2811,9 @@ module.exports = {
     verifyEmailAndRegister,
     requestPasswordReset,
     resetPassword,
+    requestRecoveryEmailVerification,
+    verifyRecoveryEmail,
+    getLoginEmailsForRecoveryAddress,
     // Animal functions
     addAnimal,
     handleBulkCreateAnimals,

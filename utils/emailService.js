@@ -99,6 +99,43 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     }
 };
 
+const sendRecoveryEmailVerificationCode = async (email, code) => {
+    await sendEmail(
+        email,
+        'CritterTrack - Recovery Email Verification',
+        `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #ec4899;">Verify Your Recovery Email</h2>
+                <p>Use this code to verify the recovery email address for your CritterTrack account:</p>
+                <div style="background-color: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0;">
+                    <h1 style="color: #ec4899; letter-spacing: 5px; margin: 0;">${code}</h1>
+                </div>
+                <p>This code expires in 10 minutes. If you did not request this, you can ignore this email.</p>
+                <p style="color: #6b7280; font-size: 12px;">CritterTrack - Breeding Registry Management</p>
+            </div>
+        `
+    );
+};
+
+const sendLoginEmailRecovery = async (email, loginEmails) => {
+    const safeEmails = loginEmails.map(value => value.replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character])).join('<br>');
+    await sendEmail(
+        email,
+        'CritterTrack - Sign-in Email Recovery',
+        `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #ec4899;">Your CritterTrack Sign-in Email</h2>
+                <p>You requested a reminder of the sign-in email associated with this recovery address:</p>
+                <p style="background-color: #f3f4f6; padding: 16px; line-height: 1.8;">${safeEmails}</p>
+                <p>If you did not request this reminder, you can ignore this email.</p>
+                <p style="color: #6b7280; font-size: 12px;">CritterTrack - Breeding Registry Management</p>
+            </div>
+        `
+    );
+};
+
 /**
  * Send bug report notification to admin
  */
@@ -257,6 +294,8 @@ module.exports = {
     sendEmail,
     sendVerificationEmail,
     sendPasswordResetEmail,
+    sendRecoveryEmailVerificationCode,
+    sendLoginEmailRecovery,
     sendBugReportNotification,
     sendGeneticsFeedbackNotification,
     sendFeedbackNotification,

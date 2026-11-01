@@ -14,6 +14,12 @@ const Counter = mongoose.model('Counter', CounterSchema);
 const UserSchema = new mongoose.Schema({
     id_public: { type: String, required: false, unique: true, sparse: true, index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    recoveryEmail: { type: String, lowercase: true, trim: true, default: null },
+    recoveryEmailVerified: { type: Boolean, default: false },
+    pendingRecoveryEmail: { type: String, lowercase: true, trim: true, default: null, select: false },
+    recoveryEmailVerificationCode: { type: String, default: null, select: false },
+    recoveryEmailVerificationExpires: { type: Date, default: null, select: false },
+    recoveryEmailVerificationAttempts: { type: Number, default: 0, select: false },
     // Password MUST be selected manually in queries or explicitly included in update handlers
     password: { type: String, required: true, select: false }, 
     personalName: { type: String, required: true, trim: true },

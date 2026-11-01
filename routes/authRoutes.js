@@ -7,11 +7,16 @@ const {
     requestEmailVerification,
     verifyEmailAndRegister,
     requestPasswordReset,
-    resetPassword
+    resetPassword,
+    requestRecoveryEmailVerification,
+    verifyRecoveryEmail,
+    getLoginEmailsForRecoveryAddress
 } = require('../database/db_service');
 const { 
     sendVerificationEmail, 
-    sendPasswordResetEmail 
+    sendPasswordResetEmail,
+    sendRecoveryEmailVerificationCode,
+    sendLoginEmailRecovery
 } = require('../utils/emailService');
 const { ProfanityError } = require('../utils/profanityFilter');
 const { createAuditLog } = require('../utils/auditLogger');
@@ -294,6 +299,78 @@ router.post('/forgot-password', async (req, res) => {
         res.status(200).json({
             message: 'If the email exists, password reset instructions have been sent.'
         });
+    }
+});
+
+// POST /api/auth/forgot-username
+// The sign-in email is the username; only verified recovery addresses are eligible.
+router.post('/forgot-username', async (req, res) => {
+    const genericResponse = {
+        message: 'If a verified recovery email matches, the sign-in email has been sent.'
+    };
+    try {
+        const recoveryEmail = typeof req.body?.recoveryEmail === 'string'
+            ? req.body.recoveryEmail.trim().toLowerCase()
+            : '';
+        const loginEmails = await getLoginEmailsForRecoveryAddress(recoveryEmail);
+        if (loginEmails.length) {
+            await sendLoginEmailRecovery(recoveryEmail, loginEmails);
+        }
+        res.status(200).json(genericResponse);
+    } catch (error) {
+        console.error('Error requesting sign-in email recovery:', error);
+        res.status(200).json(genericResponse);
+    }
+});
+
+// POST /api/auth/recovery-email/request
+// Request an email verification code to add or replace the account recovery address.
+router.post('/recovery-email/request', protect, async (req, res) => {
+    try {
+        const { recoveryEmail, currentPassword } = req.body;
+        const verification = await requestRecoveryEmailVerification(
+            req.user._id,
+            recoveryEmail,
+            currentPassword
+        );
+        await sendRecoveryEmailVerificationCode(verification.recoveryEmail, verification.code);
+        res.status(200).json({
+            message: 'A verification code has been sent to the recovery email address.'
+        });
+    } catch (error) {
+        console.error('Error requesting recovery email verification:', error);
+        const validationMessages = [
+            'Enter a valid recovery email address.',
+            'Current password is required.',
+            'User not found.',
+            'Recovery email must be different from your sign-in email.',
+            'Current password is incorrect.'
+        ];
+        if (validationMessages.includes(error.message)) {
+            return res.status(error.message === 'User not found.' ? 404 : 400).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Failed to send a recovery email verification code.' });
+    }
+});
+
+// POST /api/auth/recovery-email/verify
+router.post('/recovery-email/verify', protect, async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (typeof code !== 'string' || !/^\d{6}$/.test(code)) {
+            return res.status(400).json({ message: 'Enter the 6-digit verification code.' });
+        }
+        const recoveryEmail = await verifyRecoveryEmail(req.user._id, code);
+        res.status(200).json({
+            message: 'Recovery email verified successfully.',
+            ...recoveryEmail
+        });
+    } catch (error) {
+        console.error('Error verifying recovery email:', error);
+        if (/^(Request a recovery email|Recovery email verification code|Too many incorrect codes|Invalid recovery email verification code)/.test(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: 'Failed to verify recovery email.' });
     }
 });
 
@@ -684,10 +761,23 @@ router.put('/change-email', protect, async (req, res) => {
             return res.status(409).json({ message: 'Email address is already in use by another account.' });
         }
 
-        // Update the user's email
+        const emailUpdate = {
+            $set: { email: normalizedEmail, recoveryEmailVerificationAttempts: 0 },
+            $unset: {
+                pendingRecoveryEmail: 1,
+                recoveryEmailVerificationCode: 1,
+                recoveryEmailVerificationExpires: 1
+            }
+        };
+        if (normalizedEmail === req.user.recoveryEmail) {
+            emailUpdate.$set.recoveryEmailVerified = false;
+            emailUpdate.$unset.recoveryEmail = 1;
+        }
+
+        // A primary email change invalidates any pending verification request.
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { email: normalizedEmail },
+            emailUpdate,
             { new: true, runValidators: true }
         ).select('email id_public personalName');
 
