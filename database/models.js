@@ -1127,6 +1127,10 @@ const LitterSchema = new mongoose.Schema({
     weaningNotes: { type: String, default: null },
     // Breeding objectives for this pairing
     breedingObjectives: { type: [String], default: [] }, // short badge labels, e.g. "Better type"
+    expectedOutcomes: { type: String, default: null },
+    geneticNotes: { type: String, default: null },
+    keepersGrowouts: { type: String, default: 'Undecided' },
+    placementPlans: { type: String, default: 'Undecided' },
     objectivesNotes: { type: String, default: null },
     objectivesEvaluation: { type: String, default: null }, // how well the litter met the objectives
     pairingNotes: { type: String, default: null },
@@ -1145,7 +1149,14 @@ const LitterSchema = new mongoose.Schema({
     pregnancyLostNotes: { type: String, default: null },
 
     // Litter photo gallery (born litters only)
-    images: [{ url: { type: String }, r2Key: { type: String } }],
+    images: [{
+        url: { type: String },
+        r2Key: { type: String },
+        caption: { type: String, default: '' },
+        captureDate: { type: String, default: '' },
+        isCover: { type: Boolean, default: false },
+        offspringId_public: { type: String, default: null },
+    }],
     
 }, { timestamps: true });
 const Litter = mongoose.model('Litter', LitterSchema);

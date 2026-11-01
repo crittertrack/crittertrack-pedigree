@@ -228,7 +228,9 @@ router.get('/for-animal/:id_public', async (req, res) => {
 router.get('/:id_public/offspring', async (req, res) => {
     try {
         const { Litter, Animal } = require('../database/models');
-        const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).lean();
+        const litter = await Litter.findOne({ litter_id_public: req.params.id_public })
+            .select('offspringIds_public sireId_public damId_public')
+            .lean();
         if (!litter) return res.status(404).json({ message: 'Litter not found.' });
         const ids = litter.offspringIds_public || [];
         if (!ids.length) return res.status(200).json([]);
@@ -250,6 +252,62 @@ router.get('/:id_public/offspring', async (req, res) => {
     } catch (error) {
         console.error('Error fetching litter offspring:', error);
         res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// GET /api/litters/:id_public/genetics-summary
+// Pedigree-derived genetics data is calculated only when the genetics tab is opened.
+router.get('/:id_public/genetics-summary', async (req, res) => {
+    try {
+        const litter = await Litter.findOne({ litter_id_public: req.params.id_public })
+            .select('sireId_public damId_public')
+            .lean();
+        if (!litter) return res.status(404).json({ message: 'Litter not found.' });
+
+        let commonAncestors = [];
+        let pedigreeGenerations = 0;
+        if (litter.sireId_public && litter.damId_public) {
+            const parentIds = [litter.sireId_public, litter.damId_public];
+            const select = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId birthDate deceasedDate color coat earset markings eyeColor body inbreedingCoefficient avgKinship sireId_public damId_public';
+            const [animals, publicAnimals] = await Promise.all([
+                Animal.find({ id_public: { $in: parentIds } }).select(select).lean(),
+                PublicAnimal.find({ id_public: { $in: parentIds } }).select(select).lean(),
+            ]);
+            const byId = new Map([...animals, ...publicAnimals].map(animal => [animal.id_public, animal]));
+            const fetchAnimal = async (id) => byId.get(id)
+                || await Animal.findOne({ id_public: id }).lean()
+                || await PublicAnimal.findOne({ id_public: id }).lean();
+            const { analyzePairing } = require('../utils/inbreeding');
+            const result = await analyzePairing(litter.sireId_public, litter.damId_public, fetchAnimal, 20);
+            if (result) {
+                pedigreeGenerations = result.pedigreeGenerations || 0;
+                commonAncestors = (result.ancestors || []).map(ancestor => ({
+                    id_public: ancestor.ancestorId,
+                    name: ancestor.name,
+                    generations: Math.max(ancestor.sireGeneration || 0, ancestor.damGeneration || 0),
+                    occurrences: ancestor.occurrences,
+                    contribution: (ancestor.contributionPct || 0) / 100,
+                    contribution_pct: ancestor.contributionPct,
+                }));
+            }
+        }
+        res.status(200).json({ commonAncestors, pedigreeGenerations });
+    } catch (error) {
+        console.error('Error fetching litter genetics summary:', error);
+        res.status(500).json({ message: 'Internal server error while fetching litter genetics.' });
+    }
+});
+
+// GET /api/litters/:id_public/gallery
+// Gallery image metadata is loaded on demand, separate from the litter overview.
+router.get('/:id_public/gallery', async (req, res) => {
+    try {
+        const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).select('images').lean();
+        if (!litter) return res.status(404).json({ message: 'Litter not found.' });
+        res.status(200).json(Array.isArray(litter.images) ? litter.images : []);
+    } catch (error) {
+        console.error('Error fetching litter gallery:', error);
+        res.status(500).json({ message: 'Internal server error while fetching litter gallery.' });
     }
 });
 
@@ -313,13 +371,16 @@ router.get('/:id_public/confirmed-offspring-traits', async (req, res) => {
 router.get('/:id_public', async (req, res) => {
     try {
         const { Litter } = require('../database/models');
-        const litter = await Litter.findOne({ litter_id_public: req.params.id_public }).lean();
+        const overviewRequest = req.query.view === 'overview';
+        const litterQuery = Litter.findOne({ litter_id_public: req.params.id_public });
+        if (overviewRequest) litterQuery.select('-images');
+        const litter = await litterQuery.lean();
         if (!litter) return res.status(404).json({ message: 'Litter not found.' });
 
         // Additive: resolve sire/dam to safe display fields (same shape as GET /api/litters).
         const parentIds = [litter.sireId_public, litter.damId_public].filter(Boolean);
         // The full-page litter details view also shows each parent's variety, age and own COI.
-        const SELECT = 'id_public name prefix suffix gender imageUrl photoUrl species creatorId birthDate deceasedDate color coat earset markings eyeColor body inbreedingCoefficient geneticCode avgKinship sireId_public damId_public';
+        const SELECT = `id_public name prefix suffix gender imageUrl photoUrl species creatorId birthDate deceasedDate color coat earset markings eyeColor body inbreedingCoefficient ${overviewRequest ? '' : 'geneticCode'} avgKinship sireId_public damId_public`;
         const [anyAnimals, publicAnimals] = parentIds.length
             ? await Promise.all([
                 Animal.find({ id_public: { $in: parentIds } }).select(SELECT).lean(),
@@ -329,28 +390,43 @@ router.get('/:id_public', async (req, res) => {
         const anyMap = new Map(anyAnimals.map(a => [a.id_public, a]));
         const publicMap = new Map(publicAnimals.map(a => [a.id_public, a]));
         const getParent = (id) => (id && (anyMap.get(id) || publicMap.get(id))) || null;
-const { analyzePairing } = require('../utils/inbreeding');
-const fetchAnimal = async (id) => (id && (anyMap.get(id) || publicMap.get(id))) || (await Animal.findOne({ id_public: id }).lean()) || (await PublicAnimal.findOne({ id_public: id }).lean());
-let commonAncestors = [];
-let actualDepth = 0;
-if (litter.sireId_public && litter.damId_public) {
-    try {
-        const result = await analyzePairing(litter.sireId_public, litter.damId_public, fetchAnimal, 20);
-        if (result) {
-            actualDepth = result.pedigreeGenerations || 0;
-            commonAncestors = (result.ancestors || []).map(a => ({
-                id_public: a.ancestorId,
-                name: a.name,
-                generations: Math.max(a.sireGeneration || 0, a.damGeneration || 0),
-                occurrences: a.occurrences,
-                contribution: (a.contributionPct || 0) / 100,
-                contribution_pct: a.contributionPct,
-            }));
+        if (overviewRequest) {
+            return res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public) });
         }
-    } catch (e) { commonAncestors = []; actualDepth = 0; }
-}
 
-        res.status(200).json({ ...litter, sire: getParent(litter.sireId_public), dam: getParent(litter.damId_public), commonAncestors, pedigreeGenerations: actualDepth });
+        let commonAncestors = [];
+        let actualDepth = 0;
+        if (litter.sireId_public && litter.damId_public) {
+            try {
+                const { analyzePairing } = require('../utils/inbreeding');
+                const fetchAnimal = async (id) => (
+                    (id && (anyMap.get(id) || publicMap.get(id))) ||
+                    (await Animal.findOne({ id_public: id }).lean()) ||
+                    (await PublicAnimal.findOne({ id_public: id }).lean())
+                );
+                const result = await analyzePairing(litter.sireId_public, litter.damId_public, fetchAnimal, 20);
+                if (result) {
+                    actualDepth = result.pedigreeGenerations || 0;
+                    commonAncestors = (result.ancestors || []).map(ancestor => ({
+                        id_public: ancestor.ancestorId,
+                        name: ancestor.name,
+                        generations: Math.max(ancestor.sireGeneration || 0, ancestor.damGeneration || 0),
+                        occurrences: ancestor.occurrences,
+                        contribution: (ancestor.contributionPct || 0) / 100,
+                        contribution_pct: ancestor.contributionPct,
+                    }));
+                }
+            } catch (error) {
+                console.error('Error calculating litter pedigree summary:', error);
+            }
+        }
+        res.status(200).json({
+            ...litter,
+            sire: getParent(litter.sireId_public),
+            dam: getParent(litter.damId_public),
+            commonAncestors,
+            pedigreeGenerations: actualDepth,
+        });
     } catch (error) {
         console.error('Error fetching litter by id_public:', error);
         res.status(500).json({ message: 'Internal server error while fetching litter.' });
@@ -401,6 +477,18 @@ router.put('/:id_backend', async (req, res) => {
         if (autoCalc.dueDate && !unknownBirth) await applyAutoDueDateOnUpdate(updates, priorLitter, req.user.id_public);
 
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);
+
+        if (Array.isArray(updates.offspringIds_public)) {
+            const linkedIds = new Set(updates.offspringIds_public);
+            let clearedImageAssociation = false;
+            updatedLitter.images.forEach(image => {
+                if (image.offspringId_public && !linkedIds.has(image.offspringId_public)) {
+                    image.offspringId_public = null;
+                    clearedImageAssociation = true;
+                }
+            });
+            if (clearedImageAssociation) await updatedLitter.save();
+        }
 
         // Recompute reproductive flags for both old and new parents (covers parent changes/removals,
         // as well as birthDate/weaningDate/pregnancyDate transitions edited via any UI).
@@ -530,6 +618,42 @@ const litterImageUpload = (req, res, next) =>
         return res.status(400).json({ message: err.message || 'Invalid image file' });
     });
 
+const parseLitterImageMetadata = (body, litter) => {
+    const metadata = {};
+    if (body.caption !== undefined) {
+        if (typeof body.caption !== 'string' || body.caption.length > 240) {
+            return { error: 'Caption must be 240 characters or fewer.' };
+        }
+        metadata.caption = body.caption.trim();
+    }
+    if (body.captureDate !== undefined) {
+        if (typeof body.captureDate !== 'string' || (body.captureDate && !/^\d{4}-\d{2}-\d{2}$/.test(body.captureDate))) {
+            return { error: 'Capture date must use YYYY-MM-DD format.' };
+        }
+        if (body.captureDate) {
+            const parsedDate = new Date(`${body.captureDate}T00:00:00.000Z`);
+            if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== body.captureDate) {
+                return { error: 'Capture date is invalid.' };
+            }
+        }
+        metadata.captureDate = body.captureDate;
+    }
+    if (body.offspringId_public !== undefined) {
+        const offspringId = typeof body.offspringId_public === 'string' ? body.offspringId_public.trim() : null;
+        if (offspringId && !(litter.offspringIds_public || []).includes(offspringId)) {
+            return { error: 'Selected animal is not linked to this litter.' };
+        }
+        metadata.offspringId_public = offspringId || null;
+    }
+    if (body.isCover !== undefined) {
+        if (![true, false, 'true', 'false'].includes(body.isCover)) {
+            return { error: 'Cover selection must be true or false.' };
+        }
+        metadata.isCover = body.isCover === true || body.isCover === 'true';
+    }
+    return { metadata };
+};
+
 // POST /api/litters/:id_backend/images
 // Upload one image to a litter (max 5). Works at any stage planned, mated or born.
 router.post('/:id_backend/images', litterImageUpload, async (req, res) => {
@@ -543,19 +667,59 @@ router.post('/:id_backend/images', litterImageUpload, async (req, res) => {
             return res.status(400).json({ message: 'Maximum of 5 images per litter' });
         }
         if (!req.file) return res.status(400).json({ message: 'No image file provided' });
+        const parsedMetadata = parseLitterImageMetadata(req.body, litter);
+        if (parsedMetadata.error) return res.status(400).json({ message: parsedMetadata.error });
 
         const ext = req.file.mimetype === 'image/png' ? '.png' : '.jpg';
         const key = `litters/${litter._id}/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
 
         const imageUrl = await r2.uploadBuffer(key, req.file.buffer, req.file.mimetype);
-
-        litter.images.push({ url: imageUrl, r2Key: key });
+        const metadata = parsedMetadata.metadata;
+        const isFirstImage = (litter.images || []).length === 0;
+        if (metadata.isCover === true) {
+            litter.images.forEach(image => { image.isCover = false; });
+        }
+        litter.images.push({
+            url: imageUrl,
+            r2Key: key,
+            ...metadata,
+            isCover: metadata.isCover === true || (metadata.isCover === undefined && isFirstImage),
+        });
         await litter.save();
 
         res.json({ url: imageUrl, r2Key: key, images: litter.images });
     } catch (err) {
         console.error('Error uploading litter image:', err);
         res.status(500).json({ message: 'Failed to upload image' });
+    }
+});
+
+// PUT /api/litters/:id_backend/images/:r2Key
+// Update optional metadata for one litter gallery image.
+router.put('/:id_backend/images/:r2Key', async (req, res) => {
+    try {
+        const litter = await Litter.findById(req.params.id_backend);
+        if (!litter) return res.status(404).json({ message: 'Litter not found' });
+        if (String(litter.creatorId) !== String(req.user.id) && !litter.linkedOwners.some(id => String(id) === String(req.user.id))) {
+            return res.status(403).json({ message: 'Not your litter' });
+        }
+
+        const r2Key = decodeURIComponent(req.params.r2Key);
+        const image = (litter.images || []).find(item => item.r2Key === r2Key);
+        if (!image) return res.status(404).json({ message: 'Image not found' });
+
+        const parsedMetadata = parseLitterImageMetadata(req.body, litter);
+        if (parsedMetadata.error) return res.status(400).json({ message: parsedMetadata.error });
+        const metadata = parsedMetadata.metadata;
+        if (metadata.isCover === true) {
+            litter.images.forEach(item => { item.isCover = false; });
+        }
+        Object.assign(image, metadata);
+        await litter.save();
+        res.json({ images: litter.images });
+    } catch (err) {
+        console.error('Error updating litter image metadata:', err);
+        res.status(500).json({ message: 'Failed to update image details' });
     }
 });
 
@@ -574,6 +738,9 @@ router.delete('/:id_backend/images/:r2Key', async (req, res) => {
         litter.images = litter.images.filter(img => img.r2Key !== r2Key);
         if (litter.images.length === before) {
             return res.status(404).json({ message: 'Image not found' });
+        }
+        if (litter.images.length && !litter.images.some(img => img.isCover)) {
+            litter.images[0].isCover = true;
         }
         await litter.save();
         res.json({ message: 'Image removed', images: litter.images });

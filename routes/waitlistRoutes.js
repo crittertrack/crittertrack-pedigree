@@ -143,7 +143,7 @@ router.get('/', async (req, res) => {
 // POST /api/waitlist create a new waitlist entry (multi-species)
 router.post('/', async (req, res) => {
     try {
-        const { name, contactInfo, speciesRequests, species, genders, amount, notes, contactId } = req.body;
+        const { name, contactInfo, speciesRequests, species, genders, amount, notes, contactId, entryDate } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
 
         // Normalize speciesRequests: array of { species, genders, amount }
@@ -175,6 +175,7 @@ router.post('/', async (req, res) => {
             genders: normalized[0]?.genders || [],
             amount: normalized[0]?.amount ?? 1,
             notes: notes || '',
+            entryDate: entryDate ? new Date(entryDate) : undefined,
         });
         await entry.save();
         res.status(201).json(entry);

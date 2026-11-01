@@ -5,11 +5,15 @@ const { WaitlistEntry } = require('../database/models');
 const Contact = require('../database/contactModel');
 const waitlistRouter = require('../routes/waitlistRoutes');
 const { resolveContact, getContactName, applyContactToEntry, sortWaitlistEntries } = waitlistRouter;
+const createWaitlistHandler = waitlistRouter.stack
+    .find(layer => layer.route?.path === '/' && layer.route.methods.post)
+    .route.stack[0].handle;
 
 const USER_ID = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60701');
 const OTHER_USER_ID = new mongoose.Types.ObjectId('64b7f1c2a1b2c3d4e5f60702');
 
 const originalFindOne = Contact.findOne;
+const originalSave = WaitlistEntry.prototype.save;
 
 // Replace the Contact lookup with a stub so the linking rules can be tested
 // without a live MongoDB connection.
@@ -19,6 +23,28 @@ function stubContactFindOne(behaviour) {
 
 test.afterEach(() => {
     Contact.findOne = originalFindOne;
+    WaitlistEntry.prototype.save = originalSave;
+});
+
+test('create waitlist route preserves the submitted entry date', async () => {
+    WaitlistEntry.prototype.save = async function () { return this; };
+    const res = {
+        statusCode: 200,
+        status(code) { this.statusCode = code; return this; },
+        json(body) { this.body = body; return this; },
+    };
+
+    await createWaitlistHandler({
+        body: {
+            name: 'Jane Doe',
+            entryDate: '2024-06-15',
+            speciesRequests: [{ species: 'Fancy Mouse', genderCounts: [{ gender: 'Any', count: 1 }] }],
+        },
+        user: { id: USER_ID },
+    }, res);
+
+    assert.equal(res.statusCode, 201);
+    assert.equal(res.body.entryDate.toISOString().slice(0, 10), '2024-06-15');
 });
 
 test('resolveContact returns null link when contactId is missing', async () => {
