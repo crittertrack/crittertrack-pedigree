@@ -190,3 +190,25 @@ test('animal overview reports expected revenue only while reserved', () => {
     assert.equal(sold.totalRevenue, 75);
 });
 
+
+test('earned counts full price when paid, else paid deposit (no double counting)', () => {
+    const b = (id, extra) => ({ id_public: id, status: 'Booked', reservedPrice: 15, ...extra });
+    const overview = buildLitterOverview({
+        litter: { litter_id_public: 'CTL9' },
+        offspring: [
+            b('A', { reservedPaymentStatus: 'done' }),
+            b('B', { reservedPaymentStatus: 'done' }),
+            b('C', { reservedDeposit: 7.5, reservedDepositStatus: 'done' }),
+            b('D', { reservedDeposit: 7.5, reservedDepositStatus: 'done' }),
+            b('E', { reservedDeposit: 7.5, reservedDepositStatus: 'done' }),
+        ],
+        transactions: [],
+    });
+    assert.equal(overview.totalRevenue, 52.5);
+    const paidInFull = buildLitterOverview({
+        litter: { litter_id_public: 'CTL9' },
+        offspring: [b('C', { reservedDeposit: 7.5, reservedDepositStatus: 'done', reservedPaymentStatus: 'done' })],
+        transactions: [],
+    });
+    assert.equal(paidInFull.totalRevenue, 15);
+});

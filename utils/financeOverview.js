@@ -103,10 +103,15 @@ function buildAnimalOverview({ animal, transactions }) {
 function buildLitterOverview({ litter, offspring, transactions }) {
     const summary = summarizeTransactions(transactions);
 
-    // Deposits already paid on booked animals count as earned revenue.
+    // Money already received on booked animals counts as earned revenue:
+    //  - full price marked paid -> the full reservedPrice (replaces the deposit, never added to it)
+    //  - otherwise, a paid deposit -> just the deposit
     let depositEarned = 0;
     for (const animal of offspring || []) {
-        if (classifyOffspring(animal) === 'booked' && animal.reservedDepositStatus === 'done') {
+        if (classifyOffspring(animal) !== 'booked') continue;
+        if (animal.reservedPaymentStatus === 'done' && toNumber(animal.reservedPrice) > 0) {
+            depositEarned += toNumber(animal.reservedPrice);
+        } else if (animal.reservedDepositStatus === 'done') {
             depositEarned += toNumber(animal.reservedDeposit);
         }
     }
