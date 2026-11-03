@@ -70,14 +70,15 @@ function classifyOffspring(animal) {
     if (!animal) return 'kept';
     if (animal.soldStatus === 'sold' || animal.saleDate) return 'sold';
     if (animal.deceasedDate) return 'deceased';
-    if (animal.reservedBuyerName || animal.reservedWaitlistEntryId || toNumber(animal.reservedPrice) > 0) return 'reserved';
+    if (animal.status === 'Culled') return 'cull';
+    if (animal.reservedBuyerName || animal.reservedWaitlistEntryId || toNumber(animal.reservedPrice) > 0) return 'booked';
     if (animal.isForSale) return 'available';
     return 'kept';
 }
 
 function buildAnimalOverview({ animal, transactions }) {
     const summary = summarizeTransactions(transactions);
-    const reserved = animal && classifyOffspring(animal) === 'reserved';
+    const reserved = animal && classifyOffspring(animal) === 'booked';
     const expectedRevenue = reserved ? round2(animal.reservedPrice) : 0;
     const deposit = reserved ? round2(animal.reservedDeposit) : 0;
 
@@ -94,7 +95,7 @@ function buildAnimalOverview({ animal, transactions }) {
 function buildLitterOverview({ litter, offspring, transactions }) {
     const summary = summarizeTransactions(transactions);
 
-    const counts = { sold: 0, reserved: 0, available: 0, kept: 0, deceased: 0 };
+    const counts = { sold: 0, booked: 0, available: 0, kept: 0, deceased: 0, cull: 0 };
     let expectedRevenue = 0;
     let reservedDeposit = 0;
     const offspringDetails = [];
@@ -102,10 +103,12 @@ function buildLitterOverview({ litter, offspring, transactions }) {
         const bucket = classifyOffspring(animal);
         counts[bucket]++;
         let amount = null;
-        if (bucket === 'reserved') {
+        if (bucket === 'booked' || bucket === 'available' || bucket === 'sold') {
             amount = round2(animal.reservedPrice);
-            expectedRevenue += toNumber(animal.reservedPrice);
-            reservedDeposit += toNumber(animal.reservedDeposit);
+            if (bucket === 'booked') {
+                expectedRevenue += toNumber(animal.reservedPrice);
+                reservedDeposit += toNumber(animal.reservedDeposit);
+            }
         }
         offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, id: animal ? animal.id_public : null, status: bucket, amount });
     }

@@ -40,8 +40,8 @@ test('classifies offspring: sold, deceased, reserved, available, kept', () => {
     assert.equal(classifyOffspring({ soldStatus: 'sold' }), 'sold');
     assert.equal(classifyOffspring({ saleDate: new Date() }), 'sold');
     assert.equal(classifyOffspring({ deceasedDate: new Date() }), 'deceased');
-    assert.equal(classifyOffspring({ reservedBuyerName: 'Sam' }), 'reserved');
-    assert.equal(classifyOffspring({ reservedPrice: 50 }), 'reserved');
+    assert.equal(classifyOffspring({ reservedBuyerName: 'Sam' }), 'booked');
+    assert.equal(classifyOffspring({ reservedPrice: 50 }), 'booked');
     assert.equal(classifyOffspring({ isForSale: true }), 'available');
     assert.equal(classifyOffspring({}), 'kept');
     // A sold animal that is also flagged deceased still counts as sold.
@@ -72,7 +72,7 @@ test('litter overview: kept offspring give no revenue, reserved give expected re
     assert.equal(overview.expectedRevenue, 50);
     assert.equal(overview.reservedDeposit, 10);
     assert.equal(overview.costPerOffspringBorn, 15);
-    assert.deepEqual(overview.offspring, { sold: 1, reserved: 1, available: 1, kept: 2, deceased: 1 });
+    assert.deepEqual(overview.offspring, { sold: 1, booked: 1, available: 1, kept: 2, deceased: 1 });
 });
 
 test('litter overview falls back to offspring count when litter size is unknown', () => {
@@ -98,7 +98,7 @@ test('animal overview reports expected revenue only while reserved', () => {
     });
     assert.equal(reserved.expectedRevenue, 75);
     assert.equal(reserved.reservedDeposit, 20);
-    assert.equal(reserved.status, 'reserved');
+    assert.equal(reserved.status, 'booked');
 
     const sold = buildAnimalOverview({
         animal: { id_public: 'A', name: 'Milo', soldStatus: 'sold', reservedPrice: 75 },
