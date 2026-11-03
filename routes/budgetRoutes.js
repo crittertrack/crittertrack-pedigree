@@ -417,7 +417,7 @@ router.get('/overview/animal/:animalId', async (req, res) => {
     try {
         const userId = req.user.id;
         const animal = await Animal.findOne({ id_public: req.params.animalId, creatorId: userId })
-            .select('id_public name soldStatus saleDate deceasedDate isForSale reservedBuyerName reservedWaitlistEntryId reservedPrice reservedDeposit')
+            .select('id_public prefix name suffix status soldStatus saleDate salePrice deceasedDate isForSale salePriceAmount reservedBuyerName reservedWaitlistEntryId reservedPrice reservedDeposit reservedDepositStatus reservedPaymentStatus')
             .lean();
         if (!animal) {
             return res.status(404).json({ message: 'Animal not found or access denied.' });
@@ -469,7 +469,7 @@ router.get('/overview/litter/:litterId', async (req, res) => {
         const offspringIds = Array.isArray(litter.offspringIds_public) ? litter.offspringIds_public : [];
         const offspring = offspringIds.length
             ? await Animal.find({ id_public: { $in: offspringIds }, creatorId: userId })
-                .select('id_public name soldStatus saleDate deceasedDate isForSale reservedBuyerName reservedWaitlistEntryId reservedPrice reservedDeposit')
+                .select('id_public prefix name suffix status soldStatus saleDate salePrice deceasedDate isForSale salePriceAmount reservedBuyerName reservedWaitlistEntryId reservedPrice reservedDeposit reservedDepositStatus reservedPaymentStatus')
                 .lean()
             : [];
 
@@ -499,6 +499,42 @@ router.get('/overview/litter/:litterId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching litter finance overview:', error);
         res.status(500).json({ message: 'Internal server error while fetching litter finances.' });
+    }
+});
+
+// POST /api/budget/litters/:litterId/manual-expense - add a manual cost to a litter (vet, bedding...).
+// Saved as a normal 'expense' transaction tagged to the litter, so it counts in Spent and in Budget.
+router.post('/litters/:litterId/manual-expense', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const litter = await findUserLitter(req.params.litterId, userId);
+        if (!litter) {
+            return res.status(404).json({ message: 'Litter not found or access denied.' });
+        }
+
+        const { amount, category, note, date } = req.body || {};
+        const amt = Number(amount);
+        if (!Number.isFinite(amt) || amt <= 0) {
+            return res.status(400).json({ message: 'Amount must be greater than 0.' });
+        }
+        const when = date ? new Date(date) : new Date();
+        if (Number.isNaN(when.getTime())) {
+            return res.status(400).json({ message: 'Invalid date.' });
+        }
+
+        const txn = await Transaction.create({
+            userId,
+            type: 'expense',
+            litterId: litter.litter_id_public,
+            price: amt,
+            date: when,
+            category: typeof category === 'string' && category ? category : null,
+            notes: typeof note === 'string' && note.trim() ? note.trim() : null,
+        });
+        res.status(201).json(txn);
+    } catch (error) {
+        console.error('Error recording manual litter expense:', error);
+        res.status(500).json({ message: 'Internal server error while saving the expense.' });
     }
 });
 

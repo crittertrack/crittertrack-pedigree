@@ -71,7 +71,15 @@ function classifyOffspring(animal) {
     if (animal.soldStatus === 'sold' || animal.saleDate) return 'sold';
     if (animal.deceasedDate) return 'deceased';
     if (animal.status === 'Culled') return 'cull';
-    if (animal.reservedBuyerName || animal.reservedWaitlistEntryId || toNumber(animal.reservedPrice) > 0) return 'booked';
+    // The animal's own status is the source of truth. A price (or a leftover reservation field)
+    // must never move an Available animal to Booked, and a Booked animal stays Booked even when
+    // no price/payment has been entered yet.
+    const status = typeof animal.status === 'string' ? animal.status.trim().toLowerCase() : '';
+    if (status === 'booked') return 'booked';
+    if (status === 'available') return 'available';
+    if (status) return 'kept';
+    // No status recorded: fall back to the reservation / for-sale fields.
+    if (animal.reservedBuyerName || animal.reservedWaitlistEntryId) return 'booked';
     if (animal.isForSale) return 'available';
     return 'kept';
 }
@@ -114,15 +122,30 @@ function buildLitterOverview({ litter, offspring, transactions }) {
         counts[bucket]++;
         let amount = null;
         let deposit = null;
-        if (bucket === 'booked' || bucket === 'available' || bucket === 'sold') {
-            amount = round2(animal.reservedPrice);
-            if (bucket === 'booked') {
-                deposit = round2(animal.reservedDeposit);
-                expectedRevenue += toNumber(animal.reservedPrice);
-                reservedDeposit += toNumber(animal.reservedDeposit);
-            }
+        // depositPaid / amountPaid drive the badge colours: true = paid (green), false = still due
+        // (red), null = not applicable (gray).
+        let depositPaid = null;
+        let amountPaid = null;
+        // Each state keeps its price in a different field on the animal:
+        //  booked -> reservedPrice (+ reservedDeposit), available -> salePriceAmount (asking price),
+        //  sold/rehomed -> salePrice (falls back to the price it was booked at).
+        // Kept, deceased and culled never carry a price.
+        if (bucket === 'booked') {
+            amount = toNumber(animal.reservedPrice) > 0 ? round2(animal.reservedPrice) : null;
+            deposit = toNumber(animal.reservedDeposit) > 0 ? round2(animal.reservedDeposit) : null;
+            depositPaid = deposit === null ? null : animal.reservedDepositStatus === 'done';
+            amountPaid = amount !== null ? animal.reservedPaymentStatus === 'done' : null;
+            expectedRevenue += toNumber(animal.reservedPrice);
+            reservedDeposit += toNumber(animal.reservedDeposit);
+        } else if (bucket === 'available') {
+            amount = animal.salePriceAmount == null ? null : round2(animal.salePriceAmount);
+        } else if (bucket === 'sold') {
+            const soldFor = animal.salePrice ?? animal.reservedPrice;
+            amount = soldFor == null ? null : round2(soldFor);
+            // Payment is normally received on rehoming, so a sold animal counts as paid.
+            amountPaid = amount === null ? null : true;
         }
-        offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, displayName: animal ? (animal.prefix || '') + (animal.name || '') + (animal.suffix || '') : null, id: animal ? animal.id_public : null, status: bucket, amount, deposit });
+        offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, displayName: animal ? ([animal.prefix, animal.name, animal.suffix].filter(Boolean).join(' ') || animal.id_public) : null, prefix: animal ? (animal.prefix || null) : null, suffix: animal ? (animal.suffix || null) : null, id: animal ? animal.id_public : null, status: bucket, amount, deposit, depositPaid, amountPaid });
     }
 
     const offspringCount = (offspring || []).length;
