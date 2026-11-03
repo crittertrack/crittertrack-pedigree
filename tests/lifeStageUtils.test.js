@@ -128,8 +128,12 @@ test('getLifespanDays: returns species lifespans', () => {
     assert.equal(getLifespanDays('Chinchilla'), 3650);
 });
 
+test('getLifespanDays: uses the species lifespan for a known reptile', () => {
+    assert.equal(getLifespanDays('Ball Python'), 17 * 365);
+});
+
 test('getLifespanDays: falls back to 2-year default for unknown species', () => {
-    assert.equal(getLifespanDays('Ball Python'), 17155);
+    assert.equal(getLifespanDays('Made Up Species'), 730);
     assert.equal(getLifespanDays(null), null);
     assert.equal(getLifespanDays(''), null);
 });

@@ -1,6 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { Transaction, AnimalTransfer } = require('../database/models');
+const multer = require('multer');
+const { Transaction, AnimalTransfer, Animal, Litter, SupplyUsage, Counter } = require('../database/models');
+const { privateStorage } = require('../utils/privateStorage');
+const {
+    MAX_ATTACHMENT_BYTES, formatReceiptNumber, checkAttachmentFile, contentMatchesType, buildAttachmentKey, buildAttachment,
+} = require('../utils/receipts');
+const { buildAnimalOverview, buildLitterOverview } = require('../utils/financeOverview');
+const { summarizeUsage } = require('../utils/supplyUsage');
+
+// Resolve a litter by its public id (CTL...) for a user who created or adopted it.
+async function findUserLitter(litterId, userId) {
+    if (!litterId || typeof litterId !== 'string') return null;
+    return Litter.findOne({ litter_id_public: litterId, $or: [{ creatorId: userId }, { linkedOwners: userId }] }).lean();
+}
 
 // Middleware to verify authentication is assumed to be applied at the app level
 // req.user.id should contain the authenticated user's MongoDB ObjectId
@@ -25,11 +38,18 @@ router.get('/transactions', async (req, res) => {
 router.post('/transactions', async (req, res) => {
     try {
         const userId = req.user.id;
-        const { type, animalId, animalName, price, date, buyer, seller, notes, category, description } = req.body;
+        const { type, animalId, animalName, litterId, price, date, buyer, seller, notes, category, description } = req.body;
 
         // Validation
         if (!type || !['sale', 'purchase', 'expense', 'income'].includes(type)) {
             return res.status(400).json({ message: 'Invalid transaction type. Must be "sale", "purchase", "expense", or "income".' });
+        }
+
+        if (litterId) {
+            const litter = await findUserLitter(litterId, userId);
+            if (!litter) {
+                return res.status(400).json({ message: 'Litter not found or access denied.' });
+            }
         }
 
         const effectivePrice = (price === undefined || price === null || price === '') ? 0 : price;
@@ -46,6 +66,7 @@ router.post('/transactions', async (req, res) => {
             type,
             animalId: animalId || null,
             animalName: animalName || null,
+            litterId: litterId || null,
             price: parseFloat(effectivePrice),
             date: new Date(date),
             buyer: type === 'sale' ? (buyer || null) : null,
@@ -83,7 +104,7 @@ router.put('/transactions/:id', async (req, res) => {
     try {
         const userId = req.user.id;
         const transactionId = req.params.id;
-        const { type, animalId, animalName, price, date, buyer, seller, notes, category, description } = req.body;
+        const { type, animalId, animalName, litterId, price, date, buyer, seller, notes, category, description } = req.body;
         
         // Find the transaction and verify ownership
         const transaction = await Transaction.findOne({ _id: transactionId, userId });
@@ -105,6 +126,15 @@ router.put('/transactions/:id', async (req, res) => {
         if (type) transaction.type = type;
         if (animalId !== undefined) transaction.animalId = animalId || null;
         if (animalName !== undefined) transaction.animalName = animalName || null;
+        if (litterId !== undefined) {
+            if (litterId) {
+                const litter = await findUserLitter(litterId, userId);
+                if (!litter) {
+                    return res.status(400).json({ message: 'Litter not found or access denied.' });
+                }
+            }
+            transaction.litterId = litterId || null;
+        }
         if (price !== undefined) transaction.price = parseFloat(price);
         if (date) transaction.date = new Date(date);
         if (buyer !== undefined) transaction.buyer = transaction.type === 'sale' ? (buyer || null) : null;
@@ -143,6 +173,9 @@ router.delete('/transactions/:id', async (req, res) => {
         
         // Delete the transaction (but keep the ownership changes if transfer was accepted)
         await Transaction.findByIdAndDelete(transactionId);
+
+        // Remove its stored receipts/attachments too, so no financial files are left behind.
+        await Promise.all((transaction.attachments || []).map(a => privateStorage.remove(a.key)));
         
         const message = acceptedTransfer 
             ? 'Transaction deleted. Animal ownership changes remain intact.'
@@ -181,6 +214,291 @@ router.get('/stats', async (req, res) => {
     } catch (error) {
         console.error('Error fetching budget stats:', error);
         res.status(500).json({ message: 'Internal server error while fetching statistics.' });
+    }
+});
+
+// --- Receipts & attachments -------------------------------------------------------------------
+
+const attachmentUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_ATTACHMENT_BYTES },
+});
+
+// Runs multer and turns its errors (e.g. file too large) into a clean 400 instead of a 500.
+const receiveAttachment = (req, res, next) => {
+    attachmentUpload.single('file')(req, res, (err) => {
+        if (!err) return next();
+        const tooBig = err.code === 'LIMIT_FILE_SIZE';
+        return res.status(400).json({ message: tooBig ? 'Files must be 5 MB or smaller.' : 'Could not read the uploaded file.' });
+    });
+};
+
+// POST /api/budget/transactions/:id/attachments - attach a photo/PDF (multipart: file, kind?)
+router.post('/transactions/:id/attachments', receiveAttachment, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId });
+        if (!transaction) {
+            return res.status(404).json({ message: 'Transaction not found or access denied.' });
+        }
+
+        const problem = checkAttachmentFile(req.file, (transaction.attachments || []).length);
+        if (problem) return res.status(400).json({ message: problem });
+
+        // The browser-reported type can be faked, so check the file's real contents too.
+        if (!contentMatchesType(req.file.buffer, req.file.mimetype)) {
+            return res.status(400).json({ message: 'That file does not look like a valid image or PDF.' });
+        }
+
+        // Financial documents go to PRIVATE storage and are never given a public link.
+        if (!privateStorage.isConfigured()) {
+            return res.status(503).json({ message: 'Private file storage is not set up yet, so files cannot be attached.' });
+        }
+        const key = buildAttachmentKey(userId, req.file.mimetype);
+        try {
+            await privateStorage.put(key, req.file.buffer, req.file.mimetype);
+        } catch (uploadErr) {
+            console.error('[Budget] Attachment upload failed:', uploadErr.message);
+            return res.status(502).json({ message: 'Could not store the file. Please try again.' });
+        }
+
+        transaction.attachments.push(buildAttachment({ key, file: req.file, kind: req.body.kind }));
+        await transaction.save();
+        res.status(201).json(transaction);
+    } catch (error) {
+        console.error('[Budget] Error attaching file:', error);
+        res.status(500).json({ message: 'Failed to attach file.' });
+    }
+});
+
+// DELETE /api/budget/transactions/:id/attachments/:attachmentId - remove an attachment
+router.delete('/transactions/:id/attachments/:attachmentId', async (req, res) => {
+    try {
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.user.id });
+        if (!transaction) {
+            return res.status(404).json({ message: 'Transaction not found or access denied.' });
+        }
+        const attachment = transaction.attachments.id(req.params.attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ message: 'Attachment not found.' });
+        }
+        const key = attachment.key;
+        attachment.deleteOne();
+        await transaction.save();
+        // Delete the stored file too (private storage supports this). Best-effort.
+        await privateStorage.remove(key);
+        res.status(200).json(transaction);
+    } catch (error) {
+        console.error('[Budget] Error removing attachment:', error);
+        res.status(500).json({ message: 'Failed to remove attachment.' });
+    }
+});
+
+// GET /api/budget/transactions/:id/attachments/:attachmentId/file - download an attachment.
+// Requires sign-in and ownership of the transaction. Never cached and never shareable by link.
+router.get('/transactions/:id/attachments/:attachmentId/file', async (req, res) => {
+    try {
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.user.id }).lean();
+        const attachment = transaction && (transaction.attachments || []).find(a => String(a._id) === req.params.attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ message: 'Attachment not found.' });
+        }
+        if (!attachment.key) {
+            // Saved before private storage existed: it only has an old public link.
+            return res.status(410).json({ message: 'This older attachment is not stored privately. Please re-attach it.' });
+        }
+
+        const file = await privateStorage.get(attachment.key);
+        if (!file) {
+            return res.status(404).json({ message: 'The stored file could not be found.' });
+        }
+
+        const safeName = encodeURIComponent(attachment.filename || 'attachment');
+        res.setHeader('Content-Type', attachment.mimeType || file.contentType || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${safeName}`);
+        res.setHeader('Content-Length', file.buffer.length);
+        res.setHeader('Cache-Control', 'private, no-store');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        // The app sets Cross-Origin-Resource-Policy: cross-origin for images; financial files must not be embeddable elsewhere.
+        res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+        res.status(200).send(file.buffer);
+    } catch (error) {
+        console.error('[Budget] Error downloading attachment:', error);
+        res.status(500).json({ message: 'Failed to download attachment.' });
+    }
+});
+
+// POST /api/budget/transactions/:id/receipt-number - issue (once) this transaction's receipt number.
+// Calling it again returns the same number, so a receipt can be regenerated without a new number.
+router.post('/transactions/:id/receipt-number', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId });
+        if (!transaction) {
+            return res.status(404).json({ message: 'Transaction not found or access denied.' });
+        }
+        if (transaction.receiptNumber) {
+            return res.status(200).json(transaction);
+        }
+
+        const counter = await Counter.findByIdAndUpdate(
+            { _id: `receipt_${userId}` },
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+        const receiptNumber = formatReceiptNumber(counter.seq);
+
+        // Only set it if nobody else issued one in the meantime.
+        await Transaction.updateOne(
+            { _id: transaction._id, userId, receiptNumber: null },
+            { $set: { receiptNumber, receiptIssuedAt: new Date() } }
+        );
+        const updated = await Transaction.findOne({ _id: transaction._id, userId });
+        res.status(200).json(updated);
+    } catch (error) {
+        console.error('[Budget] Error issuing receipt number:', error);
+        res.status(500).json({ message: 'Failed to issue receipt number.' });
+    }
+
+// POST /api/budget/transactions/:id/payments - record an editable payment against a transaction
+router.post('/transactions/:id/payments', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const txn = await Transaction.findOne({ _id: req.params.id, userId });
+        if (!txn) return res.status(404).json({ message: 'Transaction not found.' });
+        const { amount, date, method, note } = req.body || {};
+        const amt = Number(amount);
+        if (!isFinite(amt) || amt <= 0) return res.status(400).json({ message: 'Amount must be a positive number.' });
+        txn.payments = txn.payments || [];
+        txn.payments.push({ amount: amt, date: date ? new Date(date) : new Date(), method: method || null, note: note || null });
+        await txn.save();
+        res.status(200).json(txn);
+    } catch (error) {
+        console.error('Error recording payment:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// DELETE /api/budget/transactions/:id/payments/:index - remove an editable payment
+router.delete('/transactions/:id/payments/:index', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const txn = await Transaction.findOne({ _id: req.params.id, userId });
+        if (!txn) return res.status(404).json({ message: 'Transaction not found.' });
+        const idx = Number(req.params.index);
+        if (!Array.isArray(txn.payments) || idx < 0 || idx >= txn.payments.length) return res.status(400).json({ message: 'Invalid payment index.' });
+        txn.payments.splice(idx, 1);
+        await txn.save();
+        res.status(200).json(txn);
+    } catch (error) {
+        console.error('Error removing payment:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+// GET /api/budget/transactions/:id/invoice - payment status summary
+router.get('/transactions/:id/invoice', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const txn = await Transaction.findOne({ _id: req.params.id, userId }).lean();
+        if (!txn) return res.status(404).json({ message: 'Transaction not found.' });
+        const { invoiceSummary } = require('../utils/paymentStatus');
+        res.status(200).json(invoiceSummary(txn, txn.payments || []));
+    } catch (error) {
+        console.error('Error fetching invoice:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+});
+
+// GET /api/budget/overview/animal/:animalId - Money summary for one animal (by id_public)
+router.get('/overview/animal/:animalId', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const animal = await Animal.findOne({ id_public: req.params.animalId, creatorId: userId })
+            .select('id_public name soldStatus saleDate deceasedDate isForSale reservedBuyerName reservedWaitlistEntryId reservedPrice reservedDeposit')
+            .lean();
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal not found or access denied.' });
+        }
+
+        const transactions = await Transaction.find({ userId, animalId: animal.id_public }).sort({ date: -1 }).lean();
+        // Supplies used on this animal (feedings etc.). Kept separate from what was paid.
+        const usageEntries = await SupplyUsage.find({ userId, animalId: animal.id_public }).lean();
+        res.status(200).json({
+            ...buildAnimalOverview({ animal, transactions }),
+            usage: summarizeUsage(usageEntries),
+            transactions,
+        });
+
+// GET /api/budget/report/year/:year - year-end financial report
+router.get('/report/year/:year', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const year = Number(req.params.year);
+        const txns = await Transaction.find({ userId }).lean();
+        const { summarizeYear, availableYears } = require('../utils/yearEndReport');
+        if (isNaN(year)) {
+            return res.status(200).json({ years: availableYears(txns) });
+        }
+        res.status(200).json(summarizeYear(txns, year));
+    } catch (error) {
+        console.error('Error fetching year report:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
+    } catch (error) {
+        console.error('Error fetching animal finance overview:', error);
+        res.status(500).json({ message: 'Internal server error while fetching animal finances.' });
+    }
+});
+
+// GET /api/budget/overview/litter/:litterId - Money summary for one litter (by litter_id_public)
+// Costs = transactions tagged to the litter + transactions on its individual offspring.
+// Parent (sire/dam) transactions are NOT included.
+router.get('/overview/litter/:litterId', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const litter = await findUserLitter(req.params.litterId, userId);
+        if (!litter) {
+            return res.status(404).json({ message: 'Litter not found or access denied.' });
+        }
+
+        const offspringIds = Array.isArray(litter.offspringIds_public) ? litter.offspringIds_public : [];
+        const offspring = offspringIds.length
+            ? await Animal.find({ id_public: { $in: offspringIds }, creatorId: userId })
+                .select('id_public name soldStatus saleDate deceasedDate isForSale reservedBuyerName reservedWaitlistEntryId reservedPrice reservedDeposit')
+                .lean()
+            : [];
+
+        const owned = offspring.map(a => a.id_public);
+        const transactions = await Transaction.find({
+            userId,
+            $or: [
+                { litterId: litter.litter_id_public },
+                ...(owned.length ? [{ animalId: { $in: owned } }] : []),
+            ],
+        }).sort({ date: -1 }).lean();
+
+        // Supplies used on the litter itself or on its individual offspring (e.g. their feedings).
+        const usageEntries = await SupplyUsage.find({
+            userId,
+            $or: [
+                { litterId: litter.litter_id_public },
+                ...(owned.length ? [{ animalId: { $in: owned } }] : []),
+            ],
+        }).lean();
+
+        res.status(200).json({
+            ...buildLitterOverview({ litter, offspring, transactions }),
+            usage: summarizeUsage(usageEntries),
+            transactions,
+        });
+    } catch (error) {
+        console.error('Error fetching litter finance overview:', error);
+        res.status(500).json({ message: 'Internal server error while fetching litter finances.' });
     }
 });
 

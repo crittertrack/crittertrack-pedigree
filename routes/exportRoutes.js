@@ -54,7 +54,8 @@ function stripSupply(doc) {
 }
 
 function stripTransaction(doc) {
-    const { _id, __v, userId, buyerUserId, sellerUserId, ...rest } = doc;
+    // Attachments are private files that stay on the server; their storage keys aren't exported.
+    const { _id, __v, userId, buyerUserId, sellerUserId, attachments, ...rest } = doc;
     return rest;
 }
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { Enclosure, Animal, SupplyItem, EnclosureLog, UserActivityLog, Location } = require('../database/models');
+const { Enclosure, Animal, SupplyItem, SupplyUsage, EnclosureLog, UserActivityLog, Location } = require('../database/models');
+const { applySupplyUsage, resolveStockQuantity } = require('../utils/supplyUsage');
 const { logUserActivity } = require('../utils/userActivityLogger');
 const { normalizeEnclosurePurpose } = require('../utils/enclosurePurpose');
 const { resyncAnimalToPublic, resyncAnimalToPublicById } = require('../utils/syncPublicAnimals');
@@ -645,17 +646,40 @@ router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
             return res.status(404).json({ message: 'Task not found in this enclosure' });
         }
 
+        // Work out what was used BEFORE changing anything, so bad input leaves the task untouched.
+        // Callers can send supplyUsage [{ supplyId, quantityUsed, unit }]; otherwise the supplies
+        // assigned to the task (with their quantity/unit) are used.
+        const usageItems = (Array.isArray(supplyUsage) && supplyUsage.length > 0
+            ? supplyUsage.map(item => ({ supplyId: item.supplyId, quantity: item.quantityUsed ?? item.quantity, unit: item.unit }))
+            : (task.assignedSupplies || []).map(item => ({ supplyId: item.supplyId, quantity: item.quantity, unit: item.unit }))
+        ).filter(item => item.supplyId && Number(item.quantity) > 0);
+
+        for (const item of usageItems) {
+            const supply = await SupplyItem.findOne({ _id: item.supplyId, userId: req.user.id }).lean();
+            if (!supply) continue; // supply was deleted; skip it rather than block the task
+            try {
+                resolveStockQuantity(supply, item.quantity, item.unit);
+            } catch (err) {
+                return res.status(err.status || 400).json({ message: `${supply.name}: ${err.message}` });
+            }
+        }
+
         task.lastDoneDate = new Date();
 
-        if (Array.isArray(supplyUsage) && supplyUsage.length > 0) {
-            for (const item of supplyUsage) {
-                if (item.supplyId && item.quantityUsed > 0) {
-                    await SupplyItem.updateOne(
-                        { _id: item.supplyId, userId: req.user.id },
-                        { $inc: { currentStock: -item.quantityUsed } }
-                    );
-                }
-            }
+        // Deduct stock with unit conversion and record each use in the Usage budget.
+        const usageIds = [];
+        const updatedSupplies = [];
+        for (const item of usageItems) {
+            const exists = await SupplyItem.exists({ _id: item.supplyId, userId: req.user.id });
+            if (!exists) continue;
+            const { supply, usage } = await applySupplyUsage({
+                SupplyItem, SupplyUsage, userId: req.user.id,
+                supplyId: item.supplyId, quantity: item.quantity, unit: item.unit,
+                source: 'enclosure_task', enclosureId: enclosure._id,
+                note: `${enclosure.name}: ${task.taskName}`,
+            });
+            updatedSupplies.push(supply);
+            if (usage) usageIds.push(usage._id);
         }
 
         await enclosure.save();
@@ -676,7 +700,9 @@ router.post('/:enclosureId/tasks/:taskId/complete', async (req, res) => {
             userAgent: req.get('User-Agent'),
         });
 
-        res.json(enclosure);
+        // usageIds lets the caller undo the completion (DELETE /api/supplies/usage/:id restores
+        // the stock); supplies are the updated stock levels so screens can refresh without a reload.
+        res.json({ enclosure, usageIds, supplies: updatedSupplies });
     } catch (err) {
         console.error('[POST /api/enclosures/.../complete]', err);
         res.status(500).json({ message: 'Failed to mark task as complete' });

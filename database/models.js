@@ -1632,8 +1632,11 @@ const SystemSettings = mongoose.model('SystemSettings', SystemSettingsSchema);
 const TransactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     type: { type: String, enum: ['sale', 'purchase', 'expense', 'income', 'gift'], required: true, index: true }, // Added 'gift' for completeness
-    animalId: { type: String, default: null }, // id_public of the animal
+    animalId: { type: String, default: null, index: true }, // id_public of the animal
     animalName: { type: String, default: null },
+    // Optional litter tag (Litter.litter_id_public, e.g. CTL1001) for costs that belong to a whole
+    // litter (vet checks, weaning food...). Parent costs are intentionally not part of a litter.
+    litterId: { type: String, default: null, index: true },
     price: { type: Number, required: true, default: 0 },
     date: { type: Date, required: true, index: true },
     buyer: { type: String, default: null },
@@ -1643,8 +1646,36 @@ const TransactionSchema = new mongoose.Schema({
     category: { type: String, default: null }, // For expenses/income: food, equipment, other, etc.
     description: { type: String, default: null }, // For expenses/income
     notes: { type: String, default: null },
+    // Receipt number issued for this transaction (per-user, sequential: R-0001, R-0002...).
+    receiptNumber: { type: String, default: null },
+    receiptIssuedAt: { type: Date, default: null },
+    // Files attached to this transaction: photos/PDFs of paper receipts, or generated receipt PDFs.
+    attachments: [{
+        // Key in the PRIVATE bucket. Files are never public; they're read through
+        // GET /api/budget/transactions/:id/attachments/:attachmentId/file after an ownership check.
+        key: { type: String, default: null },
+        url: { type: String, default: null }, // legacy: only set on files saved before private storage
+        filename: { type: String, default: 'attachment' },
+        mimeType: { type: String, default: '' },
+        size: { type: Number, default: 0 },
+        kind: { type: String, enum: ['receipt', 'upload'], default: 'upload' },
+        uploadedAt: { type: Date, default: Date.now },
+    }],
+    // Editable payment records for invoices (deposit + subsequent payments).
+    payments: [{
+        amount: { type: Number, required: true },
+        date: { type: Date, default: Date.now },
+        method: { type: String, default: null },
+        note: { type: String, default: null },
+    }],
+
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
+// A user can't have two transactions with the same receipt number (only checked when one is set).
+TransactionSchema.index(
+    { userId: 1, receiptNumber: 1 },
+    { unique: true, partialFilterExpression: { receiptNumber: { $type: 'string' } } }
+);
 const Transaction = mongoose.model('Transaction', TransactionSchema);
 
 // --- WAITLIST ENTRY SCHEMA (Reservations page → Waitlist tab) ---
@@ -1930,6 +1961,30 @@ const SupplyItemSchema = new mongoose.Schema({
 }, { timestamps: true });
 const SupplyItem = mongoose.model('SupplyItem', SupplyItemSchema);
 
+// ── Supply Usage ─────────────────────────────────────────────────────────────
+// One entry each time supply stock is consumed (feeding, enclosure task, litter use...).
+// This is the "Usage" side of the budget: what was USED, valued at cost per unit at the time.
+// It is deliberately a separate collection from Transaction (what was PAID) so the two are never
+// added together and a purchase is never counted twice.
+const SupplyUsageSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    supplyId: { type: mongoose.Schema.Types.ObjectId, ref: 'SupplyItem', default: null, index: true },
+    supplyName: { type: String, default: '' },        // snapshot, survives the supply being deleted
+    supplyCategory: { type: String, default: 'Other' },
+    quantity: { type: Number, required: true },       // in the supply's own stock unit
+    unit: { type: String, default: '' },
+    unitCost: { type: Number, default: null },        // cost per unit when used; null = supply had no price
+    cost: { type: Number, default: 0 },
+    priced: { type: Boolean, default: false },
+    date: { type: Date, default: Date.now, index: true },
+    source: { type: String, enum: ['feeding', 'enclosure_task', 'litter', 'animal', 'other'], default: 'other' },
+    animalId: { type: String, default: null, index: true },   // id_public
+    litterId: { type: String, default: null, index: true },   // litter_id_public
+    enclosureId: { type: String, default: null },
+    note: { type: String, default: '' },
+}, { timestamps: true });
+const SupplyUsage = mongoose.model('SupplyUsage', SupplyUsageSchema);
+
 // ── AppearanceFieldOption (per-user, per-species dropdown entries for appearance fields
 // like Color starts empty and grows as the user types new values on the Animal form) 
 const AppearanceFieldOptionSchema = new mongoose.Schema({
@@ -2175,6 +2230,7 @@ module.exports = {
     Enclosure,
     EnclosureLog,
     SupplyItem,
+    SupplyUsage,
     AnimalLog,
     BreederRating,
     RatingReport,

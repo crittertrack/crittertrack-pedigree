@@ -1,6 +1,7 @@
 ﻿﻿const express = require('express');
 const router = express.Router();
-const { Animal, AnimalLog, SupplyItem, Litter, User, PublicAnimal, Transaction, Notification } = require('../database/models');
+const { Animal, AnimalLog, SupplyItem, SupplyUsage, Litter, User, PublicAnimal, Transaction, Notification } = require('../database/models');
+const { recordSupplyUsage } = require('../utils/supplyUsage');
 const { addAnimal, updateAnimal, deleteAnimal, getUsersAnimals, getAnimalByIdAndUser, getArchivedAndSoldAnimals, getAvkReferencePopulation, handleBulkCreateAnimals } = require('../database/db_service');
 const { calculateInbreedingCoefficient, calculateInbreedingCoefficientWithDiagnostics, calculatePairingInbreeding, explainPairingInbreeding, calculateAverageKinship } = require('../utils/inbreeding');
 const { logFeedingEvent } = require('../utils/animalLogger');
@@ -593,10 +594,24 @@ router.post('/:id_public/feeding', async (req, res) => {
 
         animal.lastFedDate = new Date();
         await animal.save();
+        let usage = null;
         if (supply && quantityToDeduct != null) {
             if (!supply.unit && quantityUnit) supply.unit = quantityUnit;
             supply.currentStock = Math.max(0, (supply.currentStock || 0) - quantityToDeduct);
             await supply.save();
+
+            // Usage budget: record what this feeding consumed (valued at the supply's cost per unit).
+            // Kept separate from purchases so the same money is never counted twice.
+            if (!skipped) {
+                usage = await recordSupplyUsage(SupplyUsage, {
+                    userId,
+                    supply,
+                    quantityInStockUnit: quantityToDeduct,
+                    source: 'feeding',
+                    animalId: animal.id_public,
+                    note: notes || '',
+                });
+            }
         }
 
         await logFeedingEvent({
@@ -609,7 +624,7 @@ router.post('/:id_public/feeding', async (req, res) => {
             skipped: !!skipped,
         });
 
-        res.json({ animal, supply });
+        res.json({ animal, supply, usageId: usage ? usage._id : null });
     } catch (error) {
         console.error(`[ANIMALS] Error logging feeding for ${req.params.id_public}:`, error);
         res.status(500).json({ message: 'Failed to log feeding', error: error.message });
