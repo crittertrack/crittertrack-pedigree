@@ -6,7 +6,7 @@ const { privateStorage } = require('../utils/privateStorage');
 const {
     MAX_ATTACHMENT_BYTES, formatReceiptNumber, checkAttachmentFile, contentMatchesType, buildAttachmentKey, buildAttachment,
 } = require('../utils/receipts');
-const { buildAnimalOverview, buildLitterOverview } = require('../utils/financeOverview');
+const { buildLitterOverview } = require('../utils/financeOverview');
 const { summarizeUsage } = require('../utils/supplyUsage');
 
 // Resolve a litter by its public id (CTL...) for a user who created or adopted it.
@@ -412,26 +412,6 @@ router.get('/transactions/:id/invoice', async (req, res) => {
 
 });
 
-// GET /api/budget/overview/animal/:animalId - Money summary for one animal (by id_public)
-router.get('/overview/animal/:animalId', async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const animal = await Animal.findOne({ id_public: req.params.animalId, creatorId: userId })
-            .select('id_public prefix name suffix status soldStatus saleDate salePrice deceasedDate isForSale salePriceAmount reservedBuyerName reservedWaitlistEntryId reservedPrice reservedDeposit reservedDepositStatus reservedPaymentStatus')
-            .lean();
-        if (!animal) {
-            return res.status(404).json({ message: 'Animal not found or access denied.' });
-        }
-
-        const transactions = await Transaction.find({ userId, animalId: animal.id_public }).sort({ date: -1 }).lean();
-        // Supplies used on this animal (feedings etc.). Kept separate from what was paid.
-        const usageEntries = await SupplyUsage.find({ userId, animalId: animal.id_public }).lean();
-        res.status(200).json({
-            ...buildAnimalOverview({ animal, transactions }),
-            usage: summarizeUsage(usageEntries),
-            transactions,
-        });
-
 // GET /api/budget/report/year/:year - year-end financial report
 router.get('/report/year/:year', async (req, res) => {
     try {
@@ -446,12 +426,6 @@ router.get('/report/year/:year', async (req, res) => {
     } catch (error) {
         console.error('Error fetching year report:', error);
         res.status(500).json({ message: 'Internal server error.' });
-    }
-});
-
-    } catch (error) {
-        console.error('Error fetching animal finance overview:', error);
-        res.status(500).json({ message: 'Internal server error while fetching animal finances.' });
     }
 });
 

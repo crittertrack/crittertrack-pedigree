@@ -84,22 +84,6 @@ function classifyOffspring(animal) {
     return 'kept';
 }
 
-function buildAnimalOverview({ animal, transactions }) {
-    const summary = summarizeTransactions(transactions);
-    const reserved = animal && classifyOffspring(animal) === 'booked';
-    const expectedRevenue = reserved ? round2(animal.reservedPrice) : 0;
-    const deposit = reserved ? round2(animal.reservedDeposit) : 0;
-
-    return {
-        animalId: animal ? animal.id_public : null,
-        animalName: animal ? animal.name : null,
-        ...summary,
-        expectedRevenue,
-        reservedDeposit: deposit,
-        status: animal ? classifyOffspring(animal) : null,
-    };
-}
-
 function buildLitterOverview({ litter, offspring, transactions }) {
     const summary = summarizeTransactions(transactions);
 
@@ -178,6 +162,5 @@ module.exports = {
     summarizeTransactions,
     costRecoupedPercent,
     classifyOffspring,
-    buildAnimalOverview,
     buildLitterOverview,
 };

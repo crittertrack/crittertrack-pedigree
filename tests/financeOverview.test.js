@@ -4,7 +4,6 @@ const {
     summarizeTransactions,
     costRecoupedPercent,
     classifyOffspring,
-    buildAnimalOverview,
     buildLitterOverview,
 } = require('../utils/financeOverview');
 
@@ -172,24 +171,6 @@ test('litter overview with no costs has null percentage and cost per offspring',
     assert.equal(overview.costRecoupedPercent, null);
     assert.equal(overview.costPerOffspringBorn, null);
 });
-
-test('animal overview reports expected revenue only while reserved', () => {
-    const reserved = buildAnimalOverview({
-        animal: { id_public: 'A', name: 'Milo', reservedPrice: 75, reservedDeposit: 20, reservedBuyerName: 'Sam' },
-        transactions: [{ _id: '1', type: 'expense', price: 10 }],
-    });
-    assert.equal(reserved.expectedRevenue, 75);
-    assert.equal(reserved.reservedDeposit, 20);
-    assert.equal(reserved.status, 'booked');
-
-    const sold = buildAnimalOverview({
-        animal: { id_public: 'A', name: 'Milo', soldStatus: 'sold', reservedPrice: 75 },
-        transactions: [{ _id: '2', type: 'sale', price: 75 }],
-    });
-    assert.equal(sold.expectedRevenue, 0);
-    assert.equal(sold.totalRevenue, 75);
-});
-
 
 test('earned counts full price when paid, else paid deposit (no double counting)', () => {
     const b = (id, extra) => ({ id_public: id, status: 'Booked', reservedPrice: 15, ...extra });
