@@ -359,6 +359,7 @@ router.post('/transactions/:id/receipt-number', async (req, res) => {
         console.error('[Budget] Error issuing receipt number:', error);
         res.status(500).json({ message: 'Failed to issue receipt number.' });
     }
+});
 
 // POST /api/budget/transactions/:id/payments - record an editable payment against a transaction
 router.post('/transactions/:id/payments', async (req, res) => {
@@ -408,8 +409,6 @@ router.get('/transactions/:id/invoice', async (req, res) => {
         console.error('Error fetching invoice:', error);
         res.status(500).json({ message: 'Internal server error.' });
     }
-});
-
 });
 
 // GET /api/budget/report/year/:year - year-end financial report
