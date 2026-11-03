@@ -122,7 +122,7 @@ function buildLitterOverview({ litter, offspring, transactions }) {
                 reservedDeposit += toNumber(animal.reservedDeposit);
             }
         }
-        offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, id: animal ? animal.id_public : null, status: bucket, amount, deposit });
+        offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, displayName: animal ? (animal.prefix || '') + (animal.name || '') + (animal.suffix || '') : null, id: animal ? animal.id_public : null, status: bucket, amount, deposit });
     }
 
     const offspringCount = (offspring || []).length;
