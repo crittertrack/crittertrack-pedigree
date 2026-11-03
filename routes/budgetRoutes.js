@@ -512,7 +512,7 @@ router.post('/litters/:litterId/manual-expense', async (req, res) => {
             return res.status(404).json({ message: 'Litter not found or access denied.' });
         }
 
-        const { amount, category, note, date } = req.body || {};
+        const { name, amount, category, note, date } = req.body || {};
         const amt = Number(amount);
         if (!Number.isFinite(amt) || amt <= 0) {
             return res.status(400).json({ message: 'Amount must be greater than 0.' });
@@ -529,6 +529,7 @@ router.post('/litters/:litterId/manual-expense', async (req, res) => {
             price: amt,
             date: when,
             category: typeof category === 'string' && category ? category : null,
+            description: typeof name === 'string' && name.trim() ? name.trim().slice(0, 100) : null,
             notes: typeof note === 'string' && note.trim() ? note.trim() : null,
         });
         res.status(201).json(txn);
