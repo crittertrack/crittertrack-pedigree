@@ -95,6 +95,16 @@ function buildAnimalOverview({ animal, transactions }) {
 function buildLitterOverview({ litter, offspring, transactions }) {
     const summary = summarizeTransactions(transactions);
 
+    // Deposits already paid on booked animals count as earned revenue.
+    let depositEarned = 0;
+    for (const animal of offspring || []) {
+        if (classifyOffspring(animal) === 'booked' && animal.reservedDepositStatus === 'done') {
+            depositEarned += toNumber(animal.reservedDeposit);
+        }
+    }
+    summary.totalRevenue = round2(summary.totalRevenue + depositEarned);
+    summary.net = round2(summary.totalRevenue - summary.totalCost);
+
     const counts = { sold: 0, booked: 0, available: 0, kept: 0, deceased: 0, cull: 0 };
     let expectedRevenue = 0;
     let reservedDeposit = 0;
@@ -103,14 +113,16 @@ function buildLitterOverview({ litter, offspring, transactions }) {
         const bucket = classifyOffspring(animal);
         counts[bucket]++;
         let amount = null;
+        let deposit = null;
         if (bucket === 'booked' || bucket === 'available' || bucket === 'sold') {
             amount = round2(animal.reservedPrice);
             if (bucket === 'booked') {
+                deposit = round2(animal.reservedDeposit);
                 expectedRevenue += toNumber(animal.reservedPrice);
                 reservedDeposit += toNumber(animal.reservedDeposit);
             }
         }
-        offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, id: animal ? animal.id_public : null, status: bucket, amount });
+        offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, id: animal ? animal.id_public : null, status: bucket, amount, deposit });
     }
 
     const offspringCount = (offspring || []).length;
