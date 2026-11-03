@@ -467,7 +467,16 @@ router.get('/overview/litter/:litterId', async (req, res) => {
 
         res.status(200).json({
             ...buildLitterOverview({ litter, offspring, transactions }),
-            usage: summarizeUsage(usageEntries),
+            // entries = the individual rows, so the Care & supplies table can remove one.
+            usage: {
+                ...summarizeUsage(usageEntries),
+                entries: usageEntries
+                    .map(e => ({
+                        _id: e._id, supplyName: e.supplyName || 'Unknown supply', quantity: e.quantity,
+                        unit: e.unit || '', cost: e.cost, priced: !!e.priced, date: e.date,
+                    }))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date)),
+            },
             transactions,
         });
     } catch (error) {
