@@ -97,13 +97,17 @@ function buildLitterOverview({ litter, offspring, transactions }) {
     const counts = { sold: 0, reserved: 0, available: 0, kept: 0, deceased: 0 };
     let expectedRevenue = 0;
     let reservedDeposit = 0;
+    const offspringDetails = [];
     for (const animal of offspring || []) {
         const bucket = classifyOffspring(animal);
         counts[bucket]++;
+        let amount = null;
         if (bucket === 'reserved') {
+            amount = round2(animal.reservedPrice);
             expectedRevenue += toNumber(animal.reservedPrice);
             reservedDeposit += toNumber(animal.reservedDeposit);
         }
+        offspringDetails.push({ name: animal ? (animal.name || animal.id_public) : null, id: animal ? animal.id_public : null, status: bucket, amount });
     }
 
     const offspringCount = (offspring || []).length;
@@ -121,6 +125,7 @@ function buildLitterOverview({ litter, offspring, transactions }) {
         bornCount: born,
         costPerOffspringBorn,
         offspring: counts,
+        offspringDetails,
     };
 }
 
