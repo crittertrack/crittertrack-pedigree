@@ -53,6 +53,16 @@ const ContactSchema = new mongoose.Schema({
     isKeeper: { type: Boolean, default: false },
     isBreeder: { type: Boolean, default: false },
 
+    // Additional categories beyond Owner (isKeeper) and Breeder (isBreeder).
+    // isKeeper is displayed as "Owner" in the UI; the field name is kept for compatibility.
+    categories: {
+        type: [{
+            type: String,
+            enum: ['vet', 'judge', 'stud', 'rescue', 'trainer', 'club', 'other']
+        }],
+        default: []
+    },
+
     // Only meaningful when isBreeder is true
     breederStatus: {
         type: String,
@@ -105,6 +115,7 @@ ContactSchema.pre('save', function(next) {
 ContactSchema.index({ userId: 1, isKeeper: 1 });
 ContactSchema.index({ userId: 1, isBreeder: 1 });
 ContactSchema.index({ userId: 1, linkedCTUID: 1 });
+ContactSchema.index({ userId: 1, categories: 1 });
 
 const Contact = mongoose.model('Contact', ContactSchema);
 

@@ -8,6 +8,14 @@ const { protect } = require('../middleware/authMiddleware');
 // Apply authentication to all routes
 router.use(protect);
 
+// Categories other than Owner (isKeeper) and Breeder (isBreeder)
+const EXTRA_CATEGORIES = ['vet', 'judge', 'stud', 'rescue', 'trainer', 'club', 'other'];
+
+function sanitizeCategories(input) {
+    if (!Array.isArray(input)) return [];
+    return [...new Set(input.filter(c => EXTRA_CATEGORIES.includes(c)))];
+}
+
 // Shared lookups for a contact's linked animals, reused by the bred/owned detail
 // routes below and by the counts attached to the list route.
 async function getBredAnimalsForContact(contact, req) {
@@ -131,10 +139,12 @@ router.get('/', async (req, res) => {
         let filter = { userId: req.user._id };
         
         // Apply type filter if specified
-        if (type === 'keeper') {
+        if (type === 'keeper' || type === 'owner') {
             filter.isKeeper = true;
         } else if (type === 'breeder') {
             filter.isBreeder = true;
+        } else if (EXTRA_CATEGORIES.includes(type)) {
+            filter.categories = type;
         }
         
         const contacts = await Contact.find(filter)
@@ -190,12 +200,14 @@ router.post('/', async (req, res) => {
             isKeeper,
             isBreeder,
             breederStatus,
+            categories,
             notes
         } = req.body;
+        const cleanCategories = sanitizeCategories(categories);
         
-        // Validate that at least one type is selected
-        if (!isKeeper && !isBreeder) {
-            return res.status(400).json({ message: 'Contact must be marked as keeper, breeder, or both' });
+        // Validate that at least one category is selected
+        if (!isKeeper && !isBreeder && cleanCategories.length === 0) {
+            return res.status(400).json({ message: 'Contact must have at least one category' });
         }
         
         // Validate that at least one name is provided
@@ -214,6 +226,7 @@ router.post('/', async (req, res) => {
             isKeeper: !!isKeeper,
             isBreeder: !!isBreeder,
             breederStatus: breederStatus === 'retired' ? 'retired' : 'active',
+            categories: cleanCategories,
             notes: notes || null,
             assignedAnimals: []
         });
@@ -253,12 +266,14 @@ router.put('/:id', async (req, res) => {
             isKeeper,
             isBreeder,
             breederStatus,
+            categories,
             notes
         } = req.body;
+        const cleanCategories = sanitizeCategories(categories);
         
-        // Validate that at least one type is selected
-        if (!isKeeper && !isBreeder) {
-            return res.status(400).json({ message: 'Contact must be marked as keeper, breeder, or both' });
+        // Validate that at least one category is selected
+        if (!isKeeper && !isBreeder && cleanCategories.length === 0) {
+            return res.status(400).json({ message: 'Contact must have at least one category' });
         }
         
         // Validate that at least one name is provided
@@ -276,6 +291,7 @@ router.put('/:id', async (req, res) => {
         contact.isKeeper = !!isKeeper;
         contact.isBreeder = !!isBreeder;
         contact.breederStatus = breederStatus === 'retired' ? 'retired' : 'active';
+        contact.categories = cleanCategories;
         contact.notes = notes || null;
         
         console.log('[CONTACTS] PUT /api/contacts/:id - Contact Object before save:', contact);
