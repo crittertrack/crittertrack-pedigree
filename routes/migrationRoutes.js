@@ -548,4 +548,55 @@ router.post('/convert-feeding-frequency-to-hours', async (req, res) => {
     }
 });
 
+// Migration: clear sale state on any animal already marked Deceased / Culled /
+// Rehomed (or with a deceasedDate set), so deceased animals stop appearing in
+// the marketplace with a leftover sale price / for-sale flag. Also clears the
+// PublicAnimal mirror. Safe to re-run (idempotent).
+router.post('/clear-sale-state-for-deceased', async (req, res) => {
+    try {
+        const deathOrRehomed = {
+            $or: [
+                { deceasedDate: { $ne: null } },
+                { status: { $in: ['Deceased', 'Culled', 'Rehomed'] } }
+            ]
+        };
+
+        const saleStateDefaults = {
+            soldStatus: null,
+            saleDate: null,
+            salePrice: null,
+            saleRecordCurrency: null,
+            buyerName: null,
+            buyerContact: null,
+            saleTransactionId: null,
+            isForSale: false,
+            salePriceAmount: null,
+            salePriceCurrency: 'USD',
+            studFeeAmount: null,
+            studFeeCurrency: 'USD',
+        };
+
+        const publicSaleStateDefaults = {
+            isForSale: false,
+            salePriceAmount: null,
+            salePriceCurrency: 'USD',
+            studFeeAmount: null,
+            studFeeCurrency: 'USD',
+        };
+
+        const animalResult = await Animal.updateMany(deathOrRehomed, { $set: saleStateDefaults });
+        const publicResult = await PublicAnimal.updateMany(deathOrRehomed, { $set: publicSaleStateDefaults });
+
+        console.log(`[Migration] clear-sale-state-for-deceased: animals=${animalResult.modifiedCount}, public=${publicResult.modifiedCount}`);
+        res.json({
+            success: true,
+            animalsCleared: animalResult.modifiedCount,
+            publicAnimalsCleared: publicResult.modifiedCount
+        });
+    } catch (error) {
+        console.error('[Migration] clear-sale-state-for-deceased error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

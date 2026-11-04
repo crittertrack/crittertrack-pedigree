@@ -2593,6 +2593,8 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
         throw new Error('Invalid verification code');
     }
 
+
+
     // Check if code has expired
     if (user.verificationCodeExpires < new Date()) {
         throw new Error('Verification code has expired');
@@ -2800,6 +2802,119 @@ const getLoginEmailsForRecoveryAddress = async (recoveryEmail) => {
     return users.map(user => user.email);
 };
 
+// ---------------------------------------------------------------------------
+// SALE-STATE CLEARING  (Mongoose-level enforcement + migration)
+// ---------------------------------------------------------------------------
+// An animal that is deceased, culled, or rehomed must no longer carry any
+// "sale state". "Sale state" = soldStatus, saleDate/salePrice/buyer fields,
+// saleTransactionId, isForSale, salePriceAmount, studFeeAmount, etc.
+// Leaving these on a dead animal is exactly why deceased animals kept showing
+// up in the marketplace.
+//
+// Enforcement (single source of truth, catches every write path):
+//  - AnimalSchema.pre('save')        -> addAnimal / doc.save() paths.
+//  - AnimalSchema.pre('updateOne')   -> direct updateOne updates (imports,
+//                                      kintrak/zooeasy, admin) and mirrors the
+//                                      cleared state back onto PublicAnimal.
+//  - AnimalSchema.pre('findOneAndUpdate') -> the public AnimalForm PUT
+//                                      (updateAnimal) path.
+// The standalone + API migration endpoint clears existing data for already-
+// deceased/culled/rehomed animals.
+
+const DEATH_REHOME_STATUSES = new Set(['Deceased', 'Culled', 'Rehomed']);
+
+const SALE_STATE_DEFAULTS = {
+    soldStatus: null,
+    saleDate: null,
+    salePrice: null,
+    saleRecordCurrency: null,
+    buyerName: null,
+    buyerContact: null,
+    saleTransactionId: null,
+    isForSale: false,
+    salePriceAmount: null,
+    salePriceCurrency: 'USD',
+    studFeeAmount: null,
+    studFeeCurrency: 'USD',
+};
+
+const PUBLIC_SALE_STATE_DEFAULTS = {
+    isForSale: false,
+    salePriceAmount: null,
+    salePriceCurrency: 'USD',
+    studFeeAmount: null,
+    studFeeCurrency: 'USD',
+};
+
+function isDeceasedOrRehomed(animal) {
+    if (!animal) return false;
+    return Boolean(animal.deceasedDate) || DEATH_REHOME_STATUSES.has(animal.status);
+}
+
+function clearSaleStateForAnimal(animal) {
+    if (!animal || !isDeceasedOrRehomed(animal)) return false;
+    Object.assign(animal, SALE_STATE_DEFAULTS);
+    return true;
+}
+
+function shouldClearSaleStateOnWrite(update) {
+    if (!update || typeof update !== 'object') return false;
+    const set = update.$set;
+    if (set && typeof set === 'object') {
+        if ((set.deceasedDate !== undefined && set.deceasedDate != null) ||
+            DEATH_REHOME_STATUSES.has(set.status)) {
+            return true;
+        }
+    }
+    if (update.deceasedDate !== undefined && update.deceasedDate != null) return true;
+    if (update.status && DEATH_REHOME_STATUSES.has(update.status)) return true;
+    return false;
+}
+
+Animal.schema.pre('save', function (next) {
+    if (isDeceasedOrRehomed(this)) {
+        clearSaleStateForAnimal(this);
+    }
+    next();
+});
+
+Animal.schema.pre('updateOne', function (next) {
+    const update = this.getUpdate && this.getUpdate() || {};
+    if (shouldClearSaleStateOnWrite(update)) {
+        const $set = update.$set || (update.$set = {});
+        Object.assign($set, SALE_STATE_DEFAULTS);
+
+        const filter = this.getFilter && this.getFilter() || {};
+        const idPublic = filter && filter.id_public;
+        if (idPublic) {
+            PublicAnimal.updateOne(
+                { id_public: idPublic },
+                { $set: PUBLIC_SALE_STATE_DEFAULTS }
+            ).catch((err) => console.error('[Animal sale-state middleware] Failed to sync PublicAnimal:', err));
+        }
+    }
+    next();
+});
+
+Animal.schema.pre('findOneAndUpdate', function (next) {
+    const update = this.getUpdate && this.getUpdate() || {};
+    if (shouldClearSaleStateOnWrite(update)) {
+        const $set = update.$set || (update.$set = {});
+        Object.assign($set, SALE_STATE_DEFAULTS);
+    }
+    next();
+});
+
+// Test hook: exposes the pure helpers for unit tests.
+const CLEAR_SALE_STATE_HELPER = {
+    SALE_STATE_DEFAULTS,
+    PUBLIC_SALE_STATE_DEFAULTS,
+    DEATH_REHOME_STATUSES,
+    isDeceasedOrRehomed,
+    clearSaleStateForAnimal,
+    shouldClearSaleStateOnWrite,
+};
+
 module.exports = {
     connectDB,
     registerUser,
@@ -2841,4 +2956,5 @@ module.exports = {
     // Public functions
     getPublicProfile,
     getPublicAnimalsByOwner,
+    CLEAR_SALE_STATE_HELPER,
 };
