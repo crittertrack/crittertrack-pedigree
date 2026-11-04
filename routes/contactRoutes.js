@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Contact = require('../database/contactModel');
 // Import User and PublicProfile for potential future use or debugging
-const { Animal, User, PublicProfile } = require('../database/models');
+const { Animal, User, PublicProfile, WaitlistEntry } = require('../database/models');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication to all routes
@@ -311,6 +311,14 @@ router.delete('/:id', async (req, res) => {
         if (!contact) {
             return res.status(404).json({ message: 'Contact not found' });
         }
+        
+        // Waitlist entries that were linked to this contact keep their own name and details;
+        // only the link is cleared so nothing points at a contact that no longer exists.
+        // (Animals are untouched: their owner/breeder fields are stored on the animal itself.)
+        await WaitlistEntry.updateMany(
+            { userId: req.user._id, contactId: contact._id },
+            { $set: { contactId: null } }
+        );
         
         res.json({ message: 'Contact deleted successfully' });
     } catch (error) {
