@@ -548,10 +548,12 @@ router.post('/convert-feeding-frequency-to-hours', async (req, res) => {
     }
 });
 
-// Migration: clear sale state on any animal already marked Deceased / Culled /
-// Rehomed (or with a deceasedDate set), so deceased animals stop appearing in
-// the marketplace with a leftover sale price / for-sale flag. Also clears the
-// PublicAnimal mirror. Safe to re-run (idempotent).
+// Migration: clear ACTIVE marketplace listing state (isForSale, salePriceAmount,
+// studFeeAmount) on any animal already marked Deceased / Culled / Rehomed (or with
+// a deceasedDate set), so deceased animals stop appearing in the marketplace.
+// Sale/reservation records (soldStatus, saleDate, salePrice, buyer info,
+// saleTransactionId, currencies) are intentionally preserved for record-keeping.
+// Also updates the PublicAnimal mirror. Safe to re-run (idempotent).
 router.post('/clear-sale-state-for-deceased', async (req, res) => {
     try {
         const deathOrRehomed = {
@@ -562,26 +564,15 @@ router.post('/clear-sale-state-for-deceased', async (req, res) => {
         };
 
         const saleStateDefaults = {
-            soldStatus: null,
-            saleDate: null,
-            salePrice: null,
-            saleRecordCurrency: null,
-            buyerName: null,
-            buyerContact: null,
-            saleTransactionId: null,
             isForSale: false,
             salePriceAmount: null,
-            salePriceCurrency: 'USD',
             studFeeAmount: null,
-            studFeeCurrency: 'USD',
         };
 
         const publicSaleStateDefaults = {
             isForSale: false,
             salePriceAmount: null,
-            salePriceCurrency: 'USD',
             studFeeAmount: null,
-            studFeeCurrency: 'USD',
         };
 
         const animalResult = await Animal.updateMany(deathOrRehomed, { $set: saleStateDefaults });
