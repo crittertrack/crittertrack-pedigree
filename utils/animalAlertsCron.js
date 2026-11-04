@@ -4,6 +4,7 @@
 const cron = require('node-cron');
 const { Animal, Litter, Enclosure, SupplyItem, SystemSettings, PublicProfile } = require('../database/models');
 const { sendPushToUser } = require('./pushService');
+const { medicationWantsReminders } = require('./doseReminders');
 const { formatAnimalName, formatAlertDigest } = require('./alertNames');
 const { buildNursingCutoffMap, DEFAULT_MAX_NURSING_DAYS, syncParentReproStatus } = require('./reproStatusSync');
 
@@ -130,8 +131,10 @@ const runAnimalAlertsCheck = async () => {
         if (HEALTH_STATUSES_OF_CONCERN.includes(status)) {
             bump(alerts, a.creatorId, 'health', `${animalName} • ${status} health status`);
         }
+        // Medications with dose reminders are handled by utils/doseReminders.js (exact dose times,
+        // snooze, escalation), so the daily digest only covers ones without a usable reminder.
         const dueMedications = (a.medications || [])
-            .filter((m) => !m.status || m.status === 'active')
+            .filter((m) => (!m.status || m.status === 'active') && !medicationWantsReminders(m))
             .map((medication) => ({ medication, nextDose: calcNextDose(medication) }))
             .filter(({ nextDose }) => nextDose && nextDose.getTime() <= Date.now());
         dueMedications.forEach(({ medication }) => bump(alerts, a.creatorId, 'health', `${animalName} • ${medication.name || 'medication'}`));

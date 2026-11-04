@@ -305,6 +305,16 @@ setTimeout(() => {
     }
 }, 5000);
 
+// --- Initialize medication dose reminders (exact dose times, snooze, escalation, dose history) ---
+const { startDoseReminderCron } = require('./utils/doseReminders');
+setTimeout(() => {
+    try {
+        startDoseReminderCron();
+    } catch (err) {
+        console.error('[Server] Failed to initialize dose reminder cron:', err);
+    }
+}, 6000);
+
 
 // --- UNPROTECTED Routes ---
 
@@ -999,6 +1009,12 @@ app.use('/api/push', authMiddleware, pushRoutes);
 // Activity Log Routes (Require authMiddleware)
 const activityLogRoutes = require('./routes/activityLogRoutes');
 app.use('/api/activity-logs', authMiddleware, activityLogRoutes);
+
+// Medication dose reminders (given / skip / snooze, dose history, settings) and care-checklist templates
+const medicationDoseRoutes = require('./routes/medicationDoseRoutes');
+app.use('/api/medication-doses', authMiddleware, medicationDoseRoutes);
+const careTemplateRoutes = require('./routes/careTemplateRoutes');
+app.use('/api/care-templates', authMiddleware, careTemplateRoutes);
 
 // Supplies / Inventory Routes (Require authMiddleware)
 const suppliesRoutes = require('./routes/suppliesRoutes');

@@ -69,6 +69,16 @@ const UserSchema = new mongoose.Schema({
     }],
     // Per-category push notification opt-out (missing key = enabled by default)
     pushCategoryPreferences: { type: Map, of: Boolean, default: {} },
+    // IANA time zone (e.g. 'America/Chicago') used to place medication doses at the owner's local
+    // time. Set automatically by the web app; null falls back to UTC.
+    timeZone: { type: String, default: null },
+    // Medication dose reminder settings (see utils/doseReminders.js). Escalation never bypasses the
+    // push 'health' category toggle; the final-alert email is opt-in and off by default.
+    medicationReminderPrefs: {
+        snoozeMinutes: { type: Number, default: 30 },
+        missedAfterMinutes: { type: Number, default: 120 },
+        emailEscalation: { type: Boolean, default: false },
+    },
     // Email notification preferences
     emailNotificationPreference: { 
         type: String, 
@@ -295,6 +305,10 @@ const HealthRecordSchema = new mongoose.Schema({
     supplyName: { type: String, default: null },
     source: { type: String, default: null },
     administrations: [{ date: { type: Date } }],
+    // Dose reminders: wall-clock time ("HH:MM", owner's time zone) of the first dose each day /
+    // from the start date, and a per-medication switch (reminders are on unless set to false).
+    doseTime: { type: String, default: null },
+    remindersEnabled: { type: Boolean, default: true },
 }, { _id: false });
 
 const ShowEventSchema = new mongoose.Schema({
@@ -1940,6 +1954,48 @@ const AnimalLogSchema = new mongoose.Schema({
 AnimalLogSchema.index({ animalId: 1, createdAt: -1 });
 const AnimalLog = mongoose.model('AnimalLog', AnimalLogSchema);
 
+// ── Medication dose history / reminder state ────────────────────────────────
+// One document per scheduled dose that was reminded about. It doubles as the dose history shown on
+// the animal's Health tab (given / skipped / missed) and as the live reminder state (stage,
+// snooze) the scheduler in utils/doseReminders.js advances. Never backfilled for past doses.
+const MedicationDoseEventSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    animalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Animal', required: true },
+    animalId_public: { type: String, index: true },
+    animalName: { type: String, default: null },
+    medicationId: { type: String, required: true },
+    medicationName: { type: String, default: null },
+    dose: { type: String, default: null },
+    scheduledAt: { type: Date, required: true },
+    status: { type: String, enum: ['pending', 'given', 'skipped', 'missed'], default: 'pending', index: true },
+    // Escalation: 0 = nothing sent yet, 1 = reminder, 2 = nudge, 3 = final alert.
+    stage: { type: Number, default: 0 },
+    // Escalation + missed deadline are measured from here (the slot, or the end of the latest snooze).
+    clockStart: { type: Date, required: true },
+    snoozedUntil: { type: Date, default: null },
+    snoozeCount: { type: Number, default: 0 },
+    administeredAt: { type: Date, default: null },
+    resolvedAt: { type: Date, default: null },
+    resolvedBy: { type: String, enum: ['user', 'system', null], default: null },
+}, { timestamps: true });
+MedicationDoseEventSchema.index({ animalId: 1, medicationId: 1, scheduledAt: 1 }, { unique: true });
+MedicationDoseEventSchema.index({ animalId_public: 1, scheduledAt: -1 });
+const MedicationDoseEvent = mongoose.model('MedicationDoseEvent', MedicationDoseEventSchema);
+
+// ── Care checklist templates (admin-curated, one per species) ───────────────
+// Applied by owners onto animals by COPYING tasks into Animal.animalCareTasks, so later template
+// edits never change schedules on animals that already used one.
+const CareChecklistTemplateSchema = new mongoose.Schema({
+    species: { type: String, required: true, unique: true, trim: true, index: true }, // Species.name
+    tasks: [{
+        taskName: { type: String, required: true, trim: true },
+        frequencyDays: { type: Number, default: null },
+        notes: { type: String, default: null, trim: true },
+    }],
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+}, { timestamps: true });
+const CareChecklistTemplate = mongoose.model('CareChecklistTemplate', CareChecklistTemplateSchema);
+
 // ── Supply Item ──────────────────────────────────────────────────────────────
 const SupplyItemSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -2199,6 +2255,8 @@ TransactionSchema.index({ userId: 1, date: -1 }); // Uncommented and applied
 
 // --- EXPORTS ---
 module.exports = {
+    MedicationDoseEvent,
+    CareChecklistTemplate,
     Counter,
     User,
     PublicProfile,
