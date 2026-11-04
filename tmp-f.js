@@ -1,0 +1,22 @@
+﻿require('dotenv').config();
+const fs = require('fs');
+const mongoose = require('mongoose');
+const { connectDB } = require('./database/db_service');
+const { Animal, User } = require('./database/models');
+const Contact = require('./database/contactModel');
+const norm = s => String(s || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+(async () => {
+  await connectDB(process.env.MONGODB_URI);
+  const users = await User.find({}).select('_id id_public personalName breederName').lean();
+  const me = users.find(u => norm(u.id_public) === 'CTU2');
+  const out = [];
+  const contacts = await Contact.find({ userId: me._id }).lean();
+  const hits = contacts.filter(c => /flevo/i.test([c.personalName, c.breederName, c.prefix, c.suffix, c.linkedCTUID].join(' ')));
+  out.push('CONTACTS MATCHING flevo: ' + hits.length);
+  hits.forEach(c => out.push(JSON.stringify({ _id: c._id, personalName: c.personalName, breederName: c.breederName, prefix: c.prefix, suffix: c.suffix, linkedCTUID: c.linkedCTUID, isKeeper: c.isKeeper, isBreeder: c.isBreeder, breederStatus: c.breederStatus, categories: c.categories, userId: String(c.userId) })));
+  out.push('Total contacts: ' + contacts.length + ' | retired breeders: ' + contacts.filter(c => c.isBreeder && c.breederStatus === 'retired').length + ' | no category at all: ' + contacts.filter(c => !c.isKeeper && !c.isBreeder && !(c.categories||[]).length).length);
+  const flevoUser = users.filter(u => /flevo/i.test([u.personalName, u.breederName].join(' ')));
+  out.push('USERS matching flevo: ' + JSON.stringify(flevoUser.map(u => ({ id_public: u.id_public, personalName: u.personalName, breederName: u.breederName }))));
+  fs.writeFileSync(process.env.TEMP + '\\flevo.txt', out.join('\n'), 'utf8');
+  await mongoose.disconnect();
+})().catch(e => { console.error(e.message); process.exit(1); });
