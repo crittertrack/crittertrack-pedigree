@@ -1658,7 +1658,7 @@ const TransactionSchema = new mongoose.Schema({
         filename: { type: String, default: 'attachment' },
         mimeType: { type: String, default: '' },
         size: { type: Number, default: 0 },
-        kind: { type: String, enum: ['receipt', 'upload'], default: 'upload' },
+        kind: { type: String, enum: ['receipt', 'upload', 'invoice'], default: 'upload' },
         uploadedAt: { type: Date, default: Date.now },
     }],
     // Editable payment records for invoices (deposit + subsequent payments).
