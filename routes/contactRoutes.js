@@ -25,8 +25,7 @@ async function getBredAnimalsForContact(contact, req) {
     if (contact.linkedCTUID) {
         animals = await Animal.find({
             breederId_public: contact.linkedCTUID,
-            creatorId: req.user._id,
-            archived: { $ne: true } // Exclude archived animals
+            creatorId: req.user._id
         })
         .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
         .sort({ birthDate: -1 })
@@ -41,8 +40,7 @@ async function getBredAnimalsForContact(contact, req) {
     if (assignedBreederAnimals.length > 0) {
         const manualAnimals = await Animal.find({
             id_public: { $in: assignedBreederAnimals },
-            creatorId: req.user._id,
-            archived: { $ne: true }
+            creatorId: req.user._id
         })
         .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl breederId_public')
         .sort({ birthDate: -1 })
@@ -66,8 +64,7 @@ async function getOwnedAnimalsForContact(contact, req) {
     if (contact.linkedCTUID) {
         animals = await Animal.find({
             breederId_public: req.user.id_public,
-            creatorId_public: contact.linkedCTUID,
-            archived: { $ne: true } // Exclude archived animals
+            creatorId_public: contact.linkedCTUID
         })
         .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl creatorId_public')
         .sort({ birthDate: -1 })
@@ -82,8 +79,7 @@ async function getOwnedAnimalsForContact(contact, req) {
     if (assignedKeeperAnimals.length > 0) {
         const manualAnimals = await Animal.find({
             id_public: { $in: assignedKeeperAnimals },
-            creatorId: req.user._id,
-            archived: { $ne: true }
+            creatorId: req.user._id
         })
         .select('id_public name prefix suffix species gender birthDate deceasedDate status color imageUrl photoUrl creatorId_public')
         .sort({ birthDate: -1 })
