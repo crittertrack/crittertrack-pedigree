@@ -83,7 +83,11 @@ router.post('/seed-default-species', async (req, res) => {
             { name: 'Campbells Dwarf Hamster', latinName: 'Phodopus campbelli', category: 'Mammal', isDefault: true, createdBy_public: null },
             { name: 'Chinese Dwarf Hamster', latinName: 'Cricetulus barabensis', category: 'Mammal', isDefault: true, createdBy_public: null },
             { name: 'Syrian Hamster', latinName: 'Mesocricetus auratus', category: 'Mammal', isDefault: true, createdBy_public: null },
-            { name: 'Guinea Pig', latinName: 'Cavia porcellus', category: 'Mammal', isDefault: true, createdBy_public: null }
+            { name: 'Guinea Pig', latinName: 'Cavia porcellus', category: 'Mammal', isDefault: true, createdBy_public: null },
+            { name: 'Bronze Baboon', latinName: null, category: 'Invertebrate', isDefault: true, createdBy_public: null },
+            { name: 'Kigoma Baboon', latinName: null, category: 'Invertebrate', isDefault: true, createdBy_public: null },
+            { name: 'Rear-Horned Baboon', latinName: null, category: 'Invertebrate', isDefault: true, createdBy_public: null },
+            { name: 'Pumpkin Patch', latinName: null, category: 'Invertebrate', isDefault: true, createdBy_public: null }
         ];
         
         let created = 0;

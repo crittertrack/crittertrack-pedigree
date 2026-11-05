@@ -571,6 +571,8 @@ const SPECIES_THRESHOLDS_KEY_MAP = {
     'pill millipede': 'pill millipede',
     'roly-poly isopod': 'roly-poly isopod',
     'roly poly isopod': 'roly-poly isopod',
+    'bronze baboon': 'bronze baboon',
+    'kigoma baboon': 'kigoma baboon',
     'pumpkin patch': 'pumpkin patch',
     'mexican blood leg': 'mexican blood leg',
     'thai purple zebra': 'thai purple zebra',
