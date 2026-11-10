@@ -42,4 +42,17 @@ async function insertMissing(Model, docs, keyFn, label) {
     return { inserted, skipped, failed };
 }
 
-module.exports = { confirm, load, oid, day, log, insertMissing, models, mongoose, planDefaultTemplates, path, fs };
+// Bulk insert-only by _id: one existence query, then insertMany of the missing ones (no per-document round trips).
+async function insertByIds(Model, docs, label) {
+    const existing = new Set((await Model.collection.find({ _id: { $in: docs.map(d => d._id) } }).project({ _id: 1 }).toArray()).map(x => String(x._id)));
+    const fresh = docs.filter(d => !existing.has(String(d._id)));
+    if (confirm && fresh.length) {
+        for (let i = 0; i < fresh.length; i += 200) await Model.collection.insertMany(fresh.slice(i, i + 200), { ordered: false });
+    }
+    log(`  ${label}: ${confirm ? 'inserted' : 'would insert'} ${fresh.length}, skipped (already exist) ${docs.length - fresh.length}`);
+    return { inserted: fresh.length, skipped: docs.length - fresh.length };
+}
+const idTime = (id) => new Date(parseInt(String(id).slice(0, 8), 16) * 1000); // ObjectId embeds its creation time
+const mode = (arr) => { const c = {}; arr.forEach(x => { c[x] = (c[x] || 0) + 1; }); return (Object.entries(c).sort((a, b) => b[1] - a[1] || a[0].length - b[0].length)[0] || [])[0]; };
+
+module.exports = { insertByIds, idTime, mode, confirm, load, oid, day, log, insertMissing, models, mongoose, planDefaultTemplates, path, fs };

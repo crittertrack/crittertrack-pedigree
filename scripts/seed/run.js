@@ -18,7 +18,7 @@ const want = (n) => !only.length || only.includes(n);
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 20000 });
     log('Database:', mongoose.connection.name, '\n');
     const ctx = { animals: L.load('animals'), users: L.load('users') };
-    const steps = [['species', './species'], ['care', './care'], ['litters', './litters'], ['transactions', './transactions'], ['litters-inferred', './litters-inferred']];
+    const steps = [['species', './species'], ['care', './care'], ['litters', './litters'], ['transactions', './transactions'], ['litters-inferred', './litters-inferred'], ['planned', './planned-litters'], ['enclosures', './enclosures'], ['waitlists', './waitlists']];
     for (const [name, file] of steps) {
         if (!want(name)) continue;
         log(`=== ${name} ===`);
