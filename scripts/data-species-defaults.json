@@ -1,0 +1,367 @@
+[
+ {
+  "name": "Fancy Mouse",
+  "latinName": "Mus musculus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Fancy Rat",
+  "latinName": "Rattus norvegicus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Syrian Hamster",
+  "latinName": "Mesocricetus auratus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Russian Dwarf Hamster",
+  "latinName": "Phodopus sungorus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Campbells Dwarf Hamster",
+  "latinName": "Phodopus campbelli",
+  "category": "Mammal"
+ },
+ {
+  "name": "Chinese Dwarf Hamster",
+  "latinName": "Cricetulus griseus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Roborovski Dwarf Hamster",
+  "latinName": "Phodopus roborovskii",
+  "category": "Mammal"
+ },
+ {
+  "name": "Guinea Pig",
+  "latinName": "Cavia porcellus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Gerbil",
+  "latinName": "Meriones unguiculatus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Degu",
+  "latinName": "Octodon degus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Chinchilla",
+  "latinName": "Chinchilla lanigera",
+  "category": "Mammal"
+ },
+ {
+  "name": "African Pygmy Mouse",
+  "latinName": "Mus minutoides",
+  "category": "Mammal"
+ },
+ {
+  "name": "African Pygmy Dormouse",
+  "latinName": "Graphiurus murinus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Fat-tailed Gerbil",
+  "latinName": "Pachyuromys duprasi",
+  "category": "Mammal"
+ },
+ {
+  "name": "Rabbit",
+  "latinName": "Oryctolagus cuniculus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Ferret",
+  "latinName": "Mustela putorius furo",
+  "category": "Mammal"
+ },
+ {
+  "name": "Hedgehog",
+  "latinName": "Atelerix albiventris",
+  "category": "Mammal"
+ },
+ {
+  "name": "Sugar Glider",
+  "latinName": "Petaurus breviceps",
+  "category": "Mammal"
+ },
+ {
+  "name": "Prairie Dog",
+  "latinName": "Cynomys ludovicianus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Cat",
+  "latinName": "Felis catus",
+  "category": "Mammal"
+ },
+ {
+  "name": "Dog",
+  "latinName": "Canis lupus familiaris",
+  "category": "Mammal"
+ },
+ {
+  "name": "Leopard Gecko",
+  "latinName": "Eublepharis macularius",
+  "category": "Reptile"
+ },
+ {
+  "name": "Crested Gecko",
+  "latinName": "Correlophus ciliatus",
+  "category": "Reptile"
+ },
+ {
+  "name": "Gargoyle Gecko",
+  "latinName": "Rhacodactylus auriculatus",
+  "category": "Reptile"
+ },
+ {
+  "name": "Bearded Dragon",
+  "latinName": "Pogona vitticeps",
+  "category": "Reptile"
+ },
+ {
+  "name": "Blue-Tongued Skink",
+  "latinName": "Tiliqua scincoides",
+  "category": "Reptile"
+ },
+ {
+  "name": "Ball Python",
+  "latinName": "Python regius",
+  "category": "Reptile"
+ },
+ {
+  "name": "Corn Snake",
+  "latinName": "Pantherophis guttatus",
+  "category": "Reptile"
+ },
+ {
+  "name": "Cape African House Snake",
+  "latinName": "Boaedon capensis",
+  "category": "Reptile"
+ },
+ {
+  "name": "Chameleon",
+  "latinName": "Chamaeleo sp.",
+  "category": "Reptile"
+ },
+ {
+  "name": "Red-Eared Slider",
+  "latinName": "Trachemys scripta elegans",
+  "category": "Reptile"
+ },
+ {
+  "name": "Russian Tortoise",
+  "latinName": "Testudo horsfieldii",
+  "category": "Reptile"
+ },
+ {
+  "name": "Budgie",
+  "latinName": "Melopsittacus undulatus",
+  "category": "Bird"
+ },
+ {
+  "name": "Cockatiel",
+  "latinName": "Nymphicus hollandicus",
+  "category": "Bird"
+ },
+ {
+  "name": "Lovebird",
+  "latinName": "Agapornis sp.",
+  "category": "Bird"
+ },
+ {
+  "name": "Canary",
+  "latinName": "Serinus canaria",
+  "category": "Bird"
+ },
+ {
+  "name": "Zebra Finch",
+  "latinName": "Taeniopygia guttata",
+  "category": "Bird"
+ },
+ {
+  "name": "Conure",
+  "latinName": "Pyrrhura / Psittacara sp.",
+  "category": "Bird"
+ },
+ {
+  "name": "African Grey Parrot",
+  "latinName": "Psittacus erithacus",
+  "category": "Bird"
+ },
+ {
+  "name": "Macaw",
+  "latinName": "Ara sp.",
+  "category": "Bird"
+ },
+ {
+  "name": "Cockatoo",
+  "latinName": "Cacatua sp.",
+  "category": "Bird"
+ },
+ {
+  "name": "Dove",
+  "latinName": "Streptopelia sp.",
+  "category": "Bird"
+ },
+ {
+  "name": "Axolotl",
+  "latinName": "Ambystoma mexicanum",
+  "category": "Amphibian"
+ },
+ {
+  "name": "Pacman Frog",
+  "latinName": "Ceratophrys ornata",
+  "category": "Amphibian"
+ },
+ {
+  "name": "Dart Poison Frog",
+  "latinName": "Dendrobatidae sp.",
+  "category": "Amphibian"
+ },
+ {
+  "name": "White's Tree Frog",
+  "latinName": "Ranoidea caerulea",
+  "category": "Amphibian"
+ },
+ {
+  "name": "Fire-Bellied Toad",
+  "latinName": "Bombina sp.",
+  "category": "Amphibian"
+ },
+ {
+  "name": "Tomato Frog",
+  "latinName": "Dyscophus antongilii",
+  "category": "Amphibian"
+ },
+ {
+  "name": "Tiger Salamander",
+  "latinName": "Ambystoma tigrinum",
+  "category": "Amphibian"
+ },
+ {
+  "name": "Betta Fish",
+  "latinName": "Betta splendens",
+  "category": "Fish"
+ },
+ {
+  "name": "Fancy Goldfish",
+  "latinName": "Carassius auratus",
+  "category": "Fish"
+ },
+ {
+  "name": "Koi",
+  "latinName": "Cyprinus rubrofuscus",
+  "category": "Fish"
+ },
+ {
+  "name": "Guppy",
+  "latinName": "Poecilia reticulata",
+  "category": "Fish"
+ },
+ {
+  "name": "Platy",
+  "latinName": "Xiphophorus maculatus",
+  "category": "Fish"
+ },
+ {
+  "name": "Discus",
+  "latinName": "Symphysodon sp.",
+  "category": "Fish"
+ },
+ {
+  "name": "Angelfish",
+  "latinName": "Pterophyllum scalare",
+  "category": "Fish"
+ },
+ {
+  "name": "Corydoras",
+  "latinName": "Corydoras sp.",
+  "category": "Fish"
+ },
+ {
+  "name": "Oscar",
+  "latinName": "Astronotus ocellatus",
+  "category": "Fish"
+ },
+ {
+  "name": "Tarantula",
+  "latinName": "Theraphosidae sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Jumping Spider",
+  "latinName": "Salticidae sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Scorpion",
+  "latinName": "Scorpiones sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Giant African Millipede",
+  "latinName": "Archispirostreptus gigas",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Praying Mantis",
+  "latinName": "Mantodea sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Hissing Cockroach",
+  "latinName": "Gromphadorhina portentosa",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Stick Insect",
+  "latinName": "Phasmatodea sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Hermit Crab",
+  "latinName": "Coenobita sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Land Snail",
+  "latinName": "Achatina sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Honey Bee",
+  "latinName": "Apis mellifera",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Bumble Bee",
+  "latinName": "Bombus sp.",
+  "category": "Invertebrate"
+ },
+ {
+  "name": "Other",
+  "latinName": null,
+  "category": "Other"
+ },
+ {
+  "name": "Mouse",
+  "latinName": null,
+  "category": "Mammal"
+ },
+ {
+  "name": "Rat",
+  "latinName": null,
+  "category": "Mammal"
+ },
+ {
+  "name": "Hamster",
+  "latinName": null,
+  "category": "Mammal"
+ }
+]
