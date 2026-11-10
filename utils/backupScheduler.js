@@ -1,7 +1,8 @@
 const cron = require('node-cron');
 const { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const { User, Animal, PublicProfile, PublicAnimal } = require('../database/models');
+const mongoose = require('mongoose');
 const { createAuditLog } = require('./auditLogger');
+const backupExport = require('./backupExport');
 
 // R2 Configuration - supports both naming conventions
 const accessKeyId = process.env.R2_ACCESS_KEY_ID || process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
@@ -63,15 +64,8 @@ const saveBackupMetadata = async (metadata) => {
     }
 };
 
-const getCollectionStats = async () => {
-    const stats = {
-        users: await User.countDocuments({}),
-        animals: await Animal.countDocuments({}),
-        publicProfiles: await PublicProfile.countDocuments({}),
-        publicAnimals: await PublicAnimal.countDocuments({})
-    };
-    return stats;
-};
+// Counts for EVERY backed-up collection (discovered from the live database, not a hard-coded list).
+const getCollectionStats = async () => backupExport.getAllCounts(mongoose.connection.db);
 
 // Create automated backup - saves to R2 cloud storage
 const createAutomatedBackup = async () => {
@@ -87,33 +81,46 @@ const createAutomatedBackup = async () => {
     console.log(`[BackupScheduler] Starting automated backup to R2: ${backupId}`);
 
     try {
-        // Get collection stats before backup
-        const stats = await getCollectionStats();
+        const db = mongoose.connection.db;
 
-        // Export collections to JSON
-        const collections = {
-            users: await User.find({}).lean(),
-            animals: await Animal.find({}).lean(),
-            publicProfiles: await PublicProfile.find({}).lean(),
-            publicAnimals: await PublicAnimal.find({}).lean()
-        };
+        // Safety: refuse to back up an emptied / wrong database. Otherwise the 10-backup rotation would
+        // quietly push every good backup out and leave only empty ones.
+        const previousMetadata = await getBackupMetadata();
+        const previousStats = previousMetadata.backups?.[0]?.stats;
+        const liveStats = await getCollectionStats();
+        const lossReason = backupExport.looksLikeDataLoss(liveStats, previousStats);
+        if (lossReason) {
+            console.error(`[BackupScheduler] ❌ Backup SKIPPED to protect existing backups: ${lossReason}. The database looks emptied or wrong.`);
+            try {
+                await createAuditLog({ action: 'auto_backup_failed', performedBy: null, details: { error: `Skipped: ${lossReason}`, liveStats, previousStats } });
+            } catch (auditErr) { console.error('[BackupScheduler] Failed to log skipped backup:', auditErr); }
+            return { success: false, error: `Backup skipped: ${lossReason}` };
+        }
 
+        // Export EVERY collection (discovered from the database), one at a time to keep memory low.
+        const collectionNames = await backupExport.listBackupCollections(db);
+        const stats = {};
+        const fileNames = [];
         let totalSize = 0;
-        
-        // Upload each collection to R2
-        for (const [name, data] of Object.entries(collections)) {
-            const jsonData = JSON.stringify(data, null, 2);
-            const key = `${backupPrefix}/${name}.json`;
-            
-            const command = new PutObjectCommand({
-                Bucket: bucket,
-                Key: key,
-                Body: jsonData,
-                ContentType: 'application/json'
-            });
-            await s3Client.send(command);
-            totalSize += Buffer.byteLength(jsonData, 'utf8');
-            console.log(`[BackupScheduler] Uploaded ${name}.json (${data.length} records)`);
+        const failures = [];
+
+        for (const name of collectionNames) {
+            try {
+                const exported = await backupExport.exportCollection(db, name);
+                const key = `${backupPrefix}/${exported.fileName}.json`;
+                totalSize += await backupExport.uploadVerified(s3Client, bucket, key, exported.body);
+                stats[exported.fileName] = exported.count;
+                fileNames.push(exported.fileName);
+                console.log(`[BackupScheduler] Uploaded ${exported.fileName}.json (${exported.count} records)`);
+            } catch (colErr) {
+                failures.push({ collection: name, error: colErr.message });
+                console.error(`[BackupScheduler] ❌ Failed to back up collection "${name}":`, colErr.message);
+            }
+        }
+
+        // A backup missing collections is a failed backup: report it loudly instead of "completed".
+        if (failures.length > 0) {
+            throw new Error(`Backup incomplete, ${failures.length} collection(s) failed: ${failures.map(f => `${f.collection} (${f.error})`).join('; ')}`);
         }
 
         // Create backup info file
@@ -123,8 +130,10 @@ const createAutomatedBackup = async () => {
             createdBy: 'system-scheduler',
             description: 'Automated daily backup',
             type: 'auto',
+            format: 'ejson',
+            secretsIncluded: backupExport.includeSecrets(),
             stats,
-            collections: Object.keys(collections),
+            collections: fileNames,
             totalSizeBytes: totalSize,
             storageLocation: 'r2'
         };
@@ -139,7 +148,7 @@ const createAutomatedBackup = async () => {
         await s3Client.send(infoCommand);
 
         // Update metadata
-        const metadata = await getBackupMetadata();
+        const metadata = previousMetadata;
         metadata.backups.unshift({
             id: backupId,
             createdAt: timestamp,

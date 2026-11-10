@@ -862,16 +862,15 @@ const saveBackupMetadata = async (metadata) => {
 
 // Helper: Get collection counts
 const getCollectionStats = async () => {
-    const stats = {
-        users: await User.countDocuments(),
-        animals: await Animal.countDocuments(),
-        publicProfiles: await PublicProfile.countDocuments(),
-        publicAnimals: await PublicAnimal.countDocuments(),
-        auditLogs: await AuditLog.countDocuments(),
-        profileReports: await ProfileReport.countDocuments(),
-        animalReports: await AnimalReport.countDocuments(),
-        messageReports: await MessageReport.countDocuments()
-    };
+    // Counts for every backed-up collection, so the admin UI compares like with like.
+    const mongoose = require('mongoose');
+    const { getAllCounts } = require('../utils/backupExport');
+    const stats = await getAllCounts(mongoose.connection.db);
+    // Keep the extra keys older UI code may read
+    stats.profileReports = stats.profilereports ?? await ProfileReport.countDocuments();
+    stats.animalReports = stats.animalreports ?? await AnimalReport.countDocuments();
+    stats.messageReports = stats.messagereports ?? await MessageReport.countDocuments();
+    stats.auditLogs = stats.auditlogs ?? await AuditLog.countDocuments();
     return stats;
 };
 
@@ -975,32 +974,19 @@ router.post('/trigger-backup', async (req, res) => {
         const backupId = `backup-${timestamp.toISOString().replace(/:/g, '-').split('.')[0]}`;
         const backupPrefix = `backups/${backupId}`;
 
-        // Get collection stats before backup
-        const stats = await getCollectionStats();
-
-        // Export collections to JSON
-        const collections = {
-            users: await User.find({}).lean(),
-            animals: await Animal.find({}).lean(),
-            publicProfiles: await PublicProfile.find({}).lean(),
-            publicAnimals: await PublicAnimal.find({}).lean()
-        };
-
+        // Export EVERY collection (shared logic with the daily scheduler: utils/backupExport.js)
+        const mongoose = require('mongoose');
+        const backupExport = require('../utils/backupExport');
+        const db = mongoose.connection.db;
+        const stats = {};
+        const fileNames = [];
         let totalSize = 0;
-        
-        // Upload each collection to R2
-        for (const [name, data] of Object.entries(collections)) {
-            const jsonData = JSON.stringify(data, null, 2);
-            const key = `${backupPrefix}/${name}.json`;
-            
-            const command = new PutObjectCommand({
-                Bucket: bucket,
-                Key: key,
-                Body: jsonData,
-                ContentType: 'application/json'
-            });
-            await s3Client.send(command);
-            totalSize += Buffer.byteLength(jsonData, 'utf8');
+
+        for (const name of await backupExport.listBackupCollections(db)) {
+            const exported = await backupExport.exportCollection(db, name);
+            totalSize += await backupExport.uploadVerified(s3Client, bucket, `${backupPrefix}/${exported.fileName}.json`, exported.body);
+            stats[exported.fileName] = exported.count;
+            fileNames.push(exported.fileName);
         }
 
         // Create backup info file
@@ -1010,8 +996,10 @@ router.post('/trigger-backup', async (req, res) => {
             createdBy: req.user?.email || 'system',
             description: description || `${backupType} backup`,
             type: backupType,
+            format: 'ejson',
+            secretsIncluded: backupExport.includeSecrets(),
             stats,
-            collections: Object.keys(collections),
+            collections: fileNames,
             totalSizeBytes: totalSize,
             storageLocation: 'r2'
         };
@@ -1250,41 +1238,62 @@ router.post('/restore-backup/:backupId', async (req, res) => {
         const restored = [];
         const errors = [];
 
-        // Restore specified collections (or all if none specified)
-        const collectionMap = {
-            users: User,
-            animals: Animal,
-            publicProfiles: PublicProfile,
-            publicAnimals: PublicAnimal
-        };
+        // Restore every collection found in the backup (or only those requested).
+        // Raw collection access (not Mongoose models) so ALL collections work, ids/dates stay exact, and
+        // validation can't reject documents (backups intentionally contain no password hashes).
+        const mongoose = require('mongoose');
+        const { EJSON, collectionFor } = require('../utils/backupExport');
+        const db = mongoose.connection.db;
 
-        for (const [name, Model] of Object.entries(collectionMap)) {
-            if (collections.length > 0 && !collections.includes(name)) continue;
+        // Backups made before the fix are plain JSON (ids/dates are strings, only 4 collections). Those must go
+        // through the Mongoose models so ids and dates are cast correctly. New backups are EJSON (exact types).
+        let backupFormat = 'json';
+        try {
+            const infoResp = await s3Client.send(new GetObjectCommand({ Bucket: getR2Bucket(), Key: `backups/${backupId}/backup-info.json` }));
+            backupFormat = JSON.parse(await infoResp.Body.transformToString()).format || 'json';
+        } catch (e) { /* no info file: treat as legacy */ }
+        const legacyModels = { users: User, animals: Animal, publicProfiles: PublicProfile, publicAnimals: PublicAnimal };
 
-            const key = `backups/${backupId}/${name}.json`;
-            
-            // Check if this collection exists in the backup
-            const exists = listResponse.Contents.some(obj => obj.Key === key);
-            if (!exists) continue;
+        const backupFiles = listResponse.Contents
+            .map(obj => obj.Key)
+            .filter(k => k.endsWith('.json') && !k.endsWith('/backup-info.json') && !k.endsWith('/metadata.json'))
+            .map(k => k.split('/').pop().replace(/\.json$/, ''));
+
+        for (const fileName of backupFiles) {
+            if (collections.length > 0 && !collections.includes(fileName)) continue;
+            const collectionName = collectionFor(fileName);
+            const key = `backups/${backupId}/${fileName}.json`;
 
             try {
-                const getCommand = new GetObjectCommand({
-                    Bucket: getR2Bucket(),
-                    Key: key
-                });
-                const response = await s3Client.send(getCommand);
+                const response = await s3Client.send(new GetObjectCommand({ Bucket: getR2Bucket(), Key: key }));
                 const bodyString = await response.Body.transformToString();
-                const data = JSON.parse(bodyString);
-                
-                // Clear existing data and insert backup data
-                await Model.deleteMany({});
-                if (data.length > 0) {
-                    await Model.insertMany(data, { ordered: false });
+                // EJSON keeps ObjectIds/Dates exact; plain JSON from older backups parses the same way.
+                const data = EJSON.parse(bodyString);
+                if (!Array.isArray(data)) throw new Error('Backup file is not a list of documents');
+
+                // Safety: never wipe a live collection that has data using an empty backup file.
+                const liveCount = await db.collection(collectionName).estimatedDocumentCount();
+                if (data.length === 0 && liveCount > 0) {
+                    errors.push({ collection: fileName, error: `Skipped: backup is empty but the live collection has ${liveCount} documents` });
+                    continue;
                 }
-                
-                restored.push({ collection: name, count: data.length });
+
+                if (backupFormat !== 'ejson') {
+                    // Legacy plain-JSON backup: only the 4 original collections exist; cast via the models.
+                    const Model = legacyModels[fileName];
+                    if (!Model) { errors.push({ collection: fileName, error: 'Skipped: unknown collection in a legacy backup' }); continue; }
+                    await Model.deleteMany({});
+                    if (data.length > 0) await Model.insertMany(data, { ordered: false });
+                } else {
+                    await db.collection(collectionName).deleteMany({});
+                    for (let i = 0; i < data.length; i += 500) {
+                        await db.collection(collectionName).insertMany(data.slice(i, i + 500), { ordered: false });
+                    }
+                }
+
+                restored.push({ collection: fileName, count: data.length });
             } catch (err) {
-                errors.push({ collection: name, error: err.message });
+                errors.push({ collection: fileName, error: err.message });
             }
         }
 
