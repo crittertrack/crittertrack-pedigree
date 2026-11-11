@@ -278,8 +278,10 @@ const registerUser = async (userData) => {
 /**
  * Logs in a user.
  */
-const loginUser = async (email, password, req, keepSignedIn = false) => {
-    // 1. Find user by email, explicitly requesting the password field
+const loginUser = async (rawEmail, password, req, keepSignedIn = false) => {
+    // 1. Find user by email, explicitly requesting the password field.
+    // Emails are stored lowercased/trimmed; normalise so "Name@Mail.com " still matches.
+    const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : rawEmail;
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
@@ -364,7 +366,13 @@ const loginUser = async (email, password, req, keepSignedIn = false) => {
         }
     }
 
-    // 3. Compare password
+    // 3. Compare password.
+    // Restored accounts have no password hash at all (hashes are stripped from backups).
+    // bcrypt.compare() throws on a missing hash, which surfaced as a generic 500 instead of
+    // the "reset your password" message, so treat it as a normal credential failure.
+    if (!user.password) {
+        throw new Error('Invalid credentials: Password reset required.');
+    }
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -2672,7 +2680,10 @@ const verifyEmailAndRegister = async (email, code, userIP = null) => {
 /**
  * Request password reset - generates token and stores it with expiry
  */
-const requestPasswordReset = async (email) => {
+const normalizeEmail = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value);
+
+const requestPasswordReset = async (rawEmail) => {
+    const email = normalizeEmail(rawEmail);
     const user = await User.findOne({ email });
     
     if (!user) {
@@ -2680,9 +2691,9 @@ const requestPasswordReset = async (email) => {
         throw new Error('If the email exists, a reset link has been sent');
     }
 
-    if (!user.emailVerified) {
-        throw new Error('Email not verified. Please verify your email first');
-    }
+    // Unverified accounts are allowed through on purpose: the reset link goes to the
+    // address itself, so completing the reset proves ownership (resetPassword then marks
+    // the email verified). Blocking them stranded restored accounts with no way back in.
 
     // Generate secure reset token (32 bytes = 64 hex characters)
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -2702,7 +2713,8 @@ const requestPasswordReset = async (email) => {
 /**
  * Reset password with valid token
  */
-const resetPassword = async (email, token, newPassword) => {
+const resetPassword = async (rawEmail, token, newPassword) => {
+    const email = normalizeEmail(rawEmail);
     const user = await User.findOne({ 
         email,
         resetPasswordExpires: { $gt: new Date() }
@@ -2727,6 +2739,7 @@ const resetPassword = async (email, token, newPassword) => {
     user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    user.emailVerified = true; // they received the emailed token, so the address is theirs
     await user.save();
 
     return { message: 'Password reset successful' };

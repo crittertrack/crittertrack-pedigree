@@ -72,7 +72,10 @@ const sendPasswordResetEmail = async (email, resetToken) => {
     const resetUrl = `https://www.crittertrack.net/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
     
     try {
-        await resend.emails.send({
+        // Resend's SDK resolves with { data, error } instead of throwing on API failures
+        // (bad key, unverified domain, rate limit...), so the result must be checked or a
+        // failed send looks like success.
+        const { error: sendError } = await resend.emails.send({
             from: fromEmail,
             to: email,
             subject: 'CritterTrack - Password Reset Request',
@@ -93,6 +96,9 @@ const sendPasswordResetEmail = async (email, resetToken) => {
                 </div>
             `
         });
+        if (sendError) {
+            throw new Error(`Resend rejected password reset email: ${sendError.name || ''} ${sendError.message || ''}`.trim());
+        }
     } catch (error) {
         console.error('Error sending password reset email:', error);
         throw error;

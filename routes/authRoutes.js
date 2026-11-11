@@ -263,9 +263,9 @@ router.post('/login', async (req, res) => {
             // shown verbatim by every app version's "Login Failed" popup, so it reaches users
             // on old builds too. Same text for both cases to avoid revealing which emails exist.
             return res.status(401).json({
-                message: 'Login failed. If you have not already, you need to reset your password: ' +
-                    'tap "Forgot password?" below and use the email link to set a new one. ' +
-                    'Following our recent database issue, passwords had to be reset. ' +
+                message: 'Login failed. Due to an unexpected system issue, previous passwords are no longer valid ' +
+                    '(passwords are never stored in our backups, so they could not be restored). ' +
+                    'If you have not already, please use "Forgot password?" to reset your password, then log in. ' +
                     'Some recent data may have been lost.'
             });
         }
