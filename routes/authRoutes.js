@@ -255,7 +255,8 @@ router.post('/login', async (req, res) => {
         });
     } catch (error) {
         const errorMessage = error?.message || 'Unknown login error';
-        console.error('Error logging in user:', errorMessage);
+        const email = req.body?.email || 'unknown';
+        console.error(`Error logging in user for ${email}:`, errorMessage);
         // 401 Unauthorized for bad credentials
         if (errorMessage.includes('Invalid credentials') || errorMessage.includes('User not found')) {
             return res.status(401).json({ message: errorMessage });
@@ -267,7 +268,7 @@ router.post('/login', async (req, res) => {
             const expiryTimestamp = timestampMatch ? parseInt(timestampMatch[1]) : null;
             
             return res.status(403).json({ 
-                message: error.message,
+                message: errorMessage,
                 expiryTimestamp: expiryTimestamp
             });
         }
