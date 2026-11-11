@@ -254,15 +254,16 @@ router.post('/login', async (req, res) => {
             userProfile // Includes id_public and other non-sensitive data
         });
     } catch (error) {
-        console.error('Error logging in user:', error.message);
+        const errorMessage = error?.message || 'Unknown login error';
+        console.error('Error logging in user:', errorMessage);
         // 401 Unauthorized for bad credentials
-        if (error.message.includes('Invalid credentials') || error.message.includes('User not found')) {
-            return res.status(401).json({ message: error.message });
+        if (errorMessage.includes('Invalid credentials') || errorMessage.includes('User not found')) {
+            return res.status(401).json({ message: errorMessage });
         }
         // 403 Forbidden for suspended or banned accounts
-        if (error.message.includes('Account suspended') || error.message.includes('Account banned')) {
+        if (errorMessage.includes('Account suspended') || errorMessage.includes('Account banned')) {
             // Extract expiry timestamp if present for accurate client-side timer
-            const timestampMatch = error.message.match(/ExpiryTimestamp:\s*(\d+)/);
+            const timestampMatch = errorMessage.match(/ExpiryTimestamp:\s*(\d+)/);
             const expiryTimestamp = timestampMatch ? parseInt(timestampMatch[1]) : null;
             
             return res.status(403).json({ 
