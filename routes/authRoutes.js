@@ -259,7 +259,15 @@ router.post('/login', async (req, res) => {
         console.error(`Error logging in user for ${email}:`, errorMessage);
         // 401 Unauthorized for bad credentials
         if (errorMessage.includes('Invalid credentials') || errorMessage.includes('User not found')) {
-            return res.status(401).json({ message: errorMessage });
+            // After the database restore, existing passwords no longer match. The message is
+            // shown verbatim by every app version's "Login Failed" popup, so it reaches users
+            // on old builds too. Same text for both cases to avoid revealing which emails exist.
+            return res.status(401).json({
+                message: 'Login failed. If you have not already, you need to reset your password: ' +
+                    'tap "Forgot password?" below and use the email link to set a new one. ' +
+                    'Following our recent database issue, passwords had to be reset. ' +
+                    'Some recent data may have been lost.'
+            });
         }
         // 403 Forbidden for suspended or banned accounts
         if (errorMessage.includes('Account suspended') || errorMessage.includes('Account banned')) {
