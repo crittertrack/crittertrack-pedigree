@@ -4,7 +4,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); // <-- REQUIRED for inlined Auth Middleware
 // Deployment trigger: 2026-03-13 isPlanned schema field active
-require('dotenv').config();
+// A local .env wins over stray machine-level variables (e.g. a stale MONGODB_URI).
+// In deployed environments there is no .env file, so platform variables are used as-is.
+require('dotenv').config({ override: true });
 const { ProfanityError } = require('./utils/profanityFilter');
 
 // Database Connection Service and User Profile Controllers
