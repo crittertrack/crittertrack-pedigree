@@ -41,6 +41,38 @@ async function listBackupCollections(db) {
         .sort();
 }
 
+// NEW: Get collections that have changed since last backup snapshot
+async function getChangedCollections(db, lastBackupStats) {
+    const allCollections = await listBackupCollections(db);
+    const changed = [];
+    
+    for (const name of allCollections) {
+        const nowCount = await db.collection(name).estimatedDocumentCount();
+        const prevCount = Number(lastBackupStats[name] || 0);
+        
+        // If count changed OR this is the first backup (no previous stats), include it
+        if (prevCount === 0 || nowCount !== prevCount) {
+            changed.push(name);
+        }
+    }
+    return changed;
+}
+
+// NEW: Export only changed collections, using previous stats for reference
+async function exportChangedCollections(db, lastBackupStats, s3Client, bucket, prefix) {
+    const changed = await getChangedCollections(db, lastBackupStats);
+    const exports = [];
+    
+    for (const name of changed) {
+        const result = await exportCollection(db, name);
+        // Upload to primary storage
+        const key = `${prefix}${name}/${new Date().toISOString().replace(/:/g, '-').split('.')[0]}.json`;
+        await uploadVerified(s3Client, bucket, key, result.body);
+        exports.push({ collection: name, fileName: result.fileName, count: result.count, key });
+    }
+    return exports;
+}
+
 const stripSecrets = (collection, docs) => {
     if (collection !== 'users' || includeSecrets()) return docs;
     return docs.map(d => { const copy = { ...d }; for (const f of SECRET_USER_FIELDS) delete copy[f]; return copy; });
@@ -86,4 +118,5 @@ module.exports = {
     DEFAULT_EXCLUDED, SECRET_USER_FIELDS, LEGACY_FILE_NAMES,
     fileNameFor, collectionFor, includeSecrets, listBackupCollections, stripSecrets,
     exportCollection, getAllCounts, uploadVerified, looksLikeDataLoss, EJSON,
+    getChangedCollections, exportChangedCollections
 };

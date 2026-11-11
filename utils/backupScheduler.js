@@ -11,6 +11,15 @@ const accountId = process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID
 const bucket = process.env.R2_BUCKET || process.env.R2_BUCKET_NAME;
 const endpoint = accountId ? `https://${accountId}.r2.cloudflarestorage.com` : undefined;
 
+// Secondary storage bucket for redundancy/backup
+const secondaryBucket = process.env.R2_SECONDARY_BUCKET;
+
+// Local backup directory (keep last 3 full backups locally)
+const localBackupDir = process.env.LOCAL_BACKUP_DIR || 'C:\\\\Projects';
+
+// Local metadata file for tracking local backups
+const LOCAL_METADATA_FILE = 'backup-metadata-local.json';
+
 const s3Client = new S3Client({
     region: process.env.R2_REGION || 'auto',
     endpoint: endpoint,
@@ -19,6 +28,9 @@ const s3Client = new S3Client({
 });
 
 const isR2Configured = () => !!(accessKeyId && secretAccessKey && bucket);
+
+// Secondary metadata key (stored in secondary bucket for redundancy)
+const SECONDARY_METADATA_KEY = 'backups/metadata-secondary.json';
 
 // Backup metadata stored in R2
 const METADATA_KEY = 'backups/metadata.json';
@@ -62,7 +74,124 @@ const saveBackupMetadata = async (metadata) => {
     } catch (err) {
         console.error('[BackupScheduler] Error saving backup metadata to R2:', err);
     }
-};
+}
+
+// NEW: Get local backup metadata
+async function getLocalBackupMetadata() {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        if (!fs.existsSync(localBackupDir)) {
+            fs.mkdirSync(localBackupDir, { recursive: true });
+            return { backups: [], lastLocalBackup: null };
+        }
+        const metadataPath = path.join(localBackupDir, LOCAL_METADATA_FILE);
+        if (!fs.existsSync(metadataPath)) {
+            return { backups: [], lastLocalBackup: null };
+        }
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        if (!metadata.backups) metadata.backups = [];
+        return metadata;
+    } catch (err) {
+        console.error('[BackupScheduler] Error reading local backup metadata:', err);
+        return { backups: [], lastLocalBackup: null };
+    }
+}
+
+// NEW: Save local backup metadata
+async function saveLocalBackupMetadata(metadata) {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        if (!fs.existsSync(localBackupDir)) {
+            fs.mkdirSync(localBackupDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(localBackupDir, LOCAL_METADATA_FILE), JSON.stringify(metadata, null, 2));
+        return true;
+    } catch (err) {
+        console.error('[BackupScheduler] Error saving local backup metadata:', err);
+        return false;
+    }
+}
+
+// NEW: Save backup locally (keep full backup for local retention)
+async function saveBackupLocally(backupId, body, collectionCounts) {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        if (!fs.existsSync(localBackupDir)) {
+            fs.mkdirSync(localBackupDir, { recursive: true });
+        }
+        // Use the backupId timestamp for filename
+        const timestamp = new Date(backupId.replace('auto-backup-', '')).toISOString().replace(/:/g, '-').split('.')[0];
+        const localFileName = `backups_auto-backup-${timestamp}.json`;
+        const localPath = path.join(localBackupDir, localFileName);
+        fs.writeFileSync(localPath, body, 'utf8');
+        // Update local metadata
+        const localMeta = await getLocalBackupMetadata();
+        localMeta.backups.unshift({
+            id: backupId,
+            fileName: localFileName,
+            createdAt: new Date(),
+            type: 'full',
+            stats: collectionCounts
+        });
+        // Prune to keep only last 3 full backups
+        await pruneLocalBackups();
+        await saveLocalBackupMetadata(localMeta);
+        console.log(`[BackupScheduler] 💾 Backup saved locally: ${localFileName}`);
+        return localPath;
+    } catch (err) {
+        console.error('[BackupScheduler] Error saving backup locally:', err);
+        return null;
+    }
+}
+
+// NEW: Prune old local backups, keeping only last 3 full backups
+async function pruneLocalBackups() {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        if (!fs.existsSync(localBackupDir)) return;
+        const files = fs.readdirSync(localBackupDir)
+            .filter(f => f.startsWith('backups_auto-backup-') && f.endsWith('.json'))
+            .map(f => {
+                const fullPath = path.join(localBackupDir, f);
+                const stat = fs.statSync(fullPath);
+                return { fileName: f, mtime: stat.mtime, fullPath };
+            })
+            .sort((a, b) => b.mtime - a.mtime);
+        // Keep only the first 3 (most recent full backups)
+        if (files.length > 3) {
+            for (let i = 3; i < files.length; i++) {
+                try {
+                    fs.unlinkSync(files[i].fullPath);
+                    console.log(`[BackupScheduler] 🗑️ Pruned old local backup: ${files[i].fileName}`);
+                } catch (err) {
+                    console.error(`[BackupScheduler] Failed to prune ${files[i].fileName}:`, err);
+                }
+            }
+        }
+        // Update metadata
+        const localMeta = await getLocalBackupMetadata();
+        localMeta.backups = localMeta.backups.filter(b => 
+            files.some(f => f.fileName === b.fileName)
+        );
+        await saveLocalBackupMetadata(localMeta);
+    } catch (err) {
+        console.error('[BackupScheduler] Error pruning local backups:', err);
+    }
+}
+
+// Upload body to both primary and secondary storage
+async function uploadToBoth(key, body) {
+    // Upload to primary
+    await s3Client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: 'application/json' }));
+    // Upload to secondary if configured
+    if (secondaryBucket) {
+        await s3Client.send(new PutObjectCommand({ Bucket: secondaryBucket, Key: key, Body: body, ContentType: 'application/json' }));
+    }
+}
 
 // Counts for EVERY backed-up collection (discovered from the live database, not a hard-coded list).
 const getCollectionStats = async () => backupExport.getAllCounts(mongoose.connection.db);
