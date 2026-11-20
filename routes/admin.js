@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const { LoginAuditLog } = require('../database/2faModels');
 const { Animal, PublicProfile, PublicAnimal, User, ProfileReport, AnimalReport, MessageReport, AuditLog } = require('../database/models');
 const { createAuditLog, getAuditLogs } = require('../utils/auditLogger');
+const { exportCollection, listBackupCollections } = require('../utils/backupExport');
 
 // Helper: Check if user is admin
 const isAdmin = (req) => {
@@ -873,6 +874,31 @@ const getCollectionStats = async () => {
     stats.auditLogs = stats.auditlogs ?? await AuditLog.countDocuments();
     return stats;
 };
+
+// GET /api/admin/export/:collection - Download a single collection's data as EJSON
+router.get('/export/:collection', async (req, res) => {
+    try {
+        if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only' });
+
+        const { collection } = req.params;
+
+        // Safety: only allow real, non-system, non-view collections
+        const mongoose = require('mongoose');
+        const db = mongoose.connection.db;
+        const allowed = await listBackupCollections(db);
+        if (!allowed.includes(collection)) {
+            return res.status(400).json({ error: `Unknown or disallowed collection: ${collection}` });
+        }
+        const exported = await exportCollection(db, collection);
+
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${exported.fileName}.json"`);
+        res.send(exported.body);
+    } catch (error) {
+        console.error(`Error exporting collection ${req.params.collection}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // GET /api/admin/backups - List available backups (from R2)
 router.get('/backups', async (req, res) => {

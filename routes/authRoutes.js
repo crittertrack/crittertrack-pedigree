@@ -263,10 +263,7 @@ router.post('/login', async (req, res) => {
             // shown verbatim by every app version's "Login Failed" popup, so it reaches users
             // on old builds too. Same text for both cases to avoid revealing which emails exist.
             return res.status(401).json({
-                message: 'Login failed. Due to an unexpected system issue, previous passwords are no longer valid ' +
-                    '(passwords are never stored in our backups, so they could not be restored). ' +
-                    'If you have not already, please use "Forgot password?" to reset your password, then log in. ' +
-                    'Some recent data may have been lost.'
+                message: 'Login failed. Please check your email and password, and try again. If the user counter does not show a count, server might be down for maintenance.'
             });
         }
         // 403 Forbidden for suspended or banned accounts

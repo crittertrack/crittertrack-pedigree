@@ -10,7 +10,7 @@ const CounterSchema = new mongoose.Schema({
 const Counter = mongoose.model('Counter', CounterSchema);
 
 
-// --- 2. USER SCHEMA (Private/Authentication Data) ---
+// --- 4. USER SCHEMA (Private/Authentication Data) ---
 const UserSchema = new mongoose.Schema({
     id_public: { type: String, required: false, unique: true, sparse: true, index: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -216,18 +216,6 @@ const PublicProfileSchema = new mongoose.Schema({
     // newest-first ordering. Null for members who opted in before this was tracked (the directory orders those by highest CTU number).
     directoryOptInAt: { type: Date, default: null },
     hasSeenProfileSetupGuide: { type: Boolean, default: false }, // Track if user has seen the one-time profile setup guide
-    betaSurveyStatus: {
-        type: String,
-        enum: ['pending', 'skipped', 'dismissed', 'completed'],
-        default: 'pending'
-    },
-    betaSurveyLastPromptedAt: { type: Date, default: null }, // Drives the once-per-day "Skip for now" re-prompt throttle
-    betaSurveyFollowupStatus: {
-        type: String,
-        enum: ['pending', 'skipped', 'dismissed', 'completed'],
-        default: 'pending'
-    },
-    betaSurveyFollowupLastPromptedAt: { type: Date, default: null },
     speciesOrder: { type: [String], default: [] }, // User's custom order for species display
     speciesFavorites: { type: [String], default: [] }, // User's favorite species (starred)
     breedingLineDefs: { type: Array, default: [] },        // [{ id, name, color }]
@@ -1367,67 +1355,7 @@ const FeedbackSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Feedback = mongoose.model('Feedback', FeedbackSchema);
 
-
-// --- 9B. BETA SURVEY RESPONSE SCHEMA (Beta Feedback Finalizing Survey) ---
-const BetaSurveyResponseSchema = new mongoose.Schema({
-    userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    id_public: { type: String, required: true },
-
-    q1_overallSatisfaction: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q2_mostUsedFeature: { type: [String], default: null }, // multi-select
-    q3_mostConfusingFeature: { type: [String], default: null }, // multi-select
-    q4_appSpeed: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q5_easeOfNavigation: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q6_visualDesign: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q7_primarySpecies: { type: [String], default: null }, // multi-select
-    q8_primaryDevice: { type: String, default: null },
-    q9_priorSolution: { type: [String], default: null }, // multi-select
-    q9_priorSolutionOther: { type: String, default: null }, // "Which app?" free text when q9 includes 'Another app'
-    q10_howHeard: { type: String, default: null },
-    q11_likelihoodToRecommend: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q12_likelyToKeepUsing: { type: Number, min: 1, max: 5, default: null }, // ⭐ 1-5
-    q13_bugsIssues: { type: String, default: null },
-    q14_magicWandFeature: { type: String, default: null },
-    q15_anythingElse: { type: String, default: null },
-}, { timestamps: true });
-const BetaSurveyResponse = mongoose.model('BetaSurveyResponse', BetaSurveyResponseSchema);
-
-const BetaSurveyFollowupResponseSchema = new mongoose.Schema({
-    userId_backend: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    id_public: { type: String, required: true, index: true },
-    difficultArea: {
-        type: String,
-        enum: [
-            'My Animals (main list)', 'Collections', 'Enclosures',
-            'Animal Care (Reproduction, Health, Feeding & Care)', 'Litter Management',
-            'Budget Tracker', 'Marketplace', 'Community', 'Calendar',
-            'Tools (calculators and family trees)', 'Other', 'Nothing was difficult'
-        ],
-        required: true
-    },
-    difficultyType: {
-        type: String,
-        enum: [
-            'Finding where to start', 'Understanding a term or label',
-            'Understanding how sections connect', 'Entering or editing information',
-            'Understanding a result', 'Something else'
-        ],
-        default: null
-    },
-    expectedVsActual: { type: String, maxlength: 2000, default: null },
-    helpfulSupport: {
-        type: String,
-        enum: [
-            'A short guided checklist', 'Step-by-step examples',
-            'Clearer explanations in the app', 'Something else', 'No extra help needed'
-        ],
-        default: null
-    },
-    stillHappening: { type: String, enum: ['Yes', 'No', 'Not sure'], default: null },
-    additionalDetail: { type: String, maxlength: 2000, default: null }
-}, { timestamps: true });
-const BetaSurveyFollowupResponse = mongoose.model('BetaSurveyFollowupResponse', BetaSurveyFollowupResponseSchema);
-
+// --- 10. MESSAGE SCHEMA ---
 
 // --- 10. MESSAGE SCHEMA ---
 const MessageSchema = new mongoose.Schema({
@@ -2268,8 +2196,6 @@ module.exports = {
     SpeciesGeneticsSubmission,
     BugReport,
     Feedback,
-    BetaSurveyResponse,
-    BetaSurveyFollowupResponse,
     Message,
     MessageReport,
     ProfileReport,
