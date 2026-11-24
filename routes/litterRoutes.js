@@ -417,6 +417,7 @@ router.get('/:id_public', async (req, res) => {
                     }));
                 }
             } catch (error) {
+                // Log but don't fail the request - partial results are okay
                 console.error('Error calculating litter pedigree summary:', error);
             }
         }

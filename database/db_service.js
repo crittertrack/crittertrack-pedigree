@@ -1926,10 +1926,17 @@ const addLitter = async (appUserId_backend, litterData) => {
     // Auto-assign CTL-ID if not already provided
     const litter_id_public = litterData.litter_id_public || await getNextSequence('litterId');
 
-    const { confirmDuplicate, ...cleanLitterData } = litterData;
+    const { confirmDuplicate, assistanceRequired, ...cleanLitterData } = litterData;
+
+    // Normalize assistanceRequired: convert empty string to null for Boolean field
+    // The frontend Select has options 'yes'/'no' and placeholder 'Not recorded',
+    // which can result in an empty string that Mongoose cannot cast to Boolean
+    const normalizedAssistanceRequired = assistanceRequired === '' ? null : assistanceRequired;
+
     const newLitter = new Litter({
         creatorId: appUserId_backend,
         litter_id_public,
+        assistanceRequired: normalizedAssistanceRequired,
         ...cleanLitterData,
     });
     await newLitter.save();
@@ -2068,6 +2075,11 @@ const updateLitter = async (appUserId_backend, litterId_backend, updates) => {
     }
     if ('femaleCount' in updates) {
         sanitizedUpdates.femaleCount = updates.femaleCount === '' ? null : updates.femaleCount;
+    }
+    
+    // Normalize assistanceRequired: convert empty string to null for Boolean field
+    if ('assistanceRequired' in updates) {
+        sanitizedUpdates.assistanceRequired = updates.assistanceRequired === '' ? null : updates.assistanceRequired;
     }
 
     // Auto-clear isPlanned when a birth date is recorded

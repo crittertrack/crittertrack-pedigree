@@ -1091,10 +1091,19 @@ const LitterSchema = new mongoose.Schema({
     hasCulls: { type: Boolean, default: false },
     cullsCount: { type: Number, default: null },
 
+    // Cull breakdown by sex - how many culls were male/female/unknown
+    cullMaleCount: { type: Number, default: null },
+    cullFemaleCount: { type: Number, default: null },
+    cullUnknownCount: { type: Number, default: null },
+
     // Extraction flags when true, the M/F/U counts above have already been reduced
     // by the corresponding stillborn/losses breakdown (i.e., they represent live/surviving only)
     extractStillbornFromTotal: { type: Boolean, default: false },
     extractLossesFromTotal: { type: Boolean, default: false },
+
+    // When extractCullsFromTotal is true, the M/F/U counts above have already been reduced
+    // by the cull breakdown (i.e., they represent live/surviving only after culls removed)
+    extractCullsFromTotal: { type: Boolean, default: false },
     
     // Public IDs of offspring animals that came from this litter
     offspringIds_public: { type: [String], default: [] }, 
