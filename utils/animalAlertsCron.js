@@ -6,7 +6,7 @@ const { Animal, Litter, Enclosure, SupplyItem, SystemSettings, PublicProfile } =
 const { sendPushToUser } = require('./pushService');
 const { medicationWantsReminders } = require('./doseReminders');
 const { formatAnimalName, formatAlertDigest } = require('./alertNames');
-const { buildNursingCutoffMap, DEFAULT_MAX_NURSING_DAYS, syncParentReproStatus } = require('./reproStatusSync');
+const { buildNursingCutoffMap, DEFAULT_MAX_NURSING_DAYS, syncParentReproStatus, autoConfirmOverdueWeaning } = require('./reproStatusSync');
 
 // Whether a litter's weaning reminder should fire: the weaning date has arrived AND the
 // litter is still inside its species' nursing window (age since birth <= Species.maxNursingDays,
@@ -218,6 +218,18 @@ const runAnimalAlertsCheck = async () => {
             }
         }
         if (staleDams.length) console.log(`[animalAlertsCron] Self-healed ${staleDams.length} stale isNursing flag(s).`);
+    }
+
+    // Auto-confirm weaning for born litters that have passed their species' nursing cut-off
+    // without a manual "Wean Today" confirmation. Flips weaningConfirmed so survival stats,
+    // the "Weaned" timeline and the dam's derived flags all settle (see reproStatusSync).
+    try {
+        const autoConfirm = await autoConfirmOverdueWeaning();
+        if (autoConfirm.confirmed) {
+            console.log(`[animalAlertsCron] Auto-confirmed weaning for ${autoConfirm.confirmed} litter(s).`);
+        }
+    } catch (err) {
+        console.error('[animalAlertsCron] Auto-confirm weaning failed:', err.message || err);
     }
 
     // --- Supplies: reorder due (grouped with enclosure/logistics care, not feeding) ---
