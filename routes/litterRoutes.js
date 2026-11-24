@@ -9,6 +9,7 @@ const { syncParentReproStatus } = require('../utils/reproStatusSync');
 const {
     applyAutoWeaningOnCreate, applyAutoWeaningOnUpdate,
     applyAutoDueDateOnCreate, applyAutoDueDateOnUpdate,
+    applyAutoDueDateOnPregnancy,
     getAutoCalcPrefs,
 } = require('../utils/autoWeaningDate');
 const r2 = require('../storage/r2_client');
@@ -475,6 +476,7 @@ router.put('/:id_backend', async (req, res) => {
         const autoCalc = await getAutoCalcPrefs(appUserId_backend);
         const unknownBirth = isUnknownBirth(updates, priorLitter);
         if (autoCalc.weaning && !unknownBirth) await applyAutoWeaningOnUpdate(updates, priorLitter, req.user.id_public);
+        if (autoCalc.dueDate && !unknownBirth) await applyAutoDueDateOnPregnancy(updates, priorLitter, req.user.id_public);
         if (autoCalc.dueDate && !unknownBirth) await applyAutoDueDateOnUpdate(updates, priorLitter, req.user.id_public);
 
         const updatedLitter = await updateLitter(appUserId_backend, litterId_backend, updates);

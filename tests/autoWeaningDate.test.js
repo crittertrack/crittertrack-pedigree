@@ -10,6 +10,7 @@ const {
     computeExpectedDueDate,
     applyAutoDueDateOnCreate,
     applyAutoDueDateOnUpdate,
+    applyAutoDueDateOnPregnancy,
 } = require('../utils/autoWeaningDate');
 
 const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
@@ -354,4 +355,57 @@ test('due update: clearing the field re-fills; lost pregnancy and other users un
     assert.equal(day(anyUser.expectedDueDate), '2026-10-24');
     const noUser = await applyAutoDueDateOnUpdate({ matingDate: '2026-10-05' }, { matingDate: '2026-10-05' }, null, stub);
     assert.equal('expectedDueDate' in noUser, false);
+});
+
+test('due pregnancy: resets a past due date to today + 50% gestation on "Mark Pregnant"', async () => {
+    const mouse = async () => 'Fancy Mouse'; // gestation 19 -> 10-day window
+    const p = await applyAutoDueDateOnPregnancy(
+        { pregnancyDate: '2026-03-10' },
+        { expectedDueDate: '2026-03-01', sireId_public: 'CTC1', damId_public: 'CTC2' },
+        CTU2, mouse
+    );
+    assert.equal(day(p.expectedDueDate), '2026-03-20'); // 2026-03-10 + 10
+});
+
+test('due pregnancy: leaves a future due date alone', async () => {
+    const mouse = async () => 'Fancy Mouse';
+    const p = await applyAutoDueDateOnPregnancy(
+        { pregnancyDate: '2026-03-10' },
+        { expectedDueDate: '2026-04-01', sireId_public: 'CTC1', damId_public: 'CTC2' },
+        CTU2, mouse
+    );
+    assert.equal('expectedDueDate' in p, false);
+});
+
+test('due pregnancy: respects an explicit due date in the payload', async () => {
+    const mouse = async () => 'Fancy Mouse';
+    const p = await applyAutoDueDateOnPregnancy(
+        { pregnancyDate: '2026-03-10', expectedDueDate: '2026-03-01' },
+        { expectedDueDate: '2026-03-01', sireId_public: 'CTC1', damId_public: 'CTC2' },
+        CTU2, mouse
+    );
+    assert.equal(day(p.expectedDueDate), '2026-03-01'); // untouched
+});
+
+test('due pregnancy: no-op without a pregnancyDate, a stored due date, or a gestation rule', async () => {
+    const mouse = async () => 'Fancy Mouse';
+    const glider = async () => 'Sugar Glider';
+    const noPreg = await applyAutoDueDateOnPregnancy(
+        { matingDate: '2026-03-01' },
+        { expectedDueDate: '2026-02-01' },
+        CTU2, mouse
+    );
+    assert.equal('expectedDueDate' in noPreg, false);
+    const noStoredDue = await applyAutoDueDateOnPregnancy(
+        { pregnancyDate: '2026-03-10' },
+        { expectedDueDate: null },
+        CTU2, mouse
+    );
+    assert.equal('expectedDueDate' in noStoredDue, false);
+    const unknownSpecies = await applyAutoDueDateOnPregnancy(
+        { pregnancyDate: '2026-03-10' },
+        { expectedDueDate: '2026-02-01' },
+        CTU2, glider
+    );
+    assert.equal('expectedDueDate' in unknownSpecies, false);
 });

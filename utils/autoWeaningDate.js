@@ -359,6 +359,51 @@ const applyAutoDueDateOnUpdate = async (payload, prior, idPublic, lookupSpecies 
     return payload; // otherwise the user supplied/changed it by hand -> respect it
 };
 
+// When "Mark Pregnant" runs on a litter whose due date has already passed, reset
+// expectedDueDate FORWARD by this fraction of the species' gestation (50% assumes
+// the pregnancy is already ~half-way when confirmed) instead of re-starting a full
+// term, keeping the "birth due" reminder forward-looking.
+const PREGNANCY_DUE_RESET_PCT = 0.5;
+
+/**
+ * "Mark Pregnant" rule (async): the quick action sets a pregnancyDate without
+ * supplying expectedDueDate. When the stored due date has already passed, reset
+ * it to pregnancyDate + PREGNANCY_DUE_RESET_PCT of the species' gestation so a
+ * retroactively-recorded pregnancy keeps a forward-looking "birth due" reminder.
+ * Form edits that supply their own expectedDueDate are respected, and species
+ * without a gestation rule are left untouched. `prior` needs
+ * sireId_public/damId_public/expectedDueDate.
+ */
+const applyAutoDueDateOnPregnancy = async (payload, prior, idPublic, lookupSpecies = defaultSpeciesLookup) => {
+    if (!payload || !isAutoWeaningUser(idPublic)) return payload;
+
+    const pregnancyProvided = hasOwn(payload, 'pregnancyDate') && !isBlank(payload.pregnancyDate);
+    if (!pregnancyProvided || hasOwn(payload, 'expectedDueDate')) return payload;
+
+    const pregnancyDate = payload.pregnancyDate;
+    const due = prior && prior.expectedDueDate;
+    if (isBlank(due)) return payload; // nothing auto-filled yet -> applyAutoDueDateOnUpdate handles it
+
+    const dueTime = new Date(due).getTime();
+    const pregTime = new Date(pregnancyDate).getTime();
+    if (isNaN(dueTime) || isNaN(pregTime)) return payload;
+    if (dueTime >= pregTime) return payload; // due today/future -> fine
+
+    const explicitSpecies = typeof payload.species === 'string' && payload.species.trim()
+        ? payload.species
+        : null;
+    const sire = ((hasOwn(payload, 'sireId_public') && payload.sireId_public) || (prior && prior.sireId_public)) || null;
+    const dam = ((hasOwn(payload, 'damId_public') && payload.damId_public) || (prior && prior.damId_public)) || null;
+    const species = explicitSpecies ?? (await lookupSpecies(sire, dam));
+    const gestation = gestationDaysForSpecies(species);
+    if (!gestation) return payload;
+
+    const windowDays = Math.round(gestation * PREGNANCY_DUE_RESET_PCT);
+    const corrected = computeExpectedDueDate(pregnancyDate, windowDays);
+    if (corrected) payload.expectedDueDate = corrected;
+    return payload;
+};
+
 // ── Per-user on/off switches (Litter Management header) ───────────────────────
 // Stored in User.uiPreferences.autoCalcDueDate / autoCalcWeaningDate. Both default to ON
 // (anything other than an explicit `false` counts as on) until the user flips a switch.
@@ -396,4 +441,6 @@ module.exports = {
     computeExpectedDueDate,
     applyAutoDueDateOnCreate,
     applyAutoDueDateOnUpdate,
+    applyAutoDueDateOnPregnancy,
+    PREGNANCY_DUE_RESET_PCT,
 };
