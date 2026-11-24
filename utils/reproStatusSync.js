@@ -14,10 +14,24 @@
  * existed.
  */
 const { Animal, PublicAnimal, Litter, Species } = require('../database/models');
+const { weaningAgeDaysForSpecies } = require('./autoWeaningDate');
 
 // Fallback cutoff (days) used when a litter's dam has no species match in the
 // Species collection (e.g. a custom/user-added species never assigned one).
 const DEFAULT_MAX_NURSING_DAYS = 90;
+
+// Auto-confirm weaning this fraction of a species' weaning age AFTER its expected
+// weaning date (50% = "half a weaning-age of grace for the breeder to confirm").
+// Species without a weaning-age rule fall back to maxNursingDays instead.
+const WEANING_AUTO_CONFIRM_GRACE_PCT = 0.5;
+
+const DAY_MS = 1000 * 60 * 60 * 24;
+const daysSince = (date, now) => (now.getTime() - new Date(date).getTime()) / DAY_MS;
+const addDays = (date, days) => {
+    const d = new Date(date);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d;
+};
 
 /**
  * Determine the single active reproductive status contributed by one litter.
@@ -30,12 +44,11 @@ const DEFAULT_MAX_NURSING_DAYS = 90;
  *
  * A litter is considered "closed" (contributes no active status) once:
  *  - it has a birthDate and weaning was confirmed (weaningConfirmed === true), either by
- *    the explicit "Wean Today" action or by the auto-confirm at the cut-off below,
+ *    the explicit "Wean Today" action or by the daily autoConfirmOverdueWeaning() job,
  *  - the pregnancy was recorded as lost (pregnancyLost === true) with no birth, or
  *  - it has a birthDate but wasn't confirmed weaned and more than `maxNursingDays` have
  *    passed since birth a safety-net cutoff so a litter the breeder forgot
- *    to mark as weaned doesn't leave the dam flagged "nursing" forever. The daily
- *    autoConfirmOverdueWeaning() job flips weaningConfirmed=true at this same cutoff.
+ *    to mark as weaned doesn't leave the dam flagged "nursing" forever.
  */
 function getLitterReproStatus(litter, today = new Date(), maxNursingDays = DEFAULT_MAX_NURSING_DAYS) {
     const hasBirth = !!litter.birthDate;
@@ -152,21 +165,61 @@ async function syncParentReproStatus(creatorId, parentIdsPublic = []) {
 }
 
 /**
- * True when a born litter that was never manually confirmed ("Wean Today") has
- * aged past its species' nursing cut-off (Species.maxNursingDays, default 90)
- * and should now be auto-confirmed as weaned. Pure (no DB) so it is unit
- * tested; autoConfirmOverdueWeaning uses the same check to persist the flag.
+ * True when a born litter that was never manually confirmed ("Wean Today")
+ * should now be auto-confirmed as weaned. Pure (no DB) so it is unit tested.
+ *
+ * Two rules, in order:
+ *  1. Percentage grace when the species has a weaning age AND a recorded
+ *     expected weaning date: confirm once `weaningAge * gracePct` days have
+ *     passed since `weaningDate` (default 50%).
+ *  2. Otherwise fall back to the species' nursing cut-off: confirm once more
+ *     than `maxNursingDays` days have passed since birth.
+ *
+ * @param {Object} litter Needs birthDate, weaningDate, weaningAge,
+ *                        maxNursingDays, weaningConfirmed, pregnancyLost.
+ * @param {Date} [now]
+ * @param {Number} [gracePct]
  */
-function shouldAutoConfirmWeaning(litter, cutoffDays = DEFAULT_MAX_NURSING_DAYS, now = new Date()) {
+function shouldAutoConfirmWeaning(litter, now = new Date(), gracePct = WEANING_AUTO_CONFIRM_GRACE_PCT) {
     if (!litter || !litter.birthDate) return false;
     if (litter.weaningConfirmed || litter.pregnancyLost) return false;
-    const daysSinceBirth = (now.getTime() - new Date(litter.birthDate).getTime()) / (1000 * 60 * 60 * 24);
-    return daysSinceBirth > cutoffDays;
+
+    if (litter.weaningAge != null && litter.weaningDate) {
+        const wean = new Date(litter.weaningDate);
+        if (isNaN(wean.getTime())) return false;
+        const confirmAfter = addDays(wean, litter.weaningAge * gracePct);
+        return now.getTime() > confirmAfter.getTime();
+    }
+
+    return daysSince(litter.birthDate, now) > (litter.maxNursingDays ?? DEFAULT_MAX_NURSING_DAYS);
 }
 
 /**
- * Auto-confirm weaning for born litters that are still unconfirmed once they
- * pass their species' nursing cut-off (Species.maxNursingDays, default 90).
+ * Given a batch of litters, resolve each litter's dam's species and return a
+ * Map of litter._id (string) -> species weaning age (days) from the same
+ * auto-fill rules as utils/autoWeaningDate.js. null when the species has no
+ * rule (or the dam/species can't be resolved) callers fall back to maxNursingDays.
+ */
+async function buildWeaningAgeMap(litters) {
+    const weaningAgeByLitter = new Map();
+    const damIds = [...new Set(litters.map((l) => l.damId_public).filter(Boolean))];
+    if (!damIds.length) return weaningAgeByLitter;
+
+    const dams = await Animal.find({ id_public: { $in: damIds } }).select('id_public species').lean();
+    const speciesByDam = new Map(dams.map((d) => [d.id_public, d.species]));
+
+    for (const litter of litters) {
+        const damSpecies = litter.damId_public && speciesByDam.get(litter.damId_public);
+        weaningAgeByLitter.set(String(litter._id), weaningAgeDaysForSpecies(damSpecies));
+    }
+    return weaningAgeByLitter;
+}
+
+/**
+ * Auto-confirm weaning for born litters that are still unconfirmed:
+ *  - rule species: `weaningAge * WEANING_AUTO_CONFIRM_GRACE_PCT` days past the
+ *    expected weaning date (see shouldAutoConfirmWeaning), or
+ *  - other species: past their nursing cut-off (maxNursingDays).
  * Previously such litters were only "silently closed" (the dam's Nursing flag
  * cleared, the litter left as an unconfirmed "Expected weaning" forever); now
  * weaningConfirmed is flipped so survival stats, the "Weaned" timeline and the
@@ -183,10 +236,18 @@ async function autoConfirmOverdueWeaning(now = new Date()) {
         weaningConfirmed: false,
         birthDate: { $ne: null },
         pregnancyLost: { $ne: true },
-    }).select('creatorId damId_public birthDate').lean();
+    }).select('creatorId damId_public birthDate weaningDate').lean();
 
     const cutoffByLitter = await buildNursingCutoffMap(litters);
-    const overdue = litters.filter((l) => shouldAutoConfirmWeaning(l, cutoffByLitter.get(String(l._id)), now));
+    const weaningAgeByLitter = await buildWeaningAgeMap(litters);
+
+    const enriched = litters.map((l) => ({
+        ...l,
+        maxNursingDays: cutoffByLitter.get(String(l._id)) ?? DEFAULT_MAX_NURSING_DAYS,
+        weaningAge: weaningAgeByLitter.get(String(l._id)) ?? null,
+    }));
+
+    const overdue = enriched.filter((l) => shouldAutoConfirmWeaning(l, now));
     if (!overdue.length) return { confirmed: 0, dams: [] };
 
     const res = await Litter.updateMany(
@@ -215,7 +276,9 @@ module.exports = {
     getLitterReproStatus,
     computeReproFlags,
     buildNursingCutoffMap,
+    buildWeaningAgeMap,
     shouldAutoConfirmWeaning,
     autoConfirmOverdueWeaning,
     DEFAULT_MAX_NURSING_DAYS,
+    WEANING_AUTO_CONFIRM_GRACE_PCT,
 };
